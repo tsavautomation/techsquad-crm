@@ -112,7 +112,8 @@ async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: E
           attachments,
         });
         const sent = await deliver(db, id);
-        did.push(sent.ok ? `email to ${to.join(", ")}` : `email queued (${sent.error})`);
+        const redirected = process.env.EMAIL_TEST_MODE !== "false" ? ` (test mode: sent to ${process.env.EMAIL_TEST_RECIPIENT || "fred@tsav.net"})` : "";
+        did.push(sent.ok ? `email to ${to.join(", ")}${redirected}` : `email failed (${sent.error})`);
         break;
       }
     }
