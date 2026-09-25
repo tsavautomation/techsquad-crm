@@ -47,6 +47,16 @@ Replacement for the WebAuthor CRM at techsquad.webauthor.com.
   - Upload **directly from the browser** (signed upload URLs / resumable sessions). Never stream file bodies through a Vercel function (4.5 MB request limit; iPhone videos are large).
 - **Platform features every record has** (SPEC §1.3) are generic tables keyed by (table, record_id): `record_notes`, `record_comments`, `record_checklist_items`, `audit_log`. Soft-delete uses `deleted_at`, archive uses `archived_at`, and locking uses `locked` + `submitted_at`.
 
+## Commands
+- `npm run dev` · `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`
+- `npm run gen:registry`: regenerate `src/registry/tables/*` from the JSON. **This overwrites hand edits**, so check `git diff`.
+- `npx tsx scripts/generate-schema.ts <file>`: SQL for record tables. It generated the M4 migration; never regenerate an applied migration.
+- `npm run db:push`: apply new migrations to the linked **dev** project. `npm run db:types` regenerates `database.types.ts` after every migration.
+- `npm run db:test-rls`: 40 permission checks against dev, all rolled back. Run it after any change to policies or permissions.
+- `npm run users:sync -- --apply [--only a@b.c]`: create logins and sync groups from `scripts/data/users.ts`. Sign-up links go to `.invite-links.txt`.
+- Agent PowerShell sessions must refresh PATH (Machine + User) before calling node/npm/npx. In the user's own terminal, use `npx.cmd` (script execution is disabled).
+- Migration file names must sort after the last applied one. Check before `db push`.
+
 ## Database conventions
 - Migrations live in `supabase/migrations/`, one file per change, created with `npx supabase migration new <name>`. Never edit a migration that has already been applied; add a new one.
 - Table names are clean, plural snake_case (`projects`, `contacts`, `organizations`, `punch_list_items`, `job_reports`, …). Column names are clean snake_case. Each registry field keeps `legacy: 'fx_techsquad_projects.which_one'` for the future data import. SPEC §9 Q2.

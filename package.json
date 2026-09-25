@@ -9,7 +9,12 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:push": "supabase db push",
+    "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts",
+    "db:test-rls": "supabase db query --linked --file supabase/tests/rls_m4.sql",
+    "gen:registry": "tsx scripts/generate-registry.ts",
+    "users:sync": "tsx --env-file=.env.local scripts/sync-users.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
