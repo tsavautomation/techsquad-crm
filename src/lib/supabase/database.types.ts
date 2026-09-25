@@ -75,6 +75,7 @@ export type Database = {
           action: string
           actor: string | null
           at: string
+          automation_status: string | null
           changes: Json
           id: number
           record_id: number
@@ -84,6 +85,7 @@ export type Database = {
           action: string
           actor?: string | null
           at?: string
+          automation_status?: string | null
           changes?: Json
           id?: number
           record_id: number
@@ -93,6 +95,7 @@ export type Database = {
           action?: string
           actor?: string | null
           at?: string
+          automation_status?: string | null
           changes?: Json
           id?: number
           record_id?: number
@@ -107,6 +110,83 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      automation_runs: {
+        Row: {
+          at: string
+          automation_id: number
+          detail: Json
+          event: string
+          id: number
+          record_id: number
+          status: string
+          table_name: string
+        }
+        Insert: {
+          at?: string
+          automation_id: number
+          detail?: Json
+          event: string
+          id?: number
+          record_id: number
+          status: string
+          table_name: string
+        }
+        Update: {
+          at?: string
+          automation_id?: number
+          detail?: Json
+          event?: string
+          id?: number
+          record_id?: number
+          status?: string
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          actions: Json
+          active: boolean
+          conditions: Json
+          events: string[]
+          id: number
+          notes: string | null
+          table_name: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          actions: Json
+          active?: boolean
+          conditions?: Json
+          events: string[]
+          id: number
+          notes?: string | null
+          table_name: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          active?: boolean
+          conditions?: Json
+          events?: string[]
+          id?: number
+          notes?: string | null
+          table_name?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       brands: {
         Row: {
@@ -487,6 +567,74 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_outbox: {
+        Row: {
+          attachments: Json
+          automation_id: number | null
+          bcc_addresses: string[]
+          cc_addresses: string[]
+          created_at: string
+          error: string | null
+          from_address: string
+          html: string
+          id: string
+          provider_id: string | null
+          record_id: number | null
+          sent_at: string | null
+          status: string
+          subject: string
+          table_name: string | null
+          test_mode: boolean
+          to_addresses: string[]
+        }
+        Insert: {
+          attachments?: Json
+          automation_id?: number | null
+          bcc_addresses?: string[]
+          cc_addresses?: string[]
+          created_at?: string
+          error?: string | null
+          from_address: string
+          html: string
+          id?: string
+          provider_id?: string | null
+          record_id?: number | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          table_name?: string | null
+          test_mode?: boolean
+          to_addresses: string[]
+        }
+        Update: {
+          attachments?: Json
+          automation_id?: number | null
+          bcc_addresses?: string[]
+          cc_addresses?: string[]
+          created_at?: string
+          error?: string | null
+          from_address?: string
+          html?: string
+          id?: string
+          provider_id?: string | null
+          record_id?: number | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          table_name?: string | null
+          test_mode?: boolean
+          to_addresses?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_outbox_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
             referencedColumns: ["id"]
           },
         ]

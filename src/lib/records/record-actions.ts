@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireUser } from "@/lib/auth/session";
+import { runAutomationsSafely } from "@/lib/engine/automations";
 import { getTable } from "@/registry";
 import { canDo, canLockAction } from "@/registry/permissions";
 import { recordHref, tableHref } from "@/registry/routes";
@@ -14,8 +16,9 @@ export type ActionResult = { ok: true } | { ok: false; message: string };
 
 const DENIED: ActionResult = { ok: false, message: "You don't have permission to do that." };
 
-/** Where to refresh after a change: the record page (or its parent's, for sub-list rows) and the list. */
+/** Where to refresh after a change: the record page (or its parent's, for sub-list rows) and the list. Automations run after the response. */
 function refresh(t: TableDef, id: number, parentId?: number) {
+  after(runAutomationsSafely);
   if (t.parent && parentId) {
     const p = getTable(t.parent.table);
     revalidatePath(recordHref(p, parentId));

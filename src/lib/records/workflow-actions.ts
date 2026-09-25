@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireUser } from "@/lib/auth/session";
+import { runAutomationsSafely } from "@/lib/engine/automations";
 import { getTable } from "@/registry";
 import { recordHref, tableHref } from "@/registry/routes";
 import { recordsDb } from "./data";
@@ -23,6 +25,7 @@ export async function moveWorkflowAction(table: string, id: number, outcomeId: n
     p_comment: comment.trim() || null,
   });
   if (error) return { ok: false, message: error.message };
+  after(runAutomationsSafely);
   revalidatePath(recordHref(t, id));
   revalidatePath(tableHref(t));
   return { ok: true };

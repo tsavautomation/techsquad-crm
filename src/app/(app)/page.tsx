@@ -46,6 +46,14 @@ export default async function DashboardPage() {
           <span className="text-muted-foreground">: every table, field and rule carried over from WebAuthor</span>
         </p>
       )}
+      {user.permissions.has("projects.module.design_triggers") && (
+        <p className="mt-2 text-sm">
+          <Link href="/admin/automations" className="underline underline-offset-4">
+            Automations
+          </Link>{" "}
+          <span className="text-muted-foreground">: what runs when records change, the run log and sent emails</span>
+        </p>
+      )}
     </div>
   );
 }

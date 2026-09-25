@@ -3,7 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import { isSupabaseConfigured, supabaseEnv } from "./env";
 
 /** Paths reachable without being signed in. */
-export const PUBLIC_PATHS = ["/login", "/auth", "/setup"];
+// /api/cron checks its own secret (CRON_SECRET) instead of a signed-in user.
+export const PUBLIC_PATHS = ["/login", "/auth", "/setup", "/api/cron"];
 
 export function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
