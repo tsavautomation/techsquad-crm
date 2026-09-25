@@ -14,6 +14,10 @@ import { recordHref, tableFromRoute, tableHref } from "@/registry/routes";
 import type { FieldDef, TableDef } from "@/registry/types";
 import { FieldValue } from "@/components/records/field-value";
 import { SensitiveValue } from "@/components/records/sensitive-value";
+import { RecordToolbar } from "@/components/records/record-toolbar";
+import { ChecklistPanel, FilesPod, NotesPanel } from "@/components/records/record-panels";
+import { HistoryList, RelatedList, Section, SubListTable } from "@/components/records/record-sections";
+import { canModule, loadChecklist, loadHistory, loadNotes, loadPodFiles, loadRelated, loadSubLists, type ModuleAction } from "@/lib/records/extras";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -41,8 +45,28 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
   const [names, computed] = await Promise.all([userNames([row], ["created_by", "updated_by"]), computedValues(t, recordId)]);
 
   const locked = row.locked === true;
-  const canEdit = canDo(user.permissions, t, "modify", getTable) && (!locked || canLockAction(user.permissions, t, "modify_locked", getTable));
+  const perms = user.permissions;
+  const canEdit = canDo(perms, t, "modify", getTable) && (!locked || canLockAction(perms, t, "modify_locked", getTable));
   const fields = t.fields.filter((f) => visible.has(f.name) && !(t.parent && f.name === t.parent.field));
+
+  // Record features (SPEC §1.3), each gated by WebAuthor's module permissions (SPEC §7.4).
+  const db = await recordsDb();
+  const [may, related, subLists] = await Promise.all([
+    Promise.all(
+      (["activity_history_view", "activity_history_add", "notes_allow_delete", "notes_allow_delete_of_my_notes", "files_view_files_pod", "files_add_new", "files_allow_delete", "audit_log"] as const).map(
+        async (a) => [a, await canModule(perms, t, a)] as const,
+      ),
+    ).then((pairs) => Object.fromEntries(pairs) as Record<ModuleAction, boolean>),
+    loadRelated(t, recordId, perms),
+    loadSubLists(t, recordId, perms),
+  ]);
+  const [notes, checklist, podFiles, history] = await Promise.all([
+    may.activity_history_view ? loadNotes(db, t, recordId) : Promise.resolve([]),
+    loadChecklist(db, t, recordId),
+    may.files_view_files_pod ? loadPodFiles(db, t, recordId) : Promise.resolve([]),
+    may.audit_log ? loadHistory(db, t, recordId) : Promise.resolve([]),
+  ]);
+  const canModify = canDo(perms, t, "modify", getTable);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -69,6 +93,20 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
         )}
       </div>
 
+      <RecordToolbar
+        table={t.name}
+        id={recordId}
+        listHref={tableHref(t)}
+        locked={locked}
+        archived={Boolean(row.archived_at)}
+        can={{
+          submit: Boolean(t.submit?.showButton) && canModify,
+          lock: canLockAction(perms, t, "lock_unlock", getTable),
+          archive: canDo(perms, t, "archive", getTable),
+          delete: canDo(perms, t, "delete", getTable) && (!locked || canLockAction(perms, t, "delete_locked", getTable)),
+        }}
+      />
+
       <dl className="divide-y rounded-xl border">
         {fields.map((f) => (
           <div key={f.name}>
@@ -82,6 +120,46 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
           </div>
         ))}
       </dl>
+
+      <div className="mt-6 flex flex-col gap-3">
+        {subLists.map((s) => (
+          <Section key={s.table.name} title={s.table.label} count={s.rows.length} open>
+            <SubListTable list={s} baseHref={recordHref(t, recordId)} />
+          </Section>
+        ))}
+        {related.length > 0 && (
+          <Section title="Related records" count={related.reduce((n, r) => n + r.count, 0)} open>
+            <RelatedList items={related} />
+          </Section>
+        )}
+        <Section title="Checklist" count={checklist.filter((c) => !c.completed_at).length} open={checklist.some((c) => !c.completed_at)}>
+          <ChecklistPanel
+            table={t.name}
+            id={recordId}
+            items={checklist.map((c) => ({ ...c, canDelete: c.created_by === user.id || canModify }))}
+          />
+        </Section>
+        {may.activity_history_view && (
+          <Section title="Notes" count={notes.length}>
+            <NotesPanel
+              table={t.name}
+              id={recordId}
+              canAdd={may.activity_history_add}
+              notes={notes.map((n) => ({ ...n, canDelete: may.notes_allow_delete || (n.created_by === user.id && may.notes_allow_delete_of_my_notes) }))}
+            />
+          </Section>
+        )}
+        {may.files_view_files_pod && (
+          <Section title="Files" count={podFiles.length}>
+            <FilesPod table={t.name} id={recordId} files={podFiles} canAdd={may.files_add_new} canRemove={may.files_allow_delete} />
+          </Section>
+        )}
+        {may.audit_log && (
+          <Section title="History" count={history.length}>
+            <HistoryList table={t} entries={history} />
+          </Section>
+        )}
+      </div>
 
       <p className="mt-4 text-xs text-muted-foreground">
         Created {formatDateTime(String(row.created_at))}

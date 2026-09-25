@@ -44,6 +44,9 @@ export const EDITABLE_TYPES: FieldDef["type"][] = [
   "ein",
 ];
 
+/** Pseudo-field for a record's general Files pod (attachments with no field). */
+export const POD_FIELD = "_files";
+
 export const UPLOAD_TYPES: FieldDef["type"][] = ["file", "image", "signature"];
 export const isUpload = (f: FieldDef) => UPLOAD_TYPES.includes(f.type);
 export const isMultiLookup = (f: FieldDef) => (f.type === "lookup" || f.type === "group") && Boolean(f.multiple);

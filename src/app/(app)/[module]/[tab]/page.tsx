@@ -11,6 +11,7 @@ import { ListControls } from "@/components/records/list-controls";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/dates";
+import { canModule } from "@/lib/records/extras";
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]">) {
   const { module, tab } = await props.params;
@@ -43,6 +44,17 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
   const cols = listFields(t);
   const [titles, names] = await Promise.all([lookupTitles(t, rows, cols), userNames(rows, cols.filter((c) => c.type === "user").map((c) => c.name))]);
   const base = tableHref(t);
+
+  // "Records linked to X" filters coming from a record's Related panel.
+  const linkFilters = await Promise.all(
+    t.fields
+      .filter((f) => f.type === "lookup" && !f.multiple && filter[f.name])
+      .map(async (f) => {
+        const t2 = await lookupTitles(t, [{ [f.name]: Number(filter[f.name]) }], [f]);
+        return { label: f.label, title: t2[f.name]?.get(Number(filter[f.name])) ?? `#${filter[f.name]}` };
+      }),
+  );
+  const showDeletedLink = await canModule(user.permissions, t, "deleted_items");
   const dir = one("dir") ?? (sort === "title" ? "asc" : "desc");
 
   const sortLink = (name: string) => {
@@ -74,6 +86,14 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
           <h1 className="text-2xl font-semibold">{t.label}</h1>
           <p className="text-sm text-muted-foreground">
             {count} {count === 1 ? "record" : "records"}
+            {showDeletedLink && (
+              <>
+                {" · "}
+                <Link href={`${base}/deleted`} className="underline-offset-4 hover:underline">
+                  Deleted items
+                </Link>
+              </>
+            )}
           </p>
         </div>
         {canDo(user.permissions, t, "create", getTable) && (
@@ -83,6 +103,19 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
           </Link>
         )}
       </div>
+
+      {linkFilters.length > 0 && (
+        <p className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm">
+          {linkFilters.map((lf) => (
+            <span key={lf.label}>
+              {lf.label}: <strong>{lf.title}</strong>
+            </span>
+          ))}
+          <Link href={base} className="ml-auto underline underline-offset-4">
+            Show all
+          </Link>
+        </p>
+      )}
 
       <ListControls filters={filterFields(t).map((f) => ({ name: f.name, label: f.label, options: f.options ?? [] }))} />
 

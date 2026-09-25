@@ -7,6 +7,8 @@ import { getTable } from "@/registry";
 import { canDo } from "@/registry/permissions";
 import type { FieldDef, TableDef } from "@/registry/types";
 import { recordsDb } from "./data";
+import { canModule } from "./extras";
+import { POD_FIELD } from "./values";
 import { BUCKET, displayNames } from "./relations";
 
 export type Choice = { id: string; label: string; hint?: string };
@@ -104,18 +106,30 @@ export async function createUploadAction(
   file: { name: string; type: string; size: number },
 ): Promise<{ ok: true; path: string; token: string } | { ok: false; message: string }> {
   const user = await requireUser();
-  const { t, f } = fieldOf(tableName, fieldName);
-  if (!["file", "image", "signature"].includes(f.type)) return { ok: false, message: "Not an upload field" };
-  if (!canDo(user.permissions, t, recordId ? "modify" : "create", getTable)) return { ok: false, message: "You don't have permission to add files here." };
   if (file.size > MAX_UPLOAD_BYTES) return { ok: false, message: `“${file.name}” is larger than 50 MB.` };
+  let t: TableDef;
+  let fieldSegment: string;
 
-  const ext = file.name.includes(".") ? file.name.split(".").pop()!.toLowerCase() : "";
-  if (f.fileTypes && !f.fileTypes.includes(ext)) return { ok: false, message: `Allowed file types: ${f.fileTypes.join(", ")}` };
-  if (f.type === "image" && !file.type.startsWith("image/")) return { ok: false, message: "Please choose an image." };
+  if (fieldName === POD_FIELD) {
+    // The record's general Files pod ("Files: Add New"), only on saved records.
+    t = getTable(tableName);
+    if (!recordId || !(await canModule(user.permissions, t, "files_add_new"))) return { ok: false, message: "You don't have permission to add files here." };
+    fieldSegment = POD_FIELD;
+  } else {
+    const found = fieldOf(tableName, fieldName);
+    t = found.t;
+    const f = found.f;
+    if (!["file", "image", "signature"].includes(f.type)) return { ok: false, message: "Not an upload field" };
+    if (!canDo(user.permissions, t, recordId ? "modify" : "create", getTable)) return { ok: false, message: "You don't have permission to add files here." };
+    const ext = file.name.includes(".") ? file.name.split(".").pop()!.toLowerCase() : "";
+    if (f.fileTypes && !f.fileTypes.includes(ext)) return { ok: false, message: `Allowed file types: ${f.fileTypes.join(", ")}` };
+    if (f.type === "image" && !file.type.startsWith("image/")) return { ok: false, message: "Please choose an image." };
+    fieldSegment = f.name;
+  }
 
   const safeName = file.name.replace(/[^\w.\- ]+/g, "_").slice(-120);
   const scope = recordId ? String(recordId) : `pending-${randomUUID()}`;
-  const path = `${t.name}/${scope}/${f.name}/${user.id}/${randomUUID()}-${safeName}`;
+  const path = `${t.name}/${scope}/${fieldSegment}/${user.id}/${randomUUID()}-${safeName}`;
 
   const db = await recordsDb();
   const { data, error } = await db.storage.from(BUCKET).createSignedUploadUrl(path);

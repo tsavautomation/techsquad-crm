@@ -68,12 +68,22 @@ export async function listRecords(t: TableDef, p: ListParams) {
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   query = p.archived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
   if (p.q?.trim()) query = query.ilike("title", `%${p.q.trim().replace(/[%_]/g, "\\$&")}%`);
-  for (const [k, v] of Object.entries(p.filter ?? {})) if (v && sortable.has(k)) query = query.eq(k, v);
+  // Quick filters (dropdowns) and "records linked to X" filters from the Related panel.
+  const filterable = new Set(t.fields.filter((f) => ["select", "radio"].includes(f.type) || (f.type === "lookup" && !f.multiple)).map((f) => f.name));
+  for (const [k, v] of Object.entries(p.filter ?? {})) if (v && filterable.has(k)) query = query.eq(k, v);
 
   const { data, count, error } = await query;
   if (error) throw new Error(`${t.label}: ${error.message}`);
   const rows = (data ?? []) as unknown as Row[];
   return { rows, count: count ?? 0, page, sort, pages: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)) };
+}
+
+/** Deleted records of a table, newest first (Deleted Items page). */
+export async function listDeleted(t: TableDef) {
+  const db = await recordsDb();
+  const { data, error } = await db.from(t.name).select("id,title,deleted_at,updated_by").not("deleted_at", "is", null).order("deleted_at", { ascending: false }).limit(200);
+  if (error) throw new Error(`${t.label}: ${error.message}`);
+  return (data ?? []) as { id: number; title: string | null; deleted_at: string; updated_by: string | null }[];
 }
 
 export async function getRecord(t: TableDef, id: number): Promise<Row | null> {

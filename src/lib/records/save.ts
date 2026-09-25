@@ -43,6 +43,8 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
   // Only fields the form may edit are taken from the browser; everything else keeps its stored value.
   const merged: Values = { ...base };
   for (const f of t.fields) if (isEditable(f) && f.name in input) merged[f.name] = input[f.name];
+  // A new sub-list row (e.g. a Contact's Interaction) is tied to its parent once, when created.
+  if (!id && t.parent && typeof input[t.parent.field] === "number") merged[t.parent.field] = input[t.parent.field];
   await applyReadOnlyAutofill(db, t, base, merged);
 
   const normalized = normalize(t, merged);

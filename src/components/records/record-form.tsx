@@ -22,9 +22,11 @@ type Props = {
   /** Labels for ids already in the form (linked records, users, groups), by field. */
   labels?: Record<string, Record<string, string>>;
   lockedMessage?: string;
+  /** Where to go after saving; default is the saved record's page. */
+  redirectTo?: string;
 };
 
-export function RecordForm({ table, recordId, initialValues, baseHref, cancelHref, labels: initialLabels = {}, lockedMessage }: Props) {
+export function RecordForm({ table, recordId, initialValues, baseHref, cancelHref, labels: initialLabels = {}, lockedMessage, redirectTo }: Props) {
   const router = useRouter();
   const [values, setValues] = useState<Values>(initialValues);
   const [labels, setLabels] = useState(initialLabels);
@@ -54,7 +56,7 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
       const result = await saveRecordAction(table.name, recordId, rules.values);
       if (result.ok) {
         toast.success(recordId ? "Saved" : "Created");
-        router.push(`${baseHref}/${result.id}`);
+        router.push(redirectTo ?? `${baseHref}/${result.id}`);
         router.refresh();
         return;
       }
