@@ -1,7 +1,8 @@
 // Main menu and tab order, taken from WebAuthor (SPEC §1.1).
 // `tabs` list record types; later milestones attach a registry table to each.
 
-export type ModuleTab = { slug: string; title: string };
+/** `permission` is the key that shows the tab (see scripts/lib/permissions-map.ts). */
+export type ModuleTab = { slug: string; title: string; permission: string };
 export type ModuleDef = {
   slug: string;
   title: string;
@@ -10,6 +11,12 @@ export type ModuleDef = {
   tabs: ModuleTab[];
 };
 
+const tab = (module: string, slug: string, title: string, resource = slug): ModuleTab => ({
+  slug,
+  title,
+  permission: `${module}.${resource}.view_page`,
+});
+
 export const MODULES: ModuleDef[] = [
   {
     slug: "projects",
@@ -17,12 +24,12 @@ export const MODULES: ModuleDef[] = [
     shortTitle: "Projects",
     icon: "folder-kanban",
     tabs: [
-      { slug: "projects", title: "Projects" },
-      { slug: "contacts", title: "Contacts" },
-      { slug: "organizations", title: "Organizations" },
-      { slug: "buildings", title: "Buildings / Developments" },
-      { slug: "permits", title: "Permits" },
-      { slug: "punch-list", title: "Punch List" },
+      tab("projects", "projects", "Projects"),
+      tab("projects", "contacts", "Contacts"),
+      tab("projects", "organizations", "Organizations"),
+      tab("projects", "buildings", "Buildings / Developments"),
+      tab("projects", "permits", "Permits"),
+      tab("projects", "punch-list", "Punch List"),
     ],
   },
   {
@@ -31,13 +38,13 @@ export const MODULES: ModuleDef[] = [
     shortTitle: "Admin",
     icon: "briefcase",
     tabs: [
-      { slug: "employees", title: "Employees" },
-      { slug: "payroll", title: "Payroll" },
-      { slug: "transactions", title: "Transactions" },
-      { slug: "vehicles", title: "Vehicle" },
-      { slug: "rma", title: "RMA" },
-      { slug: "tasks", title: "Tasks" },
-      { slug: "inventory-checkout", title: "Inventory Checkout" },
+      tab("administrative", "employees", "Employees"),
+      tab("administrative", "payroll", "Payroll"),
+      tab("administrative", "transactions", "Transactions"),
+      tab("administrative", "vehicles", "Vehicle"),
+      tab("administrative", "rma", "RMA"),
+      tab("administrative", "tasks", "Tasks"),
+      tab("administrative", "inventory-checkout", "Inventory Checkout"),
     ],
   },
   {
@@ -46,9 +53,9 @@ export const MODULES: ModuleDef[] = [
     shortTitle: "Inventory",
     icon: "boxes",
     tabs: [
-      { slug: "products", title: "Product" },
-      { slug: "stock", title: "Stock" },
-      { slug: "sales", title: "Sale" },
+      tab("inventory", "products", "Product"),
+      tab("inventory", "stock", "Stock"),
+      tab("inventory", "sales", "Sale"),
     ],
   },
   {
@@ -56,26 +63,31 @@ export const MODULES: ModuleDef[] = [
     title: "TS Help Desk",
     shortTitle: "Help Desk",
     icon: "life-buoy",
-    tabs: [
-      { slug: "tickets", title: "Tickets" },
-      { slug: "articles", title: "Articles" },
-    ],
+    tabs: [tab("help-desk", "tickets", "Tickets"), tab("help-desk", "articles", "Articles")],
   },
   {
+    // All five FLEX forms share the module-level FLEX Forms permissions (SPEC §7.3).
     slug: "forms",
     title: "FLEX Forms",
     shortTitle: "Forms",
     icon: "clipboard-list",
     tabs: [
-      { slug: "job-reports", title: "Job Report" },
-      { slug: "notes", title: "Note" },
-      { slug: "staff-performance", title: "Staff Performance" },
-      { slug: "survey-and-proposals", title: "Survey and Proposals" },
-      { slug: "tv-installations", title: "TV Installation" },
+      tab("forms", "job-reports", "Job Report", "records"),
+      tab("forms", "notes", "Note", "records"),
+      tab("forms", "staff-performance", "Staff Performance", "records"),
+      tab("forms", "survey-and-proposals", "Survey and Proposals", "records"),
+      tab("forms", "tv-installations", "TV Installation", "records"),
     ],
   },
 ];
 
 export function findModule(slug: string) {
   return MODULES.find((m) => m.slug === slug);
+}
+
+/** Modules and tabs a user may see, given their permission keys. Modules with no visible tab are dropped. */
+export function visibleModules(permissions: ReadonlySet<string>): ModuleDef[] {
+  return MODULES.map((m) => ({ ...m, tabs: m.tabs.filter((t) => permissions.has(t.permission)) })).filter(
+    (m) => m.tabs.length > 0,
+  );
 }

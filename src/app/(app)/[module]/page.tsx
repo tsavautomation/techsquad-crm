@@ -1,14 +1,13 @@
 import { notFound } from "next/navigation";
-import { findModule, MODULES } from "@/config/modules";
+import { visibleModules } from "@/config/modules";
+import { requireUser } from "@/lib/auth/session";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-export function generateStaticParams() {
-  return MODULES.map((m) => ({ module: m.slug }));
-}
 
 export default async function ModulePage(props: PageProps<"/[module]">) {
   const { module: slug } = await props.params;
-  const mod = findModule(slug);
+  const user = await requireUser();
+  // A module the user can't see is treated as not found, so it doesn't reveal what exists.
+  const mod = visibleModules(user.permissions).find((m) => m.slug === slug);
   if (!mod) notFound();
 
   return (

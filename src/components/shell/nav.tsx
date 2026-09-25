@@ -2,26 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MODULES } from "@/config/modules";
+import type { ModuleDef } from "@/config/modules";
 import { cn } from "@/lib/utils";
 import { ModuleIcon } from "./module-icon";
 
-const ITEMS = [
-  { href: "/", title: "Dashboard", shortTitle: "Home", icon: "dashboard" as const },
-  ...MODULES.map((m) => ({ href: `/${m.slug}`, title: m.title, shortTitle: m.shortTitle, icon: m.icon })),
-];
+/** A module the user may open; the server layout filters these by permission. */
+export type NavItem = { href: string; title: string; shortTitle: string; icon: ModuleDef["icon"] };
+
+const HOME = { href: "/", title: "Dashboard", shortTitle: "Home", icon: "dashboard" as const };
 
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
 /** Left sidebar, shown from the md breakpoint up. */
-export function Sidebar() {
+export function Sidebar({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Main" className="hidden w-60 shrink-0 border-r bg-muted/30 md:block">
       <ul className="flex flex-col gap-1 p-3">
-        {ITEMS.map((item) => (
+        {[HOME, ...items].map((item) => (
           <li key={item.href}>
             <Link
               href={item.href}
@@ -41,15 +41,16 @@ export function Sidebar() {
 }
 
 /** Bottom tab bar for phones, hidden from md up. */
-export function BottomNav() {
+export function BottomNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  const all = [HOME, ...items];
   return (
     <nav
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      <ul className="grid grid-cols-6">
-        {ITEMS.map((item) => (
+      <ul className="grid" style={{ gridTemplateColumns: `repeat(${all.length}, minmax(0, 1fr))` }}>
+        {all.map((item) => (
           <li key={item.href}>
             <Link
               href={item.href}

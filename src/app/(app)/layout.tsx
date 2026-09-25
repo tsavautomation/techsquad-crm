@@ -1,14 +1,18 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { BottomNav, Sidebar } from "@/components/shell/nav";
+import { requireUser } from "@/lib/auth/session";
+import { visibleModules } from "@/config/modules";
+import { BottomNav, Sidebar, type NavItem } from "@/components/shell/nav";
 import { Button } from "@/components/ui/button";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) redirect("/login");
-  const email = typeof data.claims.email === "string" ? data.claims.email : "";
+  const user = await requireUser();
+  const navItems: NavItem[] = visibleModules(user.permissions).map((m) => ({
+    href: `/${m.slug}`,
+    title: m.title,
+    shortTitle: m.shortTitle,
+    icon: m.icon,
+  }));
+  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -17,7 +21,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           TechSquad CRM
         </Link>
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-muted-foreground sm:inline">{email}</span>
+          <span className="hidden text-sm text-muted-foreground sm:inline">{displayName}</span>
           <form action="/auth/signout" method="post">
             <Button type="submit" variant="outline" size="sm">
               Sign out
@@ -26,11 +30,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </div>
       </header>
       <div className="flex flex-1">
-        <Sidebar />
+        <Sidebar items={navItems} />
         {/* pb-20 keeps content clear of the mobile bottom bar */}
         <main className="min-w-0 flex-1 p-4 pb-20 md:p-6 md:pb-6">{children}</main>
       </div>
-      <BottomNav />
+      <BottomNav items={navItems} />
     </div>
   );
 }

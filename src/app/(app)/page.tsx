@@ -1,27 +1,37 @@
 import Link from "next/link";
-import { MODULES } from "@/config/modules";
+import { visibleModules } from "@/config/modules";
+import { requireUser } from "@/lib/auth/session";
 import { ModuleIcon } from "@/components/shell/module-icon";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const user = await requireUser();
+  const modules = visibleModules(user.permissions);
+
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="mb-4 text-2xl font-semibold">Dashboard</h1>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {MODULES.map((m) => (
-          <Link key={m.slug} href={`/${m.slug}`} className="rounded-xl focus-visible:outline-2">
-            <Card className="h-full transition-colors hover:bg-muted/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ModuleIcon name={m.icon} className="size-5" />
-                  {m.title}
-                </CardTitle>
-                <CardDescription>{m.tabs.map((t) => t.title).join(" · ")}</CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      {modules.length === 0 ? (
+        <p className="text-muted-foreground">
+          You don&apos;t have access to any modules yet. Ask an administrator to add you to a group.
+        </p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {modules.map((m) => (
+            <Link key={m.slug} href={`/${m.slug}`} className="rounded-xl focus-visible:outline-2">
+              <Card className="h-full transition-colors hover:bg-muted/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ModuleIcon name={m.icon} className="size-5" />
+                    {m.title}
+                  </CardTitle>
+                  <CardDescription>{m.tabs.map((t) => t.title).join(" · ")}</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
