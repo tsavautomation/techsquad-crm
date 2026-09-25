@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -2126,6 +2126,55 @@ export type Database = {
           },
         ]
       }
+      record_workflow_state: {
+        Row: {
+          entered_at: string
+          entered_by: string | null
+          level_id: number
+          record_id: number
+          table_name: string
+          workflow_id: string
+        }
+        Insert: {
+          entered_at?: string
+          entered_by?: string | null
+          level_id: number
+          record_id: number
+          table_name: string
+          workflow_id: string
+        }
+        Update: {
+          entered_at?: string
+          entered_by?: string | null
+          level_id?: number
+          record_id?: number
+          table_name?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_workflow_state_entered_by_fkey"
+            columns: ["entered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_workflow_state_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_workflow_state_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rmas: {
         Row: {
           archived_at: string | null
@@ -3181,12 +3230,229 @@ export type Database = {
           },
         ]
       }
+      workflow_events: {
+        Row: {
+          actor: string | null
+          at: string
+          comment: string | null
+          from_level_id: number | null
+          id: number
+          outcome: string
+          record_id: number
+          table_name: string
+          to_level_id: number | null
+          workflow_id: string
+        }
+        Insert: {
+          actor?: string | null
+          at?: string
+          comment?: string | null
+          from_level_id?: number | null
+          id?: number
+          outcome: string
+          record_id: number
+          table_name: string
+          to_level_id?: number | null
+          workflow_id: string
+        }
+        Update: {
+          actor?: string | null
+          at?: string
+          comment?: string | null
+          from_level_id?: number | null
+          id?: number
+          outcome?: string
+          record_id?: number
+          table_name?: string
+          to_level_id?: number | null
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_events_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_events_from_level_id_fkey"
+            columns: ["from_level_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_events_to_level_id_fkey"
+            columns: ["to_level_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_events_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_level_groups: {
+        Row: {
+          group_id: number
+          level_id: number
+        }
+        Insert: {
+          group_id: number
+          level_id: number
+        }
+        Update: {
+          group_id?: number
+          level_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_level_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_level_groups_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_levels: {
+        Row: {
+          allow_comments: boolean
+          color: string | null
+          field_updates: Json
+          id: number
+          is_start: boolean
+          place: number
+          title: string
+          workflow_id: string
+        }
+        Insert: {
+          allow_comments?: boolean
+          color?: string | null
+          field_updates?: Json
+          id?: number
+          is_start?: boolean
+          place: number
+          title: string
+          workflow_id: string
+        }
+        Update: {
+          allow_comments?: boolean
+          color?: string | null
+          field_updates?: Json
+          id?: number
+          is_start?: boolean
+          place?: number
+          title?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_levels_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_outcomes: {
+        Row: {
+          id: number
+          kind: string
+          level_id: number
+          place: number
+          target_level_id: number | null
+          title: string
+        }
+        Insert: {
+          id?: number
+          kind?: string
+          level_id: number
+          place: number
+          target_level_id?: number | null
+          title: string
+        }
+        Update: {
+          id?: number
+          kind?: string
+          level_id?: number
+          place?: number
+          target_level_id?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_outcomes_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_outcomes_target_level_id_fkey"
+            columns: ["target_level_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflows: {
+        Row: {
+          active: boolean
+          id: string
+          name: string
+          start_on: string
+          table_name: string
+        }
+        Insert: {
+          active?: boolean
+          id: string
+          name: string
+          start_on: string
+          table_name: string
+        }
+        Update: {
+          active?: boolean
+          id?: string
+          name?: string
+          start_on?: string
+          table_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       my_permissions: { Args: never; Returns: string[] }
+      my_workflow_queue: {
+        Args: never
+        Returns: {
+          entered_at: string
+          level_color: string
+          level_id: number
+          level_title: string
+          record_id: number
+          table_name: string
+          workflow_id: string
+        }[]
+      }
       project_financials: {
         Args: { p_project_ids: number[] }
         Returns: {
@@ -3195,6 +3461,21 @@ export type Database = {
           paid_amount: number
           project_id: number
         }[]
+      }
+      workflow_move: {
+        Args: {
+          p_comment?: string
+          p_id: number
+          p_outcome: number
+          p_table: string
+          p_target?: number
+        }
+        Returns: undefined
+      }
+      workflow_panel: { Args: { p_id: number; p_table: string }; Returns: Json }
+      workflow_start: {
+        Args: { p_id: number; p_table: string; p_trigger?: string }
+        Returns: undefined
       }
     }
     Enums: {

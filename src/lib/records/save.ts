@@ -75,6 +75,8 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
     const { data, error } = await db.from(t.name).insert(row).select("id").single();
     if (error || !data) return { ok: false, errors: {}, message: friendly(error?.message ?? "Could not save") };
     recordId = (data as { id: number }).id;
+    // Some workflows start as soon as a record exists (Stock Status, SPEC §9.1 Q10).
+    await db.rpc("workflow_start", { p_table: t.name, p_id: recordId, p_trigger: "create" });
     // Formulas using the record number ("#{id} …") can only be filled once the id exists.
     if (t.titleFormula?.includes("{id}")) {
       await db.from(t.name).update({ title: await buildTitle(t, values, recordId, db) }).eq("id", recordId);

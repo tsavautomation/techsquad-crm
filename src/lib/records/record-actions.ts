@@ -33,7 +33,7 @@ async function update(t: TableDef, id: number, patch: Record<string, unknown>): 
   return { ok: true };
 }
 
-/** Submit: stamps Date Submitted and locks the record (SPEC §1.3). Workflows hook in here in M9. */
+/** Submit: stamps Date Submitted, locks the record (SPEC §1.3) and starts its workflow (SPEC §6). */
 export async function submitRecordAction(table: string, id: number): Promise<ActionResult> {
   const user = await requireUser();
   const t = getTable(table);
@@ -42,8 +42,12 @@ export async function submitRecordAction(table: string, id: number): Promise<Act
   if (!row) return DENIED;
   if (row.locked) return { ok: false, message: "Already submitted." };
   const r = await update(t, id, { locked: true, submitted_at: new Date().toISOString() });
-  if (r.ok) refresh(t, id);
-  return r;
+  if (!r.ok) return r;
+  // Submitting starts the table's workflow, if it has one (SPEC §6).
+  const db = await recordsDb();
+  const { error } = await db.rpc("workflow_start", { p_table: t.name, p_id: id, p_trigger: "submit" });
+  refresh(t, id);
+  return error ? { ok: false, message: `Submitted, but the workflow didn't start: ${error.message}` } : { ok: true };
 }
 
 /** Lock / unlock without the submit step ("Records: Lock/Unlock Records"). Unlocking also clears Date Submitted. */

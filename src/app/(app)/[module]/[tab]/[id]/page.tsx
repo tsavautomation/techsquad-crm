@@ -15,6 +15,7 @@ import type { FieldDef, TableDef } from "@/registry/types";
 import { FieldValue } from "@/components/records/field-value";
 import { SensitiveValue } from "@/components/records/sensitive-value";
 import { RecordToolbar } from "@/components/records/record-toolbar";
+import { WorkflowPanel, type WorkflowPanelData } from "@/components/records/workflow-panel";
 import { ChecklistPanel, FilesPod, NotesPanel } from "@/components/records/record-panels";
 import { HistoryList, RelatedList, Section, SubListTable } from "@/components/records/record-sections";
 import { canModule, loadChecklist, loadHistory, loadNotes, loadPodFiles, loadRelated, loadSubLists, type ModuleAction } from "@/lib/records/extras";
@@ -67,6 +68,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
     may.audit_log ? loadHistory(db, t, recordId) : Promise.resolve([]),
   ]);
   const canModify = canDo(perms, t, "modify", getTable);
+  const { data: workflow } = await db.rpc("workflow_panel", { p_table: t.name, p_id: recordId });
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -92,6 +94,8 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
           </Link>
         )}
       </div>
+
+      {workflow && <WorkflowPanel table={t.name} id={recordId} data={workflow as WorkflowPanelData} />}
 
       <RecordToolbar
         table={t.name}
