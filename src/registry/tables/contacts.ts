@@ -198,7 +198,8 @@ export const contacts: TableDef = {
       "legacy": {
         "column": "secretary_or_concierge",
         "fieldId": 66902
-      }
+      },
+      "default": false
     },
     {
       "name": "alternate_name",
@@ -310,7 +311,8 @@ export const contacts: TableDef = {
         "column": "referred_by_1",
         "fieldId": 68768
       },
-      "heading": "Referral"
+      "heading": "Referral",
+      "default": false
     },
     {
       "name": "referred_by_organization_id",

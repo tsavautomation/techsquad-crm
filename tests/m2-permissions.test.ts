@@ -55,8 +55,21 @@ describe("menu per group (SPEC §7.3)", () => {
     ]);
   });
 
-  it("Admin: no Punch List, no Administrative record tabs; Inventory Product + Stock", () => {
-    expect(menuFor("admin")).toEqual([...PROJECTS_EVERYONE, "inventory/products", "inventory/stock", ...FORMS]);
+  it("Admin: no Punch List, no Administrative record tabs; Inventory Product + Stock + Sale (Q11)", () => {
+    expect(menuFor("admin")).toEqual([
+      ...PROJECTS_EVERYONE,
+      "inventory/products",
+      "inventory/stock",
+      "inventory/sales",
+      ...FORMS,
+    ]);
+  });
+
+  it("Sale has exactly the same grants as Stock (SPEC §9 Q11)", () => {
+    for (const r of rows.filter((x) => x.module === "inventory" && x.resource === "sales")) {
+      const stock = rows.find((x) => x.key === `inventory.stock.${r.action}`);
+      if (stock) expect(new Set(r.groups), r.key).toEqual(new Set(stock.groups));
+    }
   });
 
   it("Office Management: everything except Payroll, Inventory; includes Help Desk", () => {
@@ -94,7 +107,7 @@ describe("menu per group (SPEC §7.3)", () => {
     expect(menuFor("electrical_department", "lv_department")).toEqual(PROJECTS_EVERYONE);
   });
 
-  it("System Administrators see every tab, including Sale (granted to nobody)", () => {
+  it("System Administrators see every tab", () => {
     const all = menuFor("system_administrators");
     expect(all).toContain("inventory/sales");
     expect(all).toHaveLength(23);

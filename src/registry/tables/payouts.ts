@@ -209,10 +209,6 @@ export const payouts: TableDef = {
         {
           "do": "show",
           "field": "amount"
-        },
-        {
-          "do": "hide",
-          "field": "amount"
         }
       ],
       "dropped": [

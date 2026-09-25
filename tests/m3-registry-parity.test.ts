@@ -75,9 +75,24 @@ describe("registry ↔ WebAuthor export", () => {
     }
   });
 
-  it("has all 49 rules", () => {
+  it("has all 49 rules except the two do-nothing rules removed by decision (SPEC §9 Q4)", () => {
     const exportedRules = Object.values(spec.tables).reduce((n, t) => n + (t.rules?.length ?? 0), 0);
-    expect(REGISTRY.reduce((n, t) => n + t.rules.length, 0)).toBe(exportedRules);
+    expect(exportedRules).toBe(49);
+    const ids = REGISTRY.flatMap((t) => t.rules.map((r) => r.id));
+    expect(ids).toHaveLength(47);
+    expect(ids).not.toContain(3399);
+    expect(ids).not.toContain(3400);
+  });
+
+  it("payroll rule 3600 shows Employee and Amount and no longer hides Amount (SPEC §9 Q6)", () => {
+    expect(getTable("payouts").rules.find((r) => r.id === 3600)!.then).toEqual([
+      { do: "show", field: "employee_id" },
+      { do: "show", field: "amount" },
+    ]);
+  });
+
+  it("Yes/No fields start as No (SPEC §9 Q3)", () => {
+    for (const t of REGISTRY) for (const f of t.fields) if (f.type === "boolean") expect(typeof f.default, `${t.name}.${f.name}`).toBe("boolean");
   });
 });
 
@@ -120,7 +135,7 @@ describe("registry internal consistency", () => {
 
   it("only the known broken WebAuthor rule parts were dropped (SPEC §9 Q4, Q6)", () => {
     const dropped = REGISTRY.flatMap((t) => t.rules.filter((r) => r.dropped).map((r) => r.id)).sort();
-    expect(dropped).toEqual([3372, 3373, 3399, 3400, 3600]);
+    expect(dropped).toEqual([3372, 3373, 3600]);
   });
 
   it("marks the sensitive fields (SPEC §9 Q18)", () => {

@@ -9,7 +9,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { FieldDef, FieldOption, FieldType, LookupFilter, RuleAction, RuleCondition, RuleDef, TableDef } from "../src/registry/types";
-import { COLUMN_RENAMES, NOT_SYSTEM, SENSITIVE, SUBMIT_WORKFLOWS, SYSTEM_COLUMNS, TABLES } from "./lib/registry-names";
+import { COLUMN_RENAMES, NOT_SYSTEM, RULE_FIXES, SENSITIVE, SUBMIT_WORKFLOWS, SYSTEM_COLUMNS, TABLES } from "./lib/registry-names";
 
 type RawField = Record<string, unknown> & {
   id: number;
@@ -207,6 +207,8 @@ function mapField(legacy: string, f: RawField): FieldDef {
     else if (type === "boolean") def.default = dv === "1";
     else def.default = dv;
   }
+  // SPEC §9 Q3: a Yes/No box is never blank — it starts as No, so "= No" rules apply on a new form.
+  if (type === "boolean" && def.default === undefined) def.default = false;
 
   const max = Number(f.maxlength);
   if (TEXTUAL.includes(type) && max > 1) def.maxLength = max;
@@ -406,6 +408,15 @@ for (const [legacy, raw] of Object.entries(spec.tables)) {
   const related = [legacy, ...Object.entries(SECTION_HOST).filter(([, host]) => host === legacy).map(([child]) => child)];
   const pool: Resolved[] = related.flatMap((l) => defs.get(l)!.fields.filter((f) => !f.hidden).map((field) => ({ table: l, field })));
   for (const { table, rule } of parseRules(raw.rules, pool, rawRuleCounts)) defs.get(table)!.rules.push(rule);
+}
+
+// Decided fixes to WebAuthor errors (SPEC §9 Q4, Q6).
+for (const def of defs.values()) {
+  def.rules = def.rules.filter((r) => !(RULE_FIXES.removeRules as readonly number[]).includes(r.id));
+  for (const fix of RULE_FIXES.removeActions) {
+    const rule = def.rules.find((r) => r.id === fix.rule);
+    if (rule) rule.then = rule.then.filter((a) => !(a.do === fix.do && a.field === fix.field));
+  }
 }
 
 // ---------------------------------------------------------------- write files

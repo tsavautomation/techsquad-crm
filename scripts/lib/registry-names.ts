@@ -29,7 +29,7 @@ export const TABLES: Record<string, TableMeta> = {
   },
   fx_techsquad_projects_xmbuildings: { name: "buildings", label: "Buildings / Developments", module: "projects", tab: "buildings", titleFormula: null },
   fx_techsquad_projects_xmpermits: {
-    name: "permits", label: "Permits", module: "projects", tab: "permits", titleFormula: "{type} – {el_permit_number} – {project_id}",
+    name: "permits", label: "Permits", module: "projects", tab: "permits", titleFormula: "{project_id} – {type} – {status}",
   },
   fx_techsquad_projects_xmorganizations: { name: "organizations", label: "Organizations", module: "projects", tab: "organizations", titleFormula: null },
   fx_techsquad_projects_xmpunch_list: {
@@ -73,7 +73,7 @@ export const TABLES: Record<string, TableMeta> = {
   fx_techsquad_util_brand: { name: "brands", label: "Brands", module: "utility", titleFormula: "{name}" },
   fx_techsquad_util_knowledge_base_category: { name: "kb_categories", label: "Knowledge Base Categories", module: "utility", titleFormula: null },
   frx_techsquad_job_report: {
-    name: "job_reports", label: "Job Report", module: "forms", tab: "job-reports", titleFormula: "{project_id} – {date}",
+    name: "job_reports", label: "Job Report", module: "forms", tab: "job-reports", titleFormula: "{project_id} – {team_ids} – {date}",
   },
   frx_techsquad_note: { name: "form_notes", label: "Note", module: "forms", tab: "notes", titleFormula: "{project_id} – {note_type}" },
   frx_techsquad_staff_performance: {
@@ -267,6 +267,15 @@ export const SYSTEM_COLUMNS = new Set([
   "locked",
   "date_submitted",
 ]);
+
+/**
+ * Fixes to WebAuthor errors, decided 2026-09-25 (SPEC §9).
+ * Q4: rules that do nothing are removed. Q6: rule 3600 must not hide Amount.
+ */
+export const RULE_FIXES = {
+  removeRules: [3399, 3400],
+  removeActions: [{ rule: 3600, do: "hide", field: "amount" }],
+} as const;
 
 /** Legacy (table, column) pairs that look like system columns but are real user fields. */
 export const NOT_SYSTEM = new Set(["fx_techsquad_employee_xmrma.date_submitted"]);

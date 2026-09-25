@@ -137,7 +137,8 @@ export const organizations: TableDef = {
         "column": "tax_exempt",
         "fieldId": 66964
       },
-      "startsHidden": true
+      "startsHidden": true,
+      "default": false
     },
     {
       "name": "florida_dr13",

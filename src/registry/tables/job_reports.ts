@@ -9,7 +9,7 @@ export const jobReports: TableDef = {
   "tab": "job-reports",
   "itemLabel": "Record",
   "newRecordLabel": "New Record",
-  "titleFormula": "{project_id} – {date}",
+  "titleFormula": "{project_id} – {team_ids} – {date}",
   "fields": [
     {
       "name": "title",
@@ -173,7 +173,8 @@ export const jobReports: TableDef = {
       "legacy": {
         "column": "maintenance_plan_service_call",
         "fieldId": 68489
-      }
+      },
+      "default": false
     },
     {
       "name": "files",

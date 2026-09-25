@@ -205,7 +205,8 @@ export const projects: TableDef = {
       "legacy": {
         "column": "is_this_project_located_in_a_building_or_developme",
         "fieldId": 67421
-      }
+      },
+      "default": false
     },
     {
       "name": "building_id",
@@ -248,7 +249,8 @@ export const projects: TableDef = {
       "legacy": {
         "column": "project_permit",
         "fieldId": 67457
-      }
+      },
+      "default": false
     },
     {
       "name": "permit_id",
@@ -271,7 +273,8 @@ export const projects: TableDef = {
         "column": "is_there_a_designer_involved",
         "fieldId": 67466
       },
-      "heading": "INDIVIDUALS AND ORGANIZATIONS INVOLVED"
+      "heading": "INDIVIDUALS AND ORGANIZATIONS INVOLVED",
+      "default": false
     },
     {
       "name": "design_firm_id",
@@ -322,7 +325,8 @@ export const projects: TableDef = {
       "legacy": {
         "column": "is_there_a_gg_involved",
         "fieldId": 67468
-      }
+      },
+      "default": false
     },
     {
       "name": "general_contractor_id",
@@ -373,7 +377,8 @@ export const projects: TableDef = {
       "legacy": {
         "column": "is_there_a_builder_or_developer_involved_1",
         "fieldId": 67470
-      }
+      },
+      "default": false
     },
     {
       "name": "builder_developer_id",
@@ -571,7 +576,8 @@ export const projects: TableDef = {
         "column": "warranty",
         "fieldId": 68808
       },
-      "heading": "WARRANTY"
+      "heading": "WARRANTY",
+      "default": false
     },
     {
       "name": "start_date",
@@ -590,7 +596,8 @@ export const projects: TableDef = {
         "column": "maintenance_plan",
         "fieldId": 67482
       },
-      "heading": "MAINTENANCE PLAN"
+      "heading": "MAINTENANCE PLAN",
+      "default": false
     },
     {
       "name": "maintenance_type",
@@ -713,7 +720,8 @@ export const projects: TableDef = {
         "column": "special_order",
         "fieldId": 67491
       },
-      "heading": "EQUIPMENT AND MATERIALS"
+      "heading": "EQUIPMENT AND MATERIALS",
+      "default": false
     },
     {
       "name": "list_items",
@@ -1194,37 +1202,6 @@ export const projects: TableDef = {
           "do": "show",
           "field": "list_items"
         }
-      ]
-    },
-    {
-      "id": 3399,
-      "title": "SILVER PLAN",
-      "when": [
-        {
-          "field": "maintenance_type",
-          "op": "equal",
-          "value": "Silver"
-        }
-      ],
-      "then": [],
-      "dropped": [
-        "action \"[show-field]\" (no target field)",
-        "action \"[hide-field]\" (no target field)"
-      ]
-    },
-    {
-      "id": 3400,
-      "title": "GOLD PLAN",
-      "when": [
-        {
-          "field": "maintenance_type",
-          "op": "equal",
-          "value": "Gold"
-        }
-      ],
-      "then": [],
-      "dropped": [
-        "action \"[show-field]\" (no target field)"
       ]
     },
     {

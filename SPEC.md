@@ -1086,3 +1086,30 @@ These need a decision. Unless you say otherwise, the build will use the proposed
 | Q18 | Sensitive data in plain fields: SSN, Organization *Password*, Project *System Credentials*, Job Report *Login and Passwords*. | Encrypt at rest, mask in the UI, and restrict to groups with Modify rights. |
 | Q19 | Is **System Administrators** a super-user? WebAuthor does not grant SA "Records: Archive" in Projects, for example. | SA = full access everywhere. |
 | Q20 | Carlos Gurgel is only in *Everyone*. He can therefore see Projects, Contacts and so on, but **not** the FLEX forms, Punch List or Tasks, even though triggers email him about punch items and tasks. | Keep as is. Add him to a group if he should have access. |
+
+### 9.1 Decisions (Fred, 2026-09-25)
+
+Overall rule: **fix WebAuthor's errors** rather than copy them. Where no specific answer was given, the proposed default above applies.
+
+| # | Decision | Where it lives |
+|---|---|---|
+| Q1 | Titles: Contacts & Employees "First Last"; **Permit "Project – Type – Status"**; Punch List "Project – Type"; Payroll "Employee – Reason – Date"; Vehicle "Year Make and Model (Tag)"; **Job Report "Project – Technician(s) – Date"**; other tables as proposed. | `titleFormula` in each registry table |
+| Q2 | Clean names, legacy map kept. | registry `legacy` fields |
+| Q3 | Yes/No fields default to No. | registry defaults |
+| Q4 | Rules 3399 / 3400 removed; the empty targets of 3372 / 3373 are ignored. | registry |
+| Q5 | Case-insensitive match; "Service Provider" behaves as in §4.3. | registry rules |
+| Q6 | Rule 3600 shows Employee and Amount; the references to deleted fields are dropped. | registry |
+| Q7 | **Close the date gaps**: Maintenance Active < 335 days, Renewal Alert 335–365, Expired > 365; Permit Active ≤ −31, Renew Soon −30…−1, Expired ≥ 0; COI Active until the day before expiry, Expired ≥ 0; D/L Expired only when the date is in the past. Empty money counts as 0. | automations (M10–M11) |
+| Q8 | Trigger 837 imported **disabled**. | automations (M10) |
+| Q9 | Punch "Scheduled" level writes Status **"Scheduled"**. Trigger 698 still emails but does **not** change Status. | workflows (M9), automations (M10) |
+| Q10 | Stock workflow starts automatically when a Stock record is created. | workflows (M9) |
+| Q11 | Sale gets exactly the grants of Stock. | migration `20260925220000_m3_decisions.sql` |
+| Q12 | Sale Location auto-fill ignored. | registry |
+| Q13 | Driver's-licence scan: Phase 2. | — |
+| Q14 | **Trigger 735 emails saulo@tsav.net** (it was going to lucas@). | automations (M10) |
+| Q15 | Per-person email triggers ported one-to-one as editable data. | automations (M10) |
+| Q16 | Punch List Team = one employee. | registry |
+| Q17 | Employee Departments = checkboxes. | registry |
+| Q18 | Sensitive fields encrypted and masked. | registry `sensitive`, schema (M4) |
+| Q19 | **System Administrators have full access everywhere.** | `app.is_sysadmin()` (M2) |
+| Q20 | Carlos unchanged; not invited yet (nor Mike Meyer). | `scripts/data/users.ts` |

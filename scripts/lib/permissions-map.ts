@@ -254,5 +254,19 @@ export function buildPermissions(spec: SpecJson): PermissionRow[] {
     });
   }
 
+  applyPermissionFixes(rows);
   return [...rows.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
+
+/**
+ * Fixes to WebAuthor permission errors, decided 2026-09-25 (SPEC §9 Q11):
+ * Inventory › Sale was granted to nobody; it gets the same grants as Stock.
+ * Applied to the database by migration 20260925220000_m3_decisions.sql.
+ */
+function applyPermissionFixes(rows: Map<string, PermissionRow>) {
+  for (const row of rows.values()) {
+    if (row.module !== "inventory" || row.resource !== "sales") continue;
+    const stock = rows.get(`inventory.stock.${row.action}`);
+    if (stock) row.groups = [...new Set([...row.groups, ...stock.groups])];
+  }
 }

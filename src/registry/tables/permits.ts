@@ -9,7 +9,7 @@ export const permits: TableDef = {
   "tab": "permits",
   "itemLabel": "Permit",
   "newRecordLabel": "New Permit",
-  "titleFormula": "{type} – {el_permit_number} – {project_id}",
+  "titleFormula": "{project_id} – {type} – {status}",
   "fields": [
     {
       "name": "title",
