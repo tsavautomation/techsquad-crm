@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/auth/session";
 import { visibleModules } from "@/config/modules";
 import { BottomNav, Sidebar, type NavItem } from "@/components/shell/nav";
 import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
+import { ADMIN_SCREENS, canSeeScreen } from "@/lib/admin/screens";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
@@ -12,6 +14,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     shortTitle: m.shortTitle,
     icon: m.icon,
   }));
+  const showAdmin = ADMIN_SCREENS.some((s) => canSeeScreen(s, user.permissions, user.isSysadmin));
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
 
   return (
@@ -22,6 +25,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </Link>
         <div className="flex items-center gap-3">
           <span className="hidden text-sm text-muted-foreground sm:inline">{displayName}</span>
+          {showAdmin && (
+            <Link href="/admin" aria-label="Admin" title="Admin" className="inline-flex size-10 items-center justify-center rounded-lg hover:bg-muted">
+              <Settings className="size-5" aria-hidden />
+            </Link>
+          )}
           <form action="/auth/signout" method="post">
             <Button type="submit" variant="outline" size="sm">
               Sign out

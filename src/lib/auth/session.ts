@@ -9,6 +9,8 @@ export type CurrentUser = {
   firstName: string | null;
   lastName: string | null;
   permissions: ReadonlySet<string>;
+  /** Member of the active System Administrators group (bypasses every permission check). */
+  isSysadmin: boolean;
 };
 
 type SessionState = { status: "signed-out" } | { status: "inactive" } | { status: "active"; user: CurrentUser };
@@ -23,9 +25,10 @@ export const getSession = cache(async (): Promise<SessionState> => {
   const userId = claimsData?.claims?.sub;
   if (!userId) return { status: "signed-out" };
 
-  const [{ data: profile }, { data: permissions, error }] = await Promise.all([
+  const [{ data: profile }, { data: permissions, error }, { data: sysadmin }] = await Promise.all([
     supabase.from("profiles").select("email, first_name, last_name, active").eq("id", userId).maybeSingle(),
     supabase.rpc("my_permissions"),
+    supabase.from("group_members").select("group_id, groups!inner(slug, active)").eq("user_id", userId).eq("groups.slug", "system_administrators").eq("groups.active", true),
   ]);
   if (error) throw new Error(`Could not load permissions: ${error.message}`);
   if (!profile?.active) return { status: "inactive" };
@@ -38,6 +41,7 @@ export const getSession = cache(async (): Promise<SessionState> => {
       firstName: profile.first_name,
       lastName: profile.last_name,
       permissions: new Set((permissions as string[] | null) ?? []),
+      isSysadmin: Boolean(sysadmin?.length),
     },
   };
 });

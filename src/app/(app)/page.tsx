@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { visibleModules } from "@/config/modules";
 import { requireUser } from "@/lib/auth/session";
+import { DashboardWidgets } from "@/components/dashboard/widgets";
+import { ADMIN_SCREENS, canSeeScreen } from "@/lib/admin/screens";
 import { ModuleIcon } from "@/components/shell/module-icon";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -11,6 +13,11 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="mb-4 text-2xl font-semibold">Dashboard</h1>
+      {modules.length > 0 && (
+        <div className="mb-6">
+          <DashboardWidgets user={user} />
+        </div>
+      )}
       {modules.length === 0 ? (
         <p className="text-muted-foreground">
           You don&apos;t have access to any modules yet. Ask an administrator to add you to a group.
@@ -38,20 +45,12 @@ export default async function DashboardPage() {
         </Link>{" "}
         <span className="text-muted-foreground">: Brands, Suppliers, Knowledge Base Categories</span>
       </p>
-      {user.permissions.has("projects.module.design_design") && (
+      {ADMIN_SCREENS.some((s) => canSeeScreen(s, user.permissions, user.isSysadmin)) && (
         <p className="mt-2 text-sm">
-          <Link href="/admin/catalogue" className="underline underline-offset-4">
-            Field catalogue
+          <Link href="/admin" className="underline underline-offset-4">
+            Admin
           </Link>{" "}
-          <span className="text-muted-foreground">: every table, field and rule carried over from WebAuthor</span>
-        </p>
-      )}
-      {user.permissions.has("projects.module.design_triggers") && (
-        <p className="mt-2 text-sm">
-          <Link href="/admin/automations" className="underline underline-offset-4">
-            Automations
-          </Link>{" "}
-          <span className="text-muted-foreground">: what runs when records change, the run log and sent emails</span>
+          <span className="text-muted-foreground">: users, groups, permissions, form settings, automations</span>
         </p>
       )}
     </div>

@@ -67,6 +67,18 @@ declare
     ["sa",       "insert into public.sales (id) values (900701)", "ok"],
     ["tech",     "insert into public.sales (id) values (900702)", "error"],
 
+    ["admin",    "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000001' from public.groups where slug = 'project_manager'", "ok"],
+    ["admin",    "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000001' from public.groups where slug = 'system_administrators'", "error"],
+    ["admin",    "delete from public.group_members where user_id = '00000000-0000-4000-a000-000000000007'", "none"],
+    ["admin",    "update public.groups set name = 'Renamed' where slug = 'system_administrators'", "none"],
+    ["admin",    "update public.groups set active = false where slug = 'test'", "ok"],
+    ["tech",     "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000001' from public.groups where slug = 'admin'", "error"],
+    ["tech",     "update public.profiles set active = false where id = '00000000-0000-4000-a000-000000000004'", "none"],
+    ["tech",     "select count(*) from public.user_last_sign_in()", "rows=0"],
+    ["admin",    "delete from public.group_permissions where permission_key like 'projects.projects.%'", "none"],
+    ["sa",       "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000004' from public.groups where slug = 'system_administrators'", "ok"],
+    ["admin",    "update public.profiles set first_name = 'Renamed' where id = '00000000-0000-4000-a000-000000000004'", "ok"],
+
     [null,       "update public.profiles set active = false where id = '00000000-0000-4000-a000-000000000001'", "ok"],
     ["tech",     "select count(*) from public.projects where id = 900001", "rows=0"]
   ]$steps$;

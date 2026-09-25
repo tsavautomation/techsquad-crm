@@ -3640,6 +3640,13 @@ export type Database = {
           project_id: number
         }[]
       }
+      user_last_sign_in: {
+        Args: never
+        Returns: {
+          id: string
+          last_sign_in_at: string
+        }[]
+      }
       workflow_move: {
         Args: {
           p_comment?: string

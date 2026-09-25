@@ -16,8 +16,9 @@ export type OutboxAttachment = { kind: "record_pdf" } | { kind: "file"; path: st
 
 export type QueuedEmail = {
   automationId: number | null;
-  table: string;
-  recordId: number;
+  /** The record the email is about; null for system email such as sign-up links. */
+  table: string | null;
+  recordId: number | null;
   from: string;
   to: string[];
   cc?: string[];
@@ -78,8 +79,8 @@ export async function queueEmail(db: SupabaseClient, e: QueuedEmail): Promise<st
 
 type OutboxRow = {
   id: string;
-  table_name: string;
-  record_id: number;
+  table_name: string | null;
+  record_id: number | null;
   from_address: string;
   to_addresses: string[];
   cc_addresses: string[];
@@ -132,7 +133,7 @@ export async function deliver(db: SupabaseClient, id: string): Promise<{ ok: boo
   let budget = MAX_ATTACH_BYTES;
   for (const a of m.attachments ?? []) {
     if (a.kind === "record_pdf") {
-      const pdf = await buildRecordPdf(db, m.table_name, m.record_id);
+      const pdf = m.table_name && m.record_id ? await buildRecordPdf(db, m.table_name, m.record_id) : null;
       if (pdf) {
         attachments.push(pdf);
         budget -= pdf.content.length * 0.75;

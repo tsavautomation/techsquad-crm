@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { DashboardWidgets } from "@/components/dashboard/widgets";
 import { visibleModules } from "@/config/modules";
 import { requireUser } from "@/lib/auth/session";
 import { REGISTRY } from "@/registry";
@@ -19,10 +20,16 @@ export default async function ModulePage(props: PageProps<"/[module]">) {
   // A module the user can't see is treated as not found, so it doesn't reveal what exists.
   const mod = visibleModules(user.permissions).find((m) => m.slug === slug);
   if (!mod) notFound();
-  return <TabList title={mod.title} items={mod.tabs.map((t) => ({ href: `/${mod.slug}/${t.slug}`, title: t.title }))} />;
+  return (
+    <TabList title={mod.title} items={mod.tabs.map((t) => ({ href: `/${mod.slug}/${t.slug}`, title: t.title }))}>
+      <div className="mt-6">
+        <DashboardWidgets user={user} module={mod.slug} />
+      </div>
+    </TabList>
+  );
 }
 
-function TabList({ title, items }: { title: string; items: { href: string; title: string }[] }) {
+function TabList({ title, items, children }: { title: string; items: { href: string; title: string }[]; children?: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-4 text-2xl font-semibold">{title}</h1>
@@ -36,6 +43,7 @@ function TabList({ title, items }: { title: string; items: { href: string; title
           </li>
         ))}
       </ul>
+      {children}
     </div>
   );
 }
