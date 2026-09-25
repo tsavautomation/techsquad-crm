@@ -32,8 +32,14 @@ export default async function DashboardPage() {
           ))}
         </div>
       )}
+      <p className="mt-6 text-sm">
+        <Link href="/lists" className="underline underline-offset-4">
+          Lists
+        </Link>{" "}
+        <span className="text-muted-foreground">: Brands, Suppliers, Knowledge Base Categories</span>
+      </p>
       {user.permissions.has("projects.module.design_design") && (
-        <p className="mt-6 text-sm">
+        <p className="mt-2 text-sm">
           <Link href="/admin/catalogue" className="underline underline-offset-4">
             Field catalogue
           </Link>{" "}
