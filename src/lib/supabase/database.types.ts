@@ -2524,6 +2524,30 @@ export type Database = {
           },
         ]
       }
+      scheduled_runs: {
+        Row: {
+          finished_at: string | null
+          key: string
+          kind: string
+          result: Json | null
+          started_at: string
+        }
+        Insert: {
+          finished_at?: string | null
+          key: string
+          kind: string
+          result?: Json | null
+          started_at?: string
+        }
+        Update: {
+          finished_at?: string | null
+          key?: string
+          kind?: string
+          result?: Json | null
+          started_at?: string
+        }
+        Relationships: []
+      }
       staff_performance: {
         Row: {
           archived_at: string | null
@@ -3599,6 +3623,12 @@ export type Database = {
           record_id: number
           table_name: string
           workflow_id: string
+        }[]
+      }
+      orphan_uploads: {
+        Args: { p_hours: number }
+        Returns: {
+          name: string
         }[]
       }
       project_financials: {

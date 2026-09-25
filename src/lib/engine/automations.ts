@@ -1,12 +1,15 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { todayET } from "@/lib/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
+import { cleanupOrphanUploads } from "./cleanup";
 import { conditionsMatch, eventsForChange, renderTokens, type Conditions } from "./conditions";
-import { cardHtml, deliver, queueEmail, type OutboxAttachment } from "./email";
-import { cardFields, displayStrings, loadEngineRecord, type EngineRecord } from "./record-view";
+import { cardHtml, deliver, deliverQueued, queueEmail, type OutboxAttachment } from "./email";
+import { cardFields, displayStrings, loadConditionValues, loadEngineRecord, type EngineRecord } from "./record-view";
+import { etSlot, runKeys } from "./schedule";
 
 // Automations engine (SPEC §5). Data-driven: every WebAuthor trigger is a row in public.automations.
 //
@@ -126,8 +129,8 @@ async function logRun(db: SupabaseClient, a: Automation, recordId: number, event
 }
 
 /** Check one automation against one record and run it if the conditions hold. */
-async function apply(db: SupabaseClient, a: Automation, t: TableDef, rec: EngineRecord, event: string) {
-  if (!conditionsMatch(a.conditions, rec.values)) return;
+async function apply(db: SupabaseClient, a: Automation, t: TableDef, rec: EngineRecord, event: string, today: string = todayET()) {
+  if (!conditionsMatch(a.conditions, rec.values, today)) return;
   try {
     const did = await runActions(db, a, t, rec);
     if (did.length) await logRun(db, a, rec.id, event, "done", { actions: did });
@@ -184,22 +187,78 @@ export async function processPendingEvents(limit = 50): Promise<{ processed: num
   return { processed: rows.length };
 }
 
-/** Scheduled check ('daily' / 'hourly'): every live record of each table with such an automation. */
-export async function runScheduled(kind: "daily" | "hourly"): Promise<{ checked: number }> {
+/**
+ * Scheduled check ('daily' / 'hourly'): every live, unarchived record of each table with such an
+ * automation (SPEC §9.1 M11-a). Conditions are tested on values loaded in bulk; only matching
+ * records are reloaded in full and run. Re-running is harmless: updates only write real changes.
+ */
+export async function runScheduled(kind: "daily" | "hourly", today: string = todayET()): Promise<{ checked: number; matched: number }> {
   const db = adminDb();
   const autos = (await activeAutomations(db)).filter((a) => a.events.includes(kind));
   let checked = 0;
+  let matched = 0;
   for (const table of new Set(autos.map((a) => a.table_name))) {
     const t = getTable(table);
-    const { data } = await db.from(table).select("id").is("deleted_at", null).order("id");
-    for (const { id } of (data ?? []) as { id: number }[]) {
-      const rec = await loadEngineRecord(db, t, id);
-      if (!rec) continue;
+    const tableAutos = autos.filter((x) => x.table_name === table);
+    for (const { id, values } of await loadConditionValues(db, t)) {
       checked++;
-      for (const a of autos.filter((x) => x.table_name === table)) await apply(db, a, t, rec, kind);
+      const due = tableAutos.filter((a) => conditionsMatch(a.conditions, values, today));
+      if (!due.length) continue;
+      const rec = await loadEngineRecord(db, t, id);
+      if (!rec || rec.deleted) continue;
+      for (const a of due) {
+        matched++;
+        await apply(db, a, t, rec, kind, today);
+      }
     }
   }
-  return { checked };
+  return { checked, matched };
+}
+
+/** Claim a scheduled slot (e.g. "daily:2026-09-25"). False when another call already ran it. */
+export async function claimRun(db: SupabaseClient, key: string): Promise<boolean> {
+  const { error } = await db.from("scheduled_runs").insert({ key, kind: key.split(":")[0] });
+  if (!error) return true;
+  if (error.code === "23505") return false; // already claimed
+  throw new Error(`Could not claim ${key}: ${error.message}`);
+}
+
+async function finishRun(db: SupabaseClient, key: string, result: Record<string, unknown>) {
+  await db.from("scheduled_runs").update({ finished_at: new Date().toISOString(), result }).eq("key", key);
+}
+
+/**
+ * The timer's entry point: run the hourly and daily checks if their current Eastern-time slot
+ * hasn't run yet, catch up on change history, retry queued email and (daily) tidy storage.
+ */
+export async function tick(now: Date = new Date()): Promise<Record<string, unknown>> {
+  const db = adminDb();
+  const keys = runKeys(now);
+  const today = etSlot(now).date;
+  const out: Record<string, unknown> = { events: await processPendingEvents() };
+
+  if (await claimRun(db, keys.daily)) {
+    try {
+      const daily = { ...(await runScheduled("daily", today)), cleanup: await cleanupOrphanUploads(db) };
+      await finishRun(db, keys.daily, daily);
+      out.daily = daily;
+    } catch (e) {
+      await finishRun(db, keys.daily, { error: e instanceof Error ? e.message : String(e) });
+      throw e;
+    }
+  }
+  if (await claimRun(db, keys.hourly)) {
+    try {
+      const hourly = await runScheduled("hourly", today);
+      await finishRun(db, keys.hourly, hourly);
+      out.hourly = hourly;
+    } catch (e) {
+      await finishRun(db, keys.hourly, { error: e instanceof Error ? e.message : String(e) });
+      throw e;
+    }
+  }
+  await deliverQueued(db);
+  return out;
 }
 
 /** Called from server actions via next/server after(): never lets an automation problem break a save. */

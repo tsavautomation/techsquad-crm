@@ -12,7 +12,8 @@ export const metadata = { title: "Automations" };
 
 type AutomationRow = { id: number; table_name: string; title: string; active: boolean; events: string[]; conditions: Conditions; actions: Action[]; notes: string | null };
 type RunRow = { id: number; automation_id: number; table_name: string; record_id: number; event: string; status: string; detail: { actions?: string[]; error?: string }; at: string };
-type EmailRow = { id: string; subject: string; to_addresses: string[]; status: string; test_mode: boolean; error: string | null; created_at: string; table_name: string | null; record_id: number | null };
+type SlotRow = { key: string; kind: string; started_at: string; finished_at: string | null; result: { checked?: number; matched?: number; error?: string; cleanup?: { removed: number } } | null };
+type EmailRow ={ id: string; subject: string; to_addresses: string[]; status: string; test_mode: boolean; error: string | null; created_at: string; table_name: string | null; record_id: number | null };
 
 const TABLES = new Map(REGISTRY.map((t) => [t.name, t]));
 
@@ -36,10 +37,11 @@ export default async function AutomationsPage() {
   const user = await requireUser();
   if (!user.permissions.has("projects.module.design_triggers")) notFound();
   const db = await createClient();
-  const [{ data: autos }, { data: runs }, { data: emails }] = await Promise.all([
+  const [{ data: autos }, { data: runs }, { data: emails }, { data: slots }] = await Promise.all([
     db.from("automations").select("*").order("table_name").order("id"),
     db.from("automation_runs").select("*").order("id", { ascending: false }).limit(50),
     db.from("email_outbox").select("id, subject, to_addresses, status, test_mode, error, created_at, table_name, record_id").order("created_at", { ascending: false }).limit(30),
+    db.from("scheduled_runs").select("*").order("started_at", { ascending: false }).limit(10),
   ]);
   const automations = (autos ?? []) as unknown as AutomationRow[];
   const titles = new Map(automations.map((a) => [a.id, a.title]));
@@ -50,8 +52,8 @@ export default async function AutomationsPage() {
     <div className="mx-auto max-w-5xl">
       <h1 className="text-2xl font-semibold">Automations</h1>
       <p className="mt-1 mb-2 text-sm text-muted-foreground">
-        The {automations.length} WebAuthor triggers ({automations.filter((a) => a.active).length} active). They run right after a record is saved; daily and hourly
-        checks run on a schedule. Read-only for now.
+        The {automations.length} WebAuthor triggers ({automations.filter((a) => a.active).length} active). They run right after a record is saved; daily checks run
+        just after midnight (Eastern) and hourly checks every hour. Read-only for now.
       </p>
       {testMode && (
         <p className="mb-6 rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
@@ -93,6 +95,29 @@ export default async function AutomationsPage() {
           </section>
         );
       })}
+
+      <section className="mb-8">
+        <h2 className="mb-2 text-lg font-semibold">Scheduled checks</h2>
+        {!slots?.length ? (
+          <p className="text-sm text-muted-foreground">No scheduled check has run yet.</p>
+        ) : (
+          <ul className="divide-y rounded-lg border text-sm">
+            {(slots as unknown as SlotRow[]).map((s) => (
+              <li key={s.key} className="flex flex-wrap justify-between gap-x-3 p-3">
+                <span className="font-medium">{s.kind === "daily" ? "Daily" : "Hourly"} check</span>
+                <span className="text-xs text-muted-foreground">{formatDateTime(s.started_at)}</span>
+                <span className={`w-full ${s.result?.error ? "text-destructive" : "text-muted-foreground"}`}>
+                  {!s.finished_at
+                    ? "running…"
+                    : s.result?.error
+                      ? String(s.result.error)
+                      : `${s.result?.checked ?? 0} records checked, ${s.result?.matched ?? 0} matched${s.result?.cleanup ? `, ${s.result.cleanup.removed} abandoned uploads removed` : ""}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="mb-8">
         <h2 className="mb-2 text-lg font-semibold">Recent runs</h2>

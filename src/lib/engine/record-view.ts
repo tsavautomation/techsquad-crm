@@ -56,6 +56,50 @@ export async function loadEngineRecord(db: SupabaseClient, t: TableDef, id: numb
   return { id, values, files, title: (row.title as string | null) ?? null, deleted: Boolean(row.deleted_at) };
 }
 
+const PAGE = 1000; // PostgREST's default row cap
+
+/** Every row of a query, page by page. */
+async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < PAGE) return out;
+  }
+}
+
+/**
+ * Values of every live, unarchived record of a table in a few queries (scheduled checks).
+ * Enough to test conditions; files are not loaded, so matches are reloaded in full before running actions.
+ */
+export async function loadConditionValues(db: SupabaseClient, t: TableDef): Promise<{ id: number; values: Values }[]> {
+  const rows = await fetchAll<Record<string, unknown>>((a, b) => db.from(t.name).select("*").is("deleted_at", null).is("archived_at", null).order("id").range(a, b));
+  const byId = new Map(rows.map((r) => [r.id as number, { ...r } as Values]));
+  for (const f of t.fields.filter((x) => x.sensitive)) for (const v of byId.values()) delete v[f.name];
+
+  for (const f of t.fields.filter(isMultiLookup)) {
+    for (const v of byId.values()) v[f.name] = [];
+    const links = await fetchAll<{ record_id: number; target_id: number }>((a, b) => db.from(joinTable(t, f)).select("record_id, target_id").order("record_id").range(a, b));
+    for (const l of links) (byId.get(l.record_id)?.[f.name] as number[] | undefined)?.push(l.target_id);
+  }
+
+  const computed = t.fields.filter((x) => x.computed);
+  if (computed.length) {
+    for (const v of byId.values()) for (const f of computed) v[f.name] = 0;
+    const tx = await fetchAll<{ project_id: number; type: string; amount: number }>((a, b) =>
+      db.from("transactions").select("id, project_id, type, amount").eq("payment_type", "Apply to Project").is("deleted_at", null).not("project_id", "is", null).order("id").range(a, b),
+    );
+    for (const x of tx) {
+      const v = byId.get(x.project_id);
+      if (!v) continue;
+      for (const f of computed.filter((c) => c.computed!.where.type === x.type)) v[f.name] = Number(v[f.name]) + Number(x.amount ?? 0);
+    }
+  }
+  return [...byId.entries()].map(([id, values]) => ({ id, values }));
+}
+
 /** Human-readable value of every field (for email cards, PDFs and subject tokens). */
 export async function displayStrings(db: SupabaseClient, t: TableDef, rec: EngineRecord): Promise<Record<string, string>> {
   const out: Record<string, string> = {};

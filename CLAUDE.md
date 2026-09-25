@@ -41,7 +41,7 @@ Replacement for the WebAuthor CRM at techsquad.webauthor.com.
   6. workflow effects
 
   Engines use the same path, so their changes are audited too.
-- **Scheduled triggers**: Vercel Cron hits `/api/cron/daily` (00:00 America/New_York) and `/api/cron/hourly`. Both are protected by `CRON_SECRET` and must be idempotent.
+- **Scheduled triggers**: Supabase pg_cron (job `crm-tick`, hourly at :01) calls `/api/cron/tick` through pg_net; Vercel Cron (`vercel.json`, daily 05:15 UTC) is a backup, since Hobby allows one cron a day. The tick runs each Eastern-time slot once (`scheduled_runs` keys `daily:<date>` / `hourly:<date>T<hh>`). Protected by `CRON_SECRET`; everything must be idempotent. The URL and secret live in Supabase Vault (`crm_cron_url`, `crm_cron_secret`); set them again on the production project (M13). `/api/cron/daily|hourly|events` run a check on demand.
 - **Files**: one `attachments` table (table, record_id, field, provider, provider_path, name, mime, size).
   - Phase 1 provider = `supabase`; Phase 2 adds `onedrive` / `gdrive` without touching domain tables.
   - Upload **directly from the browser** (signed upload URLs / resumable sessions). Never stream file bodies through a Vercel function (4.5 MB request limit; iPhone videos are large).
