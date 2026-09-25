@@ -10,7 +10,7 @@ import { evaluateRules, type Values } from "@/lib/rules/evaluate";
 import { isEditable } from "@/lib/records/values";
 import { cn } from "@/lib/utils";
 import type { TableDef } from "@/registry/types";
-import { FieldInput } from "./field-input";
+import { FieldInput, type FieldContext } from "./field-input";
 
 type Props = {
   table: TableDef;
@@ -19,13 +19,15 @@ type Props = {
   /** List URL of the table; the saved record opens at `${baseHref}/${id}`. */
   baseHref: string;
   cancelHref: string;
-  /** Field-level problems already known on the server (e.g. read-only fields). */
+  /** Labels for ids already in the form (linked records, users, groups), by field. */
+  labels?: Record<string, Record<string, string>>;
   lockedMessage?: string;
 };
 
-export function RecordForm({ table, recordId, initialValues, baseHref, cancelHref, lockedMessage }: Props) {
+export function RecordForm({ table, recordId, initialValues, baseHref, cancelHref, labels: initialLabels = {}, lockedMessage }: Props) {
   const router = useRouter();
   const [values, setValues] = useState<Values>(initialValues);
+  const [labels, setLabels] = useState(initialLabels);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
@@ -47,7 +49,7 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
     startTransition(async () => {
       const result = await saveRecordAction(table.name, recordId, rules.values);
       if (result.ok) {
-        toast.success(recordId ? "Saved" : `${table.itemLabel} created`);
+        toast.success(recordId ? "Saved" : "Created");
         router.push(`${baseHref}/${result.id}`);
         router.refresh();
         return;
@@ -59,6 +61,17 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
       if (first) document.getElementById(`f-${first}`)?.focus();
     });
   }
+
+  const ctx: FieldContext = {
+    table: table.name,
+    recordId,
+    form: rules.values,
+    labels,
+    setMany: (v, l) => {
+      setValues((prev) => ({ ...prev, ...v }));
+      if (l) setLabels((prev) => ({ ...prev, ...Object.fromEntries(Object.entries(l).map(([k, m]) => [k, { ...prev[k], ...m }])) }));
+    },
+  };
 
   const fields = table.fields.filter((f) => rules.visible.has(f.name) && !(table.parent && f.name === table.parent.field));
 
@@ -75,7 +88,7 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
               {f.label}
               {rules.required.has(f.name) && <span className="text-destructive"> *</span>}
             </label>
-            <FieldInput field={f} value={rules.values[f.name]} onChange={(v) => update(f.name, v)} invalid={Boolean(err)} disabled={!editable || pending} />
+            <FieldInput ctx={ctx} field={f} value={rules.values[f.name]} onChange={(v) => update(f.name, v)} invalid={Boolean(err)} disabled={!editable || pending} />
             {err && (
               <p role="alert" className="text-sm text-destructive">
                 {err}
@@ -93,7 +106,7 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
         )}
       >
         <Button type="submit" className="h-11 flex-1 md:flex-none md:px-8" disabled={pending}>
-          {pending ? "Saving…" : recordId ? "Save" : `Create ${table.itemLabel.toLowerCase()}`}
+          {pending ? "Saving…" : recordId ? "Save" : `Create ${table.newRecordLabel.replace(/^New /, "").toLowerCase()}`}
         </Button>
         <Link href={cancelHref} className={cn(buttonVariants({ variant: "outline" }), "h-11 flex-1 md:flex-none md:px-6")}>
           Cancel

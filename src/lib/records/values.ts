@@ -14,10 +14,14 @@ export function isRowField(f: FieldDef) {
   return !NOT_IN_ROW.includes(f.type) && !((f.type === "lookup" || f.type === "group") && f.multiple);
 }
 
-/** Field types the M5 form can edit; the rest arrive in M6. */
+/** An uploaded file in form state. `id` is set once it is saved as an attachment. */
+export type FileItem = { id?: string; path: string; name: string; mime: string | null; size: number | null; url?: string };
+
+/** Field types the form can edit (computed values are calculated, never typed in). */
 export const EDITABLE_TYPES: FieldDef["type"][] = [
   "text",
   "textarea",
+  "richtext",
   "select",
   "radio",
   "checkboxes",
@@ -30,16 +34,27 @@ export const EDITABLE_TYPES: FieldDef["type"][] = [
   "email",
   "url",
   "address",
+  "lookup",
+  "user",
+  "group",
+  "file",
+  "image",
+  "signature",
+  "ssn",
+  "ein",
 ];
+
+export const UPLOAD_TYPES: FieldDef["type"][] = ["file", "image", "signature"];
+export const isUpload = (f: FieldDef) => UPLOAD_TYPES.includes(f.type);
+export const isMultiLookup = (f: FieldDef) => (f.type === "lookup" || f.type === "group") && Boolean(f.multiple);
 
 export function isEditable(f: FieldDef) {
   return EDITABLE_TYPES.includes(f.type) && !f.readOnly && !f.hidden;
 }
-
 export function newRecordValues(t: TableDef, today: string = todayET()): Values {
   const v: Values = {};
   for (const f of t.fields) {
-    if (f.type === "checkboxes") v[f.name] = [];
+    if (f.type === "checkboxes" || isUpload(f) || isMultiLookup(f)) v[f.name] = [];
     else if (f.type === "boolean") v[f.name] = f.default === true;
     else if (f.default === "today") v[f.name] = today;
     else if (f.default === "now") v[f.name] = new Date().toISOString();
@@ -96,6 +111,16 @@ export function validate(t: TableDef, values: Values, rules: RuleResult, today: 
         break;
       case "datetime":
         if (Number.isNaN(Date.parse(String(v)))) errors[f.name] = "Enter a date and time";
+        break;
+      case "ssn":
+        if (String(v).replace(/\D/g, "").length !== 9) errors[f.name] = "Enter 9 digits";
+        break;
+      case "ein":
+        if (String(v).replace(/\D/g, "").length !== 9) errors[f.name] = "Enter the 9-digit EIN";
+        break;
+      case "lookup":
+      case "group":
+        if (f.multiple ? !Array.isArray(v) || v.some((x) => typeof x !== "number") : typeof v !== "number") errors[f.name] = "Choose from the list";
         break;
     }
     if (errors[f.name]) continue;

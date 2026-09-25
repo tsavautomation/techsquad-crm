@@ -1,16 +1,31 @@
 "use client";
 
 import { fromDateTimeLocalET, toDateTimeLocalET } from "@/lib/dates";
-import type { Address } from "@/lib/records/values";
+import type { Values } from "@/lib/rules/evaluate";
+import type { Address, FileItem } from "@/lib/records/values";
 import { cn } from "@/lib/utils";
 import type { FieldDef } from "@/registry/types";
+import { FileField } from "./file-field";
+import { LookupPicker } from "./lookup-picker";
+import { RichTextEditor } from "./rich-text-editor";
+import { SignaturePad } from "./signature-pad";
 
 // Native inputs: on iPhone they bring up the right keyboard, date wheel and picker.
 // text-base (16px) stops Safari zooming in on focus; h-11 = 44px tap targets.
 const BOX =
   "w-full rounded-lg border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 aria-invalid:border-destructive";
 
+/** What some inputs need beyond their own value. */
+export type FieldContext = {
+  table: string;
+  recordId: number | null;
+  form: Values;
+  labels: Record<string, Record<string, string>>;
+  setMany: (v: Values, labels?: Record<string, Record<string, string>>) => void;
+};
+
 type Props = {
+  ctx: FieldContext;
   field: FieldDef;
   value: unknown;
   onChange: (v: unknown) => void;
@@ -18,7 +33,7 @@ type Props = {
   disabled?: boolean;
 };
 
-export function FieldInput({ field: f, value, onChange, invalid, disabled }: Props) {
+export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }: Props) {
   const id = `f-${f.name}`;
   const common = { id, name: f.name, disabled, "aria-invalid": invalid || undefined };
   const str = typeof value === "string" ? value : value === null || value === undefined ? "" : String(value);
@@ -162,27 +177,59 @@ export function FieldInput({ field: f, value, onChange, invalid, disabled }: Pro
       );
     }
 
-    default:
+    case "lookup":
+    case "user":
+    case "group":
       return (
-        <p className="rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground">
-          {TYPE_SOON[f.type] ?? "This field type"} arrives in the next update (M6).
-        </p>
+        <LookupPicker
+          table={ctx.table}
+          field={f}
+          value={value}
+          onChange={onChange}
+          form={ctx.form}
+          labels={ctx.labels[f.name] ?? {}}
+          onAutofill={ctx.setMany}
+          disabled={disabled}
+          invalid={invalid}
+        />
       );
+
+    case "file":
+    case "image":
+      return <FileField table={ctx.table} recordId={ctx.recordId} field={f} value={value} onChange={(v: FileItem[]) => onChange(v)} disabled={disabled} />;
+
+    case "signature":
+      return <SignaturePad table={ctx.table} recordId={ctx.recordId} field={f} value={value} onChange={(v: FileItem[]) => onChange(v)} disabled={disabled} />;
+
+    case "richtext":
+      return <RichTextEditor id={id} value={str || null} onChange={onChange} disabled={disabled} invalid={invalid} />;
+
+    case "ssn":
+    case "ein": {
+      // SSN ###-##-####, EIN ##-####### (stored as 9 digits).
+      const digits = str.replace(/\D/g, "").slice(0, 9);
+      const shown =
+        f.type === "ssn"
+          ? [digits.slice(0, 3), digits.slice(3, 5), digits.slice(5)].filter(Boolean).join("-")
+          : [digits.slice(0, 2), digits.slice(2)].filter(Boolean).join("-");
+      return (
+        <input
+          {...common}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder={f.type === "ssn" ? "###-##-####" : "##-#######"}
+          className={cn(BOX, "h-11 tracking-wider")}
+          value={shown}
+          onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 9))}
+        />
+      );
+    }
+
+    default:
+      return <p className="rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground">Calculated automatically.</p>;
   }
 }
-
-const TYPE_SOON: Partial<Record<FieldDef["type"], string>> = {
-  lookup: "Choosing a linked record",
-  user: "Choosing a user",
-  group: "Choosing user groups",
-  file: "File upload",
-  image: "Image upload",
-  signature: "Signature",
-  richtext: "Rich text editing",
-  ssn: "SSN entry",
-  ein: "EIN entry",
-};
-
 function Choice({
   selected,
   onClick,
