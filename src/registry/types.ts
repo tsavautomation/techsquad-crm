@@ -28,7 +28,8 @@ export type FieldType =
   | "ein"
   | "computed";
 
-export type FieldOption = { label: string; value: string; color?: string };
+/** `retired` (Form settings, M12): no longer offered for new choices; existing records keep and show it. */
+export type FieldOption = { label: string; value: string; color?: string; retired?: boolean };
 
 /** Filter applied to a lookup picker: fixed values, or the current value of another field on this form. */
 export type LookupFilter = Record<string, string | string[] | { sameAs: string }>;
@@ -73,6 +74,8 @@ export type FieldDef = {
   maxLength?: number;
   pattern?: string;
   placeholder?: string;
+  /** Help text under the field (Form settings, M12). */
+  help?: string;
   notFuture?: boolean;
   fileTypes?: string[];
   computed?: ComputedDef;

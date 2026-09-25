@@ -744,6 +744,50 @@ export type Database = {
           },
         ]
       }
+      field_settings: {
+        Row: {
+          field_name: string
+          help: string | null
+          label: string | null
+          options: Json | null
+          required: boolean | null
+          sort_order: number | null
+          table_name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          field_name: string
+          help?: string | null
+          label?: string | null
+          options?: Json | null
+          required?: boolean | null
+          sort_order?: number | null
+          table_name: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          field_name?: string
+          help?: string | null
+          label?: string | null
+          options?: Json | null
+          required?: boolean | null
+          sort_order?: number | null
+          table_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_notes: {
         Row: {
           archived_at: string | null

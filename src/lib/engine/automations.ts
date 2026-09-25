@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ensureFieldSettings } from "@/lib/admin/field-settings";
 import { todayET } from "@/lib/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { getTable } from "@/registry";
@@ -145,6 +146,7 @@ async function apply(db: SupabaseClient, a: Automation, t: TableDef, rec: Engine
  */
 export async function processPendingEvents(limit = 50): Promise<{ processed: number }> {
   if (!hasAdminKey()) return { processed: 0 };
+  await ensureFieldSettings();
   const db = adminDb();
   const { data: pending } = await db.from("audit_log").select("id").is("automation_status", null).order("id").limit(limit);
   const ids = ((pending ?? []) as { id: number }[]).map((r) => r.id);
@@ -193,6 +195,7 @@ export async function processPendingEvents(limit = 50): Promise<{ processed: num
  * records are reloaded in full and run. Re-running is harmless: updates only write real changes.
  */
 export async function runScheduled(kind: "daily" | "hourly", today: string = todayET()): Promise<{ checked: number; matched: number }> {
+  await ensureFieldSettings();
   const db = adminDb();
   const autos = (await activeAutomations(db)).filter((a) => a.events.includes(kind));
   let checked = 0;

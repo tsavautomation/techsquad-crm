@@ -33,6 +33,12 @@ type Props = {
   disabled?: boolean;
 };
 
+/** Options offered for a new choice: retired ones (Form settings) only while a record still holds them. */
+function choosable(f: FieldDef, value: unknown) {
+  const held = new Set(Array.isArray(value) ? value.map(String) : value === null || value === undefined ? [] : [String(value)]);
+  return (f.options ?? []).filter((o) => !o.retired || held.has(o.value));
+}
+
 export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }: Props) {
   const id = `f-${f.name}`;
   const common = { id, name: f.name, disabled, "aria-invalid": invalid || undefined };
@@ -74,7 +80,7 @@ export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }
       return (
         <select {...common} className={cn(BOX, "h-11")} value={str} onChange={(e) => onChange(e.target.value || null)}>
           <option value="">Select one</option>
-          {f.options?.map((o) => (
+          {choosable(f, value).map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
@@ -85,7 +91,7 @@ export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }
     case "radio":
       return (
         <div role="radiogroup" aria-labelledby={`${id}-label`} className="flex flex-wrap gap-2">
-          {f.options?.map((o) => (
+          {choosable(f, value).map((o) => (
             <Choice key={o.value} selected={value === o.value} disabled={disabled} onClick={() => onChange(o.value)} color={o.color}>
               {o.label}
             </Choice>
@@ -97,7 +103,7 @@ export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }
       const selected = Array.isArray(value) ? (value as string[]) : [];
       return (
         <div role="group" aria-labelledby={`${id}-label`} className="flex flex-wrap gap-2">
-          {f.options?.map((o) => {
+          {choosable(f, value).map((o) => {
             const on = selected.includes(o.value);
             return (
               <Choice

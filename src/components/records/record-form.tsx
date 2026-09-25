@@ -95,6 +95,7 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
               {rules.required.has(f.name) && <span className="text-destructive"> *</span>}
             </label>
             <FieldInput ctx={ctx} field={f} value={rules.values[f.name]} onChange={(v) => update(f.name, v)} invalid={Boolean(err)} disabled={!editable || pending} />
+            {f.help && <p className="text-sm text-muted-foreground">{f.help}</p>}
             {err && (
               <p role="alert" className="text-sm text-destructive">
                 {err}

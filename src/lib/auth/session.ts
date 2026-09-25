@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import { ensureFieldSettings } from "@/lib/admin/field-settings";
 import { createClient } from "@/lib/supabase/server";
 
 export type CurrentUser = {
@@ -20,6 +21,8 @@ type SessionState = { status: "signed-out" } | { status: "inactive" } | { status
  * request, so layouts and pages can call it freely.
  */
 export const getSession = cache(async (): Promise<SessionState> => {
+  // Every page and server action passes here, so Form settings are current before any form is built.
+  await ensureFieldSettings();
   const supabase = await createClient();
   const { data: claimsData } = await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub;
