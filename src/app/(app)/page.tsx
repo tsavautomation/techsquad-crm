@@ -32,6 +32,14 @@ export default async function DashboardPage() {
           ))}
         </div>
       )}
+      {user.permissions.has("projects.module.design_design") && (
+        <p className="mt-6 text-sm">
+          <Link href="/admin/catalogue" className="underline underline-offset-4">
+            Field catalogue
+          </Link>{" "}
+          <span className="text-muted-foreground">: every table, field and rule carried over from WebAuthor</span>
+        </p>
+      )}
     </div>
   );
 }
