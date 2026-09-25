@@ -35,7 +35,11 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
   const rules = useMemo(() => evaluateRules(table, values), [table, values]);
 
   function update(name: string, v: unknown) {
-    setValues((prev) => ({ ...prev, [name]: v }));
+    // A pick filtered by this field (e.g. Organization "same Type as this contact") no longer fits: clear it.
+    const dependents = table.fields.filter((f) =>
+      Object.values(f.lookup?.filter ?? {}).some((rule) => typeof rule === "object" && !Array.isArray(rule) && rule.sameAs === name),
+    );
+    setValues((prev) => ({ ...prev, [name]: v, ...Object.fromEntries(dependents.map((d) => [d.name, d.multiple ? [] : null])) }));
     if (errors[name])
       setErrors((prev) => {
         const next = { ...prev };

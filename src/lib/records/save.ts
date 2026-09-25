@@ -48,7 +48,7 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
   const normalized = normalize(t, merged);
   const rules = evaluateRules(t, normalized);
   const values = rules.values;
-  const errors = validate(t, values, rules);
+  const errors = { ...validate(t, values, rules), ...(await checkLookupFilters(db, t, values, rules.visible)) };
   if (Object.keys(errors).length) return { ok: false, errors };
 
   const row: Record<string, unknown> = {};
@@ -112,6 +112,33 @@ async function applyReadOnlyAutofill(db: SupabaseClient, t: TableDef, before: Va
     const src = (data ?? {}) as Values;
     for (const m of map) values[m.to] = src[m.from] ?? null;
   }
+}
+
+/**
+ * A picked record must still satisfy the picker's filter (SPEC §2.1): e.g. a contact's
+ * Organization must have the contact's Type; a Job Report team member must be "Active + Reports".
+ */
+async function checkLookupFilters(db: SupabaseClient, t: TableDef, values: Values, visible: Set<string>) {
+  const errors: Record<string, string> = {};
+  for (const f of t.fields) {
+    const filter = f.lookup?.filter;
+    if (!filter || !visible.has(f.name)) continue;
+    const ids = (Array.isArray(values[f.name]) ? (values[f.name] as unknown[]) : [values[f.name]]).filter((x): x is number => typeof x === "number");
+    if (!ids.length) continue;
+    const cols = Object.keys(filter);
+    const { data } = await db.from(f.lookup!.table).select(["id", ...cols].join(",")).in("id", ids);
+    const rows = (data ?? []) as unknown as Record<string, unknown>[];
+    const ok = (row: Record<string, unknown>) =>
+      cols.every((col) => {
+        const rule = filter[col];
+        const v = row[col];
+        if (typeof rule === "string") return v === rule;
+        if (Array.isArray(rule)) return rule.includes(v as string);
+        return v === values[rule.sameAs];
+      });
+    if (rows.length < ids.length || !rows.every(ok)) errors[f.name] = "This choice isn't allowed here any more; please choose again";
+  }
+  return errors;
 }
 
 function friendly(message: string) {

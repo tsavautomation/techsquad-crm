@@ -45,18 +45,23 @@ function matches(c: RuleCondition, fields: Map<string, FieldDef>, values: Values
 export function evaluateRules(table: TableDef, input: Values, today: string = todayET()): RuleResult {
   const fields = new Map(table.fields.map((f) => [f.name, f]));
   const rules = [...table.rules].sort((a, b) => a.id - b.id);
+  const initial = new Set(table.fields.filter((f) => !f.hidden && !f.startsHidden).map((f) => f.name));
   let values = { ...input };
-  let visible = new Set<string>();
+  let visible = new Set(initial);
   let required = new Set<string>();
 
-  // set/clear actions can change values that other rules look at; settle within a few passes.
-  for (let pass = 0; pass < 4; pass++) {
-    visible = new Set(table.fields.filter((f) => !f.hidden && !f.startsHidden).map((f) => f.name));
+  // Settle to a fixed point: set/clear actions change values other rules read, and
+  // showing/hiding a field changes which rules it can trigger.
+  for (let pass = 0; pass < 8; pass++) {
+    // A field that is hidden doesn't trigger rules (SPEC §9.1): hiding "Referred by anyone?"
+    // also hides what it controlled, even if it still holds "Yes".
+    const triggers = visible;
+    visible = new Set(initial);
     required = new Set(table.fields.filter((f) => f.required).map((f) => f.name));
     const next = { ...values };
 
     for (const rule of rules) {
-      if (!rule.when.some((c) => matches(c, fields, values, today))) continue;
+      if (!rule.when.some((c) => triggers.has(c.field) && matches(c, fields, values, today))) continue;
       for (const a of rule.then) {
         switch (a.do) {
           case "show":
@@ -78,9 +83,10 @@ export function evaluateRules(table: TableDef, input: Values, today: string = to
       }
     }
 
-    const changed = Object.keys(next).some((k) => JSON.stringify(next[k]) !== JSON.stringify(values[k]));
+    const valuesChanged = Object.keys(next).some((k) => JSON.stringify(next[k]) !== JSON.stringify(values[k]));
+    const visibilityChanged = visible.size !== triggers.size || [...visible].some((f) => !triggers.has(f));
     values = next;
-    if (!changed) break;
+    if (!valuesChanged && !visibilityChanged) break;
   }
 
   // A field nobody can see can't be demanded.

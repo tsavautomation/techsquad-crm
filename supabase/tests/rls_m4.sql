@@ -57,7 +57,7 @@ declare
     ["admin",    "insert into public.brands (id, name) values (900502, 'B2')", "ok"],
     ["tech",     "select count(*) from public.brands where id = 900502", "rows=1"],
 
-    [null,       "insert into public.transactions (project_id, type, amount, payment_type, description) values (900001, 'Proposal', 100, 'Apply to Project', 'p'), (900001, 'Invoice', 50, 'Apply to Project', 'i'), (900001, 'Payment', 20, 'Apply to Project', 'x')", "ok"],
+    [null,       "insert into public.transactions (project_id, type, amount, payment_type, description) values (900001, 'Proposal', 100, 'Apply to Project', 'p'), (900001, 'Invoice', 50, 'Apply to Project', 'i'), (900001, 'Payment', 20, 'Apply to Project', 'x'), (900001, 'Proposal', 1000, 'Pay Individual', 'leftover hidden values must not count')", "ok"],
     ["everyone", "select count(*) from public.project_financials(array[900001]::bigint[]) where approved_amount = 100 and invoiced_amount = 50 and paid_amount = 20", "rows=1"],
     ["tech",     "select count(*) from public.transactions where project_id = 900001", "rows=0"],
 
