@@ -1,6 +1,7 @@
 // The 39 seeded automations (SPEC §5) only refer to tables and fields that exist, and read sensibly.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { AutomationSchema, check } from "@/lib/engine/automation-schema";
 import { describeConditions, describeEvents, type Conditions } from "@/lib/engine/conditions";
 import { REGISTRY } from "@/registry";
 
@@ -56,6 +57,22 @@ describe("seeded automations", () => {
         for (const f of (a.files as string[] | undefined) ?? []) expect(["file", "image"]).toContain(t!.fields.find((x) => x.name === f)?.type);
       }
     }
+  });
+
+  it("every seeded automation passes the editor's checks (M12)", () => {
+    for (const r of rows.filter((x) => x.active)) {
+      const parsed = AutomationSchema.parse({ title: `#${r.id}`, active: true, events: r.events, conditions: r.conditions, actions: r.actions });
+      expect(check(tables.get(r.table)!, parsed), `#${r.id}`).toEqual([]);
+    }
+  });
+
+  it("the editor's checks catch typical mistakes", () => {
+    const t = tables.get("permits")!;
+    const base = { title: "x", active: true, events: ["daily"], conditions: { match: "all" as const, rules: [] } };
+    expect(check(t, AutomationSchema.parse({ ...base, actions: [{ type: "update", set: { expiration_status: "Nope" } }] }))[0]).toMatch(/not an option/);
+    expect(check(t, AutomationSchema.parse({ ...base, actions: [{ type: "email", from: "evil@gmail.com", to: ["a@b.co"], subject: "s" }] }))[0]).toMatch(/From/);
+    expect(check(t, AutomationSchema.parse({ ...base, actions: [{ type: "email", from: "TS CRM", to: ["not-an-email"], subject: "{nope}" }] }))).toHaveLength(2);
+    expect(check(t, AutomationSchema.parse({ ...base, events: [], actions: [{ type: "archive" }] }))).toEqual(["Choose when it runs."]);
   });
 
   it("describes events and conditions in plain English", () => {

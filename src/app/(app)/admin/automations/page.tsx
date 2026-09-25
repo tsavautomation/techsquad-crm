@@ -32,7 +32,7 @@ function describeAction(a: Action, label: (f: string) => string): string {
   }
 }
 
-/** Read-only view of the automations (SPEC §5), their run log and the email outbox (M10). Editing comes in M12. */
+/** The automations (SPEC §5), scheduled checks, run log and email outbox. Each opens in the editor (M12). */
 export default async function AutomationsPage() {
   const user = await requireUser();
   if (!user.permissions.has("projects.module.design_triggers")) notFound();
@@ -50,10 +50,17 @@ export default async function AutomationsPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="text-2xl font-semibold">Automations</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Automations</h1>
+        {user.isSysadmin && (
+          <Link href="/admin/automations/new" className="inline-flex h-11 items-center rounded-lg border px-4 text-sm font-medium hover:bg-muted">
+            New automation
+          </Link>
+        )}
+      </div>
       <p className="mt-1 mb-2 text-sm text-muted-foreground">
         The {automations.length} WebAuthor triggers ({automations.filter((a) => a.active).length} active). They run right after a record is saved; daily checks run
-        just after midnight (Eastern) and hourly checks every hour. Read-only for now.
+        just after midnight (Eastern) and hourly checks every hour. Tap one to see or change it.
       </p>
       {testMode && (
         <p className="mb-6 rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
@@ -71,7 +78,9 @@ export default async function AutomationsPage() {
               {list.map((a) => (
                 <li key={a.id} className={`p-3 text-sm ${a.active ? "" : "opacity-60"}`}>
                   <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-medium">{a.title}</span>
+                    <Link href={`/admin/automations/${a.id}`} className="font-medium underline-offset-4 hover:underline">
+                      {a.title}
+                    </Link>
                     <span className="text-xs text-muted-foreground">#{a.id}</span>
                     {!a.active && <span className="rounded bg-muted px-1.5 text-xs">off</span>}
                   </div>
