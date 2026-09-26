@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { fromDateTimeLocalET, toDateTimeLocalET } from "@/lib/dates";
 import type { Values } from "@/lib/rules/evaluate";
 import type { Address, FileItem } from "@/lib/records/values";
@@ -32,6 +33,38 @@ type Props = {
   invalid?: boolean;
   disabled?: boolean;
 };
+
+/**
+ * Money / number box. Keeps exactly what was typed ("12.", "12.50") on screen while the form
+ * holds the number, so the decimal point isn't swallowed mid-typing.
+ */
+function NumberInput({ common, money, value, onChange }: { common: Record<string, unknown>; money: boolean; value: unknown; onChange: (v: unknown) => void }) {
+  const [text, setText] = useState(() => (value === null || value === undefined ? "" : String(value)));
+  // Show the typed text while it still means the current value; otherwise (value set elsewhere, e.g. auto-fill) show the value.
+  const parsed = text.replace(/[,$\s]/g, "");
+  const same = parsed === "" ? value === null || value === undefined || value === "" : Number(parsed) === value || parsed === value;
+  const shown = same ? text : value === null || value === undefined ? "" : String(value);
+  return (
+    <div className="relative">
+      {money && <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground">$</span>}
+      <input
+        {...common}
+        type="text"
+        inputMode="decimal"
+        className={cn(BOX, "h-11", money && "pl-7")}
+        value={shown}
+        onChange={(e) => {
+          const t = e.target.value;
+          setText(t);
+          const raw = t.replace(/[,$\s]/g, "");
+          if (raw === "") return onChange(null);
+          const n = Number(raw);
+          onChange(Number.isFinite(n) && /^-?\d*\.?\d*$/.test(raw) ? n : raw);
+        }}
+      />
+    </div>
+  );
+}
 
 /** Options offered for a new choice: retired ones (Form settings) only while a record still holds them. */
 function choosable(f: FieldDef, value: unknown) {
@@ -150,24 +183,7 @@ export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }
 
     case "money":
     case "number":
-      return (
-        <div className="relative">
-          {f.type === "money" && <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground">$</span>}
-          <input
-            {...common}
-            type="text"
-            inputMode={f.type === "money" ? "decimal" : "numeric"}
-            className={cn(BOX, "h-11", f.type === "money" && "pl-7")}
-            value={typeof value === "number" ? String(value) : str}
-            onChange={(e) => {
-              const raw = e.target.value.replace(/[,$\s]/g, "");
-              if (raw === "") return onChange(null);
-              const n = Number(raw);
-              onChange(Number.isFinite(n) && /^-?\d*\.?\d*$/.test(raw) ? n : raw);
-            }}
-          />
-        </div>
-      );
+      return <NumberInput common={common} money={f.type === "money"} value={value} onChange={onChange} />;
 
     case "address": {
       const a = (value && typeof value === "object" ? value : {}) as Address;

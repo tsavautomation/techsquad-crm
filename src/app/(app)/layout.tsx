@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/session";
 import { visibleModules } from "@/config/modules";
-import { BottomNav, Sidebar, type NavItem } from "@/components/shell/nav";
+import { BottomNav, ModuleTabsBar, Sidebar, type NavItem } from "@/components/shell/nav";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
@@ -14,6 +14,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     title: m.title,
     shortTitle: m.shortTitle,
     icon: m.icon,
+    tabs: m.tabs.map((t) => ({ href: `/${m.slug}/${t.slug}`, title: t.title })),
   }));
   const showAdmin = ADMIN_SCREENS.some((s) => canSeeScreen(s, user.permissions, user.isSysadmin));
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
@@ -39,6 +40,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </form>
         </div>
       </header>
+      <ModuleTabsBar items={navItems} />
       <div className="flex flex-1">
         <Sidebar items={navItems} />
         {/* pb-20 keeps content clear of the mobile bottom bar */}

@@ -167,6 +167,7 @@ export const employees: TableDef = {
       "name": "dl_status",
       "label": "D/L Status",
       "type": "select",
+      "readOnly": true,
       "legacy": {
         "column": "dl_status_1",
         "fieldId": 68727

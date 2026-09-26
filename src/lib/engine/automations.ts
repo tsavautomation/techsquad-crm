@@ -8,7 +8,7 @@ import { recordHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
 import { cleanupOrphanUploads } from "./cleanup";
 import { conditionsMatch, eventsForChange, renderTokens, type Conditions } from "./conditions";
-import { cardHtml, deliver, deliverQueued, queueEmail, type OutboxAttachment } from "./email";
+import { cardHtml, deliverQueued, queueEmail, type OutboxAttachment } from "./email";
 import { cardFields, displayStrings, loadConditionValues, loadEngineRecord, type EngineRecord } from "./record-view";
 import { etSlot, runKeys } from "./schedule";
 
@@ -104,7 +104,7 @@ async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: E
         const attachments: OutboxAttachment[] = [];
         if (action.pdf) attachments.push({ kind: "record_pdf" });
         for (const f of action.files ?? []) for (const file of rec.files[f] ?? []) attachments.push({ kind: "file", path: file.path, name: file.name, size: file.size });
-        const id = await queueEmail(db, {
+        await queueEmail(db, {
           automationId: a.id,
           table: t.name,
           recordId: rec.id,
@@ -115,9 +115,9 @@ async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: E
           html,
           attachments,
         });
-        const sent = await deliver(db, id);
-        const redirected = process.env.EMAIL_TEST_MODE !== "false" ? ` (test mode: sent to ${process.env.EMAIL_TEST_RECIPIENT || "fred@tsav.net"})` : "";
-        did.push(sent.ok ? `email to ${to.join(", ")}${redirected}` : `email failed (${sent.error})`);
+        // Sent by deliverQueued() right after (see runAutomationsSafely), so a save isn't held up by PDFs.
+        const redirected = process.env.EMAIL_TEST_MODE !== "false" ? ` (test mode: goes to ${process.env.EMAIL_TEST_RECIPIENT || "fred@tsav.net"})` : "";
+        did.push(`email to ${to.join(", ")}${redirected}`);
         break;
       }
     }
@@ -266,6 +266,25 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
 
 /** Called from server actions via next/server after(): never lets an automation problem break a save. */
 export async function runAutomationsSafely() {
+  try {
+    await processPendingEvents();
+  } catch (e) {
+    console.error("automations:", e);
+  }
+  await sendQueuedSafely();
+}
+
+/** Send emails the automations queued. Called after the response, so PDFs never slow a save. */
+export async function sendQueuedSafely() {
+  try {
+    if (hasAdminKey()) await deliverQueued(adminDb());
+  } catch (e) {
+    console.error("email delivery:", e);
+  }
+}
+
+/** For saves: run automations now (status fields are right when the page reloads); emails go after the response. */
+export async function runAutomationsNow() {
   try {
     await processPendingEvents();
   } catch (e) {
