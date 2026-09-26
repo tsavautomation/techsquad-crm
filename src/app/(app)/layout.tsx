@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth/session";
 import { visibleModules } from "@/config/modules";
 import { BottomNav, Sidebar, type NavItem } from "@/components/shell/nav";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 import { ADMIN_SCREENS, canSeeScreen } from "@/lib/admin/screens";
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </Link>
         <div className="flex items-center gap-3">
           <span className="hidden text-sm text-muted-foreground sm:inline">{displayName}</span>
+          <ThemeToggle />
           {showAdmin && (
             <Link href="/admin" aria-label="Admin" title="Admin" className="inline-flex size-10 items-center justify-center rounded-lg hover:bg-muted">
               <Settings className="size-5" aria-hidden />

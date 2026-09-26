@@ -1,3 +1,4 @@
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
 
@@ -6,7 +7,10 @@ export const metadata = { title: "Sign in" };
 export default async function LoginPage(props: PageProps<"/login">) {
   const { next, error } = await props.searchParams;
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
+    <main className="relative flex min-h-dvh items-center justify-center bg-muted/30 p-4">
+      <div className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4">
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-xl">TechSquad CRM</CardTitle>
