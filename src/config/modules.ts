@@ -66,17 +66,17 @@ export const MODULES: ModuleDef[] = [
     tabs: [tab("help-desk", "tickets", "Tickets"), tab("help-desk", "articles", "Articles")],
   },
   {
-    // All five FLEX forms share the module-level FLEX Forms permissions (SPEC §7.3).
+    // Each FLEX form has its own permissions since SPEC §9.1 M12-b (WebAuthor shared one set, SPEC §7.3).
     slug: "forms",
     title: "FLEX Forms",
     shortTitle: "Forms",
     icon: "clipboard-list",
     tabs: [
-      tab("forms", "job-reports", "Job Report", "records"),
-      tab("forms", "notes", "Note", "records"),
-      tab("forms", "staff-performance", "Staff Performance", "records"),
-      tab("forms", "survey-and-proposals", "Survey and Proposals", "records"),
-      tab("forms", "tv-installations", "TV Installation", "records"),
+      tab("forms", "job-reports", "Job Report"),
+      tab("forms", "notes", "Note"),
+      tab("forms", "staff-performance", "Staff Performance"),
+      tab("forms", "survey-and-proposals", "Survey and Proposals"),
+      tab("forms", "tv-installations", "TV Installation"),
     ],
   },
 ];

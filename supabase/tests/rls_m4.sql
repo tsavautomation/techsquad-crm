@@ -24,7 +24,7 @@ declare
     ["pm",       "insert into public.projects (id, title, type, category) values (900001, 'RLS test', 'Residential', 'Low Voltage')", "ok"],
     ["tech",     "insert into public.projects (id, title, type, category) values (900002, 'x', 'Residential', 'Low Voltage')", "error"],
     ["tech",     "select count(*) from public.projects where id = 900001", "rows=1"],
-    ["everyone", "select count(*) from public.projects where id = 900001", "rows=1"],
+    ["everyone", "select count(*) from public.projects where id = 900001", "rows=0"],
     ["everyone", "update public.projects set title = 'x' where id = 900001", "none"],
 
     [null,       "insert into public.punch_list_items (id, project_id, type) values (900101, 900001, 'Installation')", "ok"],
@@ -58,7 +58,7 @@ declare
     ["tech",     "select count(*) from public.brands where id = 900502", "rows=1"],
 
     [null,       "insert into public.transactions (project_id, type, amount, payment_type, description) values (900001, 'Proposal', 100, 'Apply to Project', 'p'), (900001, 'Invoice', 50, 'Apply to Project', 'i'), (900001, 'Payment', 20, 'Apply to Project', 'x'), (900001, 'Proposal', 1000, 'Pay Individual', 'leftover hidden values must not count')", "ok"],
-    ["everyone", "select count(*) from public.project_financials(array[900001]::bigint[]) where approved_amount = 100 and invoiced_amount = 50 and paid_amount = 20", "rows=1"],
+    ["tech",     "select count(*) from public.project_financials(array[900001]::bigint[]) where approved_amount = 100 and invoiced_amount = 50 and paid_amount = 20", "rows=1"],
     ["tech",     "select count(*) from public.transactions where project_id = 900001", "rows=0"],
 
     [null,       "insert into public.products (id, model) values (900601, 'M')", "ok"],
@@ -66,6 +66,11 @@ declare
     ["admin",    "select count(*) from public.products where id = 900601", "rows=1"],
     ["sa",       "insert into public.sales (id) values (900701)", "ok"],
     ["tech",     "insert into public.sales (id) values (900702)", "error"],
+
+    [null,       "insert into public.staff_performance (id) values (900801)", "ok"],
+    ["tech",     "select count(*) from public.staff_performance where id = 900801", "rows=0"],
+    ["pm",       "select count(*) from public.staff_performance where id = 900801", "rows=1"],
+    ["tech",     "insert into public.job_reports (id) values (900802)", "ok"],
 
     ["admin",    "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000001' from public.groups where slug = 'project_manager'", "ok"],
     ["admin",    "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000001' from public.groups where slug = 'system_administrators'", "error"],

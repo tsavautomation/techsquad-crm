@@ -52,7 +52,7 @@ Replacement for the WebAuthor CRM at techsquad.webauthor.com.
 - `npm run gen:registry`: regenerate `src/registry/tables/*` from the JSON. **This overwrites hand edits**, so check `git diff`.
 - `npx tsx scripts/generate-schema.ts <file>`: SQL for record tables. It generated the M4 migration; never regenerate an applied migration.
 - `npm run db:push`: apply new migrations to the linked **dev** project. `npm run db:types` regenerates `database.types.ts` after every migration.
-- `npm run db:test-rls` (51 permission checks) and `npm run db:test-workflows` (34 workflow checks) run against dev and are fully rolled back. Run both after any change to policies, permissions or workflows.
+- `npm run db:test-rls` (55 permission checks) and `npm run db:test-workflows` (34 workflow checks) run against dev and are fully rolled back. Run both after any change to policies, permissions or workflows.
 - `npm run users:sync -- --apply [--only a@b.c]`: create logins and sync groups from `scripts/data/users.ts`. Sign-up links go to `.invite-links.txt`.
 - Agent PowerShell sessions must refresh PATH (Machine + User) before calling node/npm/npx. In the user's own terminal, use `npx.cmd` (script execution is disabled).
 - Migration file names must sort after the last applied one. Check before `db push`.

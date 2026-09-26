@@ -1,10 +1,35 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildPermissions, effectivePermissions, GROUPS } from "../scripts/lib/permissions-map";
+import { buildPermissions, effectivePermissions, GROUPS, type PermissionRow } from "../scripts/lib/permissions-map";
 import { visibleModules } from "@/config/modules";
 
 const spec = JSON.parse(readFileSync("techsquad_crm_spec.json", "utf8"));
-const rows = buildPermissions(spec);
+const seeded = buildPermissions(spec);
+
+/**
+ * Grants after the M12 permission review (SPEC §9.1 M12-a/b/d, migration 20260926080000):
+ * Everyone loses the Projects-module record keys, each FLEX form gets its own keys
+ * (Technicians none on Staff Performance), Office Management + COO get Admin's inventory access.
+ */
+function reviewed(rows: PermissionRow[]): PermissionRow[] {
+  const FORM_TABS = ["job-reports", "notes", "staff-performance", "survey-and-proposals", "tv-installations"];
+  const RECORD = ["view_page", "view_all", "create", "modify", "delete", "archive"];
+  const out: PermissionRow[] = [];
+  for (const r of rows) {
+    let groups = r.groups;
+    if (/^projects\.(projects|contacts|organizations|buildings|permits)\./.test(r.key)) groups = groups.filter((g) => g !== "everyone");
+    if (r.key.startsWith("inventory.") && groups.includes("admin")) groups = [...new Set([...groups, "office_management", "coo"])];
+    if (r.module === "forms" && r.resource === "records" && RECORD.includes(r.action)) {
+      for (const tab of FORM_TABS) {
+        out.push({ ...r, key: `forms.${tab}.${r.action}`, resource: tab, groups: tab === "staff-performance" ? groups.filter((g) => g !== "technician") : groups });
+      }
+      groups = [];
+    }
+    out.push({ ...r, groups });
+  }
+  return out;
+}
+const rows = reviewed(seeded);
 
 /** "module/tab" list a user in these groups would see in the menu. */
 function menuFor(...groups: string[]) {
@@ -18,6 +43,7 @@ const PROJECTS_EVERYONE = [
   "projects/buildings",
   "projects/permits",
 ];
+const PROJECTS_TECH = ["projects/projects", "projects/buildings", "projects/permits"];
 const FORMS = [
   "forms/job-reports",
   "forms/notes",
@@ -28,18 +54,18 @@ const FORMS = [
 
 // Expected menus, written by hand from SPEC §7.3 (not derived from the generator).
 describe("menu per group (SPEC §7.3)", () => {
-  it("Everyone only (e.g. Carlos): Projects module minus Punch List, nothing else", () => {
-    expect(menuFor()).toEqual(PROJECTS_EVERYONE);
+  it("Everyone only: nothing (M12-a: each group grants what its people need)", () => {
+    expect(menuFor()).toEqual([]);
   });
 
-  it("Technician: all Projects tabs incl. Punch List; Tasks, RMA, Inventory Checkout; FLEX forms", () => {
+  it("Technician: Projects, Buildings, Permits, Punch List; Tasks, RMA, Inventory Checkout; forms except Staff Performance (M12-b)", () => {
     expect(menuFor("technician")).toEqual([
-      ...PROJECTS_EVERYONE,
+      ...PROJECTS_TECH,
       "projects/punch-list",
       "administrative/rma",
       "administrative/tasks",
       "administrative/inventory-checkout",
-      ...FORMS,
+      ...FORMS.filter((f) => f !== "forms/staff-performance"),
     ]);
   });
 
@@ -72,7 +98,7 @@ describe("menu per group (SPEC §7.3)", () => {
     }
   });
 
-  it("Office Management: everything except Payroll, Inventory; includes Help Desk", () => {
+  it("Office Management: everything except Payroll; Inventory like Admin (M12-d); includes Help Desk", () => {
     expect(menuFor("office_management")).toEqual([
       ...PROJECTS_EVERYONE,
       "projects/punch-list",
@@ -82,6 +108,9 @@ describe("menu per group (SPEC §7.3)", () => {
       "administrative/rma",
       "administrative/tasks",
       "administrative/inventory-checkout",
+      "inventory/products",
+      "inventory/stock",
+      "inventory/sales",
       "help-desk/tickets",
       "help-desk/articles",
       ...FORMS,
@@ -103,8 +132,8 @@ describe("menu per group (SPEC §7.3)", () => {
     ]);
   });
 
-  it("Electrical / LV departments grant nothing beyond Everyone", () => {
-    expect(menuFor("electrical_department", "lv_department")).toEqual(PROJECTS_EVERYONE);
+  it("Electrical / LV departments grant nothing", () => {
+    expect(menuFor("electrical_department", "lv_department")).toEqual([]);
   });
 
   it("System Administrators see every tab", () => {
@@ -117,8 +146,9 @@ describe("menu per group (SPEC §7.3)", () => {
 describe("record permissions (SPEC §7.3 spot checks)", () => {
   const has = (groups: string[], key: string) => effectivePermissions(rows, groups).has(key);
 
-  it("Projects: everyone views, Technician cannot create", () => {
-    expect(has([], "projects.projects.view_all")).toBe(true);
+  it("Projects: Everyone alone no longer views (M12-a), Technician views but cannot create", () => {
+    expect(has([], "projects.projects.view_all")).toBe(false);
+    expect(has(["technician"], "projects.projects.view_all")).toBe(true);
     expect(has(["technician"], "projects.projects.create")).toBe(false);
     expect(has(["project_manager"], "projects.projects.create")).toBe(true);
   });
@@ -139,11 +169,13 @@ describe("record permissions (SPEC §7.3 spot checks)", () => {
     expect(has(["project_manager"], "administrative.payroll.view_all")).toBe(false);
   });
 
-  it("FLEX forms: Technician can add and modify but not delete; PM cannot modify", () => {
-    expect(has(["technician"], "forms.records.create")).toBe(true);
-    expect(has(["technician"], "forms.records.modify")).toBe(true);
-    expect(has(["technician"], "forms.records.delete")).toBe(false);
-    expect(has(["project_manager"], "forms.records.modify")).toBe(false);
+  it("FLEX forms: Technician can add and modify but not delete; PM cannot modify; per form since M12-b", () => {
+    expect(has(["technician"], "forms.job-reports.create")).toBe(true);
+    expect(has(["technician"], "forms.job-reports.modify")).toBe(true);
+    expect(has(["technician"], "forms.job-reports.delete")).toBe(false);
+    expect(has(["technician"], "forms.staff-performance.view_page")).toBe(false);
+    expect(has(["project_manager"], "forms.tv-installations.modify")).toBe(false);
+    expect(has(["technician"], "forms.records.create")).toBe(false);
   });
 
   it("Site admin (Members/Groups) for Admin and Test only among non-SA groups", () => {

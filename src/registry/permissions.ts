@@ -6,13 +6,12 @@ export type RecordAction = "view_page" | "view_all" | "create" | "modify" | "del
 export type LockAction = "modify_locked" | "lock_unlock" | "delete_locked";
 
 /**
- * Permission resource protecting a table: the tab slug for most, `records` for the
- * five FLEX forms (they share permissions), none for child tables (they use the
- * parent's) and utility lists (special rule).
+ * Permission resource protecting a table: its tab slug; none for child tables (they use the
+ * parent's) and utility lists (special rule). The five FLEX forms shared `records` in
+ * WebAuthor; since SPEC §9.1 M12-b each form has its own (lock permissions stay shared).
  */
 export function permissionResource(t: TableDef): string | null {
   if (t.parent) return null;
-  if (t.module === "forms") return "records";
   return t.tab ?? null;
 }
 
