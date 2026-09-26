@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { saveRecordAction } from "@/lib/records/actions";
+import { extractFromUploadAction } from "@/lib/records/field-actions";
+import { formatDate } from "@/lib/dates";
 import { evaluateRules, type Values } from "@/lib/rules/evaluate";
-import { isEditable } from "@/lib/records/values";
+import { isEditable, type FileItem } from "@/lib/records/values";
 import { cn } from "@/lib/utils";
 import type { TableDef } from "@/registry/types";
 import { FieldInput, type FieldContext } from "./field-input";
@@ -48,6 +50,25 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
         delete next[name];
         return next;
       });
+    readFromUpload(name, v);
+  }
+
+  // Upload fields with `extract` (e.g. licence photo → expiry date): read the newly added file with AI.
+  function readFromUpload(name: string, v: unknown) {
+    const f = table.fields.find((x) => x.name === name);
+    if (!f?.extract || !Array.isArray(v)) return;
+    const before = new Set(((values[name] as FileItem[] | undefined) ?? []).map((x) => x.path));
+    const added = (v as FileItem[]).find((x) => !before.has(x.path) && !x.id);
+    if (!added) return;
+    const target = table.fields.find((x) => x.name === f.extract!.to);
+    const reading = toast.loading(`Reading ${target?.label ?? "the date"} from the photo…`);
+    void extractFromUploadAction(table.name, name, added.path).then((r) => {
+      toast.dismiss(reading);
+      if (!r.ok) return void toast.error(r.message);
+      if (!r.value) return void toast.warning(`Couldn't read ${target?.label ?? "it"} from the photo. Please type it in.`);
+      setValues((prev) => ({ ...prev, [r.field]: r.value }));
+      toast.success(`${target?.label ?? "Date"} filled in from the photo: ${formatDate(r.value)}. Please check it.`);
+    });
   }
 
   function submit(e: React.FormEvent) {

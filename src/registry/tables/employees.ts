@@ -152,7 +152,11 @@ export const employees: TableDef = {
         "jpeg",
         "png",
         "pdf"
-      ]
+      ],
+      "extract": {
+        "what": "license_expiration",
+        "to": "dl_expiration"
+      }
     },
     {
       "name": "dl_expiration",

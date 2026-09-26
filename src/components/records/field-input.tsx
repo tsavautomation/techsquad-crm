@@ -6,6 +6,7 @@ import type { Values } from "@/lib/rules/evaluate";
 import type { Address, FileItem } from "@/lib/records/values";
 import { cn } from "@/lib/utils";
 import type { FieldDef } from "@/registry/types";
+import { AddressInput } from "./address-input";
 import { FileField } from "./file-field";
 import { LookupPicker } from "./lookup-picker";
 import { RichTextEditor } from "./rich-text-editor";
@@ -187,16 +188,7 @@ export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }
 
     case "address": {
       const a = (value && typeof value === "object" ? value : {}) as Address;
-      const set = (k: keyof Address, v: string) => onChange({ ...a, [k]: v });
-      return (
-        <div className="grid grid-cols-6 gap-2">
-          <input aria-label="Street" placeholder="Street" autoComplete="off" disabled={disabled} className={cn(BOX, "col-span-6 h-11")} value={a.street ?? ""} onChange={(e) => set("street", e.target.value)} />
-          <input aria-label="Address line 2" placeholder="Apt, suite (optional)" autoComplete="off" disabled={disabled} className={cn(BOX, "col-span-6 h-11")} value={a.address_2 ?? ""} onChange={(e) => set("address_2", e.target.value)} />
-          <input aria-label="City" placeholder="City" autoComplete="off" disabled={disabled} className={cn(BOX, "col-span-3 h-11")} value={a.city ?? ""} onChange={(e) => set("city", e.target.value)} />
-          <input aria-label="State" placeholder="State" autoComplete="off" maxLength={2} disabled={disabled} className={cn(BOX, "col-span-1 h-11 uppercase")} value={a.state ?? ""} onChange={(e) => set("state", e.target.value.toUpperCase())} />
-          <input aria-label="ZIP" placeholder="ZIP" inputMode="numeric" autoComplete="off" maxLength={10} disabled={disabled} className={cn(BOX, "col-span-2 h-11")} value={a.zip ?? ""} onChange={(e) => set("zip", e.target.value)} />
-        </div>
-      );
+      return <AddressInput value={a} onChange={onChange} disabled={disabled} box={BOX} />;
     }
 
     case "lookup":

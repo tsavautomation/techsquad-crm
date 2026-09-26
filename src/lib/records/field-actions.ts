@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { extractFromFile } from "@/lib/ai/extract";
 import { requireUser } from "@/lib/auth/session";
 import type { Values } from "@/lib/rules/evaluate";
 import { getTable } from "@/registry";
@@ -144,4 +145,23 @@ export async function previewUrlAction(path: string): Promise<string | null> {
   const db = await recordsDb();
   const { data } = await db.storage.from(BUCKET).createSignedUrl(path, 60 * 60);
   return data?.signedUrl ?? null;
+}
+
+/**
+ * Read a value out of a photo the user just uploaded (e.g. the licence expiry, SPEC §9.1 B1-a)
+ * and return it for the form to pre-fill. Only the uploader's own new uploads can be read.
+ */
+export async function extractFromUploadAction(tableName: string, fieldName: string, path: string): Promise<{ ok: true; field: string; value: string | null } | { ok: false; message: string }> {
+  const user = await requireUser();
+  const { t, f } = fieldOf(tableName, fieldName);
+  if (!f.extract) return { ok: false, message: "This field can't be read automatically." };
+  const parts = path.split("/");
+  if (parts[0] !== t.name || parts[2] !== f.name || parts[3] !== user.id) return { ok: false, message: "Not your upload." };
+  const db = await recordsDb();
+  const { data, error } = await db.storage.from(BUCKET).download(path);
+  if (error || !data) return { ok: false, message: "Could not open the uploaded file." };
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  const mime = data.type || (ext === "pdf" ? "application/pdf" : ext === "png" ? "image/png" : "image/jpeg");
+  const r = await extractFromFile(f.extract.what, Buffer.from(await data.arrayBuffer()), mime);
+  return r.ok ? { ok: true, field: f.extract.to, value: r.value } : r;
 }
