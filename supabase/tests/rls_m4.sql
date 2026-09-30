@@ -72,6 +72,13 @@ declare
     ["pm",       "select count(*) from public.staff_performance where id = 900801", "rows=1"],
     ["tech",     "insert into public.job_reports (id) values (900802)", "ok"],
 
+    ["pm",       "insert into public.visits (id, project_id, starts_at, duration, arrival_window, status) values (900901, 900001, now(), '120', '60', 'Scheduled')", "ok"],
+    ["tech",     "select count(*) from public.visits where id = 900901", "rows=1"],
+    ["tech",     "insert into public.visits (id, project_id, starts_at) values (900902, 900001, now())", "error"],
+    ["tech",     "update public.visits set duration = '30' where id = 900901", "none"],
+    ["everyone", "select count(*) from public.visits where id = 900901", "rows=0"],
+    ["admin",    "update public.visits set duration = '90' where id = 900901", "ok"],
+
     ["admin",    "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000001' from public.groups where slug = 'project_manager'", "ok"],
     ["admin",    "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000001' from public.groups where slug = 'system_administrators'", "error"],
     ["admin",    "delete from public.group_members where user_id = '00000000-0000-4000-a000-000000000007'", "none"],

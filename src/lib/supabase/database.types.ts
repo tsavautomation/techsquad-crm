@@ -3446,6 +3446,140 @@ export type Database = {
           },
         ]
       }
+      visits: {
+        Row: {
+          access_notes: string | null
+          archived_at: string | null
+          arrival_window: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          duration: string | null
+          id: number
+          instructions: string | null
+          locked: boolean
+          project_id: number | null
+          repeat: string | null
+          repeat_count: number | null
+          series_id: string | null
+          service_type: string | null
+          starts_at: string | null
+          status: string | null
+          submitted_at: string | null
+          technician_id: number | null
+          title: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          access_notes?: string | null
+          archived_at?: string | null
+          arrival_window?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          duration?: string | null
+          id?: number
+          instructions?: string | null
+          locked?: boolean
+          project_id?: number | null
+          repeat?: string | null
+          repeat_count?: number | null
+          series_id?: string | null
+          service_type?: string | null
+          starts_at?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          technician_id?: number | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          access_notes?: string | null
+          archived_at?: string | null
+          arrival_window?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          duration?: string | null
+          id?: number
+          instructions?: string | null
+          locked?: boolean
+          project_id?: number | null
+          repeat?: string | null
+          repeat_count?: number | null
+          series_id?: string | null
+          service_type?: string | null
+          starts_at?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          technician_id?: number | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visits_team: {
+        Row: {
+          record_id: number
+          target_id: number
+        }
+        Insert: {
+          record_id: number
+          target_id: number
+        }
+        Update: {
+          record_id?: number
+          target_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visits_team_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_team_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_events: {
         Row: {
           actor: string | null

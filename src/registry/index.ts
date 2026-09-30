@@ -28,8 +28,10 @@ import { formNotes } from "./tables/form_notes";
 import { staffPerformance } from "./tables/staff_performance";
 import { surveyProposals } from "./tables/survey_proposals";
 import { tvInstallations } from "./tables/tv_installations";
+import { visits } from "./tables/visits";
 
-export const REGISTRY: TableDef[] = [
+/** The 28 tables carried over from WebAuthor (the parity tests check these against the export). */
+export const WEBAUTHOR_REGISTRY: TableDef[] = [
   projects,
   contacts,
   contactInteractions,
@@ -59,6 +61,11 @@ export const REGISTRY: TableDef[] = [
   surveyProposals,
   tvInstallations,
 ];
+
+/** Tables built for this CRM (Portal features, docs/portal-features-merge.md). */
+export const NEW_TABLES: TableDef[] = [visits];
+
+export const REGISTRY: TableDef[] = [...WEBAUTHOR_REGISTRY, ...NEW_TABLES];
 
 const BY_NAME = new Map(REGISTRY.map((t) => [t.name, t]));
 

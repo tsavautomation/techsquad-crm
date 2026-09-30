@@ -3,7 +3,7 @@
 // Deliberate differences are listed explicitly below so they can't creep in silently.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { REGISTRY, getTable } from "@/registry";
+import { WEBAUTHOR_REGISTRY as REGISTRY, getTable } from "@/registry";
 import type { FieldDef } from "@/registry/types";
 
 type RawField = Record<string, unknown> & { id: number; type: string; label: string; column_name: string; section: string };

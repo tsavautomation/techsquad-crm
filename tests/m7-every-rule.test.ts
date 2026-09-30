@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluateRules, type Values } from "@/lib/rules/evaluate";
 import { newRecordValues } from "@/lib/records/values";
-import { REGISTRY, getTable } from "@/registry";
+import { WEBAUTHOR_REGISTRY as REGISTRY, getTable } from "@/registry";
 
 const TODAY = "2026-09-25";
 

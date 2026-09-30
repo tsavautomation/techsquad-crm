@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { REGISTRY } from "@/registry";
+import { WEBAUTHOR_REGISTRY as REGISTRY } from "@/registry";
 import { buildPermissions } from "../scripts/lib/permissions-map";
 import { joinTableName, lockResource, permissionResource } from "../scripts/lib/schema-map";
 

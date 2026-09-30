@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { MODULES } from "@/config/modules";
+import { MODULES as ALL_MODULES } from "@/config/modules";
 import { isPublicPath } from "@/lib/supabase/proxy";
+
+// WebAuthor's five modules; Schedule (F1) is new and comes first.
+const MODULES = ALL_MODULES.filter((m) => m.slug !== "schedule");
 
 describe("module menu (SPEC §1.1)", () => {
   it("has the five WebAuthor modules in order", () => {
@@ -25,7 +28,7 @@ describe("module menu (SPEC §1.1)", () => {
   });
 
   it("has unique slugs", () => {
-    const slugs = MODULES.flatMap((m) => [m.slug, ...m.tabs.map((t) => `${m.slug}/${t.slug}`)]);
+    const slugs = ALL_MODULES.flatMap((m) => [m.slug, ...m.tabs.map((t) => `${m.slug}/${t.slug}`)]);
     expect(new Set(slugs).size).toBe(slugs.length);
   });
 });

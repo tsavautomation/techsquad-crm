@@ -7,7 +7,7 @@ export type ModuleDef = {
   slug: string;
   title: string;
   shortTitle: string; // for the mobile bottom bar
-  icon: "folder-kanban" | "briefcase" | "boxes" | "life-buoy" | "clipboard-list";
+  icon: "calendar" | "folder-kanban" | "briefcase" | "boxes" | "life-buoy" | "clipboard-list";
   tabs: ModuleTab[];
 };
 
@@ -18,6 +18,14 @@ const tab = (module: string, slug: string, title: string, resource = slug): Modu
 });
 
 export const MODULES: ModuleDef[] = [
+  {
+    // F1 (not in WebAuthor): the calendar is a custom page; Visits is the plain list.
+    slug: "schedule",
+    title: "Schedule",
+    shortTitle: "Schedule",
+    icon: "calendar",
+    tabs: [tab("schedule", "calendar", "Calendar", "visits"), tab("schedule", "visits", "Visits")],
+  },
   {
     slug: "projects",
     title: "Projects",

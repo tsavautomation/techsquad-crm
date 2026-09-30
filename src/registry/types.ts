@@ -77,6 +77,8 @@ export type FieldDef = {
   maxLength?: number;
   pattern?: string;
   placeholder?: string;
+  /** Only on the "new" form (e.g. Visit › Repeat): hidden when editing, ignored by later saves. */
+  createOnly?: boolean;
   /** Help text under the field (Form settings, M12). */
   help?: string;
   notFuture?: boolean;
@@ -123,4 +125,8 @@ export type TableDef = {
   fields: FieldDef[];
   rules: RuleDef[];
   legacy: { table: string };
+  /** "new" = built for this CRM (Portal features), not carried over from WebAuthor: no legacy names, not in parity tests. */
+  origin?: "new";
+  /** Extra panel the form shows for this table (src/components/records/form-addons.tsx). */
+  formAddon?: "visit";
 };

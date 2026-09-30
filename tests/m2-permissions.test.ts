@@ -27,9 +27,16 @@ function reviewed(rows: PermissionRow[]): PermissionRow[] {
     }
     out.push({ ...r, groups });
   }
+  // F1 Scheduling (migration 20260930000000): office groups schedule, Technicians view.
+  const office = ["admin", "office_management", "coo", "project_manager", "treasurer"];
+  for (const action of ["view_page", "view_all", "create", "modify", "delete", "archive"]) {
+    const tech = action === "view_page" || action === "view_all" ? ["technician"] : [];
+    out.push({ ...rows[0], key: `schedule.visits.${action}`, module: "schedule", resource: "visits", action, groups: [...office, ...tech] });
+  }
   return out;
 }
 const rows = reviewed(seeded);
+const SCHEDULE = ["schedule/calendar", "schedule/visits"];
 
 /** "module/tab" list a user in these groups would see in the menu. */
 function menuFor(...groups: string[]) {
@@ -60,6 +67,7 @@ describe("menu per group (SPEC §7.3)", () => {
 
   it("Technician: Projects, Buildings, Permits, Punch List; Tasks, RMA, Inventory Checkout; forms except Staff Performance (M12-b)", () => {
     expect(menuFor("technician")).toEqual([
+      ...SCHEDULE,
       ...PROJECTS_TECH,
       "projects/punch-list",
       "administrative/rma",
@@ -71,6 +79,7 @@ describe("menu per group (SPEC §7.3)", () => {
 
   it("Project Manager: Payroll, Vehicle, RMA, Tasks but not Employees or Transactions", () => {
     expect(menuFor("project_manager")).toEqual([
+      ...SCHEDULE,
       ...PROJECTS_EVERYONE,
       "projects/punch-list",
       "administrative/payroll",
@@ -83,6 +92,7 @@ describe("menu per group (SPEC §7.3)", () => {
 
   it("Admin: no Punch List, no Administrative record tabs; Inventory Product + Stock + Sale (Q11)", () => {
     expect(menuFor("admin")).toEqual([
+      ...SCHEDULE,
       ...PROJECTS_EVERYONE,
       "inventory/products",
       "inventory/stock",
@@ -100,6 +110,7 @@ describe("menu per group (SPEC §7.3)", () => {
 
   it("Office Management: everything except Payroll; Inventory like Admin (M12-d); includes Help Desk", () => {
     expect(menuFor("office_management")).toEqual([
+      ...SCHEDULE,
       ...PROJECTS_EVERYONE,
       "projects/punch-list",
       "administrative/employees",
@@ -119,6 +130,7 @@ describe("menu per group (SPEC §7.3)", () => {
 
   it("Treasurer: Administrative incl. Payroll; Inventory Checkout page but no Help Desk", () => {
     expect(menuFor("treasurer")).toEqual([
+      ...SCHEDULE,
       ...PROJECTS_EVERYONE,
       "projects/punch-list",
       "administrative/employees",
@@ -139,7 +151,7 @@ describe("menu per group (SPEC §7.3)", () => {
   it("System Administrators see every tab", () => {
     const all = menuFor("system_administrators");
     expect(all).toContain("inventory/sales");
-    expect(all).toHaveLength(23);
+    expect(all).toHaveLength(25); // 23 WebAuthor tabs + Schedule (Calendar, Visits)
   });
 });
 

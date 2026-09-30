@@ -61,7 +61,7 @@ export function newRecordValues(t: TableDef, today: string = todayET()): Values 
     else if (f.type === "boolean") v[f.name] = f.default === true;
     else if (f.default === "today") v[f.name] = today;
     else if (f.default === "now") v[f.name] = new Date().toISOString();
-    else if (typeof f.default === "string") v[f.name] = f.default;
+    else if (typeof f.default === "string") v[f.name] = f.type === "number" || f.type === "money" ? Number(f.default) : f.default;
     else v[f.name] = null;
   }
   return v;

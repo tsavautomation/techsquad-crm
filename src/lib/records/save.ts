@@ -8,6 +8,7 @@ import { canDo, canLockAction } from "@/registry/permissions";
 import type { TableDef } from "@/registry/types";
 import { getRecord, recordsDb, rowValues } from "./data";
 import { loadAttachments, loadJoins, syncAttachments, syncJoin } from "./relations";
+import { AFTER_CREATE } from "./hooks";
 import { sanitizeRichText } from "./sanitize";
 import { buildTitle } from "./title";
 import { isEditable, isMultiLookup, isRowField, isUpload, newRecordValues, normalize, validate, type FileItem } from "./values";
@@ -42,7 +43,7 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
 
   // Only fields the form may edit are taken from the browser; everything else keeps its stored value.
   const merged: Values = { ...base };
-  for (const f of t.fields) if (isEditable(f) && f.name in input) merged[f.name] = input[f.name];
+  for (const f of t.fields) if (isEditable(f) && f.name in input && !(id && f.createOnly)) merged[f.name] = input[f.name];
   // A new sub-list row (e.g. a Contact's Interaction) is tied to its parent once, when created.
   if (!id && t.parent && typeof input[t.parent.field] === "number") merged[t.parent.field] = input[t.parent.field];
   await applyReadOnlyAutofill(db, t, base, merged);
@@ -82,6 +83,7 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
       await db.from(t.name).update({ title: await buildTitle(t, values, recordId, db) }).eq("id", recordId);
     }
   }
+  const firstId = recordId;
 
   // Many-to-many links and files live in their own tables.
   try {
@@ -92,6 +94,14 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
     }
   } catch (e) {
     return { ok: false, errors: {}, message: `Saved, but: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  // Table-specific follow-ups on create (e.g. a repeating Visit creates the rest of its series).
+  if (!id) {
+    const hook = AFTER_CREATE[t.name];
+    if (hook) {
+      const r = await hook(db, t, firstId, values, row);
+      if (r) return { ok: false, errors: {}, message: r };
+    }
   }
   return { ok: true, id: recordId };
 }

@@ -12,7 +12,7 @@ describe("admin permissions", () => {
   it("every admin screen and module tab is guarded by a real WebAuthor permission", () => {
     for (const s of ADMIN_SCREENS) if (Array.isArray(s.anyOf)) for (const k of s.anyOf) expect(catalogue, s.title).toContain(k);
     // FLEX form keys were added by the permission review (SPEC §9.1 M12-b).
-    for (const m of MODULES) for (const t of m.tabs) if (m.slug !== "forms") expect(catalogue, t.title).toContain(t.permission);
+    for (const m of MODULES) for (const t of m.tabs) if (m.slug !== "forms" && m.slug !== "schedule") expect(catalogue, t.title).toContain(t.permission);
     const review = readFileSync("supabase/migrations/20260926080000_m12_permission_review.sql", "utf8");
     for (const t of MODULES.find((m) => m.slug === "forms")!.tabs) expect(review, t.title).toContain(`('${t.slug}', '`);
   });

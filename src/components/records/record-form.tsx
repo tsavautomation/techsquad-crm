@@ -13,6 +13,7 @@ import { isEditable, type FileItem } from "@/lib/records/values";
 import { cn } from "@/lib/utils";
 import type { TableDef } from "@/registry/types";
 import { FieldInput, type FieldContext } from "./field-input";
+import { VisitAddon } from "./form-addons";
 
 type Props = {
   table: TableDef;
@@ -100,7 +101,14 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
     },
   };
 
-  const fields = table.fields.filter((f) => rules.visible.has(f.name) && !(table.parent && f.name === table.parent.field));
+  const fields = table.fields.filter(
+    (f) =>
+      rules.visible.has(f.name) &&
+      !(table.parent && f.name === table.parent.field) &&
+      !(recordId && f.createOnly) &&
+      // A dropdown whose options haven't been set up yet (Form settings) isn't shown.
+      !((f.type === "select" || f.type === "radio" || f.type === "checkboxes") && !f.options?.length),
+  );
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-5 pb-24 md:pb-0">
@@ -125,6 +133,8 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
           </div>
         );
       })}
+
+      {table.formAddon === "visit" && <VisitAddon form={rules.values} recordId={recordId} setMany={ctx.setMany} />}
 
       {/* Sticky action bar on phones so Save is always reachable. */}
       <div

@@ -1,0 +1,95 @@
+// Visits on the calendar (F1 Scheduling, docs/portal-features-merge.md §A). Not from WebAuthor:
+// built for the Portal features, so it has no legacy names. Maintained by hand.
+import type { TableDef } from "../types";
+
+const NEW = { column: "", fieldId: 0 };
+
+export const visits: TableDef = {
+  name: "visits",
+  label: "Visits",
+  module: "schedule",
+  tab: "visits",
+  itemLabel: "Visit",
+  newRecordLabel: "New Visit",
+  titleFormula: "{project_id} – {starts_at}",
+  origin: "new",
+  formAddon: "visit",
+  fields: [
+    { name: "title", label: "Title", type: "text", hidden: true, legacy: NEW },
+    { name: "project_id", label: "Project", type: "lookup", required: true, heading: "Visit", lookup: { table: "projects" }, legacy: NEW },
+    { name: "starts_at", label: "Date and start time", type: "datetime", required: true, legacy: NEW },
+    {
+      name: "duration",
+      label: "Expected duration",
+      type: "select",
+      required: true,
+      default: "120",
+      options: [
+        { label: "30 min", value: "30" },
+        { label: "45 min", value: "45" },
+        { label: "1 h", value: "60" },
+        { label: "1 h 30", value: "90" },
+        { label: "2 h", value: "120" },
+        { label: "3 h", value: "180" },
+        { label: "4 h", value: "240" },
+        { label: "6 h", value: "360" },
+        { label: "8 h (full day)", value: "480" },
+      ],
+      legacy: NEW,
+    },
+    {
+      name: "arrival_window",
+      label: "Arrival time told to the client",
+      type: "select",
+      required: true,
+      default: "60",
+      options: [
+        { label: "Exact time", value: "0" },
+        { label: "Within 30 min", value: "30" },
+        { label: "Within 1 h", value: "60" },
+        { label: "Within 2 h", value: "120" },
+      ],
+      legacy: NEW,
+    },
+    { name: "technician_id", label: "Technician", type: "lookup", required: true, heading: "Team", lookup: { table: "employees" }, legacy: NEW },
+    { name: "team_ids", label: "Also going", type: "lookup", multiple: true, lookup: { table: "employees" }, legacy: NEW },
+    // Starts with no options; admins add them in Form settings (Fred 2026-09-30, option C).
+    { name: "service_type", label: "Service type", type: "select", options: [], legacy: NEW },
+    { name: "instructions", label: "Instructions for the technician", type: "textarea", heading: "Details", maxLength: 2000, placeholder: "E.g. talk to the super, bring the tall ladder…", legacy: NEW },
+    { name: "access_notes", label: "Parking and access", type: "textarea", maxLength: 1000, placeholder: "E.g. visitor parking on P2, check in at the front desk…", legacy: NEW },
+    {
+      name: "status",
+      label: "Status",
+      type: "select",
+      required: true,
+      default: "Scheduled",
+      options: [
+        { label: "Scheduled", value: "Scheduled", color: "#2563eb" },
+        { label: "On the way", value: "On the way", color: "#7c3aed" },
+        { label: "On site", value: "On site", color: "#d97706" },
+        { label: "Done", value: "Done", color: "#16a34a" },
+        { label: "Cancelled", value: "Cancelled", color: "#9ca3af" },
+      ],
+      legacy: NEW,
+    },
+    {
+      name: "repeat",
+      label: "Repeat",
+      type: "select",
+      heading: "Repeat",
+      createOnly: true,
+      options: [
+        { label: "Every week", value: "weekly" },
+        { label: "Every 2 weeks", value: "biweekly" },
+        { label: "Every month", value: "monthly" },
+        { label: "Every 3 months", value: "quarterly" },
+        { label: "Every 6 months", value: "semiannual" },
+        { label: "Every year", value: "yearly" },
+      ],
+      legacy: NEW,
+    },
+    { name: "repeat_count", label: "Number of visits in the series", type: "number", createOnly: true, startsHidden: true, default: "4", help: "Including this one (2 to 24).", legacy: NEW },
+  ],
+  rules: [{ id: 900001, title: "Show series size when repeating", when: [{ field: "repeat", op: "not_empty" }], then: [{ do: "show", field: "repeat_count" }, { do: "require", field: "repeat_count" }] }],
+  legacy: { table: "" },
+};
