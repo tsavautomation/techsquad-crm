@@ -41,6 +41,19 @@ Phase 2 will also need a Microsoft 365 / Entra app registration (OneDrive), a Go
 
 **After Phase 1 (separate, optional): M14 data import.** A script that reads a full WebAuthor data export and loads it using the legacy name map and legacy IDs. It is planned now (legacy IDs + mapping are kept) so it's cheap later.
 
+
+**Portal features (from the colleague's prototype, see docs/portal-features-merge.md).** Rebuilt on this base; the WebAuthor import (M14) stays last.
+
+| Milestone | What | Notes |
+|---|---|---|
+| **F1** | Scheduling & dispatch: Visits linked to Project + Employee, week / team / list views, drag & drop, arrival window, series, double-booking warning | before go-live (daily use) |
+| **F2** | Field day: technician Today screen, route, "on my way", check-in / check-out, extended Job Report (structured result, missing items, materials, checklist per service type, signature, dictation), automatic return cards + briefing, day hours | before go-live |
+| **F3** | Office Today dashboard (late / in field / follow-ups / renewals / reviews / expiring documents / delinquent) + tasks board (Kanban, labels, comments, private tasks) | before go-live |
+| **F4** | Pipeline board on the Project workflow + auto tasks; client timeline and communication log; message templates in EN / PT / ES; partner stats | |
+| **F5** | Reports (pipeline, money, partners, salespeople, operations real vs planned, maintenance plans) + data quality (completeness, duplicates, merge) | |
+| **F6** | Client portal (customer logins) + website quote form | needs a security review |
+| **F7** | Global search, notification bell, undo | can be spread over F1–F6 |
+
 ---
 
 ## Decisions I'm proposing (tell me if you disagree)
