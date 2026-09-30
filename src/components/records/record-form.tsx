@@ -139,7 +139,7 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
       {/* Sticky action bar on phones so Save is always reachable. */}
       <div
         className={cn(
-          "fixed inset-x-0 bottom-14 z-30 flex gap-3 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+          "fixed inset-x-0 bottom-0 z-30 flex gap-3 border-t bg-card p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgb(16_24_40/0.06)]",
           "md:static md:border-0 md:p-0 md:pt-2",
         )}
       >

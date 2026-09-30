@@ -94,7 +94,7 @@ export function Calendar({ weekStart, today, view, tech, visits, people, canEdit
         </div>
         <select
           aria-label="Technician"
-          className="h-10 rounded-lg border bg-background px-2 text-base md:text-sm"
+          className="h-10 rounded-lg border bg-card px-2 text-base md:text-sm"
           value={tech ?? ""}
           onChange={(e) => router.push(q({ tech: e.target.value ? Number(e.target.value) : null }))}
         >
@@ -159,7 +159,7 @@ function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag
   const router = useRouter();
   const hours = Array.from({ length: HE - HS }, (_, i) => HS + i);
   return (
-    <div className="overflow-hidden rounded-xl border">
+    <div className="overflow-hidden rounded-2xl border bg-card shadow-card">
       <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-b bg-muted/40 text-sm">
         <div />
         {days.map((d) => (
@@ -218,7 +218,7 @@ function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag
                     e.dataTransfer.effectAllowed = "move";
                   }}
                   onDragEnd={() => setDrag(null)}
-                  className={cn("absolute overflow-hidden rounded-md border-l-4 bg-background px-1.5 py-1 text-xs shadow-sm ring-1 ring-border hover:z-10 hover:shadow-md", v.status === "Cancelled" && "line-through opacity-60")}
+                  className={cn("absolute overflow-hidden rounded-md border-l-4 bg-card px-1.5 py-1 text-xs shadow-sm ring-1 ring-border hover:z-10 hover:shadow-md", v.status === "Cancelled" && "line-through opacity-60")}
                   style={{
                     top: Math.max(0, ((start - HS * 60) / 60) * PX),
                     height: Math.max(22, ((Math.min(end, HE * 60) - Math.max(start, HS * 60)) / 60) * PX - 2),
@@ -240,7 +240,7 @@ function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag
 
 function TeamGrid({ days, today, visits, people, canEdit, canCreate, drag, setDrag, move, newHref }: GridProps & { people: CalPerson[] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border">
+    <div className="overflow-x-auto rounded-2xl border bg-card shadow-card">
       <table className="w-full min-w-[56rem] table-fixed border-collapse text-sm">
         <thead className="bg-muted/40">
           <tr>
@@ -284,7 +284,7 @@ function TeamGrid({ days, today, visits, people, canEdit, canCreate, drag, setDr
                             e.dataTransfer.effectAllowed = "move";
                           }}
                           onDragEnd={() => setDrag(null)}
-                          className={cn("block rounded-md border-l-4 bg-background px-1.5 py-1 text-xs ring-1 ring-border hover:shadow-md", v.techId !== p.id && "border-dashed opacity-80", v.status === "Cancelled" && "line-through opacity-60")}
+                          className={cn("block rounded-md border-l-4 bg-card px-1.5 py-1 text-xs ring-1 ring-border hover:shadow-md", v.techId !== p.id && "border-dashed opacity-80", v.status === "Cancelled" && "line-through opacity-60")}
                           style={{ borderLeftColor: v.color }}
                           title={v.techId !== p.id ? "Going along (not the lead technician)" : undefined}
                         >
@@ -322,7 +322,7 @@ function DayList({ days, today, visits, name }: { days: string[]; today: string;
             {!items.length ? (
               <p className="text-sm text-muted-foreground">—</p>
             ) : (
-              <ul className="divide-y rounded-xl border">
+              <ul className="divide-y rounded-2xl border bg-card shadow-card">
                 {items.map((v) => (
                   <li key={v.id}>
                     <Link href={visitHref(v)} className="flex min-h-14 gap-3 px-3 py-2 hover:bg-muted/50 active:bg-muted">

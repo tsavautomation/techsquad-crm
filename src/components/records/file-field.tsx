@@ -90,7 +90,7 @@ export function FileField({ table, recordId, field: f, value, onChange, disabled
                 <button
                   type="button"
                   onClick={() => remove(x)}
-                  className="absolute top-1 right-1 inline-flex size-8 items-center justify-center rounded-full bg-background/90 shadow"
+                  className="absolute top-1 right-1 inline-flex size-8 items-center justify-center rounded-full bg-card/90 shadow"
                   aria-label={`Remove ${x.name}`}
                 >
                   <X className="size-4" aria-hidden />

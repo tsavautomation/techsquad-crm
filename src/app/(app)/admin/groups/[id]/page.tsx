@@ -49,7 +49,7 @@ export default async function GroupPage(props: PageProps<"/admin/groups/[id]">) 
         <p className="text-sm text-muted-foreground">Every signed-in user is in this group automatically.</p>
       ) : (
         <>
-          <ul className="divide-y rounded-xl border">
+          <ul className="divide-y rounded-2xl border bg-card shadow-card">
             {people.map((p) => (
               <li key={p.id}>
                 <Link href={`/admin/users/${p.id}`} className="block px-4 py-3 hover:bg-muted/50">

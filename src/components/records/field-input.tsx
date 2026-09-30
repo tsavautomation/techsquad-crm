@@ -15,7 +15,7 @@ import { SignaturePad } from "./signature-pad";
 // Native inputs: on iPhone they bring up the right keyboard, date wheel and picker.
 // text-base (16px) stops Safari zooming in on focus; h-11 = 44px tap targets.
 const BOX =
-  "w-full rounded-lg border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 aria-invalid:border-destructive";
+  "w-full rounded-[10px] border border-input bg-card px-3 text-base outline-none transition-[border-color,box-shadow] focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/20 disabled:opacity-60 aria-invalid:border-destructive";
 
 /** What some inputs need beyond their own value. */
 export type FieldContext = {
@@ -268,7 +268,7 @@ function Choice({
       onClick={onClick}
       className={cn(
         "inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm transition-colors disabled:opacity-60",
-        selected ? "border-foreground bg-foreground text-background" : "bg-background hover:bg-muted",
+        selected ? "border-foreground bg-foreground text-background" : "bg-card hover:bg-muted",
       )}
     >
       {color && <span className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10" style={{ background: color }} aria-hidden />}

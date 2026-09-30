@@ -66,7 +66,7 @@ export function AddressInput({ value: a, onChange, disabled, box }: Props) {
           onFocus={() => suggestions.length && setOpen(true)}
         />
         {open && (
-          <ul id={listId} role="listbox" className="absolute inset-x-0 top-full z-40 mt-1 overflow-hidden rounded-lg border bg-background shadow-lg">
+          <ul id={listId} role="listbox" className="absolute inset-x-0 top-full z-40 mt-1 overflow-hidden rounded-lg border bg-card shadow-lg">
             {suggestions.map((s) => (
               <li key={s.placeId} role="option" aria-selected={false}>
                 <button

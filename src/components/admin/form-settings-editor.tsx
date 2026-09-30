@@ -22,7 +22,7 @@ export type FieldState = {
   inRules: boolean;
 };
 
-const INPUT = "h-11 w-full min-w-0 rounded-lg border bg-background px-3 text-base";
+const INPUT = "h-11 w-full min-w-0 rounded-lg border bg-card px-3 text-base";
 const ICON_BTN = "inline-flex size-11 shrink-0 items-center justify-center rounded-lg border hover:bg-muted disabled:opacity-30";
 const TYPES: Record<string, string> = { select: "Dropdown", radio: "Choice buttons", checkboxes: "Tick boxes", boolean: "Yes / No", lookup: "Link", date: "Date", datetime: "Date & time", money: "Money", textarea: "Long text", richtext: "Formatted text", file: "Files", image: "Photos", signature: "Signature" };
 
@@ -42,7 +42,7 @@ function OptionsEditor({ field, onChange }: { field: FieldState; onChange: (o: O
           <input
             type="color"
             aria-label={`Colour of ${o.label}`}
-            className="h-11 w-11 shrink-0 cursor-pointer rounded-lg border bg-background p-1"
+            className="h-11 w-11 shrink-0 cursor-pointer rounded-lg border bg-card p-1"
             value={o.color ?? "#9e9e9e"}
             onChange={(e) => onChange(opts.map((x, j) => (j === i ? { ...x, color: e.target.value } : x)))}
           />
@@ -115,7 +115,7 @@ export function FormSettingsEditor({ table, initial, canEdit }: { table: string;
   return (
     <div className="pb-24">
       <fieldset disabled={!canEdit || pending}>
-        <ul className="divide-y rounded-xl border">
+        <ul className="divide-y rounded-2xl border bg-card shadow-card">
           {fields.map((f, i) => (
             <li key={f.name}>
               {f.heading && <p className="bg-muted/40 px-3 pt-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{f.heading}</p>}
@@ -185,7 +185,7 @@ export function FormSettingsEditor({ table, initial, canEdit }: { table: string;
       )}
 
       {dirty && canEdit && (
-        <div className="sticky bottom-16 z-20 mt-4 flex items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-lg md:bottom-4">
+        <div className="sticky bottom-16 z-20 mt-4 flex items-center justify-between gap-3 rounded-2xl border bg-card shadow-card p-3 shadow-lg md:bottom-4">
           <span className="text-sm">Unsaved changes</span>
           <span className="flex gap-2">
             <button type="button" className="h-11 rounded-lg border px-4 text-sm hover:bg-muted" disabled={pending} onClick={() => setFields(initial)}>

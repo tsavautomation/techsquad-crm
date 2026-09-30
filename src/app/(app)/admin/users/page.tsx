@@ -40,13 +40,13 @@ export default async function UsersPage(props: PageProps<"/admin/users">) {
       {canList ? (
         <>
           <form className="mb-3 flex gap-2">
-            <input name="q" defaultValue={q} placeholder="Search name or email" className="h-11 min-w-0 flex-1 rounded-lg border bg-background px-3 text-base" />
+            <input name="q" defaultValue={q} placeholder="Search name or email" className="h-11 min-w-0 flex-1 rounded-lg border bg-card px-3 text-base" />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="show" value="all" defaultChecked={show === "all"} className="size-5" /> Inactive too
             </label>
             <button className="h-11 rounded-lg border px-3 text-sm">Go</button>
           </form>
-          <ul className="divide-y rounded-xl border">
+          <ul className="divide-y rounded-2xl border bg-card shadow-card">
             {rows.map((r) => {
               const seen = lastSeen.get(r.id);
               return (

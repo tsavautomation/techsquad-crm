@@ -25,7 +25,7 @@ export default async function FormsPage() {
       {Object.entries(Object.groupBy(REGISTRY, (t) => t.module)).map(([mod, tables]) => (
         <section key={mod} className="mb-6">
           <h2 className="mb-2 text-lg font-semibold">{MODULE_TITLES[mod] ?? mod}</h2>
-          <ul className="divide-y rounded-xl border">
+          <ul className="divide-y rounded-2xl border bg-card shadow-card">
             {tables!.map((t) => (
               <li key={t.name}>
                 <Link href={`/admin/forms/${t.name}`} className="flex min-h-12 items-center justify-between gap-3 px-4 hover:bg-muted/50 active:bg-muted">

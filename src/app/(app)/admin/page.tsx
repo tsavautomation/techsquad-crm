@@ -13,7 +13,7 @@ export default async function AdminPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-4 text-2xl font-semibold">Admin</h1>
-      <ul className="divide-y rounded-xl border">
+      <ul className="divide-y rounded-2xl border bg-card shadow-card">
         {screens.map((s) => (
           <li key={s.href}>
             <Link href={s.href} className="flex min-h-16 items-center justify-between gap-3 px-4 py-2 hover:bg-muted/50 active:bg-muted">

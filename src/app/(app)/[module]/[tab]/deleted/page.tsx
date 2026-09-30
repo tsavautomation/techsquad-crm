@@ -36,7 +36,7 @@ export default async function DeletedItemsPage(props: PageProps<"/[module]/[tab]
       {rows.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">Nothing has been deleted.</p>
       ) : (
-        <ul className="divide-y rounded-xl border">
+        <ul className="divide-y rounded-2xl border bg-card shadow-card">
           {rows.map((r) => (
             <li key={r.id} className="flex items-center justify-between gap-3 p-3">
               <div className="min-w-0">

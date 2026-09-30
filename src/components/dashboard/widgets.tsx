@@ -101,17 +101,17 @@ async function recentlyModified(user: CurrentUser, module?: string): Promise<Ite
 
 function Widget({ title, empty, items }: { title: string; empty: string; items: Item[] }) {
   return (
-    <section className="rounded-xl border">
-      <h2 className="border-b px-4 py-3 text-base font-semibold">{title}</h2>
+    <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+      <h2 className="mb-2 text-[15px] font-semibold tracking-tight">{title}</h2>
       {!items.length ? (
-        <p className="px-4 py-3 text-sm text-muted-foreground">{empty}</p>
+        <p className="py-1 text-[13px] text-text-2">{empty}</p>
       ) : (
-        <ul className="divide-y">
+        <ul className="-mx-2 divide-y">
           {items.map((i) => (
             <li key={i.href}>
-              <Link href={i.href} className="flex min-h-12 flex-col justify-center px-4 py-2 hover:bg-muted/50 active:bg-muted">
-                <span className="text-sm font-medium">{i.title}</span>
-                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Link href={i.href} className="flex min-h-12 flex-col justify-center rounded-lg px-2 py-2 hover:bg-muted active:bg-muted">
+                <span className="text-[14.5px] font-semibold">{i.title}</span>
+                <span className="flex items-center gap-1.5 text-[12.5px] text-text-2">
                   {i.color && <span className="inline-block size-2 rounded-full" style={{ backgroundColor: i.color }} aria-hidden />}
                   {i.meta}
                 </span>
@@ -128,7 +128,7 @@ export async function DashboardWidgets({ user, module }: { user: CurrentUser; mo
   const showTasks = !module || module === getTable("tasks").module;
   const [assigned, tasks, recent] = await Promise.all([myAssigned(user, module), showTasks ? myTasks(user) : Promise.resolve(null), recentlyModified(user, module)]);
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid gap-3.5 md:grid-cols-2">
       <Widget title="My Assigned" empty="Nothing waiting for you." items={assigned} />
       {tasks && <Widget title="My Tasks" empty="No open tasks assigned to you." items={tasks} />}
       <Widget title="Recently Modified" empty="No recent changes." items={recent} />

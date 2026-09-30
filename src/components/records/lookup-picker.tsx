@@ -89,7 +89,7 @@ export function LookupPicker({ table, field: f, value, onChange, form, labels, o
   const blockedBy = filterNeedsValue && (form[filterNeedsValue.sameAs] === null || form[filterNeedsValue.sameAs] === undefined);
 
   return (
-    <div className={cn("rounded-lg border bg-background", invalid && "border-destructive")}>
+    <div className={cn("rounded-lg border bg-card", invalid && "border-destructive")}>
       {selected.length > 0 && (
         <ul className="flex flex-wrap gap-2 p-2">
           {selected.map((id) => (

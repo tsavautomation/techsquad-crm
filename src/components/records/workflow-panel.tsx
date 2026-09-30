@@ -48,7 +48,7 @@ export function WorkflowPanel({ table, id, data }: { table: string; id: number; 
 
   const { state } = data;
   return (
-    <section aria-label={data.workflow.name} className="mb-4 rounded-xl border p-4">
+    <section aria-label={data.workflow.name} className="mb-4 rounded-2xl border bg-card shadow-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-medium text-muted-foreground">{data.workflow.name}</h2>
         {state ? (
@@ -67,7 +67,7 @@ export function WorkflowPanel({ table, id, data }: { table: string; id: number; 
               placeholder="Comment (optional)"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              className="h-11 rounded-lg border border-input bg-background px-3 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="h-11 rounded-lg border border-input bg-card px-3 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           )}
           <div className="flex flex-wrap gap-2">
@@ -97,7 +97,7 @@ export function WorkflowPanel({ table, id, data }: { table: string; id: number; 
                 id="wf-override"
                 value={target}
                 onChange={(e) => setTarget(e.target.value ? Number(e.target.value) : "")}
-                className="h-11 flex-1 rounded-lg border border-input bg-background px-3 text-base"
+                className="h-11 flex-1 rounded-lg border border-input bg-card px-3 text-base"
               >
                 <option value="">Choose a stage…</option>
                 {data.levels.filter((l) => l.id !== state.level_id).map((l) => (

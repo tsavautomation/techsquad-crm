@@ -21,7 +21,7 @@ export default async function GroupsPage() {
           <Plus className="size-4" aria-hidden /> New group
         </Link>
       </div>
-      <ul className="divide-y rounded-xl border">
+      <ul className="divide-y rounded-2xl border bg-card shadow-card">
         {((data ?? []) as unknown as Row[]).map((g) => (
           <li key={g.id}>
             <Link href={`/admin/groups/${g.id}`} className="block px-4 py-3 hover:bg-muted/50 active:bg-muted">

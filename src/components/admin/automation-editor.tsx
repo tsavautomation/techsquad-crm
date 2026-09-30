@@ -11,7 +11,7 @@ import type { ConditionRule } from "@/lib/engine/conditions";
 
 export type FieldMeta = { name: string; label: string; type: string; options?: { label: string; value: string }[]; lookup?: boolean };
 
-const INPUT = "h-11 w-full min-w-0 rounded-lg border bg-background px-3 text-base";
+const INPUT = "h-11 w-full min-w-0 rounded-lg border bg-card px-3 text-base";
 const SELECT = INPUT;
 const BTN = "inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm hover:bg-muted disabled:opacity-50";
 const ICON_BTN = "inline-flex size-11 shrink-0 items-center justify-center rounded-lg border hover:bg-muted";
@@ -33,7 +33,7 @@ const fromCsv = (s: string) => s.split(/[,;\s]+/).map((x) => x.trim()).filter(Bo
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border p-3">
+    <section className="rounded-2xl border bg-card shadow-card p-3">
       <h2 className="text-base font-semibold">{title}</h2>
       {hint && <p className="mb-2 text-sm text-muted-foreground">{hint}</p>}
       <div className="space-y-3">{children}</div>
@@ -312,7 +312,7 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
                   {fields.find((x) => x.name === f)?.label ?? f} ✕
                 </button>
               ))}
-              <select className="h-9 rounded-lg border bg-background px-2 text-sm" value="" onChange={(e) => e.target.value && setEvent(`field:${e.target.value}`, true)}>
+              <select className="h-9 rounded-lg border bg-card px-2 text-sm" value="" onChange={(e) => e.target.value && setEvent(`field:${e.target.value}`, true)}>
                 <option value="">+ add field…</option>
                 {fields
                   .filter((f) => !fieldEvents.includes(f.name))
@@ -381,7 +381,7 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
 
         <label className="block text-sm font-medium">
           Notes
-          <textarea className="min-h-20 w-full rounded-lg border bg-background p-3 text-base" value={a.notes ?? ""} onChange={(e) => setA({ ...a, notes: e.target.value })} />
+          <textarea className="min-h-20 w-full rounded-lg border bg-card p-3 text-base" value={a.notes ?? ""} onChange={(e) => setA({ ...a, notes: e.target.value })} />
         </label>
 
         {problems.length > 0 && (

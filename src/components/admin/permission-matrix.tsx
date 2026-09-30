@@ -64,7 +64,7 @@ export function PermissionMatrix({ groupId, groupName, perms, granted, viaEveryo
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search permissions" className="h-11 min-w-0 flex-1 rounded-lg border bg-background px-3 text-base" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search permissions" className="h-11 min-w-0 flex-1 rounded-lg border bg-card px-3 text-base" />
         <label className="flex min-h-11 items-center gap-2 text-sm">
           <input type="checkbox" className="size-5" checked={showUnused} onChange={(e) => setShowUnused(e.target.checked)} />
           Show WebAuthor-only permissions
@@ -127,7 +127,7 @@ export function PermissionMatrix({ groupId, groupName, perms, granted, viaEveryo
       {!visible.length && <p className="text-sm text-muted-foreground">No permissions match.</p>}
 
       {(add.length > 0 || remove.length > 0) && (
-        <div className="sticky bottom-16 z-20 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-lg md:bottom-4">
+        <div className="sticky bottom-16 z-20 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card shadow-card p-3 shadow-lg md:bottom-4">
           <span className="text-sm">
             {groupName}: <strong>{add.length}</strong> to add, <strong>{remove.length}</strong> to remove
           </span>

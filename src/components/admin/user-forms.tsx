@@ -8,7 +8,7 @@ import { inviteUserAction, saveGroupAction, sendPasswordLinkAction, setUserGroup
 
 export type GroupChoice = { id: number; name: string; system: boolean; active: boolean };
 
-const INPUT = "h-11 w-full rounded-lg border bg-background px-3 text-base";
+const INPUT = "h-11 w-full rounded-lg border bg-card px-3 text-base";
 const BTN = "inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border px-4 text-sm font-medium hover:bg-muted disabled:opacity-50";
 const PRIMARY = `${BTN} border-foreground bg-foreground text-background hover:bg-foreground/90`;
 

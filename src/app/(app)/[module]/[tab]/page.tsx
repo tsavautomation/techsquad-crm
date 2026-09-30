@@ -127,7 +127,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
           <ul className="flex flex-col gap-2 md:hidden">
             {rows.map((r) => (
               <li key={r.id}>
-                <Link href={recordHref(t, r.id)} className="block rounded-xl border p-3 active:bg-muted">
+                <Link href={recordHref(t, r.id)} className="block rounded-2xl border bg-card shadow-card p-3 active:bg-muted">
                   <div className="flex items-center gap-2 font-medium">
                     {r.locked === true && <Lock className="size-3.5 text-muted-foreground" aria-label="Submitted" />}
                     {r.title ?? `#${r.id}`}
@@ -146,7 +146,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
           </ul>
 
           {/* Desktop: table */}
-          <div className="hidden overflow-x-auto rounded-xl border md:block">
+          <div className="hidden overflow-x-auto rounded-2xl border bg-card shadow-card md:block">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left">
                 <tr>

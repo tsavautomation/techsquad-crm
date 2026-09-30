@@ -111,7 +111,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
         }}
       />
 
-      <dl className="divide-y rounded-xl border">
+      <dl className="divide-y rounded-2xl border bg-card shadow-card">
         {fields.map((f) => (
           <div key={f.name}>
             {f.heading && <h2 className="bg-muted/40 px-4 py-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{f.heading}</h2>}

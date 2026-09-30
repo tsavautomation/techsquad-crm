@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 type Base = { table: string; id: number };
 
-const INPUT = "w-full rounded-lg border border-input bg-background px-3 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+const INPUT = "w-full rounded-lg border border-input bg-card px-3 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function useRun() {
   const router = useRouter();
@@ -197,7 +197,7 @@ export function FilesPod({ table, id, files, canAdd, canRemove }: Base & { files
                 )}
               </a>
               {canRemove && (
-                <button type="button" disabled={pending} onClick={() => confirm(`Remove ${x.name}?`) && run(() => removePodFileAction(table, id, x.id!))} aria-label={`Remove ${x.name}`} className="absolute top-1 right-1 inline-flex size-8 items-center justify-center rounded-full bg-background/90 shadow">
+                <button type="button" disabled={pending} onClick={() => confirm(`Remove ${x.name}?`) && run(() => removePodFileAction(table, id, x.id!))} aria-label={`Remove ${x.name}`} className="absolute top-1 right-1 inline-flex size-8 items-center justify-center rounded-full bg-card/90 shadow">
                   <Trash2 className="size-4" aria-hidden />
                 </button>
               )}

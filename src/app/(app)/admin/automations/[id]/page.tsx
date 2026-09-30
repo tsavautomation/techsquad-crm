@@ -40,7 +40,7 @@ export default async function AutomationPage(props: PageProps<"/admin/automation
         <div className="mx-auto max-w-xl">
           <h1 className="mb-4 text-2xl font-semibold">New automation</h1>
           <p className="mb-2 text-sm text-muted-foreground">Which kind of record is it about?</p>
-          <ul className="divide-y rounded-xl border">
+          <ul className="divide-y rounded-2xl border bg-card shadow-card">
             {REGISTRY.filter((x) => !x.parent && x.module !== "utility").map((x) => (
               <li key={x.name}>
                 <Link href={`/admin/automations/new?table=${x.name}`} className="flex min-h-12 items-center px-4 hover:bg-muted/50">
@@ -87,7 +87,7 @@ export default async function AutomationPage(props: PageProps<"/admin/automation
       {!runs?.length ? (
         <p className="text-sm text-muted-foreground">It hasn&apos;t run yet.</p>
       ) : (
-        <ul className="divide-y rounded-xl border text-sm">
+        <ul className="divide-y rounded-2xl border bg-card shadow-card text-sm">
           {(runs as { id: number; record_id: number; event: string; status: string; detail: { actions?: string[]; error?: string }; at: string }[]).map((r) => (
             <li key={r.id} className="p-3">
               <span className="text-xs text-muted-foreground">{formatDateTime(r.at)}</span>

@@ -33,7 +33,7 @@ export function RichTextEditor({ id, value, onChange, disabled, invalid }: Props
   ];
 
   return (
-    <div className={cn("rounded-lg border bg-background", invalid && "border-destructive")}>
+    <div className={cn("rounded-lg border bg-card", invalid && "border-destructive")}>
       {!disabled && (
         <div role="toolbar" aria-label="Formatting" className="flex flex-wrap gap-1 border-b p-1">
           {tools.map(({ icon: Icon, label, run, on }) => (

@@ -33,7 +33,7 @@ function TabList({ title, items, children }: { title: string; items: { href: str
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-4 text-2xl font-semibold">{title}</h1>
-      <ul className="divide-y rounded-xl border">
+      <ul className="divide-y rounded-2xl border bg-card shadow-card">
         {items.map((i) => (
           <li key={i.href}>
             <Link href={i.href} className="flex min-h-14 items-center justify-between px-4 text-base hover:bg-muted/50 active:bg-muted">

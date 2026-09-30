@@ -32,7 +32,7 @@ export function ListControls({ filters }: { filters: Filter[] }) {
   }, [q]);
 
   const archived = params.get("archived") === "1";
-  const box = "h-11 rounded-lg border border-input bg-background px-3 text-base md:text-sm";
+  const box = "h-11 rounded-lg border border-input bg-card px-3 text-base md:text-sm";
 
   return (
     <div className="mb-4 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
