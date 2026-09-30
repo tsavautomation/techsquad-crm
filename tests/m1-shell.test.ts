@@ -6,14 +6,8 @@ import { isPublicPath } from "@/lib/supabase/proxy";
 const MODULES = ALL_MODULES.filter((m) => m.slug !== "schedule");
 
 describe("module menu (SPEC §1.1)", () => {
-  it("has the five WebAuthor modules in order", () => {
-    expect(MODULES.map((m) => m.title)).toEqual([
-      "Projects",
-      "Administrative",
-      "Inventory",
-      "TS Help Desk",
-      "FLEX Forms",
-    ]);
+  it("has the WebAuthor modules in order (Help Desk deleted, FLEX Forms renamed Reports: Fred 2026-09-30)", () => {
+    expect(MODULES.map((m) => m.title)).toEqual(["Projects", "Administrative", "Inventory", "Reports"]);
   });
 
   it("keeps WebAuthor tab order for Projects", () => {

@@ -21,7 +21,7 @@ export type Me = { name: string; email: string; initials: string };
 const GROUPS: { title: string; slugs: string[] }[] = [
   { title: "", slugs: ["schedule"] },
   { title: "Work", slugs: ["projects", "forms"] },
-  { title: "Office", slugs: ["administrative", "inventory", "help-desk"] },
+  { title: "Office", slugs: ["administrative", "inventory"] },
 ];
 
 function isActive(pathname: string, href: string) {

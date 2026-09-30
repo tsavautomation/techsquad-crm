@@ -11,6 +11,8 @@ const spec = JSON.parse(readFileSync("techsquad_crm_spec.json", "utf8")) as {
   tables: Record<string, { fields: RawField[]; rules: unknown[] | null }>;
 };
 
+// TS Help Desk was deleted (Fred 2026-09-30, SPEC §9.1 H-a): its WebAuthor tables are not rebuilt.
+const REMOVED = new Set(["fx_techsquad_help_desk", "fx_techsquad_help_desk_support_note", "fx_techsquad_help_desk_xmarticles", "fx_techsquad_util_knowledge_base_category"]);
 const SYSTEM = new Set(["person_id_creator", "person_id_modifier", "date_created", "date_modified", "client_id", "locked", "date_submitted"]);
 const byLegacyTable = new Map(REGISTRY.map((t) => [t.legacy.table, t]));
 const SUBGRID_SECTIONS: Record<string, string> = {
@@ -21,10 +23,12 @@ const SUBGRID_SECTIONS: Record<string, string> = {
 /** Every exported user field, paired with the registry table it should live in. */
 const exported: { legacyTable: string; raw: RawField }[] = [];
 for (const [legacyTable, t] of Object.entries(spec.tables)) {
+  if (REMOVED.has(legacyTable)) continue;
   for (const raw of t.fields) {
     if (raw.section === "Summary" || raw.type === "lookup|client") continue;
     if (SYSTEM.has(raw.column_name) && !(legacyTable === "fx_techsquad_employee_xmrma" && raw.column_name === "date_submitted")) continue;
-    exported.push({ legacyTable: SUBGRID_SECTIONS[`${legacyTable}:${raw.section}`] ?? legacyTable, raw });
+    const target = SUBGRID_SECTIONS[`${legacyTable}:${raw.section}`] ?? legacyTable;
+    if (!REMOVED.has(target)) exported.push({ legacyTable: target, raw });
   }
 }
 
@@ -35,9 +39,9 @@ function findField(legacyTable: string, raw: RawField): FieldDef | undefined {
 const normLabel = (s: string) => s.replace(/\s+/g, " ").trim();
 
 describe("registry ↔ WebAuthor export", () => {
-  it("covers all 28 tables", () => {
-    expect(REGISTRY).toHaveLength(28);
-    for (const legacy of Object.keys(spec.tables)) expect(byLegacyTable.has(legacy), legacy).toBe(true);
+  it("covers all 28 WebAuthor tables except the 4 deleted Help Desk ones", () => {
+    expect(REGISTRY).toHaveLength(24);
+    for (const legacy of Object.keys(spec.tables)) if (!REMOVED.has(legacy)) expect(byLegacyTable.has(legacy), legacy).toBe(true);
   });
 
   it("has every exported user field, and nothing extra except parent links", () => {
@@ -75,11 +79,12 @@ describe("registry ↔ WebAuthor export", () => {
     }
   });
 
-  it("has all 49 rules except the two do-nothing rules removed by decision (SPEC §9 Q4)", () => {
+  it("has all 49 rules except the two do-nothing rules (SPEC §9 Q4) and the Help Desk one (H-a)", () => {
     const exportedRules = Object.values(spec.tables).reduce((n, t) => n + (t.rules?.length ?? 0), 0);
     expect(exportedRules).toBe(49);
     const ids = REGISTRY.flatMap((t) => t.rules.map((r) => r.id));
-    expect(ids).toHaveLength(47);
+    expect(ids).toHaveLength(46);
+    expect(ids).not.toContain(3395); // Support Notes, deleted with TS Help Desk
     expect(ids).not.toContain(3399);
     expect(ids).not.toContain(3400);
   });
@@ -150,7 +155,7 @@ describe("registry internal consistency", () => {
 
   it("every tab in the menu has a registry table", () => {
     const tabs = REGISTRY.filter((t) => t.tab).map((t) => `${t.module}/${t.tab}`);
-    expect(tabs).toHaveLength(23);
+    expect(tabs).toHaveLength(21); // 23 in WebAuthor − Tickets and Articles (Help Desk deleted)
   });
 
   it("field names are unique per table and snake_case", () => {

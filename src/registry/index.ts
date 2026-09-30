@@ -17,12 +17,8 @@ import { payouts } from "./tables/payouts";
 import { products } from "./tables/products";
 import { sales } from "./tables/sales";
 import { stockItems } from "./tables/stock_items";
-import { supportTickets } from "./tables/support_tickets";
-import { supportNotes } from "./tables/support_notes";
-import { kbArticles } from "./tables/kb_articles";
 import { suppliers } from "./tables/suppliers";
 import { brands } from "./tables/brands";
-import { kbCategories } from "./tables/kb_categories";
 import { jobReports } from "./tables/job_reports";
 import { formNotes } from "./tables/form_notes";
 import { staffPerformance } from "./tables/staff_performance";
@@ -30,7 +26,7 @@ import { surveyProposals } from "./tables/survey_proposals";
 import { tvInstallations } from "./tables/tv_installations";
 import { visits } from "./tables/visits";
 
-/** The 28 tables carried over from WebAuthor (the parity tests check these against the export). */
+/** Tables carried over from WebAuthor (the parity tests check these against the export). TS Help Desk was removed (SPEC §9.1 H-a). */
 export const WEBAUTHOR_REGISTRY: TableDef[] = [
   projects,
   contacts,
@@ -49,12 +45,8 @@ export const WEBAUTHOR_REGISTRY: TableDef[] = [
   products,
   sales,
   stockItems,
-  supportTickets,
-  supportNotes,
-  kbArticles,
   suppliers,
   brands,
-  kbCategories,
   jobReports,
   formNotes,
   staffPerformance,

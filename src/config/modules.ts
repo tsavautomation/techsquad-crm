@@ -67,17 +67,11 @@ export const MODULES: ModuleDef[] = [
     ],
   },
   {
-    slug: "help-desk",
-    title: "TS Help Desk",
-    shortTitle: "Help Desk",
-    icon: "life-buoy",
-    tabs: [tab("help-desk", "tickets", "Tickets"), tab("help-desk", "articles", "Articles")],
-  },
-  {
     // Each FLEX form has its own permissions since SPEC §9.1 M12-b (WebAuthor shared one set, SPEC §7.3).
     slug: "forms",
-    title: "FLEX Forms",
-    shortTitle: "Forms",
+    // Renamed from WebAuthor's "FLEX Forms" (Fred 2026-09-30): the forms technicians fill in for each job.
+    title: "Reports",
+    shortTitle: "Reports",
     icon: "clipboard-list",
     tabs: [
       tab("forms", "job-reports", "Job Report"),

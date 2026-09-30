@@ -25,7 +25,7 @@ describe("admin permissions", () => {
     expect(used).not.toContain("administrative.module.binder_binders");
     expect(used).not.toContain("administrative.module.options_impersonate_users");
     const usedInCatalogue = [...catalogue].filter((k) => used.has(k)).length;
-    expect(usedInCatalogue).toBeGreaterThan(150);
+    expect(usedInCatalogue).toBeGreaterThan(130);
     expect(usedInCatalogue).toBeLessThan(catalogue.size);
   });
 

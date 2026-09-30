@@ -19,7 +19,6 @@ const LOCK_RESOURCE: Record<string, string> = {
   projects: "projects",
   administrative: "records",
   inventory: "products",
-  "help-desk": "tickets",
   forms: "records",
 };
 
@@ -32,7 +31,6 @@ export const UTILITY_KEYS = [
   "projects.module.options_utility_tables",
   "administrative.module.options_utility_tables",
   "inventory.module.options_utility_tables",
-  "help-desk.module.options_utility_tables",
 ];
 
 export const isUtility = (t: TableDef) => t.module === "utility";

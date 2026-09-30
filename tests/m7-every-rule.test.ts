@@ -116,7 +116,6 @@ const CASES: Case[] = [
   { rule: 3823, table: "job_reports", title: "Pending 2 filled shows Pending 3", values: { pending_1: "a", pending_2: "b" }, shown: ["pending_3"], hidden: ["pending_4"] },
   { rule: 3827, table: "job_reports", title: "Pending 3 filled shows Pending 4", values: { pending_1: "a", pending_2: "b", pending_3: "c" }, shown: ["pending_4"], hidden: ["pending_5"] },
   { rule: 3828, table: "job_reports", title: "Pending 4 filled shows Pending 5", values: { pending_1: "a", pending_2: "b", pending_3: "c", pending_4: "d" }, shown: ["pending_5"] },
-  { rule: 3395, table: "support_notes", title: "Status Closed makes Closed Date required", values: { status: "Closed" }, required: ["closed_date"] },
 ];
 
 describe("every field rule (SPEC §4)", () => {
@@ -133,10 +132,10 @@ describe("every field rule (SPEC §4)", () => {
     });
   }
 
-  it("covers all 47 rules in the registry", () => {
+  it("covers all 46 rules in the registry", () => {
     const inRegistry = REGISTRY.flatMap((t) => t.rules.map((r) => r.id)).sort();
     const tested = [...new Set(CASES.map((c) => c.rule))].sort();
-    expect(inRegistry).toHaveLength(47);
+    expect(inRegistry).toHaveLength(46);
     expect(tested).toEqual(inRegistry);
   });
 });

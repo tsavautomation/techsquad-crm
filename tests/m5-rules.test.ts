@@ -90,10 +90,6 @@ describe("value actions", () => {
     expect(run("employees", { dl_expiration: "2026-09-24" }).values.dl_status).toBe("Expired");
     expect(run("employees", { dl_expiration: "2026-09-25" }).values.dl_status).toBeUndefined();
   });
-  it("Support Notes: Status = Closed makes Closed Date required", () => {
-    expect(run("support_notes", { status: "Closed" }).required.has("closed_date")).toBe(true);
-    expect(run("support_notes", { status: "Pending" }).required.has("closed_date")).toBe(false);
-  });
   it("Job Report pending boxes cascade", () => {
     const r = run("job_reports", { pending_1: "a", pending_2: "b" });
     expect(r.visible.has("pending_2")).toBe(true);

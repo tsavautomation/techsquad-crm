@@ -29,14 +29,14 @@ describe("record tables ↔ permission catalogue", () => {
   });
 
   it("the utility-list permission keys exist", () => {
-    for (const m of ["projects", "administrative", "inventory", "help-desk"]) {
+    for (const m of ["projects", "administrative", "inventory"]) {
       expect(keys.has(`${m}.module.options_utility_tables`), m).toBe(true);
     }
   });
 
   it("only child tables and utility lists have no resource", () => {
     const without = REGISTRY.filter((t) => !permissionResource(t)).map((t) => t.name).sort();
-    expect(without).toEqual(["brands", "contact_interactions", "kb_categories", "suppliers", "support_notes"]);
+    expect(without).toEqual(["brands", "contact_interactions", "suppliers"]);
   });
 });
 
@@ -53,7 +53,6 @@ describe("generated migration", () => {
       joinTableName("job_reports", "team_ids"),
       joinTableName("job_reports", "tagged_ids"),
       joinTableName("tv_installations", "team_ids"),
-      joinTableName("kb_articles", "audience_group_ids"),
     ]) {
       expect(migration, jt).toContain(`create table public.${jt} (`);
     }

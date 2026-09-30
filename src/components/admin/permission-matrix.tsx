@@ -11,8 +11,7 @@ const MODULE_TITLES: Record<string, string> = {
   projects: "Projects",
   administrative: "Administrative",
   inventory: "Inventory",
-  "help-desk": "Help Desk",
-  forms: "Forms",
+  forms: "Reports (forms)",
   files: "Files",
   site: "Site / Admin",
 };

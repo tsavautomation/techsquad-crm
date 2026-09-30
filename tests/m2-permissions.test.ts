@@ -108,7 +108,7 @@ describe("menu per group (SPEC §7.3)", () => {
     }
   });
 
-  it("Office Management: everything except Payroll; Inventory like Admin (M12-d); includes Help Desk", () => {
+  it("Office Management: everything except Payroll; Inventory like Admin (M12-d)", () => {
     expect(menuFor("office_management")).toEqual([
       ...SCHEDULE,
       ...PROJECTS_EVERYONE,
@@ -122,8 +122,6 @@ describe("menu per group (SPEC §7.3)", () => {
       "inventory/products",
       "inventory/stock",
       "inventory/sales",
-      "help-desk/tickets",
-      "help-desk/articles",
       ...FORMS,
     ]);
   });
@@ -151,7 +149,7 @@ describe("menu per group (SPEC §7.3)", () => {
   it("System Administrators see every tab", () => {
     const all = menuFor("system_administrators");
     expect(all).toContain("inventory/sales");
-    expect(all).toHaveLength(25); // 23 WebAuthor tabs + Schedule (Calendar, Visits)
+    expect(all).toHaveLength(23); // 23 WebAuthor tabs − Help Desk (2) + Schedule (Calendar, Visits)
   });
 });
 
