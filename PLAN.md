@@ -51,7 +51,7 @@ Phase 2 will also need a Microsoft 365 / Entra app registration (OneDrive), a Go
 | **F3** | Office Today dashboard (late / in field / follow-ups / renewals / reviews / expiring documents / delinquent) + tasks board (Kanban, labels, comments, private tasks) | before go-live |
 | **F4** | Pipeline board on the Project workflow + auto tasks; client timeline and communication log; message templates in EN / PT / ES; partner stats | |
 | **F5** | Reports (pipeline, money, partners, salespeople, operations real vs planned, maintenance plans) + data quality (completeness, duplicates, merge) | |
-| **F6** | Client portal (customer logins) + website quote form | needs a security review |
+| **F6** | Client portal (customer logins, EN / PT / ES + dark/light in its top bar) + website quote form | **after M14 import** (Fred 2026-09-30); security review |
 | **F7** | Global search, notification bell, undo | can be spread over F1–F6 |
 
 ---

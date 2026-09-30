@@ -58,9 +58,9 @@ import (M14) still comes last, as agreed.
 
 ## Fred's answers (2026-09-30)
 1. **Report**: extend our Job Report with the structured fields. ✔
-2. **Service types / tool lists / checklists**: *not* the prototype's four. Open: which list (see below).
+2. **Service types / tool lists / checklists**: start **empty**; admins build the list later in Form settings (option C).
 3. **Returns**: Jessica receives every return card, for now (make the person a setting).
 4. **SMS / message templates**: not now. The "on my way", confirmation, follow-up and review texts are left out.
 5. **Languages**: office and field screens in English; the **client portal** has English / Português / Español and the dark / light switch in its top bar.
 6. **Maintenance plans**: the prices are real (Bronze $899.99, Silver $1,349.99, Gold $2,125.99, Custom). They are the **default** price list, editable by admins; each project can have its **own price** (the Project already has Maintenance Type + Amount: choosing a tier pre-fills Amount, which stays editable per client).
-7. **Client portal timing**: explained; waiting for Fred's choice.
+7. **Client portal**: **after** go-live and the WebAuthor import (F6 moves after M14), rolled out to a few clients first.
