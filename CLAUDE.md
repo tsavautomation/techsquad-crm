@@ -81,7 +81,8 @@ Replacement for the WebAuthor CRM at techsquad.webauthor.com.
 - **Mobile-first; the iPhone is the primary device.**
   - Design at 390 px first, then widen.
   - Single-column forms, 44 px minimum tap targets, and input font-size ≥ 16 px (stops iOS zoom-on-focus).
-  - Bottom navigation on mobile, sidebar on desktop.
+  - Look and layout follow the colleague's "Portal Tech Squad" design (2026-09-30): tokens in `src/app/globals.css` (Tech Squad blue, navy sidebar, cool-grey page, white cards `rounded-2xl border bg-card shadow-card`, status colours `ok/warn/bad/info-*`), Inter. Use the tokens, not raw colours.
+  - Phones: bottom bar Home · Schedule · + (Create) · Projects · More, hidden on new/edit forms (their Save bar takes its place). Computers: navy sidebar with grouped modules, Create button and account card.
   - Lists become cards under `md`.
   - File inputs use `accept` + `capture` so the camera opens.
   - The app is installable as a PWA (manifest + icons).
