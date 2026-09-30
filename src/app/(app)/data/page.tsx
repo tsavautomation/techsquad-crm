@@ -1,0 +1,172 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireUser } from "@/lib/auth/session";
+import { recordsDb } from "@/lib/records/data";
+import type { Address } from "@/lib/records/values";
+import { getTable } from "@/registry";
+import { canDo, canOpen } from "@/registry/permissions";
+import { cn } from "@/lib/utils";
+
+export const metadata = { title: "Data" };
+
+// Data quality (the Portal design's "Dados"): incomplete records and possible duplicates.
+// Merging duplicates comes after the WebAuthor import (Fred 2026-09-30).
+
+type Contact = { id: number; title: string | null; first_name: string | null; last_name: string | null; main_phone: string | null; email: string | null };
+type Org = { id: number; title: string | null; main_phone: string | null; main_email: string | null };
+type Project = { id: number; title: string | null; job_address: Address | null; job_status: string | null };
+
+const digits = (s: string | null) => (s ?? "").replace(/\D/g, "").slice(-10);
+const norm = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+function Kpi({ value, label, alert }: { value: string; label: string; alert?: boolean }) {
+  return (
+    <div className={cn("rounded-2xl border bg-card px-4 py-3.5 shadow-card", alert && "border-bad-border bg-gradient-to-b from-bad-bg to-card")}>
+      <b className={cn("block text-[28px] leading-tight font-semibold tracking-tight", alert && "text-bad-fg")}>{value}</b>
+      <span className="text-[12.5px] text-text-2">{label}</span>
+    </div>
+  );
+}
+
+export default async function DataPage(props: PageProps<"/data">) {
+  const user = await requireUser();
+  const contactsT = getTable("contacts");
+  if (!canOpen(user.permissions, contactsT, getTable)) notFound();
+  const { active } = (await props.searchParams) as { active?: string };
+  const onlyActive = active !== "all";
+  const canEdit = canDo(user.permissions, contactsT, "modify", getTable);
+  const db = await recordsDb();
+
+  const [{ data: c }, { data: o }, { data: p }] = await Promise.all([
+    db.from("contacts").select("id, title, first_name, last_name, main_phone, email").is("deleted_at", null).is("archived_at", null),
+    canOpen(user.permissions, getTable("organizations"), getTable) ? db.from("organizations").select("id, title, main_phone, main_email").is("deleted_at", null).is("archived_at", null) : Promise.resolve({ data: [] }),
+    canOpen(user.permissions, getTable("projects"), getTable) ? db.from("projects").select("id, title, job_address, job_status").is("deleted_at", null).is("archived_at", null) : Promise.resolve({ data: [] }),
+  ]);
+  const contacts = (c ?? []) as Contact[];
+  const orgs = (o ?? []) as Org[];
+  const projects = ((p ?? []) as Project[]).filter((x) => !onlyActive || !["Complete", "Proposal Denied"].includes(x.job_status ?? ""));
+
+  // Completeness.
+  type Gap = { href: string; title: string; missing: string[] };
+  const gaps: Gap[] = [
+    ...contacts.map((x) => ({ href: `/projects/contacts/${x.id}`, title: x.title ?? `Contact #${x.id}`, missing: [!x.main_phone && "phone", !x.email && "email"].filter(Boolean) as string[] })),
+    ...orgs.map((x) => ({ href: `/projects/organizations/${x.id}`, title: x.title ?? `Organization #${x.id}`, missing: [!x.main_phone && "phone", !x.main_email && "email"].filter(Boolean) as string[] })),
+    ...projects.map((x) => ({ href: `/projects/projects/${x.id}`, title: x.title ?? `Project #${x.id}`, missing: [!x.job_address?.street && "job address"].filter(Boolean) as string[] })),
+  ].filter((g) => g.missing.length);
+  const slots = contacts.length * 2 + orgs.length * 2 + projects.length;
+  const filled = slots - gaps.reduce((n, g) => n + g.missing.length, 0);
+  const pct = slots ? Math.round((filled / slots) * 100) : 100;
+
+  // Possible duplicates: same phone or email with different names, or same full name.
+  const groups = new Map<string, { label: string; ids: number[] }>();
+  const add = (key: string, label: string, id: number) => {
+    const g = groups.get(key) ?? { label, ids: [] };
+    if (!g.ids.includes(id)) g.ids.push(id);
+    groups.set(key, g);
+  };
+  for (const x of contacts) {
+    const d = digits(x.main_phone);
+    if (d.length === 10) add(`t${d}`, `Same phone: ${x.main_phone}`, x.id);
+    if (x.email) add(`e${x.email.toLowerCase()}`, `Same email: ${x.email}`, x.id);
+    const name = norm(`${x.first_name}${x.last_name}`);
+    if (name.length > 3) add(`n${name}`, `Same name: ${[x.first_name, x.last_name].filter(Boolean).join(" ")}`, x.id);
+  }
+  const byId = new Map(contacts.map((x) => [x.id, x]));
+  const dupes = [...groups.values()].filter((g) => g.ids.length > 1);
+
+  // Projects at the same address and unit.
+  const places = new Map<string, number[]>();
+  for (const x of projects) {
+    const a = x.job_address;
+    if (!a?.street) continue;
+    const k = `${norm(a.street)}|${norm(a.address_2)}|${norm(a.zip)}`;
+    places.set(k, [...(places.get(k) ?? []), x.id]);
+  }
+  const projectById = new Map(projects.map((x) => [x.id, x]));
+  const samePlace = [...places.values()].filter((ids) => ids.length > 1);
+
+  return (
+    <div className="mx-auto max-w-[960px]">
+      <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">Data</h1>
+      <p className="mb-4 text-[12.5px] text-muted-foreground">Incomplete records and possible duplicates. Merging duplicates comes after the WebAuthor import.</p>
+      <div className="mb-[18px] grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Kpi value={`${pct}%`} label="Complete overall" />
+        <Kpi value={String(gaps.length)} label="Incomplete records" alert={gaps.length > 0} />
+        <Kpi value={String(dupes.length)} label="Possible duplicate contacts" alert={dupes.length > 0} />
+        <Kpi value={String(samePlace.length)} label="Projects at the same address" />
+      </div>
+
+      <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-[15px] font-semibold tracking-tight">Incomplete records</h2>
+          <Link href={onlyActive ? "/data?active=all" : "/data"} className="text-[13px] text-primary underline-offset-2 hover:underline">
+            {onlyActive ? "Include completed / lost projects" : "Only open projects"}
+          </Link>
+        </div>
+        {gaps.length ? (
+          <ul className="-mx-2 divide-y">
+            {gaps.slice(0, 40).map((g) => (
+              <li key={g.href} className="flex items-center gap-2 px-2 py-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-medium">{g.title}</span>
+                  <span className="flex flex-wrap gap-1">
+                    {g.missing.map((m) => (
+                      <span key={m} className="rounded-md bg-warn-bg px-1.5 py-0.5 text-[11.5px] text-warn-fg">
+                        no {m}
+                      </span>
+                    ))}
+                  </span>
+                </span>
+                <Link href={canEdit ? `${g.href}/edit` : g.href} className="inline-flex h-9 shrink-0 items-center rounded-[10px] border bg-card px-3 text-[13px] hover:bg-muted">
+                  {canEdit ? "Edit" : "Open"}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-[13px] text-text-2">Everything has its phone, email and address.</p>
+        )}
+        {gaps.length > 40 && <p className="mt-1 text-[12.5px] text-muted-foreground">+ {gaps.length - 40} more</p>}
+      </section>
+
+      <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+        <h2 className="mb-1 text-[15px] font-semibold tracking-tight">Possible duplicate contacts</h2>
+        <p className="mb-2 text-[12.5px] text-text-2">Same phone, same email or same name. Open both to compare.</p>
+        {dupes.length ? (
+          <ul className="flex flex-col gap-2">
+            {dupes.map((g) => (
+              <li key={g.label + g.ids.join()} className="rounded-xl border bg-muted px-3 py-2">
+                <span className="block text-[12px] text-muted-foreground">{g.label}</span>
+                {g.ids.map((id) => (
+                  <Link key={id} href={`/projects/contacts/${id}`} className="block text-[14px] text-primary hover:underline">
+                    {byId.get(id)?.title ?? `Contact #${id}`}
+                  </Link>
+                ))}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-[13px] text-text-2">No likely duplicates.</p>
+        )}
+      </section>
+
+      {samePlace.length > 0 && (
+        <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+          <h2 className="mb-1 text-[15px] font-semibold tracking-tight">Projects at the same address</h2>
+          <p className="mb-2 text-[12.5px] text-text-2">Often fine (a new job at an old client), sometimes a duplicate.</p>
+          <ul className="flex flex-col gap-2">
+            {samePlace.map((ids) => (
+              <li key={ids.join()} className="rounded-xl border bg-muted px-3 py-2">
+                {ids.map((id) => (
+                  <Link key={id} href={`/projects/projects/${id}`} className="block text-[14px] text-primary hover:underline">
+                    {projectById.get(id)?.title ?? `Project #${id}`}
+                  </Link>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}

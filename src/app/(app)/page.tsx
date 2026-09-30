@@ -2,6 +2,7 @@ import { visibleModules } from "@/config/modules";
 import { requireUser } from "@/lib/auth/session";
 import { TIME_ZONE } from "@/lib/dates";
 import { DashboardKpis } from "@/components/dashboard/kpis";
+import { TodaySections } from "@/components/dashboard/today";
 import { DashboardWidgets } from "@/components/dashboard/widgets";
 
 /** Greeting by the Eastern-time hour, as in the Portal design. */
@@ -10,6 +11,9 @@ function greeting(now: Date) {
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
+export const metadata = { title: "Today" };
+
+/** Today (the Portal design's "Hoje"): greeting, number tiles, what needs attention. */
 export default async function DashboardPage() {
   const user = await requireUser();
   const modules = visibleModules(user.permissions);
@@ -28,8 +32,11 @@ export default async function DashboardPage() {
       ) : (
         <>
           <DashboardKpis user={user} now={now.getTime()} />
-          <div id="assigned">
-            <DashboardWidgets user={user} />
+          <div className="grid gap-3.5">
+            <TodaySections user={user} now={now.getTime()} />
+            <div id="assigned">
+              <DashboardWidgets user={user} />
+            </div>
           </div>
         </>
       )}

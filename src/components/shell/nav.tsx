@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, List, LogOut, Menu, Monitor, Moon, Plus, Settings, Sun, X } from "lucide-react";
+import { ChartColumn, ChevronRight, Database, List, LogOut, Menu, Monitor, Moon, Plus, Settings, SquareKanban, Sun, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { ModuleDef } from "@/config/modules";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,8 @@ import { ModuleIcon } from "./module-icon";
 export type NavItem = { slug: string; href: string; title: string; shortTitle: string; icon: ModuleDef["icon"]; tabs?: { href: string; title: string }[] };
 export type CreateItem = { href: string; label: string };
 export type Me = { name: string; email: string; initials: string };
+/** Pages outside the modules (Portal design): Tasks board, Insights, Data. */
+export type Extras = { tasks: boolean; insights: boolean; data: boolean };
 
 const GROUPS: { title: string; slugs: string[] }[] = [
   { title: "", slugs: ["schedule"] },
@@ -129,7 +131,7 @@ function SignOut() {
 }
 
 /** Left sidebar, shown from the md breakpoint up. The open module lists its pages underneath. */
-export function Sidebar({ items, create, me, showAdmin }: { items: NavItem[]; create: CreateItem[]; me: Me; showAdmin: boolean }) {
+export function Sidebar({ items, create, me, showAdmin, extras }: { items: NavItem[]; create: CreateItem[]; me: Me; showAdmin: boolean; extras: Extras }) {
   const pathname = usePathname();
   const [creating, setCreating] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -182,8 +184,9 @@ export function Sidebar({ items, create, me, showAdmin }: { items: NavItem[]; cr
         if (!g.title)
           return (
             <ul key="main" className="flex flex-col gap-0.5">
-              {link("/", "Dashboard", <ModuleIcon name="dashboard" className="size-[18px]" />)}
+              {link("/", "Today", <ModuleIcon name="dashboard" className="size-[18px]" />)}
               {list.map((i) => link(i.href, i.title, <ModuleIcon name={i.icon} className="size-[18px]" />, i.tabs))}
+              {extras.tasks && link("/tasks", "Tasks", <SquareKanban className="size-[18px]" aria-hidden />)}
             </ul>
           );
         if (!list.length) return null;
@@ -194,6 +197,15 @@ export function Sidebar({ items, create, me, showAdmin }: { items: NavItem[]; cr
           </div>
         );
       })}
+      {(extras.insights || extras.data) && (
+        <>
+          <p className="mx-2.5 mt-[18px] mb-1.5 text-[10.5px] tracking-[0.08em] text-[#7c8da6] uppercase">Management</p>
+          <ul className="flex flex-col gap-0.5">
+            {extras.insights && link("/insights", "Insights", <ChartColumn className="size-[18px]" aria-hidden />)}
+            {extras.data && link("/data", "Data", <Database className="size-[18px]" aria-hidden />)}
+          </ul>
+        </>
+      )}
       <p className="mx-2.5 mt-[18px] mb-1.5 text-[10.5px] tracking-[0.08em] text-[#7c8da6] uppercase">More</p>
       <ul className="flex flex-col gap-0.5">
         {link("/lists", "Lists", <List className="size-[18px]" aria-hidden />)}
@@ -268,7 +280,7 @@ export function ModuleTabsBar({ items }: { items: NavItem[] }) {
 }
 
 /** Bottom bar for phones: Home, Schedule, +, Projects, More. */
-export function BottomNav({ items, create, showAdmin }: { items: NavItem[]; create: CreateItem[]; showAdmin: boolean }) {
+export function BottomNav({ items, create, showAdmin, extras }: { items: NavItem[]; create: CreateItem[]; showAdmin: boolean; extras: Extras }) {
   const pathname = usePathname();
   const [sheet, setSheet] = useState<"create" | "more" | null>(null);
   const close = () => setSheet(null);
@@ -280,14 +292,19 @@ export function BottomNav({ items, create, showAdmin }: { items: NavItem[]; crea
       {label}
     </Link>
   );
-  const moreActive = rest.some((i) => isActive(pathname, i.href)) || isActive(pathname, "/admin") || isActive(pathname, "/lists");
+  const extraPages = [
+    ...(extras.tasks ? [{ href: "/tasks", title: "Tasks", icon: <SquareKanban className="size-5" aria-hidden /> }] : []),
+    ...(extras.insights ? [{ href: "/insights", title: "Insights", icon: <ChartColumn className="size-5" aria-hidden /> }] : []),
+    ...(extras.data ? [{ href: "/data", title: "Data", icon: <Database className="size-5" aria-hidden /> }] : []),
+  ];
+  const moreActive = rest.some((i) => isActive(pathname, i.href)) || [...extraPages.map((p) => p.href), "/admin", "/lists"].some((h) => isActive(pathname, h));
   // Forms (new / edit) get the whole screen; their Save bar sits where this bar would be.
   if (/\/(new|edit)$/.test(pathname)) return null;
 
   return (
     <>
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgb(16_24_40/0.06)] md:hidden">
-        {tab("/", "Home", <ModuleIcon name="dashboard" className="size-[22px]" />, pathname === "/")}
+        {tab("/", "Today", <ModuleIcon name="dashboard" className="size-[22px]" />, pathname === "/")}
         {pinned[0] && tab(pinned[0].href, pinned[0].shortTitle, <ModuleIcon name={pinned[0].icon} className="size-[22px]" />, isActive(pathname, pinned[0].href))}
         {create.length > 0 && (
           <button type="button" onClick={() => setSheet("create")} className="flex flex-1 flex-col items-center" aria-label="Create">
@@ -307,7 +324,7 @@ export function BottomNav({ items, create, showAdmin }: { items: NavItem[]; crea
       </Sheet>
       <Sheet open={sheet === "more"} onClose={close} title="More">
         <ul>
-          {[...rest.map((i) => ({ href: i.href, title: i.title, icon: <ModuleIcon name={i.icon} className="size-5" /> })), { href: "/lists", title: "Lists", icon: <List className="size-5" aria-hidden /> }, ...(showAdmin ? [{ href: "/admin", title: "Admin", icon: <Settings className="size-5" aria-hidden /> }] : [])].map((i) => (
+          {[...extraPages, ...rest.map((i) => ({ href: i.href, title: i.title, icon: <ModuleIcon name={i.icon} className="size-5" /> })), { href: "/lists", title: "Lists", icon: <List className="size-5" aria-hidden /> }, ...(showAdmin ? [{ href: "/admin", title: "Admin", icon: <Settings className="size-5" aria-hidden /> }] : [])].map((i) => (
             <li key={i.href}>
               <Link href={i.href} onClick={close} className={cn("flex min-h-12 items-center gap-3 rounded-xl px-3 hover:bg-muted", isActive(pathname, i.href) && "bg-secondary font-semibold")}>
                 <span className="grid size-9 place-items-center rounded-[10px] bg-muted text-text-2">{i.icon}</span>
