@@ -8,6 +8,7 @@ import { useTheme } from "next-themes";
 import type { ModuleDef } from "@/config/modules";
 import { cn } from "@/lib/utils";
 import { ModuleIcon } from "./module-icon";
+import { TileIcon } from "./tile-icons";
 
 // App frame in the "Portal Tech Squad" style (docs/portal-features-merge.md): navy sidebar with
 // grouped sections and a Create button on computers; on phones a bottom bar with Home, Schedule,
@@ -15,7 +16,7 @@ import { ModuleIcon } from "./module-icon";
 
 /** A module the user may open; the server layout filters these (and their tabs) by permission. */
 export type NavItem = { slug: string; href: string; title: string; shortTitle: string; icon: ModuleDef["icon"]; tabs?: { href: string; title: string }[] };
-export type CreateItem = { href: string; label: string };
+export type CreateItem = { href: string; label: string; icon: string };
 export type Me = { name: string; email: string; initials: string };
 /** Pages outside the modules (Portal design): Tasks board, Insights, Data. */
 export type Extras = { tasks: boolean; insights: boolean; data: boolean };
@@ -77,22 +78,29 @@ function Sheet({ open, onClose, title, children, side = "bottom" }: { open: bool
   );
 }
 
-function CreateList({ items, onPick }: { items: CreateItem[]; onPick: () => void }) {
-  if (!items.length) return <p className="px-3 py-2 text-sm text-muted-foreground">Nothing you can create here.</p>;
+/** Icon tiles inside a sheet: three across, big enough to tap. */
+function SheetTiles({ items, onPick }: { items: { href: string; label: string; icon: string; active?: boolean }[]; onPick: () => void }) {
   return (
-    <ul>
+    <ul className="grid grid-cols-3 gap-2 px-1 pb-1">
       {items.map((c) => (
         <li key={c.href}>
-          <Link href={c.href} onClick={onPick} className="flex min-h-12 items-center gap-3 rounded-xl px-3 hover:bg-muted">
-            <span className="grid size-9 place-items-center rounded-[10px] bg-secondary text-primary">
-              <Plus className="size-4" aria-hidden />
-            </span>
-            <span className="text-[15px] font-medium">{c.label}</span>
+          <Link
+            href={c.href}
+            onClick={onPick}
+            className={cn("flex h-full min-h-[92px] flex-col items-center justify-center gap-2 rounded-2xl border bg-card p-2 text-center shadow-card active:bg-muted", c.active && "border-primary bg-secondary")}
+          >
+            <TileIcon name={c.icon} />
+            <span className="text-[12.5px] leading-tight font-medium">{c.label}</span>
           </Link>
         </li>
       ))}
     </ul>
   );
+}
+
+function CreateList({ items, onPick }: { items: CreateItem[]; onPick: () => void }) {
+  if (!items.length) return <p className="px-3 py-2 text-sm text-muted-foreground">Nothing you can create here.</p>;
+  return <SheetTiles items={items.map((c) => ({ href: c.href, label: c.label, icon: c.icon }))} onPick={onPick} />;
 }
 
 function ThemeChoice() {
@@ -323,16 +331,15 @@ export function BottomNav({ items, create, showAdmin, extras }: { items: NavItem
         <CreateList items={create} onPick={close} />
       </Sheet>
       <Sheet open={sheet === "more"} onClose={close} title="More">
-        <ul>
-          {[...extraPages, ...rest.map((i) => ({ href: i.href, title: i.title, icon: <ModuleIcon name={i.icon} className="size-5" /> })), { href: "/lists", title: "Lists", icon: <List className="size-5" aria-hidden /> }, ...(showAdmin ? [{ href: "/admin", title: "Admin", icon: <Settings className="size-5" aria-hidden /> }] : [])].map((i) => (
-            <li key={i.href}>
-              <Link href={i.href} onClick={close} className={cn("flex min-h-12 items-center gap-3 rounded-xl px-3 hover:bg-muted", isActive(pathname, i.href) && "bg-secondary font-semibold")}>
-                <span className="grid size-9 place-items-center rounded-[10px] bg-muted text-text-2">{i.icon}</span>
-                <span className="text-[15px]">{i.title}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <SheetTiles
+          onPick={close}
+          items={[
+            ...extraPages.map((p) => ({ href: p.href, label: p.title, icon: p.href.slice(1), active: isActive(pathname, p.href) })),
+            ...rest.map((i) => ({ href: i.href, label: i.title, icon: i.slug, active: isActive(pathname, i.href) })),
+            { href: "/lists", label: "Lists", icon: "lists", active: isActive(pathname, "/lists") },
+            ...(showAdmin ? [{ href: "/admin", label: "Admin", icon: "admin", active: isActive(pathname, "/admin") }] : []),
+          ]}
+        />
         <ThemeChoice />
       </Sheet>
     </>

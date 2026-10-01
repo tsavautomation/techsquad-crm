@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { Tiles } from "@/components/shell/tiles";
 import { MODULES } from "@/config/modules";
 import { requireUser } from "@/lib/auth/session";
 import { recordsDb } from "@/lib/records/data";
@@ -25,20 +24,15 @@ export default async function FormsPage() {
       {Object.entries(Object.groupBy(REGISTRY, (t) => t.module)).map(([mod, tables]) => (
         <section key={mod} className="mb-6">
           <h2 className="mb-2 text-lg font-semibold">{MODULE_TITLES[mod] ?? mod}</h2>
-          <ul className="divide-y rounded-2xl border bg-card shadow-card">
-            {tables!.map((t) => (
-              <li key={t.name}>
-                <Link href={`/admin/forms/${t.name}`} className="flex min-h-12 items-center justify-between gap-3 px-4 hover:bg-muted/50 active:bg-muted">
-                  <span>
-                    {t.label}
-                    {t.parent && <span className="ml-1 text-xs text-muted-foreground">(inside {REGISTRY.find((p) => p.name === t.parent!.table)?.itemLabel})</span>}
-                    {changed.has(t.name) && <span className="ml-2 rounded bg-muted px-1.5 text-xs">{changed.get(t.name)} changed</span>}
-                  </span>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <Tiles
+            columns={4}
+            items={tables!.map((t) => ({
+              href: `/admin/forms/${t.name}`,
+              title: t.label,
+              subtitle: [t.parent ? `Inside ${REGISTRY.find((p) => p.name === t.parent!.table)?.itemLabel}` : null, changed.has(t.name) ? `${changed.get(t.name)} changed` : null].filter(Boolean).join(" · ") || undefined,
+              icon: t.tab ?? t.name,
+            }))}
+          />
         </section>
       ))}
     </div>

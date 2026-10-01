@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { Tiles } from "@/components/shell/tiles";
 import { ADMIN_SCREENS, canSeeScreen } from "@/lib/admin/screens";
 import { requireUser } from "@/lib/auth/session";
 
@@ -11,21 +10,10 @@ export default async function AdminPage() {
   const screens = ADMIN_SCREENS.filter((s) => canSeeScreen(s, user.permissions, user.isSysadmin));
   if (!screens.length) notFound();
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="mb-4 text-2xl font-semibold">Admin</h1>
-      <ul className="divide-y rounded-2xl border bg-card shadow-card">
-        {screens.map((s) => (
-          <li key={s.href}>
-            <Link href={s.href} className="flex min-h-16 items-center justify-between gap-3 px-4 py-2 hover:bg-muted/50 active:bg-muted">
-              <span>
-                <span className="block text-base font-medium">{s.title}</span>
-                <span className="block text-sm text-muted-foreground">{s.description}</span>
-              </span>
-              <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            </Link>
-          </li>
-        ))}
-      </ul>
+    <div className="mx-auto max-w-[960px]">
+      <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">Admin</h1>
+      <p className="mb-4 text-[12.5px] text-muted-foreground">People, permissions, forms, files and automations</p>
+      <Tiles items={screens.map((s) => ({ href: s.href, title: s.title, subtitle: s.description, icon: s.href === "/admin/forms" ? "form-settings" : s.href.split("/").pop()! }))} />
     </div>
   );
 }

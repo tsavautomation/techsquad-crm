@@ -1,48 +1,62 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight } from "lucide-react";
 import { DashboardWidgets } from "@/components/dashboard/widgets";
+import { TILE_TEXT } from "@/components/shell/tile-icons";
+import { Tiles, type Tile } from "@/components/shell/tiles";
 import { visibleModules } from "@/config/modules";
 import { requireUser } from "@/lib/auth/session";
+import { recordsDb } from "@/lib/records/data";
 import { REGISTRY } from "@/registry";
-import { LISTS_MODULE, tableHref } from "@/registry/routes";
+import { LISTS_MODULE, tableFromRoute, tableHref } from "@/registry/routes";
+
+/** Number of live records in a table the person can see (row-level security decides). */
+async function counts(tables: (string | null)[]) {
+  const db = await recordsDb();
+  return Promise.all(
+    tables.map(async (name) => {
+      if (!name) return null;
+      const { count } = await db.from(name).select("id", { count: "exact", head: true }).is("deleted_at", null).is("archived_at", null);
+      return count ?? 0;
+    }),
+  );
+}
 
 export default async function ModulePage(props: PageProps<"/[module]">) {
   const { module: slug } = await props.params;
   const user = await requireUser();
 
-  // Utility lists (Brands, Suppliers, KB Categories) — readable by everyone (SPEC §2).
+  // Utility lists (Brands, Suppliers) — readable by everyone (SPEC §2).
   if (slug === LISTS_MODULE) {
     const lists = REGISTRY.filter((t) => t.module === "utility");
-    return <TabList title="Lists" items={lists.map((t) => ({ href: tableHref(t), title: t.label }))} />;
+    const n = await counts(lists.map((t) => t.name));
+    return (
+      <Page title="Lists" subtitle="Shared lists used across the forms">
+        <Tiles items={lists.map((t, i) => ({ href: tableHref(t), title: t.label, subtitle: TILE_TEXT[t.name], icon: t.name, badge: String(n[i] ?? "") }))} />
+      </Page>
+    );
   }
 
   // A module the user can't see is treated as not found, so it doesn't reveal what exists.
   const mod = visibleModules(user.permissions).find((m) => m.slug === slug);
   if (!mod) notFound();
+  const tables = mod.tabs.map((t) => tableFromRoute(mod.slug, t.slug)?.name ?? null);
+  const n = await counts(tables);
+  const tiles: Tile[] = mod.tabs.map((t, i) => ({ href: `/${mod.slug}/${t.slug}`, title: t.title, subtitle: TILE_TEXT[t.slug], icon: t.slug, badge: n[i] === null ? undefined : String(n[i]) }));
+
   return (
-    <TabList title={mod.title} items={mod.tabs.map((t) => ({ href: `/${mod.slug}/${t.slug}`, title: t.title }))}>
+    <Page title={mod.title}>
+      <Tiles items={tiles} />
       <div className="mt-6">
         <DashboardWidgets user={user} module={mod.slug} />
       </div>
-    </TabList>
+    </Page>
   );
 }
 
-function TabList({ title, items, children }: { title: string; items: { href: string; title: string }[]; children?: React.ReactNode }) {
+function Page({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="mb-4 text-2xl font-semibold">{title}</h1>
-      <ul className="divide-y rounded-2xl border bg-card shadow-card">
-        {items.map((i) => (
-          <li key={i.href}>
-            <Link href={i.href} className="flex min-h-14 items-center justify-between px-4 text-base hover:bg-muted/50 active:bg-muted">
-              {i.title}
-              <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
-            </Link>
-          </li>
-        ))}
-      </ul>
+    <div className="mx-auto max-w-[960px]">
+      <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{title}</h1>
+      {subtitle ? <p className="mb-4 text-[12.5px] text-muted-foreground">{subtitle}</p> : <div className="mb-4" />}
       {children}
     </div>
   );

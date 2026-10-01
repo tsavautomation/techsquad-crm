@@ -7,7 +7,16 @@ import { canDo, canOpen } from "@/registry/permissions";
 import { tableHref } from "@/registry/routes";
 
 // What the Create button offers, most used first (only tables the person may add to).
-const CREATE = ["visits", "job_reports", "projects", "punch_list_items", "tasks", "contacts", "tv_installations"];
+// Names are our own: WebAuthor's item labels are vague here ("Record", "Item").
+const CREATE: [table: string, label: string][] = [
+  ["visits", "Visit"],
+  ["job_reports", "Job Report"],
+  ["projects", "Project"],
+  ["punch_list_items", "Punch Item"],
+  ["tasks", "Task"],
+  ["contacts", "Contact"],
+  ["tv_installations", "TV Install"],
+];
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
@@ -19,9 +28,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     icon: m.icon,
     tabs: m.tabs.map((t) => ({ href: `/${m.slug}/${t.slug}`, title: t.title })),
   }));
-  const create: CreateItem[] = CREATE.map((n) => getTable(n))
-    .filter((t) => canDo(user.permissions, t, "create", getTable))
-    .map((t) => ({ href: `${tableHref(t)}/new`, label: t.newRecordLabel }));
+  const create: CreateItem[] = CREATE.map(([n, label]) => ({ t: getTable(n), label }))
+    .filter(({ t }) => canDo(user.permissions, t, "create", getTable))
+    .map(({ t, label }) => ({ href: `${tableHref(t)}/new`, label, icon: t.tab ?? t.name }));
   const opens = (t: string) => canOpen(user.permissions, getTable(t), getTable);
   const extras: Extras = { tasks: opens("tasks"), insights: opens("projects"), data: opens("contacts") };
   const showAdmin = ADMIN_SCREENS.some((s) => canSeeScreen(s, user.permissions, user.isSysadmin));
