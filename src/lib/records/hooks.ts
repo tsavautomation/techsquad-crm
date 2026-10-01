@@ -30,4 +30,14 @@ const visitSeries: AfterCreate = async (db, t, id, values, row) => {
   }
 };
 
-export const AFTER_CREATE: Record<string, AfterCreate> = { visits: visitSeries };
+/** Visit made with "Schedule return" (F2): the return card now points at it and is being worked on. */
+const linkReturnCard: AfterCreate = async (db, _t, id, values) => {
+  const task = values.return_task_id;
+  if (typeof task !== "number") return;
+  const { error } = await db.from("tasks").update({ visit_id: id, status: "Working" }).eq("id", task);
+  if (error) return `The visit was saved, but the return card wasn't updated: ${error.message}`;
+};
+
+const visitCreated: AfterCreate = async (...args) => (await visitSeries(...args)) || (await linkReturnCard(...args));
+
+export const AFTER_CREATE: Record<string, AfterCreate> = { visits: visitCreated };

@@ -6,6 +6,8 @@ import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
+import { missingLines } from "@/lib/field-day/day";
+import { createReturnCard } from "@/lib/field-day/return-card";
 import { cleanupOrphanUploads } from "./cleanup";
 import { conditionsMatch, eventsForChange, renderTokens, type Conditions } from "./conditions";
 import { cardHtml, deliverQueued, queueEmail, type OutboxAttachment } from "./email";
@@ -22,7 +24,8 @@ import { etSlot, runKeys } from "./schedule";
 export type Action =
   | { type: "update"; set: Record<string, unknown> }
   | { type: "archive" }
-  | { type: "checklist"; target?: string; item: string }
+  | { type: "checklist"; target?: string; item: string; lines?: boolean }
+  | { type: "return_card" }
   | { type: "email"; from: string; to: string[]; cc?: string[]; bcc?: string[]; subject: string; card?: boolean; link?: boolean; pdf?: boolean; files?: string[] };
 
 export type Automation = { id: number; table_name: string; title: string; events: string[]; conditions: Conditions; actions: Action[] };
@@ -64,8 +67,10 @@ async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: E
         break;
       }
       case "checklist": {
-        const item = renderTokens(action.item, (f) => String(rec.values[f] ?? "")).trim();
-        if (!item) break;
+        const text = renderTokens(action.item, (f) => String(rec.values[f] ?? "")).trim();
+        // `lines`: one item per line (Job Report › What's missing, F2).
+        const items = action.lines ? missingLines(text) : text ? [text] : [];
+        if (!items.length) break;
         let table = t.name;
         let id: number | null = rec.id;
         if (action.target) {
@@ -75,12 +80,19 @@ async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: E
         }
         if (!table || !id) break;
         const source = `${t.name}:${rec.id}`;
-        // Once per source and item: a re-run never duplicates the checklist entry.
-        const { data: existing } = await db.from("record_checklist_items").select("id").eq("table_name", table).eq("record_id", id).eq("source", source).eq("item", item).limit(1);
-        if (existing?.length) break;
-        const { error } = await db.from("record_checklist_items").insert({ table_name: table, record_id: id, item, source, created_by: null });
-        if (error) throw new Error(`checklist: ${error.message}`);
-        did.push(`checklist item on ${table} #${id}`);
+        for (const item of items) {
+          // Once per source and item: a re-run never duplicates the checklist entry.
+          const { data: existing } = await db.from("record_checklist_items").select("id").eq("table_name", table).eq("record_id", id).eq("source", source).eq("item", item).limit(1);
+          if (existing?.length) continue;
+          const { error } = await db.from("record_checklist_items").insert({ table_name: table, record_id: id, item, source, created_by: null });
+          if (error) throw new Error(`checklist: ${error.message}`);
+          did.push(`checklist item on ${table} #${id}`);
+        }
+        break;
+      }
+      case "return_card": {
+        const r = await createReturnCard(db, t, rec);
+        if (r) did.push(r);
         break;
       }
       case "email": {

@@ -22,6 +22,7 @@ import { canModule, loadChecklist, loadHistory, loadNotes, loadPeople, loadPodFi
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getLang, getT } from "@/i18n/server";
+import { ReturnCardPanel, VisitFieldPanel } from "@/components/field-day/record-panels";
 import { localized } from "@/i18n/registry";
 
 
@@ -53,7 +54,19 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
   const locked = row.locked === true;
   const perms = user.permissions;
   const canEdit = canDo(perms, t, "modify", getTable) && (!locked || canLockAction(perms, t, "modify_locked", getTable));
-  const fields = t.fields.filter((f) => visible.has(f.name) && !(t.parent && f.name === t.parent.field));
+  // Fields kept off the form (old Pending 1–5, check-in times…) only show once they hold something;
+  // a heading on a skipped field moves to the next field shown.
+  const fields: FieldDef[] = [];
+  let carry: string | undefined;
+  for (const f of t.fields) {
+    if (!visible.has(f.name) || (t.parent && f.name === t.parent.field)) continue;
+    if (f.formHidden && isBlank(values[f.name])) {
+      carry ??= f.heading;
+      continue;
+    }
+    fields.push(carry && !f.heading ? { ...f, heading: carry } : f);
+    carry = undefined;
+  }
 
   // Record features (SPEC §1.3), each gated by WebAuthor's module permissions (SPEC §7.4).
   const db = await recordsDb();
@@ -104,6 +117,8 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       </div>
 
       {workflow && <WorkflowPanel table={t.name} id={recordId} data={workflow as WorkflowPanelData} />}
+      {t.detailAddon === "visit" && <VisitFieldPanel visitId={recordId} />}
+      {t.detailAddon === "task" && <ReturnCardPanel taskId={recordId} />}
 
       <RecordToolbar
         table={t.name}
@@ -184,6 +199,8 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
     </div>
   );
 }
+
+const isBlank = (v: unknown) => v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0);
 
 /** Computed fields: Projects › Approved / Invoiced / Paid (SPEC §2.3). */
 async function computedValues(t: TableDef, id: number): Promise<Values> {

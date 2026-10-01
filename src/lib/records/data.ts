@@ -99,9 +99,9 @@ export async function lookupTitles(t: TableDef, rows: Record<string, unknown>[],
   const out: Record<string, Map<number, string>> = {};
   await Promise.all(
     fields
-      .filter((f) => f.type === "lookup" && f.lookup && !f.multiple)
+      .filter((f) => f.type === "lookup" && f.lookup)
       .map(async (f) => {
-        const ids = [...new Set(rows.map((r) => r[f.name]).filter((v): v is number => typeof v === "number"))];
+        const ids = [...new Set(rows.flatMap((r) => r[f.name]).filter((v): v is number => typeof v === "number"))];
         out[f.name] = new Map();
         if (!ids.length) return;
         const { data } = await db.from(f.lookup!.table).select("id,title").in("id", ids);

@@ -11,6 +11,7 @@ import { FileField } from "./file-field";
 import { LookupPicker } from "./lookup-picker";
 import { RichTextEditor } from "./rich-text-editor";
 import { SignaturePad } from "./signature-pad";
+import { DictationButton } from "./dictation";
 import { useT } from "@/i18n/client";
 
 // Native inputs: on iPhone they bring up the right keyboard, date wheel and picker.
@@ -101,15 +102,19 @@ export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }
 
     case "textarea":
       return (
-        <textarea
-          {...common}
-          rows={f.maxLength && f.maxLength > 1000 ? 6 : 3}
-          maxLength={f.maxLength}
-          placeholder={f.placeholder}
-          className={cn(BOX, "min-h-24 py-2")}
-          value={str}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        <div className="flex flex-col gap-1.5">
+          <textarea
+            {...common}
+            rows={f.maxLength && f.maxLength > 1000 ? 6 : 3}
+            maxLength={f.maxLength}
+            placeholder={f.placeholder}
+            className={cn(BOX, "min-h-24 py-2")}
+            value={str}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          {/* Report-style boxes can be dictated (F2). */}
+          {!f.sensitive && (!f.maxLength || f.maxLength >= 1000) && <DictationButton value={str} onChange={(v) => onChange(f.maxLength ? v.slice(0, f.maxLength) : v)} disabled={disabled} />}
+        </div>
       );
 
     case "select":

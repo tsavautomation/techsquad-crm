@@ -27,7 +27,9 @@ function describeAction(a: Action, label: (f: string) => string): string {
     case "archive":
       return "Archive the record";
     case "checklist":
-      return `Add checklist item ${a.item}${a.target ? ` to the ${label(a.target)}` : ""}`;
+      return `Add checklist item${a.lines ? "s (one per line of)" : ""} ${a.item}${a.target ? ` to the ${label(a.target)}` : ""}`;
+    case "return_card":
+      return "Create a return card (task) for the scheduler";
     case "email": {
       const extras = [a.card && "record card", a.link && "link", a.pdf && "PDF", a.files?.length && `files (${a.files.map(label).join(", ")})`].filter(Boolean);
       return `Email ${a.to.join(", ")}${a.bcc?.length ? ` (bcc ${a.bcc.join(", ")})` : ""}: “${a.subject.trim()}”${extras.length ? ` with ${extras.join(", ")}` : ""}`;

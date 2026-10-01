@@ -18,7 +18,9 @@ const addressList = z.array(z.string().trim().min(1)).default([]);
 export const ActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("update"), set: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])) }),
   z.object({ type: z.literal("archive") }),
-  z.object({ type: z.literal("checklist"), target: z.string().optional(), item: z.string().trim().min(1) }),
+  z.object({ type: z.literal("checklist"), target: z.string().optional(), item: z.string().trim().min(1), lines: z.boolean().optional() }),
+  // F2: a Partial / Not done Job Report creates a return card (task) for the scheduler.
+  z.object({ type: z.literal("return_card") }),
   z.object({
     type: z.literal("email"),
     from: z.string().trim().min(1),
@@ -83,6 +85,9 @@ export function check(t: TableDef, a: AutomationInput): string[] {
       case "checklist":
         if (act.target && !field(act.target)?.lookup) errors.push(`Checklist target ${act.target} is not a link to another record.`);
         for (const tok of tokens(act.item)) if (!has(tok)) errors.push(`Unknown field {${tok}} in checklist item.`);
+        break;
+      case "return_card":
+        if (t.name !== "job_reports") errors.push("A return card can only come from a Job Report.");
         break;
       case "email":
         if (!act.to.length && !(act.bcc ?? []).length) errors.push("An email needs at least one recipient.");

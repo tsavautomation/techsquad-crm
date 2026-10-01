@@ -117,6 +117,7 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
       rules.visible.has(f.name) &&
       !(table.parent && f.name === table.parent.field) &&
       !(recordId && f.createOnly) &&
+      !f.formHidden &&
       // A dropdown whose options haven't been set up yet (Form settings) isn't shown.
       !((f.type === "select" || f.type === "radio" || f.type === "checkboxes") && !f.options?.length),
   );

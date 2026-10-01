@@ -2,6 +2,8 @@
 // Now maintained by hand: edit freely, but keep labels and options identical to SPEC.md.
 import type { TableDef } from "../types";
 
+const NEW = { column: "", fieldId: 0 };
+
 export const tasks: TableDef = {
   "name": "tasks",
   "label": "Tasks",
@@ -10,6 +12,7 @@ export const tasks: TableDef = {
   "itemLabel": "Task",
   "newRecordLabel": "New Task",
   "titleFormula": "{member_id} – {due_date}",
+  detailAddon: "task",
   "fields": [
     {
       "name": "title",
@@ -34,6 +37,8 @@ export const tasks: TableDef = {
         "table": "employees"
       }
     },
+    // F2 (not from WebAuthor): return cards and other project tasks.
+    { name: "project_id", label: "Project", type: "lookup", lookup: { table: "projects" }, legacy: NEW },
     {
       "name": "status",
       "label": "Status",
@@ -101,6 +106,20 @@ export const tasks: TableDef = {
       ]
     },
     {
+      name: "labels",
+      label: "Labels",
+      type: "checkboxes",
+      options: [
+        { label: "Urgent", value: "Urgent", color: "#dc2626" },
+        { label: "Material", value: "Material", color: "#d97706" },
+        { label: "Client", value: "Client", color: "#2563eb" },
+        { label: "Financial", value: "Financial", color: "#16a34a" },
+        { label: "Technical", value: "Technical", color: "#7c3aed" },
+        { label: "Return", value: "Return", color: "#0891b2" },
+      ],
+      legacy: NEW,
+    },
+    {
       "name": "due_status",
       "label": "Status",
       "type": "select",
@@ -129,7 +148,10 @@ export const tasks: TableDef = {
         "column": "file_upload",
         "fieldId": 70406
       }
-    }
+    },
+    // Set by the return-card automation and by "Schedule return"; shown on the task once filled.
+    { name: "job_report_id", label: "From report", type: "lookup", readOnly: true, formHidden: true, lookup: { table: "job_reports" }, legacy: NEW },
+    { name: "visit_id", label: "Return visit", type: "lookup", readOnly: true, formHidden: true, lookup: { table: "visits" }, legacy: NEW },
   ],
   "rules": [],
   "legacy": {

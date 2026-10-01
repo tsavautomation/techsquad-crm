@@ -133,7 +133,8 @@ describe("every field rule (SPEC §4)", () => {
   }
 
   it("covers all 46 rules in the registry", () => {
-    const inRegistry = REGISTRY.flatMap((t) => t.rules.map((r) => r.id)).sort();
+    // Rules numbered from 900000 were added for this CRM (F2) and are tested in f2-field-day.test.ts.
+    const inRegistry = REGISTRY.flatMap((t) => t.rules.filter((r) => r.id < 900000).map((r) => r.id)).sort();
     const tested = [...new Set(CASES.map((c) => c.rule))].sort();
     expect(inRegistry).toHaveLength(46);
     expect(tested).toEqual(inRegistry);

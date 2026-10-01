@@ -32,9 +32,11 @@ export default async function NewRecordPage(props: PageProps<"/[module]/[tab]/ne
   for (const f of t.fields) {
     const raw = params[f.name];
     if (typeof raw !== "string" || !raw || !isEditable(f)) continue;
-    if (f.type === "lookup" && !f.multiple && /^d+$/.test(raw)) initial[f.name] = Number(raw);
+    if (f.type === "lookup" && !f.multiple && /^\d+$/.test(raw)) initial[f.name] = Number(raw);
+    else if (f.type === "lookup" && f.multiple && /^\d+(,\d+)*$/.test(raw)) initial[f.name] = [...new Set(raw.split(",").map(Number))];
     else if (f.type === "datetime" && !Number.isNaN(Date.parse(raw))) initial[f.name] = new Date(raw).toISOString();
-    else if (f.type === "date" && /^d{4}-d{2}-d{2}$/.test(raw)) initial[f.name] = raw;
+    else if (f.type === "date" && /^\d{4}-\d{2}-\d{2}$/.test(raw)) initial[f.name] = raw;
+    else if ((f.type === "text" || f.type === "textarea") && raw.length <= (f.maxLength ?? 2000)) initial[f.name] = raw;
     else if ((f.type === "select" || f.type === "radio") && f.options?.some((o) => o.value === raw)) initial[f.name] = raw;
     else continue;
     prefilled.push(f);

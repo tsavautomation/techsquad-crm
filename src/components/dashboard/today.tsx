@@ -11,7 +11,7 @@ import { getT } from "@/i18n/server";
 import type { T } from "@/i18n/core";
 
 // "Today" sections from the Portal design (docs/portal-features-merge.md §I), built on what exists now.
-// Returns, review requests and follow-ups from the contact log arrive with F2 / F4.
+// Review requests and follow-ups from the contact log arrive with F4.
 
 type Row = { href: string; title: string; meta: string; action?: { href: string; label: string }; tone?: "bad" | "warn" };
 type Section = { id: string; title: string; rows: Row[] };
@@ -138,6 +138,35 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
             meta: `${tr(p.maintenance_status === "Expired" ? "Plan expired, offer renewal" : "Renewal due soon")} · ${p.maintenance_type ? tr(p.maintenance_type) : tr("plan")}${p.maintenance_amount ? ` · ${money.format(Number(p.maintenance_amount))}` : ""}`,
             tone: p.maintenance_status === "Expired" ? ("bad" as const) : ("warn" as const),
             action: canBook ? { href: newVisit(p.id), label: tr("Schedule visit") } : undefined,
+          })),
+        };
+      })(),
+    );
+  }
+
+  // F2 return cards: unfinished visits waiting for a return to be scheduled (office only).
+  if (can("tasks") && can("visits") && canDo(user.permissions, visitsT, "create", getTable)) {
+    jobs.push(
+      (async () => {
+        const { data } = await db
+          .from("tasks")
+          .select("id, title, due_date, priority, details, project_id, projects(title)")
+          .contains("labels", ["Return"])
+          .is("visit_id", null)
+          .neq("status", "Completed")
+          .is("deleted_at", null)
+          .is("archived_at", null)
+          .order("due_date");
+        const tasksT = getTable("tasks");
+        return {
+          id: "returns",
+          title: tr("Returns needed"),
+          rows: ((data ?? []) as unknown as { id: number; due_date: string | null; priority: string | null; details: string | null; projects: { title: string | null } | null }[]).map((r) => ({
+            href: recordHref(tasksT, r.id),
+            title: r.projects?.title ?? tr("Task #{id}", { id: r.id }),
+            meta: [r.priority === "Urgent" ? tr("2nd visit in a row not finished") : null, r.due_date ? tr("due {date}", { date: formatDate(r.due_date) }) : null].filter(Boolean).join(" · "),
+            tone: r.priority === "Urgent" || (r.due_date && r.due_date < today) ? ("bad" as const) : ("warn" as const),
+            action: { href: recordHref(tasksT, r.id), label: tr("Schedule") },
           })),
         };
       })(),

@@ -14,6 +14,9 @@ const spec = JSON.parse(readFileSync("techsquad_crm_spec.json", "utf8")) as {
 // TS Help Desk was deleted (Fred 2026-09-30, SPEC §9.1 H-a): its WebAuthor tables are not rebuilt.
 const REMOVED = new Set(["fx_techsquad_help_desk", "fx_techsquad_help_desk_support_note", "fx_techsquad_help_desk_xmarticles", "fx_techsquad_util_knowledge_base_category"]);
 const SYSTEM = new Set(["person_id_creator", "person_id_modifier", "date_created", "date_modified", "client_id", "locked", "date_submitted"]);
+/** Fields and rules added for this CRM (Portal features, F2) rather than carried over from WebAuthor. */
+const isNew = (f: FieldDef) => f.legacy.fieldId === 0 && f.legacy.column === "";
+const NEW_RULE_IDS = 900000;
 const byLegacyTable = new Map(REGISTRY.map((t) => [t.legacy.table, t]));
 const SUBGRID_SECTIONS: Record<string, string> = {
   "fx_techsquad_projects_xmcontacts:Interactions": "fx_techsquad_projects_xmcontacts_interactions",
@@ -47,7 +50,9 @@ describe("registry ↔ WebAuthor export", () => {
   it("has every exported user field, and nothing extra except parent links", () => {
     for (const { legacyTable, raw } of exported) expect(findField(legacyTable, raw), `${legacyTable}.${raw.column_name}`).toBeDefined();
     const expectedCount = exported.length + REGISTRY.filter((t) => t.parent).length;
-    expect(REGISTRY.reduce((n, t) => n + t.fields.length, 0)).toBe(expectedCount);
+    expect(REGISTRY.reduce((n, t) => n + t.fields.filter((f) => !isNew(f)).length, 0)).toBe(expectedCount);
+    // Fields built for this CRM (F2 Job Report result, Task return links…) carry no legacy name.
+    for (const t of REGISTRY) for (const f of t.fields.filter(isNew)) expect(f.legacy.column, `${t.name}.${f.name}`).toBe("");
   });
 
   it("keeps labels identical (whitespace aside), except renames Fred asked for", () => {
@@ -87,7 +92,7 @@ describe("registry ↔ WebAuthor export", () => {
   it("has all 49 rules except the two do-nothing rules (SPEC §9 Q4) and the Help Desk one (H-a)", () => {
     const exportedRules = Object.values(spec.tables).reduce((n, t) => n + (t.rules?.length ?? 0), 0);
     expect(exportedRules).toBe(49);
-    const ids = REGISTRY.flatMap((t) => t.rules.map((r) => r.id));
+    const ids = REGISTRY.flatMap((t) => t.rules.filter((r) => r.id < NEW_RULE_IDS).map((r) => r.id));
     expect(ids).toHaveLength(46);
     expect(ids).not.toContain(3395); // Support Notes, deleted with TS Help Desk
     expect(ids).not.toContain(3399);

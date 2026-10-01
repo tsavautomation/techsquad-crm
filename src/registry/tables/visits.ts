@@ -4,6 +4,18 @@ import type { TableDef } from "../types";
 
 const NEW = { column: "", fieldId: 0 };
 
+export const DURATIONS = [
+  { label: "30 min", value: "30" },
+  { label: "45 min", value: "45" },
+  { label: "1 h", value: "60" },
+  { label: "1 h 30", value: "90" },
+  { label: "2 h", value: "120" },
+  { label: "3 h", value: "180" },
+  { label: "4 h", value: "240" },
+  { label: "6 h", value: "360" },
+  { label: "8 h (full day)", value: "480" },
+];
+
 export const visits: TableDef = {
   name: "visits",
   label: "Visits",
@@ -14,6 +26,7 @@ export const visits: TableDef = {
   titleFormula: "{project_id} – {starts_at}",
   origin: "new",
   formAddon: "visit",
+  detailAddon: "visit",
   fields: [
     { name: "title", label: "Title", type: "text", hidden: true, legacy: NEW },
     { name: "project_id", label: "Project", type: "lookup", required: true, heading: "Visit", lookup: { table: "projects" }, legacy: NEW },
@@ -24,17 +37,7 @@ export const visits: TableDef = {
       type: "select",
       required: true,
       default: "120",
-      options: [
-        { label: "30 min", value: "30" },
-        { label: "45 min", value: "45" },
-        { label: "1 h", value: "60" },
-        { label: "1 h 30", value: "90" },
-        { label: "2 h", value: "120" },
-        { label: "3 h", value: "180" },
-        { label: "4 h", value: "240" },
-        { label: "6 h", value: "360" },
-        { label: "8 h (full day)", value: "480" },
-      ],
+      options: DURATIONS,
       legacy: NEW,
     },
     {
@@ -72,6 +75,12 @@ export const visits: TableDef = {
       ],
       legacy: NEW,
     },
+    // F2 Field day: set by the people going (Today screen), shown on the visit once filled.
+    { name: "on_way_at", label: "On my way", type: "datetime", readOnly: true, formHidden: true, heading: "In the field", legacy: NEW },
+    { name: "checked_in_at", label: "Checked in", type: "datetime", readOnly: true, formHidden: true, legacy: NEW },
+    { name: "checked_out_at", label: "Checked out", type: "datetime", readOnly: true, formHidden: true, legacy: NEW },
+    // "Schedule return" on a return card fills this; the card then points at this visit.
+    { name: "return_task_id", label: "Return card", type: "lookup", formHidden: true, lookup: { table: "tasks" }, legacy: NEW },
     {
       name: "repeat",
       label: "Repeat",

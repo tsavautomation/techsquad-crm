@@ -4,6 +4,7 @@ import { TIME_ZONE } from "@/lib/dates";
 import { DashboardKpis } from "@/components/dashboard/kpis";
 import { TodaySections } from "@/components/dashboard/today";
 import { DashboardWidgets } from "@/components/dashboard/widgets";
+import { MyDay } from "@/components/field-day/my-day";
 import { getLang, getT } from "@/i18n/server";
 
 /** Greeting by the Eastern-time hour, as in the Portal design. */
@@ -35,6 +36,10 @@ export default async function DashboardPage() {
         <p className="rounded-2xl border border-dashed bg-card px-6 py-10 text-center text-text-2">{t("You don't have access to any modules yet. Ask an administrator to add you to a group.")}</p>
       ) : (
         <>
+          {/* F2: the technician's own day comes first (empty for people with no visits today). */}
+          <div className="mb-3.5 empty:hidden">
+            <MyDay user={user} now={now.getTime()} />
+          </div>
           <DashboardKpis user={user} now={now.getTime()} />
           <div className="grid gap-3.5">
             <TodaySections user={user} now={now.getTime()} />

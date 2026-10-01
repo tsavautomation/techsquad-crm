@@ -132,7 +132,7 @@ function RuleRow({ rule, fields, onChange, onRemove }: { rule: ConditionRule; fi
 
 function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; fields: FieldMeta[]; onChange: (a: Action) => void; onRemove: () => void }) {
   const t = useT();
-  const TITLES = { update: "Set fields", archive: "Archive the record", checklist: "Add a checklist item", email: "Send an email" };
+  const TITLES = { update: "Set fields", archive: "Archive the record", checklist: "Add a checklist item", email: "Send an email", return_card: "Create a return card" };
   return (
     <div className="space-y-2 rounded-lg bg-muted/40 p-2">
       <div className="flex items-center justify-between gap-2">
@@ -194,8 +194,13 @@ function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; 
             {t("Item text (use {field} to insert a value)", { field: "{field}" })}
             <input className={INPUT} value={action.item} onChange={(e) => onChange({ ...action, item: e.target.value })} />
           </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" className="size-5" checked={Boolean(action.lines)} onChange={(e) => onChange({ ...action, lines: e.target.checked || undefined })} />
+            {t("One item per line")}
+          </label>
         </>
       )}
+      {action.type === "return_card" && <p className="text-sm text-muted-foreground">{t("Creates a task for the scheduler (Admin › Field day) with the missing items as its checklist, due by the reason.")}</p>}
       {action.type === "email" && (
         <>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -373,6 +378,7 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
                 email: { type: "email", from: "TS CRM", to: [], subject: "", card: true, link: true },
                 checklist: { type: "checklist", item: "" },
                 archive: { type: "archive" },
+                return_card: { type: "return_card" },
               };
               if (blank[type]) setA({ ...a, actions: [...a.actions, blank[type]] });
             }}
@@ -382,6 +388,7 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
             <option value="email">{t("Send an email")}</option>
             <option value="checklist">{t("Add a checklist item")}</option>
             <option value="archive">{t("Archive the record")}</option>
+            {table === "job_reports" && <option value="return_card">{t("Create a return card")}</option>}
           </select>
         </Section>
 

@@ -77,6 +77,8 @@ export type FieldDef = {
   maxLength?: number;
   pattern?: string;
   placeholder?: string;
+  /** Not on new / edit forms: kept for old records or filled by the app (e.g. Job Report › Pending 1–5, Visit › Checked in). Shown on the record page when it has a value. */
+  formHidden?: boolean;
   /** Only on the "new" form (e.g. Visit › Repeat): hidden when editing, ignored by later saves. */
   createOnly?: boolean;
   /** Help text under the field (Form settings, M12). */
@@ -129,4 +131,6 @@ export type TableDef = {
   origin?: "new";
   /** Extra panel the form shows for this table (src/components/records/form-addons.tsx). */
   formAddon?: "visit";
+  /** Extra panel on the record page (src/components/field-day/*): visit check-in + briefing, return card scheduling. */
+  detailAddon?: "visit" | "task";
 };

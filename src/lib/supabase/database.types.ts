@@ -43,6 +43,35 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attachments: {
         Row: {
           created_at: string
@@ -1068,7 +1097,9 @@ export type Database = {
       }
       job_reports: {
         Row: {
+          access_info: string | null
           archived_at: string | null
+          bring_next: string | null
           created_at: string
           created_by: string | null
           date: string | null
@@ -1077,21 +1108,34 @@ export type Database = {
           locked: boolean
           logins_and_passwords: string | null
           maintenance_plan_service_call: boolean
+          materials_used: string | null
+          missing_items: string | null
+          on_site: string | null
+          parking: string | null
+          partial_reason: string | null
           pending_1: string | null
           pending_2: string | null
           pending_3: string | null
           pending_4: string | null
           pending_5: string | null
+          people_needed: number | null
+          problems: string | null
           project_id: number | null
           report: string | null
+          result: string | null
           submitted_at: string | null
+          time_needed: string | null
           title: string | null
           updated_at: string
           updated_by: string | null
           vehicle_id: number | null
+          visit_id: number | null
+          waiting_on: string | null
         }
         Insert: {
+          access_info?: string | null
           archived_at?: string | null
+          bring_next?: string | null
           created_at?: string
           created_by?: string | null
           date?: string | null
@@ -1100,21 +1144,34 @@ export type Database = {
           locked?: boolean
           logins_and_passwords?: string | null
           maintenance_plan_service_call?: boolean
+          materials_used?: string | null
+          missing_items?: string | null
+          on_site?: string | null
+          parking?: string | null
+          partial_reason?: string | null
           pending_1?: string | null
           pending_2?: string | null
           pending_3?: string | null
           pending_4?: string | null
           pending_5?: string | null
+          people_needed?: number | null
+          problems?: string | null
           project_id?: number | null
           report?: string | null
+          result?: string | null
           submitted_at?: string | null
+          time_needed?: string | null
           title?: string | null
           updated_at?: string
           updated_by?: string | null
           vehicle_id?: number | null
+          visit_id?: number | null
+          waiting_on?: string | null
         }
         Update: {
+          access_info?: string | null
           archived_at?: string | null
+          bring_next?: string | null
           created_at?: string
           created_by?: string | null
           date?: string | null
@@ -1123,18 +1180,29 @@ export type Database = {
           locked?: boolean
           logins_and_passwords?: string | null
           maintenance_plan_service_call?: boolean
+          materials_used?: string | null
+          missing_items?: string | null
+          on_site?: string | null
+          parking?: string | null
+          partial_reason?: string | null
           pending_1?: string | null
           pending_2?: string | null
           pending_3?: string | null
           pending_4?: string | null
           pending_5?: string | null
+          people_needed?: number | null
+          problems?: string | null
           project_id?: number | null
           report?: string | null
+          result?: string | null
           submitted_at?: string | null
+          time_needed?: string | null
           title?: string | null
           updated_at?: string
           updated_by?: string | null
           vehicle_id?: number | null
+          visit_id?: number | null
+          waiting_on?: string | null
         }
         Relationships: [
           {
@@ -1163,6 +1231,13 @@ export type Database = {
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_reports_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
             referencedColumns: ["id"]
           },
         ]
@@ -1226,6 +1301,36 @@ export type Database = {
           },
           {
             foreignKeyName: "job_reports_team_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_reports_who_can: {
+        Row: {
+          record_id: number
+          target_id: number
+        }
+        Insert: {
+          record_id: number
+          target_id: number
+        }
+        Update: {
+          record_id?: number
+          target_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_reports_who_can_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "job_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_reports_who_can_target_id_fkey"
             columns: ["target_id"]
             isOneToOne: false
             referencedRelation: "employees"
@@ -2900,14 +3005,18 @@ export type Database = {
           due_date: string | null
           due_status: string | null
           id: number
+          job_report_id: number | null
+          labels: string[] | null
           locked: boolean
           member_id: number | null
           priority: string | null
+          project_id: number | null
           status: string | null
           submitted_at: string | null
           title: string | null
           updated_at: string
           updated_by: string | null
+          visit_id: number | null
         }
         Insert: {
           archived_at?: string | null
@@ -2918,14 +3027,18 @@ export type Database = {
           due_date?: string | null
           due_status?: string | null
           id?: number
+          job_report_id?: number | null
+          labels?: string[] | null
           locked?: boolean
           member_id?: number | null
           priority?: string | null
+          project_id?: number | null
           status?: string | null
           submitted_at?: string | null
           title?: string | null
           updated_at?: string
           updated_by?: string | null
+          visit_id?: number | null
         }
         Update: {
           archived_at?: string | null
@@ -2936,14 +3049,18 @@ export type Database = {
           due_date?: string | null
           due_status?: string | null
           id?: number
+          job_report_id?: number | null
+          labels?: string[] | null
           locked?: boolean
           member_id?: number | null
           priority?: string | null
+          project_id?: number | null
           status?: string | null
           submitted_at?: string | null
           title?: string | null
           updated_at?: string
           updated_by?: string | null
+          visit_id?: number | null
         }
         Relationships: [
           {
@@ -2954,6 +3071,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_job_report_id_fkey"
+            columns: ["job_report_id"]
+            isOneToOne: false
+            referencedRelation: "job_reports"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
@@ -2961,10 +3085,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
             referencedColumns: ["id"]
           },
         ]
@@ -3263,6 +3401,8 @@ export type Database = {
           access_notes: string | null
           archived_at: string | null
           arrival_window: string | null
+          checked_in_at: string | null
+          checked_out_at: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -3270,9 +3410,11 @@ export type Database = {
           id: number
           instructions: string | null
           locked: boolean
+          on_way_at: string | null
           project_id: number | null
           repeat: string | null
           repeat_count: number | null
+          return_task_id: number | null
           series_id: string | null
           service_type: string | null
           starts_at: string | null
@@ -3287,6 +3429,8 @@ export type Database = {
           access_notes?: string | null
           archived_at?: string | null
           arrival_window?: string | null
+          checked_in_at?: string | null
+          checked_out_at?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -3294,9 +3438,11 @@ export type Database = {
           id?: number
           instructions?: string | null
           locked?: boolean
+          on_way_at?: string | null
           project_id?: number | null
           repeat?: string | null
           repeat_count?: number | null
+          return_task_id?: number | null
           series_id?: string | null
           service_type?: string | null
           starts_at?: string | null
@@ -3311,6 +3457,8 @@ export type Database = {
           access_notes?: string | null
           archived_at?: string | null
           arrival_window?: string | null
+          checked_in_at?: string | null
+          checked_out_at?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -3318,9 +3466,11 @@ export type Database = {
           id?: number
           instructions?: string | null
           locked?: boolean
+          on_way_at?: string | null
           project_id?: number | null
           repeat?: string | null
           repeat_count?: number | null
+          return_task_id?: number | null
           series_id?: string | null
           service_type?: string | null
           starts_at?: string | null
@@ -3344,6 +3494,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_return_task_id_fkey"
+            columns: ["return_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
           {
@@ -3636,6 +3793,43 @@ export type Database = {
           id: string
           last_sign_in_at: string
         }[]
+      }
+      visit_step: {
+        Args: { p_id: number; p_step: string }
+        Returns: {
+          access_notes: string | null
+          archived_at: string | null
+          arrival_window: string | null
+          checked_in_at: string | null
+          checked_out_at: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          duration: string | null
+          id: number
+          instructions: string | null
+          locked: boolean
+          on_way_at: string | null
+          project_id: number | null
+          repeat: string | null
+          repeat_count: number | null
+          return_task_id: number | null
+          series_id: string | null
+          service_type: string | null
+          starts_at: string | null
+          status: string | null
+          submitted_at: string | null
+          technician_id: number | null
+          title: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "visits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       workflow_move: {
         Args: {

@@ -8,6 +8,7 @@ export const ADMIN_SCREENS: AdminScreen[] = [
   { href: "/admin/permissions", title: "Permissions", description: "What each group may see and do", anyOf: "sysadmin" },
   { href: "/admin/forms", title: "Form settings", description: "Labels, dropdown options, required fields, order and help text", anyOf: ["projects.module.design_design"] },
   { href: "/admin/onedrive", title: "OneDrive", description: "Where photos, videos and files are stored", anyOf: "sysadmin" },
+  { href: "/admin/field-day", title: "Field day", description: "Who gets return cards, when they're due, checklists and tools per service type", anyOf: ["projects.module.design_design"] },
   { href: "/admin/automations", title: "Automations", description: "What runs when records change, the run log and sent emails", anyOf: ["projects.module.design_triggers"] },
   { href: "/admin/catalogue", title: "Field catalogue", description: "Every table, field and rule, read-only", anyOf: ["projects.module.design_design"] },
 ];
