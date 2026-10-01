@@ -51,7 +51,7 @@ type Component = { longText: string; shortText: string; types: string[] };
 
 export async function addressDetailsAction(placeId: string, session: string): Promise<Address | null> {
   await requireUser();
-  if (!key() || !/^[\w-]+$/.test(placeId)) return null;
+  if (!key() || !/^[\w-]+$/.test(placeId) || !(await underDailyCap())) return null;
   const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}?sessionToken=${encodeURIComponent(session)}`, {
     headers: { "X-Goog-Api-Key": key()!, "X-Goog-FieldMask": "addressComponents" },
   });
