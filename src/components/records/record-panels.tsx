@@ -4,9 +4,10 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, FileText, Loader2, Paperclip, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
 import { formatDate, formatDateTime } from "@/lib/dates";
-import { createUploadAction } from "@/lib/records/field-actions";
+import type { Progress } from "@/lib/files/resumable";
+import { uploadFile } from "@/lib/files/upload-file";
+import { UploadBar } from "./file-field";
 import {
   addChecklistItemAction,
   addNoteAction,
@@ -152,28 +153,23 @@ export function ChecklistPanel({ table, id, items }: Base & { items: ChecklistVi
 
 export function FilesPod({ table, id, files, canAdd, canRemove }: Base & { files: FileItem[]; canAdd: boolean; canRemove: boolean }) {
   const { pending, run } = useRun();
-  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<Record<string, Progress>>({});
+  const busy = Object.keys(progress).length > 0;
   const input = useRef<HTMLInputElement>(null);
 
   async function upload(list: FileList | null) {
     if (!list?.length) return;
-    setBusy(true);
-    const supabase = createClient();
     const done: FileItem[] = [];
     try {
       for (const file of [...list]) {
-        const slot = await createUploadAction(table, POD_FIELD, id, { name: file.name, type: file.type, size: file.size });
-        if (!slot.ok) {
-          toast.error(slot.message);
-          continue;
-        }
-        const { error } = await supabase.storage.from("attachments").uploadToSignedUrl(slot.path, slot.token, file, { contentType: file.type || undefined });
-        if (error) toast.error(`${file.name}: ${error.message}`);
-        else done.push({ path: slot.path, name: file.name, mime: file.type || null, size: file.size });
+        setProgress((p) => ({ ...p, [file.name]: { sent: 0, total: file.size, state: "sending" } }));
+        const r = await uploadFile(table, POD_FIELD, id, file, (x) => setProgress((p) => ({ ...p, [file.name]: x })));
+        if (!r.ok) toast.error(r.message);
+        else done.push(r.item);
       }
       if (done.length) run(() => addPodFilesAction(table, id, done), () => toast.success(`${done.length} file${done.length > 1 ? "s" : ""} added`));
     } finally {
-      setBusy(false);
+      setProgress({});
     }
   }
 
@@ -205,6 +201,9 @@ export function FilesPod({ table, id, files, canAdd, canRemove }: Base & { files
           ))}
         </ul>
       )}
+      {Object.entries(progress).map(([name, p]) => (
+        <UploadBar key={name} name={name} p={p} />
+      ))}
       {canAdd && (
         <>
           <button type="button" disabled={busy || pending} onClick={() => input.current?.click()} className="inline-flex h-11 w-fit items-center gap-2 rounded-lg border px-4 text-sm hover:bg-muted disabled:opacity-50">

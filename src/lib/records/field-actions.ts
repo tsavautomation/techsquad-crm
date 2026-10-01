@@ -2,6 +2,10 @@
 
 import { randomUUID } from "node:crypto";
 import { extractFromFile } from "@/lib/ai/extract";
+import { createUploadSession, oneDriveReady } from "@/lib/files/onedrive";
+import { isPendingOneDrive, OD_UPLOAD, uploadIdOf } from "@/lib/files/paths";
+import { confirmUpload, downloadFile, fileUrls } from "@/lib/files/store";
+import { adminDb } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/auth/session";
 import type { Values } from "@/lib/rules/evaluate";
 import { getTable } from "@/registry";
@@ -14,7 +18,12 @@ import { BUCKET, displayNames } from "./relations";
 
 export type Choice = { id: string; label: string; hint?: string };
 
-const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // Supabase Free plan limit; Phase 2 sends big videos to OneDrive/Drive
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // CRM storage (Supabase Free plan limit); OneDrive takes the big files
+const MAX_ONEDRIVE_BYTES = 10 * 1024 * 1024 * 1024;
+
+export type UploadSlot =
+  | { ok: true; kind: "crm"; path: string; token: string }
+  | { ok: true; kind: "onedrive"; path: string; uploadUrl: string };
 
 function fieldOf(tableName: string, fieldName: string): { t: TableDef; f: FieldDef } {
   const t = getTable(tableName);
@@ -105,11 +114,11 @@ export async function createUploadAction(
   fieldName: string,
   recordId: number | null,
   file: { name: string; type: string; size: number },
-): Promise<{ ok: true; path: string; token: string } | { ok: false; message: string }> {
+): Promise<UploadSlot | { ok: false; message: string }> {
   const user = await requireUser();
-  if (file.size > MAX_UPLOAD_BYTES) return { ok: false, message: `“${file.name}” is larger than 50 MB.` };
   let t: TableDef;
   let fieldSegment: string;
+  let isSignature = false;
 
   if (fieldName === POD_FIELD) {
     // The record's general Files pod ("Files: Add New"), only on saved records.
@@ -126,7 +135,23 @@ export async function createUploadAction(
     if (f.fileTypes && !f.fileTypes.includes(ext)) return { ok: false, message: `Allowed file types: ${f.fileTypes.join(", ")}` };
     if (f.type === "image" && !file.type.startsWith("image/")) return { ok: false, message: "Please choose an image." };
     fieldSegment = f.name;
+    isSignature = f.type === "signature";
   }
+
+  // Everything but signatures goes to OneDrive when it is connected (resumable, big files OK).
+  if (!isSignature && (await oneDriveReady())) {
+    if (file.size > MAX_ONEDRIVE_BYTES) return { ok: false, message: `“${file.name}” is larger than 10 GB.` };
+    const id = randomUUID();
+    try {
+      const uploadUrl = await createUploadSession(file.name, id);
+      const { error } = await adminDb().from("onedrive_uploads").insert({ id, user_id: user.id, table_name: t.name, field: fieldSegment, file_name: file.name.slice(0, 200), mime_type: file.type || null, size_bytes: file.size, upload_url: uploadUrl });
+      if (error) return { ok: false, message: error.message };
+      return { ok: true, kind: "onedrive", path: OD_UPLOAD + id, uploadUrl };
+    } catch (e) {
+      return { ok: false, message: `OneDrive: ${e instanceof Error ? e.message : String(e)}` };
+    }
+  }
+  if (file.size > MAX_UPLOAD_BYTES) return { ok: false, message: `“${file.name}” is larger than 50 MB.` };
 
   const safeName = file.name.replace(/[^\w.\- ]+/g, "_").slice(-120);
   const scope = recordId ? String(recordId) : `pending-${randomUUID()}`;
@@ -135,12 +160,32 @@ export async function createUploadAction(
   const db = await recordsDb();
   const { data, error } = await db.storage.from(BUCKET).createSignedUploadUrl(path);
   if (error || !data) return { ok: false, message: error?.message ?? "Could not prepare the upload" };
-  return { ok: true, path: data.path, token: data.token };
+  return { ok: true, kind: "crm", path: data.path, token: data.token };
+}
+
+/** The phone finished sending a file to OneDrive: check it arrived whole; returns a preview link. */
+export async function finishOneDriveUploadAction(path: string, itemId: string): Promise<{ ok: true; url?: string } | { ok: false; message: string }> {
+  const user = await requireUser();
+  if (!isPendingOneDrive(path)) return { ok: false, message: "Not a OneDrive upload" };
+  const r = await confirmUpload(uploadIdOf(path), itemId, user.id);
+  if (!r.ok) return r;
+  const urls = await fileUrls(await recordsDb(), [path]);
+  return { ok: true, url: urls.get(path) };
+}
+
+/** Is this unfinished OneDrive upload still mine and open (resuming after an interruption)? */
+export async function canResumeUploadAction(path: string): Promise<boolean> {
+  const user = await requireUser();
+  if (!isPendingOneDrive(path)) return false;
+  const { data } = await adminDb().from("onedrive_uploads").select("user_id, status").eq("id", uploadIdOf(path)).maybeSingle();
+  const u = data as { user_id: string; status: string } | null;
+  return Boolean(u && u.user_id === user.id && u.status === "open");
 }
 
 /** A viewing link for a file the user just uploaded (before the record is saved). */
 export async function previewUrlAction(path: string): Promise<string | null> {
   const user = await requireUser();
+  if (isPendingOneDrive(path)) return (await fileUrls(await recordsDb(), [path])).get(path) ?? null;
   if (path.split("/")[3] !== user.id) return null;
   const db = await recordsDb();
   const { data } = await db.storage.from(BUCKET).createSignedUrl(path, 60 * 60);
@@ -155,13 +200,20 @@ export async function extractFromUploadAction(tableName: string, fieldName: stri
   const user = await requireUser();
   const { t, f } = fieldOf(tableName, fieldName);
   if (!f.extract) return { ok: false, message: "This field can't be read automatically." };
-  const parts = path.split("/");
-  if (parts[0] !== t.name || parts[2] !== f.name || parts[3] !== user.id) return { ok: false, message: "Not your upload." };
-  const db = await recordsDb();
-  const { data, error } = await db.storage.from(BUCKET).download(path);
-  if (error || !data) return { ok: false, message: "Could not open the uploaded file." };
-  const ext = path.split(".").pop()?.toLowerCase() ?? "";
-  const mime = data.type || (ext === "pdf" ? "application/pdf" : ext === "png" ? "image/png" : "image/jpeg");
-  const r = await extractFromFile(f.extract.what, Buffer.from(await data.arrayBuffer()), mime);
+  let fileName = path;
+  if (isPendingOneDrive(path)) {
+    const { data } = await adminDb().from("onedrive_uploads").select("user_id, table_name, field, file_name").eq("id", uploadIdOf(path)).maybeSingle();
+    const u = data as { user_id: string; table_name: string; field: string; file_name: string } | null;
+    if (!u || u.user_id !== user.id || u.table_name !== t.name || u.field !== f.name) return { ok: false, message: "Not your upload." };
+    fileName = u.file_name;
+  } else {
+    const parts = path.split("/");
+    if (parts[0] !== t.name || parts[2] !== f.name || parts[3] !== user.id) return { ok: false, message: "Not your upload." };
+  }
+  const file = await downloadFile(await recordsDb(), path);
+  if (!file) return { ok: false, message: "Could not open the uploaded file." };
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  const mime = file.mime && !file.mime.includes("octet-stream") ? file.mime.split(";")[0] : ext === "pdf" ? "application/pdf" : ext === "png" ? "image/png" : "image/jpeg";
+  const r = await extractFromFile(f.extract.what, file.bytes, mime);
   return r.ok ? { ok: true, field: f.extract.to, value: r.value } : r;
 }

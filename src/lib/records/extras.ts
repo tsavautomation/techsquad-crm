@@ -6,6 +6,7 @@ import { canDo, canOpen } from "@/registry/permissions";
 import type { TableDef } from "@/registry/types";
 import { createClient } from "@/lib/supabase/server";
 import { listFields, recordsDb, userNames, type Row } from "./data";
+import { pathOf } from "@/lib/files/paths";
 import { joinTable, signedUrls } from "./relations";
 import type { FileItem } from "./values";
 
@@ -62,15 +63,15 @@ export async function loadChecklist(db: SupabaseClient, t: TableDef, id: number)
 export async function loadPodFiles(db: SupabaseClient, t: TableDef, id: number): Promise<FileItem[]> {
   const { data } = await db
     .from("attachments")
-    .select("id, provider_path, file_name, mime_type, size_bytes")
+    .select("id, provider, provider_path, file_name, mime_type, size_bytes")
     .eq("table_name", t.name)
     .eq("record_id", id)
     .is("field", null)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
-  const rows = (data ?? []) as { id: string; provider_path: string; file_name: string; mime_type: string | null; size_bytes: number | null }[];
-  const urls = await signedUrls(db, rows.map((r) => r.provider_path));
-  return rows.map((r) => ({ id: r.id, path: r.provider_path, name: r.file_name, mime: r.mime_type, size: r.size_bytes, url: urls.get(r.provider_path) }));
+  const rows = (data ?? []) as { id: string; provider: string; provider_path: string; file_name: string; mime_type: string | null; size_bytes: number | null }[];
+  const urls = await signedUrls(db, rows.map(pathOf));
+  return rows.map((r) => ({ id: r.id, path: pathOf(r), name: r.file_name, mime: r.mime_type, size: r.size_bytes, url: urls.get(pathOf(r)) }));
 }
 
 export async function loadHistory(db: SupabaseClient, t: TableDef, id: number): Promise<HistoryEntry[]> {

@@ -43,7 +43,7 @@ Replacement for the WebAuthor CRM at techsquad.webauthor.com.
   Engines use the same path, so their changes are audited too.
 - **Scheduled triggers**: Supabase pg_cron (job `crm-tick`, hourly at :01) calls `/api/cron/tick` through pg_net; Vercel Cron (`vercel.json`, daily 05:15 UTC) is a backup, since Hobby allows one cron a day. The tick runs each Eastern-time slot once (`scheduled_runs` keys `daily:<date>` / `hourly:<date>T<hh>`). Protected by `CRON_SECRET`; everything must be idempotent. The URL and secret live in Supabase Vault (`crm_cron_url`, `crm_cron_secret`); set them again on the production project (M13). `/api/cron/daily|hourly|events` run a check on demand.
 - **Files**: one `attachments` table (table, record_id, field, provider, provider_path, name, mime, size).
-  - Phase 1 provider = `supabase`; Phase 2 adds `onedrive` / `gdrive` without touching domain tables.
+  - Providers: `supabase` (signatures, and everything when OneDrive isn't connected) and `onedrive` (all other uploads, SPEC §9.1 OD-a). `src/lib/files/` owns it: `paths.ts` (app paths `onedrive:<item>`, `od-upload:<id>`), `store.ts` (links, downloads, attaching), `onedrive.ts` (Graph), `resumable.ts` (phone-side pieces + resume). Never read files with `db.storage` directly; use `downloadFile` / `fileUrls`.
   - Upload **directly from the browser** (signed upload URLs / resumable sessions). Never stream file bodies through a Vercel function (4.5 MB request limit; iPhone videos are large).
 - **Platform features every record has** (SPEC §1.3) are generic tables keyed by (table, record_id): `record_notes`, `record_comments`, `record_checklist_items`, `audit_log`. Soft-delete uses `deleted_at`, archive uses `archived_at`, and locking uses `locked` + `submitted_at`.
 

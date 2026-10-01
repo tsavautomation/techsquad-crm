@@ -83,6 +83,7 @@ export function SignaturePad({ table, recordId, field: f, value, onChange, disab
       const name = "signature.png";
       const slot = await createUploadAction(table, f.name, recordId, { name, type: "image/png", size: blob.size });
       if (!slot.ok) return void toast.error(slot.message);
+      if (slot.kind !== "crm") return void toast.error("Signatures are kept in the CRM."); // never OneDrive
       const { error } = await createClient().storage.from("attachments").uploadToSignedUrl(slot.path, slot.token, blob, { contentType: "image/png" });
       if (error) return void toast.error(error.message);
       onChange([{ path: slot.path, name, mime: "image/png", size: blob.size, url: (await previewUrlAction(slot.path)) ?? undefined }]);

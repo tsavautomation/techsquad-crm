@@ -2,10 +2,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Values } from "@/lib/rules/evaluate";
 import type { FieldDef, TableDef } from "@/registry/types";
+import { attachOneDriveUploads, fileUrls } from "@/lib/files/store";
+import { isPendingOneDrive, pathOf } from "@/lib/files/paths";
 import { isMultiLookup, isUpload, type FileItem } from "./values";
 
-export const BUCKET = "attachments";
-const SIGNED_URL_SECONDS = 60 * 60;
+export { BUCKET } from "@/lib/files/store";
 
 /** Link table for a many-to-many field, e.g. job_reports.team_ids → job_reports_team (see M4 schema). */
 export const joinTable = (t: TableDef, f: FieldDef) => `${t.name}_${f.name.replace(/_ids$/, "")}`;
@@ -40,7 +41,7 @@ export async function syncJoin(db: SupabaseClient, t: TableDef, f: FieldDef, id:
   }
 }
 
-type AttachmentRow = { id: string; field: string | null; provider_path: string; file_name: string; mime_type: string | null; size_bytes: number | null };
+type AttachmentRow = { id: string; field: string | null; provider: string; provider_path: string; file_name: string; mime_type: string | null; size_bytes: number | null };
 
 /** Attachments of a record grouped by upload field, with short-lived signed URLs for viewing. */
 export async function loadAttachments(db: SupabaseClient, t: TableDef, id: number): Promise<Record<string, FileItem[]>> {
@@ -50,27 +51,24 @@ export async function loadAttachments(db: SupabaseClient, t: TableDef, id: numbe
 
   const { data } = await db
     .from("attachments")
-    .select("id, field, provider_path, file_name, mime_type, size_bytes")
+    .select("id, field, provider, provider_path, file_name, mime_type, size_bytes")
     .eq("table_name", t.name)
     .eq("record_id", id)
     .is("deleted_at", null)
     .order("sort_order")
     .order("created_at");
   const rows = (data ?? []) as AttachmentRow[];
-  const urls = await signedUrls(db, rows.map((r) => r.provider_path));
+  const urls = await signedUrls(db, rows.map(pathOf));
   for (const r of rows) {
     if (!r.field || !out[r.field]) continue;
-    out[r.field].push({ id: r.id, path: r.provider_path, name: r.file_name, mime: r.mime_type, size: r.size_bytes, url: urls.get(r.provider_path) });
+    out[r.field].push({ id: r.id, path: pathOf(r), name: r.file_name, mime: r.mime_type, size: r.size_bytes, url: urls.get(pathOf(r)) });
   }
   return out;
 }
 
+/** Viewing links for CRM-storage and OneDrive files alike (src/lib/files/store.ts). */
 export async function signedUrls(db: SupabaseClient, paths: string[]): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  if (!paths.length) return map;
-  const { data } = await db.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_SECONDS);
-  for (const s of data ?? []) if (s.path && s.signedUrl) map.set(s.path, s.signedUrl);
-  return map;
+  return paths.length ? fileUrls(db, paths) : new Map();
 }
 
 /**
@@ -94,7 +92,8 @@ export async function syncAttachments(db: SupabaseClient, t: TableDef, f: FieldD
     if (error) throw new Error(`${f.label}: ${error.message}`);
   }
 
-  const fresh = files.filter((x) => !x.id);
+  const fresh = files.filter((x) => !x.id && !isPendingOneDrive(x.path));
+  const toOneDrive = files.filter((x) => !x.id && isPendingOneDrive(x.path));
   for (const x of fresh) {
     // Paths are <table>/<scope>/<field>/<uploader id>/<file> (see createUploadAction): only your own uploads can be attached.
     const [table, , field, uploader] = x.path.split("/");
@@ -115,6 +114,12 @@ export async function syncAttachments(db: SupabaseClient, t: TableDef, f: FieldD
         created_by: userId,
       })),
     );
+    if (error) throw new Error(`${f.label}: ${error.message}`);
+  }
+  // Files the phone sent to OneDrive: filed into the record's folder, then attached.
+  if (toOneDrive.length) {
+    const rows = await attachOneDriveUploads(t, id, f.name, toOneDrive.map((x) => x.path), userId);
+    const { error } = await db.from("attachments").insert(rows.map((r, i) => ({ ...r, table_name: t.name, record_id: id, field: f.name, sort_order: have.size + fresh.length + i, created_by: userId })));
     if (error) throw new Error(`${f.label}: ${error.message}`);
   }
 }

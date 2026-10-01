@@ -10,6 +10,8 @@ import { recordHref, tableHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
 import { getRecord, recordsDb } from "./data";
 import { canModule } from "./extras";
+import { isPendingOneDrive } from "@/lib/files/paths";
+import { attachOneDriveUploads } from "@/lib/files/store";
 import type { FileItem } from "./values";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
@@ -169,14 +171,20 @@ export async function addPodFilesAction(table: string, id: number, files: FileIt
   const user = await requireUser();
   const t = getTable(table);
   if (!(await canModule(user.permissions, t, "files_add_new"))) return DENIED;
-  for (const f of files) {
+  const crm = files.filter((f) => !isPendingOneDrive(f.path));
+  const od = files.filter((f) => isPendingOneDrive(f.path));
+  for (const f of crm) {
     const [tbl, scope, field, uploader] = f.path.split("/");
     if (tbl !== t.name || scope !== String(id) || field !== "_files" || uploader !== user.id) return { ok: false, message: "Unexpected file location" };
   }
   const db = await recordsDb();
-  const { error } = await db.from("attachments").insert(
-    files.map((f) => ({ table_name: t.name, record_id: id, field: null, provider: "supabase", provider_path: f.path, file_name: f.name.slice(0, 200), mime_type: f.mime, size_bytes: f.size, created_by: user.id })),
-  );
+  let rows: Record<string, unknown>[] = crm.map((f) => ({ table_name: t.name, record_id: id, field: null, provider: "supabase", provider_path: f.path, file_name: f.name.slice(0, 200), mime_type: f.mime, size_bytes: f.size, created_by: user.id }));
+  try {
+    rows = rows.concat((await attachOneDriveUploads(t, id, null, od.map((f) => f.path), user.id)).map((x) => ({ ...x, table_name: t.name, record_id: id, field: null, created_by: user.id })));
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+  const { error } = await db.from("attachments").insert(rows);
   if (error) return { ok: false, message: error.message };
   refresh(t, id);
   return { ok: true };

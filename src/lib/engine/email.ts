@@ -1,7 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatDateTime } from "@/lib/dates";
-import { BUCKET } from "@/lib/records/relations";
+import { isOneDrivePath } from "@/lib/files/paths";
+import { BUCKET, downloadFile } from "@/lib/files/store";
+import { recordHref } from "@/registry/routes";
 import { getTable } from "@/registry";
 import { recordPdf, type PdfImage } from "./pdf";
 import { cardFields, displayStrings, loadEngineRecord } from "./record-view";
@@ -99,8 +101,8 @@ async function buildRecordPdf(db: SupabaseClient, tableName: string, recordId: n
   const images: PdfImage[] = [];
   for (const f of t.fields.filter((x) => x.type === "image" || x.type === "signature" || x.type === "file")) {
     for (const file of (rec.files[f.name] ?? []).filter((x) => (x.mime ?? "").match(/^image\/(jpeg|png)$/)).slice(0, 6)) {
-      const { data } = await db.storage.from(BUCKET).download(file.path);
-      if (data) images.push({ label: f.label, data: Buffer.from(await data.arrayBuffer()), signature: f.type === "signature" });
+      const got = await downloadFile(db, file.path);
+      if (got) images.push({ label: f.label, data: got.bytes, signature: f.type === "signature" });
     }
   }
   const buffer = await recordPdf({
@@ -141,12 +143,19 @@ export async function deliver(db: SupabaseClient, id: string): Promise<{ ok: boo
       continue;
     }
     if ((a.size ?? 0) <= budget) {
-      const { data: blob } = await db.storage.from(BUCKET).download(a.path);
-      if (blob) {
-        attachments.push({ filename: a.name, content: Buffer.from(await blob.arrayBuffer()).toString("base64") });
-        budget -= a.size ?? blob.size;
+      const got = await downloadFile(db, a.path);
+      if (got) {
+        attachments.push({ filename: a.name, content: got.bytes.toString("base64") });
+        budget -= a.size ?? got.bytes.length;
         continue;
       }
+    }
+    if (isOneDrivePath(a.path)) {
+      // OneDrive links expire within the hour; point to the record instead (the reader signs in to see it).
+      const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+      const t = m.table_name ? getTable(m.table_name) : null;
+      links.push(`<li>${escape(a.name)}${t && m.record_id && site ? ` (open in the CRM: <a href="${escape(site + recordHref(t, m.record_id))}">${escape(t.itemLabel)} #${m.record_id}</a>)` : ""}</li>`);
+      continue;
     }
     const { data: signed } = await db.storage.from(BUCKET).createSignedUrl(a.path, LINK_DAYS * 86400);
     if (signed?.signedUrl) links.push(`<li><a href="${escape(signed.signedUrl)}">${escape(a.name)}</a></li>`);

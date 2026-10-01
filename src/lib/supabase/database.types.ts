@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_integrations: {
+        Row: {
+          data: Json
+          key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          data?: Json
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          data?: Json
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_integrations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attachments: {
         Row: {
           created_at: string
@@ -24,6 +53,7 @@ export type Database = {
           id: string
           mime_type: string | null
           provider: string
+          provider_folder: string | null
           provider_path: string
           record_id: number
           size_bytes: number | null
@@ -39,6 +69,7 @@ export type Database = {
           id?: string
           mime_type?: string | null
           provider?: string
+          provider_folder?: string | null
           provider_path: string
           record_id: number
           size_bytes?: number | null
@@ -54,6 +85,7 @@ export type Database = {
           id?: string
           mime_type?: string | null
           provider?: string
+          provider_folder?: string | null
           provider_path?: string
           record_id?: number
           size_bytes?: number | null
@@ -1197,6 +1229,74 @@ export type Database = {
             columns: ["target_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onedrive_folders: {
+        Row: {
+          created_at: string
+          item_id: string
+          path: string
+        }
+        Insert: {
+          created_at?: string
+          item_id: string
+          path: string
+        }
+        Update: {
+          created_at?: string
+          item_id?: string
+          path?: string
+        }
+        Relationships: []
+      }
+      onedrive_uploads: {
+        Row: {
+          created_at: string
+          field: string
+          file_name: string
+          id: string
+          item_id: string | null
+          mime_type: string | null
+          size_bytes: number
+          status: string
+          table_name: string
+          upload_url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          field: string
+          file_name: string
+          id?: string
+          item_id?: string | null
+          mime_type?: string | null
+          size_bytes: number
+          status?: string
+          table_name: string
+          upload_url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          field?: string
+          file_name?: string
+          id?: string
+          item_id?: string | null
+          mime_type?: string | null
+          size_bytes?: number
+          status?: string
+          table_name?: string
+          upload_url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onedrive_uploads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

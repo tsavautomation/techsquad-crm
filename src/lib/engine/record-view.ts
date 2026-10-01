@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatDate, formatDateTime } from "@/lib/dates";
+import { pathOf } from "@/lib/files/paths";
 import { joinTable } from "@/lib/records/relations";
 import { isMultiLookup, isUpload } from "@/lib/records/values";
 import { evaluateRules, type Values } from "@/lib/rules/evaluate";
@@ -43,14 +44,14 @@ export async function loadEngineRecord(db: SupabaseClient, t: TableDef, id: numb
   if (t.fields.some(isUpload)) {
     const { data: att } = await db
       .from("attachments")
-      .select("field, provider_path, file_name, mime_type, size_bytes")
+      .select("field, provider, provider_path, file_name, mime_type, size_bytes")
       .eq("table_name", t.name)
       .eq("record_id", id)
       .is("deleted_at", null)
       .not("field", "is", null)
       .order("sort_order");
-    for (const a of (att ?? []) as { field: string; provider_path: string; file_name: string; mime_type: string | null; size_bytes: number | null }[]) {
-      (files[a.field] ??= []).push({ path: a.provider_path, name: a.file_name, mime: a.mime_type, size: a.size_bytes });
+    for (const a of (att ?? []) as { field: string; provider: string; provider_path: string; file_name: string; mime_type: string | null; size_bytes: number | null }[]) {
+      (files[a.field] ??= []).push({ path: pathOf(a), name: a.file_name, mime: a.mime_type, size: a.size_bytes });
     }
   }
   return { id, values, files, title: (row.title as string | null) ?? null, deleted: Boolean(row.deleted_at) };

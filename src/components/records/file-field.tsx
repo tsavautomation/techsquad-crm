@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, FileText, Loader2, Paperclip, X } from "lucide-react";
+import { Camera, FileText, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
-import { createUploadAction, previewUrlAction } from "@/lib/records/field-actions";
+import type { Progress } from "@/lib/files/resumable";
+import { uploadFile } from "@/lib/files/upload-file";
 import type { FileItem } from "@/lib/records/values";
 import type { FieldDef } from "@/registry/types";
 
@@ -30,7 +30,7 @@ function formatSize(bytes: number | null) {
  */
 export function FileField({ table, recordId, field: f, value, onChange, disabled }: Props) {
   const files = (Array.isArray(value) ? value : []) as FileItem[];
-  const [busy, setBusy] = useState<string[]>([]);
+  const [busy, setBusy] = useState<Record<string, Progress>>({});
   const pickRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const filesRef = useRef(files);
@@ -44,26 +44,23 @@ export function FileField({ table, recordId, field: f, value, onChange, disabled
 
   async function upload(list: FileList | null) {
     if (!list?.length) return;
-    const supabase = createClient();
     const picked = single ? [list[0]] : [...list];
+    // Files go one after another so a weak phone connection isn't split between them.
     for (const file of picked) {
-      setBusy((b) => [...b, file.name]);
+      setBusy((b) => ({ ...b, [file.name]: { sent: 0, total: file.size, state: "sending" } }));
       try {
-        const slot = await createUploadAction(table, f.name, recordId, { name: file.name, type: file.type, size: file.size });
-        if (!slot.ok) {
-          toast.error(slot.message);
+        const r = await uploadFile(table, f.name, recordId, file, (p) => setBusy((b) => ({ ...b, [file.name]: p })));
+        if (!r.ok) {
+          toast.error(r.message);
           continue;
         }
-        const { error } = await supabase.storage.from("attachments").uploadToSignedUrl(slot.path, slot.token, file, { contentType: file.type || undefined });
-        if (error) {
-          toast.error(`${file.name}: ${error.message}`);
-          continue;
-        }
-        const url = (await previewUrlAction(slot.path)) ?? undefined;
-        const item: FileItem = { path: slot.path, name: file.name, mime: file.type || null, size: file.size, url };
-        onChange(single ? [item] : [...filesRef.current, item]);
+        onChange(single ? [r.item] : [...filesRef.current, r.item]);
       } finally {
-        setBusy((b) => b.filter((n) => n !== file.name));
+        setBusy((b) => {
+          const next = { ...b };
+          delete next[file.name];
+          return next;
+        });
       }
     }
   }
@@ -101,11 +98,9 @@ export function FileField({ table, recordId, field: f, value, onChange, disabled
         </ul>
       )}
 
-      {busy.length > 0 && (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" aria-hidden /> Uploading {busy.join(", ")}…
-        </p>
-      )}
+      {Object.entries(busy).map(([name, p]) => (
+        <UploadBar key={name} name={name} p={p} />
+      ))}
 
       {!disabled && (single ? files.length === 0 : true) && (
         <div className="flex flex-wrap gap-2">
@@ -151,8 +146,25 @@ export function FileField({ table, recordId, field: f, value, onChange, disabled
         }}
       />
       <p className="text-xs text-muted-foreground">
-        {f.fileTypes ? `Allowed: ${f.fileTypes.join(", ")}. ` : ""}Up to 50 MB per file.
+        {f.fileTypes ? `Allowed: ${f.fileTypes.join(", ")}. ` : ""}Big videos are fine: if the upload is interrupted it continues when you come back.
       </p>
+    </div>
+  );
+}
+
+/** Progress of one upload; "paused" while the phone is in a call, locked or offline. */
+export function UploadBar({ name, p }: { name: string; p: Progress }) {
+  const pct = p.total ? Math.floor((p.sent / p.total) * 100) : 0;
+  return (
+    <div className="rounded-[10px] border bg-card px-3 py-2" role="status" aria-live="polite">
+      <div className="flex items-center justify-between gap-2 text-[13px]">
+        <span className="min-w-0 truncate">{name}</span>
+        <span className={p.state === "paused" ? "shrink-0 text-warn-fg" : "shrink-0 text-muted-foreground"}>{p.state === "paused" ? "Paused" : `${pct}%`}</span>
+      </div>
+      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
+        <div className={p.state === "paused" ? "h-full rounded-full bg-warn-fg/60" : "h-full rounded-full bg-primary transition-[width]"} style={{ width: `${Math.max(2, pct)}%` }} />
+      </div>
+      {p.state === "paused" && <p className="mt-1 text-xs text-warn-fg">Interrupted. Keep the CRM open: it continues from {pct}% when the connection is back.</p>}
     </div>
   );
 }

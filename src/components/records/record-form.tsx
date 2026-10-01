@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { onUploadsChange, uploadsInProgress } from "@/lib/files/resumable";
 import { saveRecordAction } from "@/lib/records/actions";
 import { extractFromUploadAction } from "@/lib/records/field-actions";
 import { formatDate } from "@/lib/dates";
@@ -35,6 +36,14 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
   const [labels, setLabels] = useState(initialLabels);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+  // Files still on their way (to OneDrive or CRM storage): saving waits, leaving asks first.
+  const uploading = useSyncExternalStore(onUploadsChange, uploadsInProgress, () => 0);
+  useEffect(() => {
+    if (!uploading) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [uploading]);
 
   // Rules decide what's visible and required as the user types (SPEC §4).
   const rules = useMemo(() => evaluateRules(table, values), [table, values]);
@@ -143,8 +152,8 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
           "md:static md:border-0 md:p-0 md:pt-2",
         )}
       >
-        <Button type="submit" className="h-11 flex-1 md:flex-none md:px-8" disabled={pending}>
-          {pending ? "Saving…" : recordId ? "Save" : `Create ${table.newRecordLabel.replace(/^New /, "").toLowerCase()}`}
+        <Button type="submit" className="h-11 flex-1 md:flex-none md:px-8" disabled={pending || uploading > 0}>
+          {uploading > 0 ? `Uploading ${uploading} file${uploading > 1 ? "s" : ""}…` : pending ? "Saving…" : recordId ? "Save" : `Create ${table.newRecordLabel.replace(/^New /, "").toLowerCase()}`}
         </Button>
         <Link href={cancelHref} className={cn(buttonVariants({ variant: "outline" }), "h-11 flex-1 md:flex-none md:px-6")}>
           Cancel
