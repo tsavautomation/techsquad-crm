@@ -7,6 +7,7 @@ import { ChartColumn, ChevronRight, Database, List, LogOut, Menu, Monitor, Moon,
 import { useTheme } from "next-themes";
 import type { ModuleDef } from "@/config/modules";
 import { cn } from "@/lib/utils";
+import { GlobalSearch } from "./global-search";
 import { ModuleIcon } from "./module-icon";
 import { TileIcon } from "./tile-icons";
 
@@ -238,7 +239,7 @@ export function Sidebar({ items, create, me, showAdmin, extras }: { items: NavIt
   );
 }
 
-/** Top bar: on phones the logo and account; on computers a quiet strip with the account menu. */
+/** Top bar: on phones the logo, search and account; on computers a strip with the search box and the account menu. */
 export function TopBar({ me }: { me: Me }) {
   const [menu, setMenu] = useState(false);
   return (
@@ -248,6 +249,7 @@ export function TopBar({ me }: { me: Me }) {
         <span className="font-semibold">Tech Squad</span>
       </Link>
       <span className="grow" />
+      <GlobalSearch />
       <button type="button" onClick={() => setMenu(true)} aria-label="Account and colours" className="rounded-full">
         <Avatar me={me} />
       </button>
