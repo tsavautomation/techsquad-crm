@@ -178,7 +178,7 @@ export const jobReports: TableDef = {
     },
     {
       "name": "files",
-      "label": "Upload Files (25MB MAX)",
+      "label": "Upload Files",
       "type": "file",
       "legacy": {
         "column": "upload_files",

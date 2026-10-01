@@ -50,8 +50,13 @@ describe("registry ↔ WebAuthor export", () => {
     expect(REGISTRY.reduce((n, t) => n + t.fields.length, 0)).toBe(expectedCount);
   });
 
-  it("keeps labels identical (whitespace aside)", () => {
-    for (const { legacyTable, raw } of exported) expect(findField(legacyTable, raw)!.label).toBe(normLabel(raw.label));
+  it("keeps labels identical (whitespace aside), except renames Fred asked for", () => {
+    // SPEC §9.1 L-a: the size limit left the label when uploads moved to OneDrive (10 GB).
+    const RENAMED: Record<string, string> = { "Upload Files (25MB MAX)": "Upload Files" };
+    for (const { legacyTable, raw } of exported) {
+      const label = normLabel(raw.label);
+      expect(findField(legacyTable, raw)!.label).toBe(RENAMED[label] ?? label);
+    }
   });
 
   it("keeps dropdown / radio / checkbox options identical and in order", () => {
