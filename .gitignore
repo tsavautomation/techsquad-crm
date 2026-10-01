@@ -45,3 +45,6 @@ next-env.d.ts
 # personal files that must never be committed
 /VERCEL RECOVERY CODE/
 .invite-links.txt
+
+# Personal account notes (emails, IDs): kept off GitHub
+docs/TechSquad-CRM-accounts-and-services.pdf
