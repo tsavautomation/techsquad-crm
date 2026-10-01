@@ -145,11 +145,11 @@ export async function folderFor(t: TableDef, recordId: number): Promise<string> 
   }
   if (projectId) {
     const { data: p } = await db.from("projects").select("title").eq("id", projectId).maybeSingle();
-    const project = safeName(`${(p as { title: string | null } | null)?.title ?? "Project"} #${projectId}`);
+    const project = safeName(`${(p as { title: string | null } | null)?.title ?? "Project"} (${projectId})`);
     const where = t.name === "projects" ? "Project files" : safeName(t.label);
     return `${ROOT}/Projects/${project}/${where}/${todayET()}`;
   }
-  return `${ROOT}/${safeName(t.label)}/${safeName(recordTitle ? `${recordTitle} #${recordId}` : `#${recordId}`)}`;
+  return `${ROOT}/${safeName(t.label)}/${safeName(recordTitle ? `${recordTitle} (${recordId})` : `${t.itemLabel} ${recordId}`)}`;
 }
 
 // ---------------------------------------------------------------- uploads
@@ -193,7 +193,8 @@ export async function downloadUrls(ids: string[]): Promise<Map<string, string>> 
     const part = ids.slice(i, i + 20);
     const r = await graph<{ responses: { id: string; status: number; body?: { "@microsoft.graph.downloadUrl"?: string } }[] }>("/$batch", {
       method: "POST",
-      body: JSON.stringify({ requests: part.map((id, k) => ({ id: String(k), method: "GET", url: `/me/drive/items/${encodeURIComponent(id)}?$select=id,@microsoft.graph.downloadUrl` })) }),
+      // The whole item: asking for only the download link with $select makes OneDrive leave it out.
+      body: JSON.stringify({ requests: part.map((id, k) => ({ id: String(k), method: "GET", url: `/me/drive/items/${encodeURIComponent(id)}` })) }),
     });
     for (const x of r.responses) {
       const url = x.body?.["@microsoft.graph.downloadUrl"];
