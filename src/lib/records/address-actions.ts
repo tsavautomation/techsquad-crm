@@ -1,6 +1,8 @@
 "use server";
 
 import { requireUser } from "@/lib/auth/session";
+import { todayET } from "@/lib/dates";
+import { adminDb } from "@/lib/supabase/admin";
 import type { Address } from "./values";
 
 // US address auto-complete through Google Places (API "New"), called from the server so the
@@ -12,10 +14,25 @@ export type AddressSuggestion = { placeId: string; main: string; secondary: stri
 
 const key = () => process.env.GOOGLE_MAPS_API_KEY;
 
+// Safety cap: Google gives about 10,000 free lookups a month per service; 300 a day stays well inside.
+// Past it, address boxes work as plain typing until tomorrow (Eastern time).
+const DAILY_CAP = 300;
+
+async function underDailyCap(): Promise<boolean> {
+  const db = adminDb();
+  const day = todayET();
+  const { data } = await db.from("app_integrations").select("data").eq("key", "places_usage").maybeSingle();
+  const u = (data as { data: { day?: string; count?: number } } | null)?.data ?? {};
+  const count = u.day === day ? (u.count ?? 0) : 0;
+  if (count >= DAILY_CAP) return false;
+  await db.from("app_integrations").upsert({ key: "places_usage", data: { day, count: count + 1 }, updated_at: new Date().toISOString() });
+  return true;
+}
+
 export async function addressSuggestAction(input: string, session: string): Promise<AddressSuggestion[]> {
   await requireUser();
   const q = input.trim();
-  if (!key() || q.length < 4) return [];
+  if (!key() || q.length < 4 || !(await underDailyCap())) return [];
   const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key()! },
