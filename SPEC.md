@@ -704,7 +704,7 @@ Conventions for the tables below:
 | 12 | 5 - Pending | `fld_5_pending` | Long text |  | starts hidden (shown by a rule); max 8000 chars |
 | 13 | Login and Passwords | `login_and_passwords` | Long text |  | max 1000 chars |
 | 14 | Maintenance Plan Service Call ? | `maintenance_plan_service_call` | Yes/No |  |  |
-| 15 | Upload Files (25MB MAX) | `upload_files` | File upload |  |  |
+| 15 | Upload Files (WebAuthor: "Upload Files (25MB MAX)", renamed §9.1 L-a) | `upload_files` | File upload |  |  |
 
 *Summary counts shown on the record:* Files, Notes.
 
