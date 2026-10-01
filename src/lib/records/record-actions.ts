@@ -9,7 +9,8 @@ import { canDo, canLockAction } from "@/registry/permissions";
 import { recordHref, tableHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
 import { getRecord, recordsDb } from "./data";
-import { canModule } from "./extras";
+import { canModule, loadPeople } from "./extras";
+import { mentionedIn } from "./mentions";
 import { isPendingOneDrive } from "@/lib/files/paths";
 import { attachOneDriveUploads } from "@/lib/files/store";
 import type { FileItem } from "./values";
@@ -98,15 +99,27 @@ export async function restoreRecordAction(table: string, id: number): Promise<Ac
 
 // ---------------------------------------------------------------- notes
 
-export async function addNoteAction(table: string, id: number, body: string, followUp: string | null): Promise<ActionResult> {
+/** `tagged`: people picked with "@" in the note; only those whose @Name is still in the text are tagged. */
+export async function addNoteAction(table: string, id: number, body: string, followUp: string | null, tagged: string[] = []): Promise<ActionResult> {
   const user = await requireUser();
   const t = getTable(table);
-  const text = body.trim();
+  const text = body.trim().slice(0, 5000);
   if (!text) return { ok: false, message: "Write something first." };
   if (!(await canModule(user.permissions, t, "activity_history_add"))) return DENIED;
   const db = await recordsDb();
-  const { error } = await db.from("record_notes").insert({ table_name: t.name, record_id: id, body: text.slice(0, 5000), follow_up_date: followUp || null, created_by: user.id });
+  const { data: note, error } = await db
+    .from("record_notes")
+    .insert({ table_name: t.name, record_id: id, body: text, follow_up_date: followUp || null, created_by: user.id })
+    .select("id")
+    .single();
   if (error) return { ok: false, message: error.message };
+  const people = tagged.length ? (await loadPeople(db)).filter((p) => tagged.includes(p.id) && p.id !== user.id) : [];
+  const ids = mentionedIn(text, people);
+  if (ids.length) {
+    const rows = ids.map((u) => ({ note_id: (note as { id: number }).id, table_name: t.name, record_id: id, user_id: u, created_by: user.id }));
+    const { error: tagError } = await db.from("record_mentions").insert(rows);
+    if (tagError) return { ok: false, message: `Note saved, but tagging failed: ${tagError.message}` };
+  }
   refresh(t, id);
   return { ok: true };
 }

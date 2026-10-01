@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, FileText, Loader2, Paperclip, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import {
   toggleChecklistItemAction,
   type ActionResult,
 } from "@/lib/records/record-actions";
+import { mentionQuery, splitMentions, type Mentionable } from "@/lib/records/mentions";
 import { POD_FIELD, type FileItem } from "@/lib/records/values";
 import { cn } from "@/lib/utils";
 
@@ -38,14 +39,69 @@ function useRun() {
   return { pending, run };
 }
 
+/** Links from the alerts bell end in #notes or #checklist: open that section and scroll to it. */
+export function OpenFromLink() {
+  useEffect(() => {
+    const open = () => {
+      const el = window.location.hash.length > 1 ? document.getElementById(window.location.hash.slice(1)) : null;
+      if (el instanceof HTMLDetailsElement) {
+        el.open = true;
+        el.scrollIntoView({ block: "start" });
+      }
+    };
+    open();
+    window.addEventListener("hashchange", open);
+    return () => window.removeEventListener("hashchange", open);
+  }, []);
+  return null;
+}
+
 // ---------------------------------------------------------------- notes
 
 export type NoteView = { id: number; body: string; follow_up_date: string | null; created_at: string; author: string; canDelete: boolean };
 
-export function NotesPanel({ table, id, notes, canAdd }: Base & { notes: NoteView[]; canAdd: boolean }) {
+/** `people`: everyone who can be tagged (and whose @Name is highlighted); `meId` is left out of the picker. */
+export function NotesPanel({ table, id, notes, canAdd, people, meId }: Base & { notes: NoteView[]; canAdd: boolean; people: Mentionable[]; meId: string }) {
   const { pending, run } = useRun();
   const [body, setBody] = useState("");
   const [follow, setFollow] = useState("");
+  const [tagged, setTagged] = useState<string[]>([]);
+  const [tagging, setTagging] = useState<{ start: number; query: string } | null>(null);
+  const [pick, setPick] = useState(0);
+  const box = useRef<HTMLTextAreaElement>(null);
+  const names = people.map((p) => p.name);
+
+  const q = tagging?.query.toLowerCase() ?? "";
+  const matches = tagging ? people.filter((p) => p.id !== meId).filter((p) => p.name.toLowerCase().split(" ").some((w, i, all) => all.slice(i).join(" ").startsWith(q))).slice(0, 6) : [];
+
+  function typed(value: string, cursor: number) {
+    setBody(value);
+    setTagging(mentionQuery(value, cursor));
+    setPick(0);
+  }
+  function choose(p: Mentionable) {
+    if (!tagging || !box.current) return;
+    const cursor = box.current.selectionStart;
+    const next = `${body.slice(0, tagging.start)}@${p.name} ${body.slice(cursor)}`;
+    const at = tagging.start + p.name.length + 2;
+    setBody(next);
+    setTagged((t) => (t.includes(p.id) ? t : [...t, p.id]));
+    setTagging(null);
+    requestAnimationFrame(() => {
+      box.current?.focus();
+      box.current?.setSelectionRange(at, at);
+    });
+  }
+  function keys(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!matches.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      setPick((i) => (i + (e.key === "ArrowDown" ? 1 : matches.length - 1)) % matches.length);
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      choose(matches[pick]);
+    } else if (e.key === "Escape") setTagging(null);
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -54,13 +110,50 @@ export function NotesPanel({ table, id, notes, canAdd }: Base & { notes: NoteVie
           className="flex flex-col gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            run(() => addNoteAction(table, id, body, follow || null), () => {
+            run(() => addNoteAction(table, id, body, follow || null, tagged), () => {
               setBody("");
               setFollow("");
+              setTagged([]);
             });
           }}
         >
-          <textarea aria-label="New note" placeholder="Add a note…" rows={3} className={cn(INPUT, "py-2")} value={body} onChange={(e) => setBody(e.target.value)} />
+          <div className="relative">
+            <textarea
+              ref={box}
+              aria-label="New note"
+              placeholder="Add a note… type @ to tag someone"
+              rows={3}
+              className={cn(INPUT, "py-2")}
+              value={body}
+              onChange={(e) => typed(e.target.value, e.target.selectionStart)}
+              onKeyDown={keys}
+              onBlur={() => setTimeout(() => setTagging(null), 150)}
+            />
+            {matches.length > 0 && (
+              <ul role="listbox" aria-label="People to tag" className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border bg-card p-1 shadow-float">
+                {matches.map((p, i) => (
+                  <li key={p.id} role="option" aria-selected={i === pick}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => choose(p)}
+                      className={cn("flex min-h-11 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[15px]", i === pick ? "bg-secondary" : "hover:bg-muted")}
+                    >
+                      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                        {p.name
+                          .split(" ")
+                          .map((w) => w[0])
+                          .slice(0, 2)
+                          .join("")
+                          .toUpperCase()}
+                      </span>
+                      {p.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <CalendarClock className="size-4" aria-hidden /> Follow up
@@ -89,7 +182,17 @@ export function NotesPanel({ table, id, notes, canAdd }: Base & { notes: NoteVie
                   </button>
                 )}
               </div>
-              <p className="whitespace-pre-wrap">{n.body}</p>
+              <p className="whitespace-pre-wrap">
+                {splitMentions(n.body, names).map((part, i) =>
+                  part.tag ? (
+                    <span key={i} className="rounded bg-primary/10 px-0.5 font-medium text-primary">
+                      {part.text}
+                    </span>
+                  ) : (
+                    part.text
+                  ),
+                )}
+              </p>
             </li>
           ))}
         </ul>

@@ -79,6 +79,14 @@ declare
     ["everyone", "select count(*) from public.visits where id = 900901", "rows=0"],
     ["admin",    "update public.visits set duration = '90' where id = 900901", "ok"],
 
+    ["pm",       "insert into public.record_notes (id, table_name, record_id, body) values (900951, 'projects', 900001, '@Tech please check')", "ok"],
+    ["pm",       "insert into public.record_mentions (note_id, table_name, record_id, user_id) values (900951, 'projects', 900001, '00000000-0000-4000-a000-000000000001')", "ok"],
+    ["acc",      "insert into public.record_mentions (note_id, table_name, record_id, user_id) values (900951, 'projects', 900001, '00000000-0000-4000-a000-000000000004')", "error"],
+    ["tech",     "select count(*) from public.record_mentions where note_id = 900951", "rows=1"],
+    ["acc",      "select count(*) from public.record_mentions where note_id = 900951", "rows=0"],
+    ["acc",      "update public.record_mentions set seen_at = now() where note_id = 900951", "none"],
+    ["tech",     "update public.record_mentions set seen_at = now() where note_id = 900951", "ok"],
+
     ["admin",    "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000001' from public.groups where slug = 'project_manager'", "ok"],
     ["admin",    "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000001' from public.groups where slug = 'system_administrators'", "error"],
     ["admin",    "delete from public.group_members where user_id = '00000000-0000-4000-a000-000000000007'", "none"],

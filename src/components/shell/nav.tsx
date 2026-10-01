@@ -7,6 +7,7 @@ import { ChartColumn, ChevronRight, Database, List, LogOut, Menu, Monitor, Moon,
 import { useTheme } from "next-themes";
 import type { ModuleDef } from "@/config/modules";
 import { cn } from "@/lib/utils";
+import { AlertsBell } from "./alerts-bell";
 import { GlobalSearch } from "./global-search";
 import { ModuleIcon } from "./module-icon";
 import { TileIcon } from "./tile-icons";
@@ -239,17 +240,18 @@ export function Sidebar({ items, create, me, showAdmin, extras }: { items: NavIt
   );
 }
 
-/** Top bar: on phones the logo, search and account; on computers a strip with the search box and the account menu. */
+/** Top bar: on phones the logo, search, alerts and account; on computers a strip with the search box, alerts bell and account menu. */
 export function TopBar({ me }: { me: Me }) {
   const [menu, setMenu] = useState(false);
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:px-7">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-1.5 md:gap-3 border-b bg-card/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:px-7">
       <Link href="/" className="flex items-center gap-2 md:hidden" aria-label="Dashboard">
         <Logo className="size-8" />
         <span className="font-semibold">Tech Squad</span>
       </Link>
       <span className="grow" />
       <GlobalSearch />
+      <AlertsBell />
       <button type="button" onClick={() => setMenu(true)} aria-label="Account and colours" className="rounded-full">
         <Avatar me={me} />
       </button>

@@ -16,9 +16,9 @@ import { FieldValue } from "@/components/records/field-value";
 import { SensitiveValue } from "@/components/records/sensitive-value";
 import { RecordToolbar } from "@/components/records/record-toolbar";
 import { WorkflowPanel, type WorkflowPanelData } from "@/components/records/workflow-panel";
-import { ChecklistPanel, FilesPod, NotesPanel } from "@/components/records/record-panels";
+import { ChecklistPanel, FilesPod, NotesPanel, OpenFromLink } from "@/components/records/record-panels";
 import { HistoryList, RelatedList, Section, SubListTable } from "@/components/records/record-sections";
-import { canModule, loadChecklist, loadHistory, loadNotes, loadPodFiles, loadRelated, loadSubLists, type ModuleAction } from "@/lib/records/extras";
+import { canModule, loadChecklist, loadHistory, loadNotes, loadPeople, loadPodFiles, loadRelated, loadSubLists, type ModuleAction } from "@/lib/records/extras";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -61,11 +61,14 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
     loadRelated(t, recordId, perms),
     loadSubLists(t, recordId, perms),
   ]);
-  const [notes, checklist, podFiles, history] = await Promise.all([
+  const [notes, checklist, podFiles, history, people] = await Promise.all([
     may.activity_history_view ? loadNotes(db, t, recordId) : Promise.resolve([]),
     loadChecklist(db, t, recordId),
     may.files_view_files_pod ? loadPodFiles(db, t, recordId) : Promise.resolve([]),
     may.audit_log ? loadHistory(db, t, recordId) : Promise.resolve([]),
+    may.activity_history_view ? loadPeople(db) : Promise.resolve([]),
+    // Opening the record clears my tags on it from the alerts bell.
+    db.from("record_mentions").update({ seen_at: new Date().toISOString() }).eq("user_id", user.id).eq("table_name", t.name).eq("record_id", recordId).is("seen_at", null),
   ]);
   const canModify = canDo(perms, t, "modify", getTable);
   const { data: workflow } = await db.rpc("workflow_panel", { p_table: t.name, p_id: recordId });
@@ -136,19 +139,22 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
             <RelatedList items={related} />
           </Section>
         )}
-        <Section title="Checklist" count={checklist.filter((c) => !c.completed_at).length} open={checklist.some((c) => !c.completed_at)}>
+        <Section id="checklist" title="Checklist" count={checklist.filter((c) => !c.completed_at).length} open={checklist.some((c) => !c.completed_at)}>
           <ChecklistPanel
             table={t.name}
             id={recordId}
             items={checklist.map((c) => ({ ...c, canDelete: c.created_by === user.id || canModify }))}
           />
         </Section>
+        <OpenFromLink />
         {may.activity_history_view && (
-          <Section title="Notes" count={notes.length}>
+          <Section id="notes" title="Notes" count={notes.length}>
             <NotesPanel
               table={t.name}
               id={recordId}
               canAdd={may.activity_history_add}
+              people={people}
+              meId={user.id}
               notes={notes.map((n) => ({ ...n, canDelete: may.notes_allow_delete || (n.created_by === user.id && may.notes_allow_delete_of_my_notes) }))}
             />
           </Section>

@@ -2202,6 +2202,61 @@ export type Database = {
           },
         ]
       }
+      record_mentions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          note_id: number
+          record_id: number
+          seen_at: string | null
+          table_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          note_id: number
+          record_id: number
+          seen_at?: string | null
+          table_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          note_id?: number
+          record_id?: number
+          seen_at?: string | null
+          table_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_mentions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_mentions_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "record_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_mentions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       record_notes: {
         Row: {
           body: string

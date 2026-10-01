@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listFields, recordsDb, userNames, type Row } from "./data";
 import { pathOf } from "@/lib/files/paths";
 import { joinTable, signedUrls } from "./relations";
+import type { Mentionable } from "./mentions";
 import type { FileItem } from "./values";
 
 // ---------------------------------------------------------------- module-level permissions (SPEC §7.4)
@@ -47,6 +48,14 @@ export async function loadNotes(db: SupabaseClient, t: TableDef, id: number): Pr
   const rows = (data ?? []) as Omit<Note, "author">[];
   const names = await userNames(rows, ["created_by"]);
   return rows.map((r) => ({ ...r, author: (r.created_by && names.get(r.created_by)) || "Someone" }));
+}
+
+/** Everyone with an active login, for tagging in notes ("@Name"). */
+export async function loadPeople(db: SupabaseClient): Promise<Mentionable[]> {
+  const { data } = await db.from("profiles").select("id, first_name, last_name, email").eq("active", true).order("first_name");
+  return ((data ?? []) as { id: string; first_name: string | null; last_name: string | null; email: string }[])
+    .map((p) => ({ id: p.id, name: [p.first_name, p.last_name].filter(Boolean).join(" ").trim() }))
+    .filter((p) => p.name);
 }
 
 export async function loadChecklist(db: SupabaseClient, t: TableDef, id: number): Promise<ChecklistItem[]> {

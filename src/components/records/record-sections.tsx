@@ -8,9 +8,9 @@ import { FieldValue } from "./field-value";
 import { formatAddress } from "./field-value";
 
 /** Collapsible section used under a record (WebAuthor showed these as accordions). */
-export function Section({ title, count, open, children }: { title: string; count?: number; open?: boolean; children: React.ReactNode }) {
+export function Section({ id, title, count, open, children }: { id?: string; title: string; count?: number; open?: boolean; children: React.ReactNode }) {
   return (
-    <details open={open} className="group rounded-2xl border bg-card shadow-card">
+    <details id={id} open={open} className="group scroll-mt-20 rounded-2xl border bg-card shadow-card">
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
         <span>
           {title}
