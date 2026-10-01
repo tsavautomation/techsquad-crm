@@ -119,6 +119,8 @@ export const tasks: TableDef = {
       ],
       legacy: NEW,
     },
+    // F3 (SPEC §9.1 F3-a): seen only by whoever made it and the person it's assigned to.
+    { name: "private", label: "Private", type: "boolean", default: false, help: "Only you and the person it's assigned to can see it.", legacy: NEW },
     {
       "name": "due_status",
       "label": "Status",

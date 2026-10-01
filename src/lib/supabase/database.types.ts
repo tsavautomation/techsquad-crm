@@ -3010,6 +3010,7 @@ export type Database = {
           locked: boolean
           member_id: number | null
           priority: string | null
+          private: boolean
           project_id: number | null
           status: string | null
           submitted_at: string | null
@@ -3032,6 +3033,7 @@ export type Database = {
           locked?: boolean
           member_id?: number | null
           priority?: string | null
+          private?: boolean
           project_id?: number | null
           status?: string | null
           submitted_at?: string | null
@@ -3054,6 +3056,7 @@ export type Database = {
           locked?: boolean
           member_id?: number | null
           priority?: string | null
+          private?: boolean
           project_id?: number | null
           status?: string | null
           submitted_at?: string | null

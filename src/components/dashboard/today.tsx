@@ -11,7 +11,7 @@ import { getT } from "@/i18n/server";
 import type { T } from "@/i18n/core";
 
 // "Today" sections from the Portal design (docs/portal-features-merge.md §I), built on what exists now.
-// Review requests and follow-ups from the contact log arrive with F4.
+// Review requests and the contact log (calls, texts, emails) arrive with F4; until then follow-ups go by project notes.
 
 type Row = { href: string; title: string; meta: string; action?: { href: string; label: string }; tone?: "bad" | "warn" };
 type Section = { id: string; title: string; rows: Row[] };
@@ -60,13 +60,13 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
   const upcoming = can("visits")
     ? Promise.resolve(db
         .from("visits")
-        .select("id, starts_at, status, technician_id, project_id, projects(title, job_address, financial_status), employees:technician_id(title, phone)")
+        .select("id, starts_at, duration, checked_in_at, status, technician_id, project_id, projects(title, job_address, financial_status), employees:technician_id(title, phone)")
         .gte("starts_at", dayStart)
         .lt("starts_at", in14)
         .neq("status", "Cancelled")
         .is("deleted_at", null)
         .order("starts_at")
-        .then(({ data }) => (data ?? []) as unknown as { id: number; starts_at: string; status: string; project_id: number | null; projects: { title: string | null; job_address: { street?: string } | null; financial_status: string | null } | null; employees: { title: string | null; phone: string | null } | null }[]))
+        .then(({ data }) => (data ?? []) as unknown as { id: number; starts_at: string; duration: string | null; checked_in_at: string | null; status: string; project_id: number | null; projects: { title: string | null; job_address: { street?: string } | null; financial_status: string | null } | null; employees: { title: string | null; phone: string | null } | null }[]))
     : Promise.resolve([]);
 
   const when = (iso: string) => {
@@ -79,7 +79,18 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
       upcoming.then((v) => ({
         id: "on-site",
         title: tr("On site now"),
-        rows: v.filter((x) => x.status === "On site").map((x) => ({ href: recordHref(visitsT, x.id), title: x.projects?.title ?? tr("Visit #{id}", { id: x.id }), meta: tr("{who} · started {when}", { who: x.employees?.title ?? tr("No technician"), when: when(x.starts_at) }) })),
+        rows: v
+          .filter((x) => x.status === "On site")
+          .map((x) => {
+            // F3: flag a visit running past its planned time (check-in + expected duration).
+            const over = Math.round((now - Date.parse(x.checked_in_at ?? x.starts_at)) / 60_000 - Number(x.duration ?? 60));
+            return {
+              href: recordHref(visitsT, x.id),
+              title: x.projects?.title ?? tr("Visit #{id}", { id: x.id }),
+              meta: over > 0 ? tr("{who} · {min} min over the planned time", { who: x.employees?.title ?? tr("No technician"), min: over }) : tr("{who} · started {when}", { who: x.employees?.title ?? tr("No technician"), when: when(x.checked_in_at ?? x.starts_at) }),
+              tone: over > 0 ? ("warn" as const) : undefined,
+            };
+          }),
       })),
       upcoming.then((v) => ({
         id: "late",
@@ -140,6 +151,57 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
             action: canBook ? { href: newVisit(p.id), label: tr("Schedule visit") } : undefined,
           })),
         };
+      })(),
+    );
+  }
+
+  // F3: open tasks due in the next 7 days (or overdue), and projects that need a follow-up.
+  if (can("tasks")) {
+    jobs.push(
+      (async () => {
+        const { data } = await db
+          .from("tasks")
+          .select("id, details, due_date, priority, member_id, employees:member_id(title)")
+          .lte("due_date", addDays(today, 7))
+          .neq("status", "Completed")
+          .is("deleted_at", null)
+          .is("archived_at", null)
+          .order("due_date");
+        const tasksT = getTable("tasks");
+        return {
+          id: "tasks-due",
+          title: tr("Tasks due in 7 days"),
+          rows: ((data ?? []) as unknown as { id: number; details: string | null; due_date: string; priority: string | null; employees: { title: string | null } | null }[]).map((r) => ({
+            href: recordHref(tasksT, r.id),
+            title: (r.details ?? "").split("\n")[0].slice(0, 80) || tr("Task #{id}", { id: r.id }),
+            meta: [r.employees?.title ?? tr("unassigned"), r.due_date < today ? tr("overdue since {date}", { date: formatDate(r.due_date) }) : r.due_date === today ? tr("due today") : tr("due {date}", { date: formatDate(r.due_date) })].join(" · "),
+            tone: r.due_date < today || r.priority === "Urgent" ? ("bad" as const) : r.due_date === today ? ("warn" as const) : undefined,
+          })),
+        };
+      })(),
+    );
+  }
+  if (can("projects")) {
+    jobs.push(
+      (async () => {
+        // A new project (Surveying) with no note after 2 days, or a proposal sent with no note for 7 days.
+        const { data } = await db.from("projects").select("id, title, job_status, created_at, updated_at").in("job_status", ["Surveying", "Proposal Sent"]).is("deleted_at", null).is("archived_at", null);
+        const projects = (data ?? []) as { id: number; title: string | null; job_status: string; created_at: string; updated_at: string }[];
+        if (!projects.length) return null;
+        const { data: notes } = await db.from("record_notes").select("record_id, created_at").eq("table_name", "projects").in("record_id", projects.map((p) => p.id));
+        const lastNote = new Map<number, string>();
+        for (const n of (notes ?? []) as { record_id: number; created_at: string }[]) if ((lastNote.get(n.record_id) ?? "") < n.created_at) lastNote.set(n.record_id, n.created_at);
+        const daysAgo = (iso: string) => Math.floor((now - Date.parse(iso)) / 86_400_000);
+        const rows: (Row & { days: number })[] = [];
+        for (const p of projects) {
+          const last = lastNote.get(p.id);
+          if (p.job_status === "Surveying" && !last && daysAgo(p.created_at) >= 2) {
+            rows.push({ days: daysAgo(p.created_at), href: `/projects/projects/${p.id}#notes`, title: p.title ?? tr("Project #{id}", { id: p.id }), meta: tr("New {n} days ago, no contact noted yet", { n: daysAgo(p.created_at) }), tone: "warn" });
+          } else if (p.job_status === "Proposal Sent" && daysAgo(last ?? p.updated_at) >= 7) {
+            rows.push({ days: daysAgo(last ?? p.updated_at), href: `/projects/projects/${p.id}#notes`, title: p.title ?? tr("Project #{id}", { id: p.id }), meta: tr("Proposal sent, no contact for {n} days", { n: daysAgo(last ?? p.updated_at) }), tone: "warn" });
+          }
+        }
+        return { id: "contact", title: tr("Follow up with the client"), rows: rows.sort((a, b) => b.days - a.days) };
       })(),
     );
   }

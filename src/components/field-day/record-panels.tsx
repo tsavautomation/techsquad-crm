@@ -13,7 +13,7 @@ import { getT } from "@/i18n/server";
 import { StepButtons } from "./step-buttons";
 
 // Record-page panels for F2: the visit's check-in buttons, what to bring and the briefing from the
-// project's last report; on a return card, "Schedule return".
+// project's last report; on a task with a project, "Schedule return" / "Put on the calendar" (F3).
 
 const CARD = "mb-4 rounded-2xl border bg-card px-4 py-3 shadow-card";
 
@@ -118,14 +118,16 @@ export async function ReturnCardPanel({ taskId }: { taskId: number }) {
   const [user, tr, db] = await Promise.all([requireUser(), getT(), recordsDb()]);
   const { data } = await db.from("tasks").select("id, project_id, job_report_id, visit_id, details, labels, deleted_at").eq("id", taskId).maybeSingle();
   const task = data as { id: number; project_id: number | null; job_report_id: number | null; visit_id: number | null; details: string | null; labels: string[] | null; deleted_at: string | null } | null;
-  if (!task || task.deleted_at || !(task.job_report_id || task.labels?.includes("Return")) || !task.project_id) return null;
+  // Any task with a project can go on the calendar (F3); return cards say "Schedule return" (F2).
+  if (!task || task.deleted_at || !task.project_id) return null;
+  const isReturn = Boolean(task.job_report_id || task.labels?.includes("Return"));
   const visitsT = getTable("visits");
 
   if (task.visit_id) {
     return (
       <div className={CARD}>
         <p className="text-[14px]">
-          {tr("Return visit scheduled.")}{" "}
+          {tr(isReturn ? "Return visit scheduled." : "On the calendar.")}{" "}
           <Link href={recordHref(visitsT, task.visit_id)} className="font-semibold underline underline-offset-2">
             {tr("Open the visit")}
           </Link>
@@ -150,7 +152,7 @@ export async function ReturnCardPanel({ taskId }: { taskId: number }) {
   return (
     <div className={CARD}>
       <Link href={`${tableHref(visitsT)}/new?${q}`} className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-primary px-4 text-[14px] font-semibold text-primary-foreground hover:brightness-95">
-        <CalendarPlus className="size-4" aria-hidden /> {tr("Schedule return")}
+        <CalendarPlus className="size-4" aria-hidden /> {tr(isReturn ? "Schedule return" : "Put on the calendar")}
       </Link>
     </div>
   );

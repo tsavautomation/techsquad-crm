@@ -11,7 +11,7 @@ export async function generateMetadata() {
   return { title: (await getT())("Tasks") };
 }
 
-type Row = { id: number; details: string | null; member_id: number | null; due_date: string | null; priority: string | null; status: string | null };
+type Row = { id: number; details: string | null; member_id: number | null; due_date: string | null; priority: string | null; status: string | null; labels: string[] | null; private: boolean; projects: { title: string | null } | null };
 
 /** Tasks board (Portal "Tarefas"): the Administrative › Tasks records as columns by status. */
 export default async function TasksPage(props: PageProps<"/tasks">) {
@@ -19,22 +19,31 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   const user = await requireUser();
   const t = getTable("tasks");
   if (!canOpen(user.permissions, t, getTable)) notFound();
-  const { who = "" } = (await props.searchParams) as { who?: string };
+  const { who = "", label = "" } = (await props.searchParams) as { who?: string; label?: string };
   const db = await recordsDb();
 
   const { data: meRow } = await db.from("employees").select("id").ilike("email", user.email).is("deleted_at", null).limit(1);
   const me = ((meRow ?? []) as { id: number }[])[0]?.id ?? null;
   const filterId = who === "me" ? me : /^\d+$/.test(who) ? Number(who) : null;
 
-  let q = db.from("tasks").select("id, details, member_id, due_date, priority, status").is("deleted_at", null).is("archived_at", null).order("due_date", { ascending: true, nullsFirst: false }).limit(500);
+  let q = db.from("tasks").select("id, details, member_id, due_date, priority, status, labels, private, projects(title)").is("deleted_at", null).is("archived_at", null).order("due_date", { ascending: true, nullsFirst: false }).limit(500);
   if (filterId) q = q.eq("member_id", filterId);
+  const labelOptions = (t.fields.find((f) => f.name === "labels")?.options ?? []).filter((o) => !o.retired);
+  if (labelOptions.some((o) => o.value === label)) q = q.contains("labels", [label]);
   const [{ data }, { data: emp }] = await Promise.all([q, db.from("employees").select("id, title").is("deleted_at", null).order("title")]);
-  const rows = (data ?? []) as Row[];
+  const rows = (data ?? []) as unknown as Row[];
   const names = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
 
-  // Checklist progress per task (record checklist items).
+  // Checklist progress and notes per task (record checklist items, record notes).
   const ids = rows.map((r) => r.id);
-  const { data: chk } = ids.length ? await db.from("record_checklist_items").select("record_id, completed_at").eq("table_name", "tasks").in("record_id", ids) : { data: [] };
+  const [{ data: chk }, { data: notes }] = ids.length
+    ? await Promise.all([
+        db.from("record_checklist_items").select("record_id, completed_at").eq("table_name", "tasks").in("record_id", ids),
+        db.from("record_notes").select("record_id").eq("table_name", "tasks").in("record_id", ids),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const noteCount = new Map<number, number>();
+  for (const n of (notes ?? []) as { record_id: number }[]) noteCount.set(n.record_id, (noteCount.get(n.record_id) ?? 0) + 1);
   const progress = new Map<number, { done: number; total: number }>();
   for (const c of (chk ?? []) as { record_id: number; completed_at: string | null }[]) {
     const p = progress.get(c.record_id) ?? { done: 0, total: 0 };
@@ -55,13 +64,17 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
     priority: r.priority,
     status: columns.some((c) => c.value === r.status) ? r.status! : first,
     checklist: progress.get(r.id) ?? { done: 0, total: 0 },
+    labels: (r.labels ?? []).map((v) => labelOptions.find((o) => o.value === v) ?? { value: v, label: v }).map((o) => ({ label: o.label, color: ("color" in o && o.color) || "#64748b" })),
+    project: r.projects?.title ?? null,
+    notes: noteCount.get(r.id) ?? 0,
+    private: r.private,
   }));
   const people = [...new Set(rows.map((r) => r.member_id).filter((x): x is number => x !== null))].map((id) => ({ id, name: names.get(id) ?? `#${id}` })).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="mx-auto max-w-[1200px]">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Tasks")}</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">Team board by status. Drag a card to move it; open it for details, checklist and notes.</p>
+      <p className="mb-4 text-[12.5px] text-muted-foreground">{tr("Team board by status. Drag a card (or use Move to…) to change its status; open it for details, checklist and notes.")}</p>
       <TaskBoard
         columns={columns}
         cards={cards}
@@ -71,6 +84,8 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         canCreate={canDo(user.permissions, t, "create", getTable)}
         me={me}
         who={who}
+        label={label}
+        labels={labelOptions.map((o) => ({ value: o.value, label: o.label }))}
       />
     </div>
   );
