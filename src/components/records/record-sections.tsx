@@ -6,6 +6,9 @@ import { listFields } from "@/lib/records/data";
 import type { TableDef } from "@/registry/types";
 import { FieldValue } from "./field-value";
 import { formatAddress } from "./field-value";
+import { getLang, getT } from "@/i18n/server";
+import { localizeTable } from "@/i18n/registry";
+import type { T } from "@/i18n/core";
 
 /** Collapsible section used under a record (WebAuthor showed these as accordions). */
 export function Section({ id, title, count, open, children }: { id?: string; title: string; count?: number; open?: boolean; children: React.ReactNode }) {
@@ -38,11 +41,11 @@ const ACTION_LABEL: Record<string, string> = {
 
 const SYSTEM_LABELS: Record<string, string> = { title: "Title", locked: "Locked", submitted_at: "Date Submitted", archived_at: "Archived", deleted_at: "Deleted" };
 
-function describe(t: TableDef, col: string, value: unknown): string {
+function describe(t: TableDef, col: string, value: unknown, tr: T): string {
   if (value === null || value === undefined || value === "" || (Array.isArray(value) && !value.length)) return "—";
   if (value === "***") return "•••";
   const f = t.fields.find((x) => x.name === col);
-  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "boolean") return tr(value ? "Yes" : "No");
   if (f?.options) {
     const labels = (Array.isArray(value) ? value : [value]).map((v) => f.options!.find((o) => o.value === v)?.label ?? String(v));
     return labels.join(", ");
@@ -55,8 +58,10 @@ function describe(t: TableDef, col: string, value: unknown): string {
   return s.length > 80 ? `${s.slice(0, 80)}…` : s;
 }
 
-export function HistoryList({ table, entries }: { table: TableDef; entries: HistoryEntry[] }) {
-  if (!entries.length) return <p className="text-sm text-muted-foreground">No history yet.</p>;
+export async function HistoryList({ table: source, entries }: { table: TableDef; entries: HistoryEntry[] }) {
+  const tr = await getT();
+  const table = localizeTable(source, await getLang());
+  if (!entries.length) return <p className="text-sm text-muted-foreground">{tr("No history yet.")}</p>;
   return (
     <ol className="flex flex-col gap-3">
       {entries.map((e) => {
@@ -64,17 +69,14 @@ export function HistoryList({ table, entries }: { table: TableDef; entries: Hist
         return (
           <li key={e.id} className="text-sm">
             <p>
-              <span className="font-medium">{ACTION_LABEL[e.action] ?? e.action}</span>
-              <span className="text-muted-foreground">
-                {" "}
-                by {e.actor} · {formatDateTime(e.at)}
-              </span>
+              <span className="font-medium">{tr(ACTION_LABEL[e.action] ?? e.action)}</span>
+              <span className="text-muted-foreground"> {tr("by {who} · {when}", { who: e.actor, when: formatDateTime(e.at) })}</span>
             </p>
             {changes.length > 0 && e.action === "update" && (
               <ul className="mt-1 ml-4 list-disc text-xs text-muted-foreground">
                 {changes.map(([col, [from, to]]) => (
                   <li key={col}>
-                    {table.fields.find((f) => f.name === col)?.label ?? SYSTEM_LABELS[col] ?? col}: {describe(table, col, from)} → {describe(table, col, to)}
+                    {table.fields.find((f) => f.name === col)?.label ?? tr(SYSTEM_LABELS[col] ?? col)}: {describe(table, col, from, tr)} → {describe(table, col, to, tr)}
                   </li>
                 ))}
               </ul>
@@ -88,14 +90,15 @@ export function HistoryList({ table, entries }: { table: TableDef; entries: Hist
 
 // ---------------------------------------------------------------- related records
 
-export function RelatedList({ items }: { items: Related[] }) {
-  if (!items.length) return <p className="text-sm text-muted-foreground">Nothing links to this record yet.</p>;
+export async function RelatedList({ items }: { items: Related[] }) {
+  const tr = await getT();
+  if (!items.length) return <p className="text-sm text-muted-foreground">{tr("Nothing links to this record yet.")}</p>;
   return (
     <ul className="divide-y rounded-lg border">
       {items.map((r) => (
         <li key={`${r.table.name}.${r.field}`}>
           <Link href={r.href} className="flex min-h-12 items-center justify-between px-3 text-sm hover:bg-muted/50">
-            {r.label}
+            {r.label.replace(/^(.*?)(?: \((.*)\))?$/, (_, a: string, b?: string) => (b ? `${tr(a)} (${tr(b)})` : tr(a)))}
             <span className="flex items-center gap-2">
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{r.count}</span>
               <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
@@ -109,13 +112,15 @@ export function RelatedList({ items }: { items: Related[] }) {
 
 // ---------------------------------------------------------------- sub-lists
 
-export function SubListTable({ list, baseHref }: { list: SubList; baseHref: string }) {
-  const cols = listFields(list.table);
+export async function SubListTable({ list, baseHref }: { list: SubList; baseHref: string }) {
+  const tr = await getT();
+  const table = localizeTable(list.table, await getLang());
+  const cols = listFields(table);
   const slug = list.table.name;
   return (
     <div className="flex flex-col gap-2">
       {list.rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">None yet.</p>
+        <p className="text-sm text-muted-foreground">{tr("None yet.")}</p>
       ) : (
         <ul className="divide-y rounded-lg border">
           {list.rows.map((r) => (
@@ -131,7 +136,7 @@ export function SubListTable({ list, baseHref }: { list: SubList; baseHref: stri
                 </p>
               </div>
               {list.canEdit && (
-                <Link href={`${baseHref}/sub/${slug}/${r.id}/edit`} aria-label={`Edit ${r.title ?? r.id}`} className="inline-flex size-9 shrink-0 items-center justify-center rounded border hover:bg-muted">
+                <Link href={`${baseHref}/sub/${slug}/${r.id}/edit`} aria-label={tr("Edit {name}", { name: r.title ?? r.id })} className="inline-flex size-9 shrink-0 items-center justify-center rounded border hover:bg-muted">
                   <Pencil className="size-4" aria-hidden />
                 </Link>
               )}
@@ -141,7 +146,7 @@ export function SubListTable({ list, baseHref }: { list: SubList; baseHref: stri
       )}
       {list.canAdd && (
         <Link href={`${baseHref}/sub/${slug}/new`} className="inline-flex h-11 w-fit items-center gap-1.5 rounded-lg border px-4 text-sm hover:bg-muted">
-          <Plus className="size-4" aria-hidden /> {list.table.newRecordLabel}
+          <Plus className="size-4" aria-hidden /> {table.newRecordLabel}
         </Link>
       )}
     </div>

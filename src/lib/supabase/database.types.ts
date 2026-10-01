@@ -1719,6 +1719,7 @@ export type Database = {
           email: string
           first_name: string | null
           id: string
+          language: string
           last_name: string | null
           updated_at: string
         }
@@ -1728,6 +1729,7 @@ export type Database = {
           email: string
           first_name?: string | null
           id: string
+          language?: string
           last_name?: string | null
           updated_at?: string
         }
@@ -1737,6 +1739,7 @@ export type Database = {
           email?: string
           first_name?: string | null
           id?: string
+          language?: string
           last_name?: string | null
           updated_at?: string
         }

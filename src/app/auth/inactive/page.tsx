@@ -1,14 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Account inactive" };
+export async function generateMetadata() {
+  return { title: (await getT())("Account inactive") };
+}
 
-export default function InactivePage() {
+export default async function InactivePage() {
+  const t = await getT();
   return (
     <main className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">Account not active</CardTitle>
+          <CardTitle className="text-xl">{t("Account not active")}</CardTitle>
           <CardDescription>
             Your login exists but hasn&apos;t been activated, or has been switched off. Ask an administrator to
             enable it.
@@ -17,7 +21,7 @@ export default function InactivePage() {
         <CardContent>
           <form action="/auth/signout" method="post">
             <Button type="submit" variant="outline" className="h-11 w-full">
-              Sign out
+              {t("Sign out")}
             </Button>
           </form>
         </CardContent>

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { formatDate } from "@/lib/dates";
 import { saveRecordAction } from "@/lib/records/actions";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 // Tasks board (the Portal design's "Tarefas"): one column per Task status, drag a card to move it.
 // Columns follow the Status options, so an option added in Form settings becomes a column.
@@ -19,6 +20,7 @@ type Props = { columns: BoardColumn[]; cards: BoardCard[]; people: { id: number;
 const PRIORITY: Record<string, string> = { Urgent: "bg-bad-bg text-bad-fg", ASAP: "bg-warn-bg text-warn-fg" };
 
 export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, me, who }: Props) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [drag, setDrag] = useState<number | null>(null);
@@ -31,7 +33,7 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
     if (!c || c.status === status) return;
     start(async () => {
       const r = await saveRecordAction("tasks", id, { status });
-      if (!r.ok) return void toast.error(r.message ?? "Could not move the task");
+      if (!r.ok) return void toast.error(t(r.message || "Could not move the task"));
       router.refresh();
     });
   };
@@ -39,7 +41,7 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
     start(async () => {
       if (!text.trim()) return;
       const r = await saveRecordAction("tasks", null, { details: text.trim(), status, due_date: today, ...(me ? { member_id: me } : {}) });
-      if (!r.ok) return void toast.error(r.message ?? "Could not add the task");
+      if (!r.ok) return void toast.error(t(r.message || "Could not add the task"));
       setText("");
       setAdding(null);
       router.refresh();
@@ -48,16 +50,16 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
   return (
     <div className={cn(pending && "opacity-70")}>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <select aria-label="Whose tasks" className="h-10 rounded-[10px] border bg-card px-2 text-base md:text-sm" value={who} onChange={(e) => router.push(e.target.value ? `/tasks?who=${e.target.value}` : "/tasks")}>
-          <option value="">Everyone</option>
-          {me && <option value="me">Mine</option>}
+        <select aria-label={t("Whose tasks")} className="h-10 rounded-[10px] border bg-card px-2 text-base md:text-sm" value={who} onChange={(e) => router.push(e.target.value ? `/tasks?who=${e.target.value}` : "/tasks")}>
+          <option value="">{t("Everyone")}</option>
+          {me && <option value="me">{t("Mine")}</option>}
           {people.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
         </select>
-        <span className="text-sm text-muted-foreground">{cards.length} tasks</span>
+        <span className="text-sm text-muted-foreground">{t(cards.length === 1 ? "{n} task" : "{n} tasks", { n: cards.length })}</span>
       </div>
       <div className="-mx-3.5 flex snap-x gap-3.5 overflow-x-auto px-3.5 pb-3.5 md:mx-0 md:px-0">
         {columns.map((col) => {
@@ -65,7 +67,7 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
           return (
             <section
               key={col.value}
-              aria-label={col.label}
+              aria-label={t(col.label)}
               className={cn("flex w-[268px] shrink-0 snap-start flex-col rounded-[14px] border border-t-[3px] bg-muted p-2.5", over === col.value && "outline-2 -outline-offset-4 outline-primary outline-dashed")}
               style={{ borderTopColor: col.color }}
               onDragOver={(e) => {
@@ -82,7 +84,7 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
               }}
             >
               <h2 className="mb-2.5 flex items-center justify-between px-0.5 text-[12.5px] font-semibold">
-                {col.label}
+                {t(col.label)}
                 <small className="rounded-full border bg-card px-2 font-semibold">{list.length}</small>
               </h2>
               <ul className="flex flex-col gap-2">
@@ -121,19 +123,19 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
                       add(col.value);
                     }}
                   >
-                    <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder="What needs doing…" className="rounded-[10px] border bg-card px-3 py-2 text-base md:text-sm" />
+                    <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder={t("What needs doing…")} className="rounded-[10px] border bg-card px-3 py-2 text-base md:text-sm" />
                     <div className="flex gap-1.5">
                       <button type="submit" className="h-9 flex-1 rounded-[10px] bg-primary text-sm font-semibold text-primary-foreground">
-                        Add
+                        {t("Add")}
                       </button>
                       <button type="button" onClick={() => setAdding(null)} className="h-9 rounded-[10px] border bg-card px-3 text-sm">
-                        Cancel
+                        {t("Cancel")}
                       </button>
                     </div>
                   </form>
                 ) : (
                   <button type="button" onClick={() => setAdding(col.value)} className="mt-2 flex h-9 items-center justify-center gap-1 rounded-[10px] text-[13px] text-muted-foreground hover:bg-card">
-                    <Plus className="size-4" aria-hidden /> Add a card
+                    <Plus className="size-4" aria-hidden /> {t("Add a card")}
                   </button>
                 ))}
             </section>

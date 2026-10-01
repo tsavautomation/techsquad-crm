@@ -9,15 +9,17 @@ import { canDo } from "@/registry/permissions";
 import type { FieldDef } from "@/registry/types";
 import { tableFromRoute, tableHref } from "@/registry/routes";
 import { RecordForm } from "@/components/records/record-form";
+import { getLang, getT } from "@/i18n/server";
+import { localized } from "@/i18n/registry";
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]/new">) {
   const { module, tab } = await props.params;
-  return { title: tableFromRoute(module, tab)?.newRecordLabel ?? "Not found" };
+  return { title: (await getT())(tableFromRoute(module, tab)?.newRecordLabel ?? "Not found") };
 }
 
 export default async function NewRecordPage(props: PageProps<"/[module]/[tab]/new">) {
   const { module, tab } = await props.params;
-  const t = tableFromRoute(module, tab);
+  const t = localized(tableFromRoute(module, tab), await getLang());
   if (!t) notFound();
   const user = await requireUser();
   if (!canDo(user.permissions, t, "create", getTable)) notFound();

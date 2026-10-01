@@ -7,6 +7,8 @@ import { canOpen } from "@/registry/permissions";
 import { recordHref, tableHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
 import { matchLine, orFilters, searchColumns, searchWords, selectColumns } from "./query";
+import { getLang } from "@/i18n/server";
+import { localizeTable } from "@/i18n/registry";
 
 export type SearchHit = {
   href: string;
@@ -39,11 +41,12 @@ export async function globalSearchAction(q: string): Promise<SearchGroup[]> {
   const words = searchWords(q);
   if (!words.length || words.join("").length < 2) return [];
   const db = await recordsDb();
+  const lang = await getLang();
   const tables = REGISTRY.filter((t) => pageOf(t) && canOpen(user.permissions, t, getTable));
 
   const groups = await Promise.all(
     tables.map(async (t): Promise<SearchGroup | null> => {
-      const cols = searchColumns(t);
+      const cols = searchColumns(localizeTable(t, lang));
       let query = db.from(t.name).select(selectColumns(t, cols)).is("deleted_at", null);
       for (const f of orFilters(cols, words)) query = query.or(f);
       const { data, error } = await query.order("archived_at", { ascending: false, nullsFirst: true }).order("updated_at", { ascending: false }).limit(PER_TABLE);
@@ -52,12 +55,12 @@ export async function globalSearchAction(q: string): Promise<SearchGroup[]> {
       const rows = data as unknown as Record<string, unknown>[];
       return {
         table: t.name,
-        label: t.label,
+        label: localizeTable(t, lang).label,
         icon: page.tab ?? page.name.replace(/_/g, "-"),
         href: t.parent ? undefined : `${tableHref(page)}?q=${encodeURIComponent(q.trim())}`,
         hits: rows.map((r) => ({
           href: t.parent ? recordHref(page, String(r[t.parent.field])) : recordHref(t, Number(r.id)),
-          title: String(r.title ?? "") || `${t.itemLabel} ${r.id}`,
+          title: String(r.title ?? "") || `${localizeTable(t, lang).itemLabel} ${r.id}`,
           line: matchLine(r, cols, words),
           archived: Boolean(r.archived_at),
         })),

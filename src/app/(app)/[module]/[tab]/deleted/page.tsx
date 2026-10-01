@@ -9,16 +9,20 @@ import { getTable } from "@/registry";
 import { canDo } from "@/registry/permissions";
 import { tableFromRoute, tableHref } from "@/registry/routes";
 import { RestoreButton } from "@/components/records/restore-button";
+import { getLang, getT } from "@/i18n/server";
+import { localized } from "@/i18n/registry";
+
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]/deleted">) {
   const { module, tab } = await props.params;
-  return { title: `Deleted ${tableFromRoute(module, tab)?.label ?? ""}` };
+  return { title: (await getT())("Deleted {name}", { name: (await getT())(tableFromRoute(module, tab)?.label ?? "") }) };
 }
 
 /** WebAuthor "Deleted Items": deleted records can be restored by people allowed to delete them. */
 export default async function DeletedItemsPage(props: PageProps<"/[module]/[tab]/deleted">) {
+  const tr = await getT();
   const { module, tab } = await props.params;
-  const t = tableFromRoute(module, tab);
+  const t = localized(tableFromRoute(module, tab), await getLang());
   if (!t) notFound();
   const user = await requireUser();
   if (!(await canModule(user.permissions, t, "deleted_items"))) notFound();
@@ -32,9 +36,9 @@ export default async function DeletedItemsPage(props: PageProps<"/[module]/[tab]
       <Link href={tableHref(t)} className="mb-2 inline-flex h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden /> {t.label}
       </Link>
-      <h1 className="mb-4 text-2xl font-semibold">Deleted {t.label}</h1>
+      <h1 className="mb-4 text-2xl font-semibold">{tr("Deleted")} {t.label}</h1>
       {rows.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">Nothing has been deleted.</p>
+        <p className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">{tr("Nothing has been deleted.")}</p>
       ) : (
         <ul className="divide-y rounded-2xl border bg-card shadow-card">
           {rows.map((r) => (
@@ -42,7 +46,7 @@ export default async function DeletedItemsPage(props: PageProps<"/[module]/[tab]
               <div className="min-w-0">
                 <p className="font-medium">{r.title ?? `#${r.id}`}</p>
                 <p className="text-xs text-muted-foreground">
-                  Deleted {formatDateTime(r.deleted_at)}
+                  {tr("Deleted")} {formatDateTime(r.deleted_at)}
                   {r.updated_by ? ` by ${names.get(r.updated_by) ?? "someone"}` : ""}
                 </p>
               </div>

@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2, Search, X } from "lucide-react";
 import { globalSearchAction, type SearchGroup, type SearchHit } from "@/lib/search/actions";
 import { cn } from "@/lib/utils";
 import { TileIcon } from "./tile-icons";
+import { useT } from "@/i18n/client";
 
 // Top-bar search over every record type (projects, contacts, buildings, suppliers, employees, vehicles…).
 // Computers: a box next to the account initials, results drop down under it (Ctrl+K or "/" jumps to it).
@@ -51,10 +52,11 @@ function useSearch() {
 }
 
 function Results({ s, active, onPick, onHover }: { s: ReturnType<typeof useSearch>; active: number; onPick: () => void; onHover: (i: number) => void }) {
-  if (s.q.trim().length < 2) return <p className="px-4 py-6 text-center text-sm text-muted-foreground">Type a name, address, phone, email or number.</p>;
+  const t = useT();
+  if (s.q.trim().length < 2) return <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t("Type a name, address, phone, email or number.")}</p>;
   if (!s.groups.length) {
-    if (s.loading || s.searched !== s.q.trim()) return <p className="px-4 py-6 text-center text-sm text-muted-foreground">Searching…</p>;
-    return <p className="px-4 py-6 text-center text-sm text-muted-foreground">No matches for “{s.searched}”.</p>;
+    if (s.loading || s.searched !== s.q.trim()) return <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t("Searching…")}</p>;
+    return <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t("No matches for “{q}”.", { q: s.searched })}</p>;
   }
   let n = -1;
   return (
@@ -66,7 +68,7 @@ function Results({ s, active, onPick, onHover }: { s: ReturnType<typeof useSearc
             <span className="flex-1 text-[11.5px] font-semibold tracking-wider text-muted-foreground uppercase">{g.label}</span>
             {g.href && g.hits.length >= 5 && (
               <Link href={g.href} onClick={onPick} className="rounded-md px-2 py-1 text-[12.5px] font-medium text-primary hover:bg-muted">
-                See all
+                {t("See all")}
               </Link>
             )}
           </div>
@@ -84,7 +86,7 @@ function Results({ s, active, onPick, onHover }: { s: ReturnType<typeof useSearc
                   >
                     <span className="flex items-center gap-2">
                       <span className="truncate text-[14.5px] font-medium">{h.title}</span>
-                      {h.archived && <span className="shrink-0 rounded-full bg-muted px-1.5 text-[11px] text-text-2">Archived</span>}
+                      {h.archived && <span className="shrink-0 rounded-full bg-muted px-1.5 text-[11px] text-text-2">{t("Archived")}</span>}
                     </span>
                     {h.line && <span className="truncate text-[12.5px] text-text-2">{h.line}</span>}
                   </Link>
@@ -99,6 +101,7 @@ function Results({ s, active, onPick, onHover }: { s: ReturnType<typeof useSearc
 }
 
 export function GlobalSearch() {
+  const t = useT();
   const s = useSearch();
   const router = useRouter();
   const pathname = usePathname();
@@ -185,8 +188,8 @@ export function GlobalSearch() {
           onChange={(e) => change(e.target.value)}
           onFocus={() => setOpen(true)}
           onKeyDown={keys}
-          placeholder="Search projects, clients, buildings…"
-          aria-label="Search all records"
+          placeholder={t("Search projects, clients, buildings…")}
+          aria-label={t("Search all records")}
           role="combobox"
           aria-expanded={open}
           aria-controls="global-search-results"
@@ -200,7 +203,7 @@ export function GlobalSearch() {
             type="button"
             onClick={() => change("")}
             className="absolute top-1/2 right-1.5 grid size-7 -translate-y-1/2 place-items-center rounded-md hover:bg-muted"
-            aria-label="Clear search"
+            aria-label={t("Clear search")}
           >
             <X className="size-4" aria-hidden />
           </button>
@@ -218,15 +221,15 @@ export function GlobalSearch() {
       </div>
 
       {/* Phones */}
-      <button type="button" onClick={() => setPhone(true)} className="grid size-11 place-items-center rounded-full text-text-2 active:bg-muted md:hidden" aria-label="Search">
+      <button type="button" onClick={() => setPhone(true)} className="grid size-11 place-items-center rounded-full text-text-2 active:bg-muted md:hidden" aria-label={t("Search")}>
         <Search className="size-[22px]" aria-hidden />
       </button>
       {/* On <body>: the top bar's blur would otherwise trap this full-screen layer inside the bar. */}
       {phone &&
         createPortal(
-          <div role="dialog" aria-modal="true" aria-label="Search" className="fixed inset-0 z-50 flex flex-col bg-background md:hidden">
+          <div role="dialog" aria-modal="true" aria-label={t("Search")} className="fixed inset-0 z-50 flex flex-col bg-background md:hidden">
             <div className="flex items-center gap-1 border-b bg-card px-2 pt-[env(safe-area-inset-top)]">
-              <button type="button" onClick={() => setPhone(false)} className="grid size-11 shrink-0 place-items-center rounded-full active:bg-muted" aria-label="Close search">
+              <button type="button" onClick={() => setPhone(false)} className="grid size-11 shrink-0 place-items-center rounded-full active:bg-muted" aria-label={t("Close search")}>
                 <ArrowLeft className="size-5" aria-hidden />
               </button>
               <input
@@ -236,8 +239,8 @@ export function GlobalSearch() {
                 value={s.q}
                 onChange={(e) => change(e.target.value)}
                 onKeyDown={keys}
-                placeholder="Search everything"
-                aria-label="Search all records"
+                placeholder={t("Search everything")}
+                aria-label={t("Search all records")}
                 autoComplete="off"
                 className="h-14 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
               />
@@ -245,7 +248,7 @@ export function GlobalSearch() {
                 <Loader2 className="mx-3 size-5 animate-spin text-muted-foreground" aria-hidden />
               ) : (
                 s.q && (
-                  <button type="button" onClick={() => change("")} className="grid size-11 shrink-0 place-items-center rounded-full active:bg-muted" aria-label="Clear search">
+                  <button type="button" onClick={() => change("")} className="grid size-11 shrink-0 place-items-center rounded-full active:bg-muted" aria-label={t("Clear search")}>
                     <X className="size-5" aria-hidden />
                   </button>
                 )

@@ -2,10 +2,14 @@ import { Logo } from "@/components/shell/nav";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Sign in" };
+export async function generateMetadata() {
+  return { title: (await getT())("Sign in") };
+}
 
 export default async function LoginPage(props: PageProps<"/login">) {
+  const t = await getT();
   const { next, error } = await props.searchParams;
   return (
     <main className="relative flex min-h-dvh items-center justify-center bg-muted/30 p-4">
@@ -16,11 +20,11 @@ export default async function LoginPage(props: PageProps<"/login">) {
         <CardHeader>
           <Logo className="mb-2 size-11 rounded-[13px] text-sm" />
           <CardTitle className="text-xl">TechSquad CRM</CardTitle>
-          <CardDescription>Sign in with your work email.</CardDescription>
+          <CardDescription>{t("Sign in with your work email.")}</CardDescription>
         </CardHeader>
         <CardContent>
           {error === "link" && (
-            <p className="mb-4 text-sm text-destructive">That link has expired or was already used. Try again.</p>
+            <p className="mb-4 text-sm text-destructive">{t("That link has expired or was already used. Try again.")}</p>
           )}
           <LoginForm next={typeof next === "string" ? next : undefined} />
         </CardContent>

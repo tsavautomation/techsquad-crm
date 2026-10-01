@@ -12,16 +12,20 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/dates";
 import { canModule } from "@/lib/records/extras";
+import { getLang, getT } from "@/i18n/server";
+import { localized } from "@/i18n/registry";
+
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]">) {
   const { module, tab } = await props.params;
-  return { title: tableFromRoute(module, tab)?.label ?? "Not found" };
+  return { title: (await getT())(tableFromRoute(module, tab)?.label ?? "Not found") };
 }
 
 export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
+  const tr = await getT();
   const { module, tab } = await props.params;
   const sp = await props.searchParams;
-  const t = tableFromRoute(module, tab);
+  const t = localized(tableFromRoute(module, tab), await getLang());
   if (!t) notFound();
   const user = await requireUser();
   if (!canOpen(user.permissions, t, getTable)) notFound();
@@ -85,12 +89,12 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
         <div>
           <h1 className="text-2xl font-semibold">{t.label}</h1>
           <p className="text-sm text-muted-foreground">
-            {count} {count === 1 ? "record" : "records"}
+            {tr(count === 1 ? "{n} record" : "{n} records", { n: count })}
             {showDeletedLink && (
               <>
                 {" · "}
                 <Link href={`${base}/deleted`} className="underline-offset-4 hover:underline">
-                  Deleted items
+                  {tr("Deleted items")}
                 </Link>
               </>
             )}
@@ -112,7 +116,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
             </span>
           ))}
           <Link href={base} className="ml-auto underline underline-offset-4">
-            Show all
+            {tr("Show all")}
           </Link>
         </p>
       )}
@@ -120,7 +124,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
       <ListControls filters={filterFields(t).map((f) => ({ name: f.name, label: f.label, options: f.options ?? [] }))} />
 
       {rows.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">No records found.</p>
+        <p className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">{tr("No records found.")}</p>
       ) : (
         <>
           {/* Phones: cards */}
@@ -129,7 +133,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
               <li key={r.id}>
                 <Link href={recordHref(t, r.id)} className="block rounded-2xl border bg-card shadow-card p-3 active:bg-muted">
                   <div className="flex items-center gap-2 font-medium">
-                    {r.locked === true && <Lock className="size-3.5 text-muted-foreground" aria-label="Submitted" />}
+                    {r.locked === true && <Lock className="size-3.5 text-muted-foreground" aria-label={tr("Submitted")} />}
                     {r.title ?? `#${r.id}`}
                   </div>
                   <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
@@ -152,7 +156,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
                 <tr>
                   <th className="px-3 py-2 font-medium">
                     <Link href={sortLink("title")} className="inline-flex items-center gap-1">
-                      Name {sortIcon("title")}
+                      {tr("Name")} {sortIcon("title")}
                     </Link>
                   </th>
                   {cols.map((c) => (
@@ -164,7 +168,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
                   ))}
                   <th className="px-3 py-2 font-medium">
                     <Link href={sortLink("updated_at")} className="inline-flex items-center gap-1">
-                      Modified {sortIcon("updated_at")}
+                      {tr("Modified")} {sortIcon("updated_at")}
                     </Link>
                   </th>
                 </tr>
@@ -174,7 +178,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
                   <tr key={r.id} className="border-t hover:bg-muted/30">
                     <td className="px-3 py-2">
                       <Link href={recordHref(t, r.id)} className="inline-flex items-center gap-1.5 font-medium underline-offset-4 hover:underline">
-                        {r.locked === true && <Lock className="size-3.5 text-muted-foreground" aria-label="Submitted" />}
+                        {r.locked === true && <Lock className="size-3.5 text-muted-foreground" aria-label={tr("Submitted")} />}
                         {r.title ?? `#${r.id}`}
                       </Link>
                     </td>
@@ -191,18 +195,18 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
           </div>
 
           {pages > 1 && (
-            <nav aria-label="Pages" className="mt-4 flex items-center justify-center gap-3 text-sm">
+            <nav aria-label={tr("Pages")} className="mt-4 flex items-center justify-center gap-3 text-sm">
               {page > 1 && (
                 <Link href={pageLink(page - 1)} className={cn(buttonVariants({ variant: "outline" }), "h-11 px-4")}>
-                  Previous
+                  {tr("Previous")}
                 </Link>
               )}
               <span>
-                Page {page} of {pages}
+                {tr("Page {page} of {pages}", { page, pages })}
               </span>
               {page < pages && (
                 <Link href={pageLink(page + 1)} className={cn(buttonVariants({ variant: "outline" }), "h-11 px-4")}>
-                  Next
+                  {tr("Next")}
                 </Link>
               )}
             </nav>

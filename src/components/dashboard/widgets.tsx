@@ -6,6 +6,8 @@ import { getTable, REGISTRY } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
+import { getT } from "@/i18n/server";
+import type { T } from "@/i18n/core";
 
 // Dashboard widgets (PLAN M12): My Assigned (workflow stages I may act on), My Tasks (tasks whose
 // Member is the employee with my email) and Recently Modified. Row-level security decides what
@@ -32,7 +34,7 @@ function inModule(table: string, module?: string) {
   return known.has(table) && (!module || getTable(table).module === module);
 }
 
-async function myAssigned(user: CurrentUser, module?: string): Promise<Item[]> {
+async function myAssigned(user: CurrentUser, tr: T, module?: string): Promise<Item[]> {
   const db = await recordsDb();
   const { data } = await db.rpc("my_workflow_queue");
   const rows = ((data ?? []) as { table_name: string; record_id: number; level_title: string; level_color: string | null; entered_at: string }[]).filter(
@@ -46,14 +48,14 @@ async function myAssigned(user: CurrentUser, module?: string): Promise<Item[]> {
       const t = getTable(r.table_name);
       return {
         href: recordHref(t, r.record_id),
-        title: titles.get(`${r.table_name}:${r.record_id}`) || `${t.itemLabel} #${r.record_id}`,
-        meta: `${r.level_title} · since ${formatDate(r.entered_at)}`,
+        title: titles.get(`${r.table_name}:${r.record_id}`) || `${tr(t.itemLabel)} #${r.record_id}`,
+        meta: `${tr(r.level_title)} · ${tr("since {date}", { date: formatDate(r.entered_at) })}`,
         color: r.level_color,
       };
     });
 }
 
-async function myTasks(user: CurrentUser): Promise<Item[]> {
+async function myTasks(user: CurrentUser, tr: T): Promise<Item[]> {
   const db = await recordsDb();
   const { data: emp } = await db.from("employees").select("id").ilike("email", user.email).is("deleted_at", null);
   const ids = ((emp ?? []) as { id: number }[]).map((e) => e.id);
@@ -71,13 +73,13 @@ async function myTasks(user: CurrentUser): Promise<Item[]> {
   const status = t.fields.find((f) => f.name === "status");
   return ((data ?? []) as { id: number; title: string | null; status: string | null; due_date: string | null }[]).map((r) => ({
     href: recordHref(t, r.id),
-    title: r.title || `${t.itemLabel} #${r.id}`,
-    meta: [r.status, r.due_date && `due ${formatDate(r.due_date)}`].filter(Boolean).join(" · "),
+    title: r.title || `${tr(t.itemLabel)} #${r.id}`,
+    meta: [r.status && tr(r.status), r.due_date && tr("due {date}", { date: formatDate(r.due_date) })].filter(Boolean).join(" · "),
     color: status?.options?.find((o) => o.value === r.status)?.color,
   }));
 }
 
-async function recentlyModified(user: CurrentUser, module?: string): Promise<Item[]> {
+async function recentlyModified(user: CurrentUser, tr: T, module?: string): Promise<Item[]> {
   const db = await recordsDb();
   const tables = REGISTRY.filter((t) => (t.tab || t.module === "utility") && (!module || t.module === module) && canOpen(user.permissions, t, getTable)).map((t) => t.name);
   if (!tables.length) return [];
@@ -95,7 +97,7 @@ async function recentlyModified(user: CurrentUser, module?: string): Promise<Ite
     .slice(0, 10)
     .map((r) => {
       const t: TableDef = getTable(r.table_name);
-      return { href: recordHref(t, r.record_id), title: titles.get(`${r.table_name}:${r.record_id}`) || `${t.itemLabel} #${r.record_id}`, meta: `${t.itemLabel} · ${formatDateTime(r.at)}` };
+      return { href: recordHref(t, r.record_id), title: titles.get(`${r.table_name}:${r.record_id}`) || `${tr(t.itemLabel)} #${r.record_id}`, meta: `${tr(t.itemLabel)} · ${formatDateTime(r.at)}` };
     });
 }
 
@@ -125,13 +127,14 @@ function Widget({ title, empty, items }: { title: string; empty: string; items: 
 }
 
 export async function DashboardWidgets({ user, module }: { user: CurrentUser; module?: string }) {
+  const tr = await getT();
   const showTasks = !module || module === getTable("tasks").module;
-  const [assigned, tasks, recent] = await Promise.all([myAssigned(user, module), showTasks ? myTasks(user) : Promise.resolve(null), recentlyModified(user, module)]);
+  const [assigned, tasks, recent] = await Promise.all([myAssigned(user, tr, module), showTasks ? myTasks(user, tr) : Promise.resolve(null), recentlyModified(user, tr, module)]);
   return (
     <div className="grid gap-3.5 md:grid-cols-2">
-      <Widget title="My Assigned" empty="Nothing waiting for you." items={assigned} />
-      {tasks && <Widget title="My Tasks" empty="No open tasks assigned to you." items={tasks} />}
-      <Widget title="Recently Modified" empty="No recent changes." items={recent} />
+      <Widget title={tr("My Assigned")} empty={tr("Nothing waiting for you.")} items={assigned} />
+      {tasks && <Widget title={tr("My Tasks")} empty={tr("No open tasks assigned to you.")} items={tasks} />}
+      <Widget title={tr("Recently Modified")} empty={tr("No recent changes.")} items={recent} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { autofillAction, searchChoicesAction, type Choice } from "@/lib/records/
 import type { Values } from "@/lib/rules/evaluate";
 import { cn } from "@/lib/utils";
 import type { FieldDef } from "@/registry/types";
+import { useT } from "@/i18n/client";
 
 type Props = {
   table: string;
@@ -24,6 +25,7 @@ type Props = {
 
 /** Search-as-you-type picker for linked records, users and groups; single or multiple. */
 export function LookupPicker({ table, field: f, value, onChange, form, labels, onAutofill, disabled, invalid }: Props) {
+  const t = useT();
   const multiple = Boolean(f.multiple);
   const numeric = f.type !== "user";
   const selected: string[] = (multiple ? ((value as unknown[]) ?? []) : value === null || value === undefined ? [] : [value]).map(String);
@@ -114,12 +116,12 @@ export function LookupPicker({ table, field: f, value, onChange, form, labels, o
           className="flex h-11 w-full items-center gap-2 px-3 text-left text-base text-muted-foreground disabled:opacity-60"
         >
           <Search className="size-4" aria-hidden />
-          {blockedBy ? "Choose the Type first" : multiple && selected.length ? "Add another…" : "Choose…"}
+          {t(blockedBy ? "Choose the Type first" : multiple && selected.length ? "Add another…" : "Choose…")}
         </button>
       )}
       {!disabled && !open && !multiple && selected.length > 0 && (
         <button type="button" id={`f-${f.name}`} onClick={openPicker} className="h-10 w-full border-t px-3 text-left text-sm text-muted-foreground hover:bg-muted/40">
-          Change…
+          {t("Change…")}
         </button>
       )}
 
@@ -143,20 +145,20 @@ export function LookupPicker({ table, field: f, value, onChange, form, labels, o
                 }
               }}
               placeholder={`Search ${f.label.toLowerCase()}…`}
-              aria-label={`Search ${f.label}`}
+              aria-label={t("Search {name}", { name: f.label })}
               className="h-11 w-full bg-transparent pr-20 pl-9 text-base outline-none"
             />
             <button type="button" onClick={() => setOpen(false)} className="absolute top-1/2 right-1 h-9 -translate-y-1/2 rounded px-3 text-sm text-muted-foreground hover:bg-muted">
-              Done
+              {t("Done")}
             </button>
           </div>
           <ul role="listbox" aria-label={f.label} aria-multiselectable={multiple} className="max-h-72 overflow-y-auto border-t">
             {loading && results.length === 0 && (
               <li className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" aria-hidden /> Searching…
+                <Loader2 className="size-4 animate-spin" aria-hidden /> {t("Searching…")}
               </li>
             )}
-            {!loading && results.length === 0 && <li className="px-3 py-3 text-sm text-muted-foreground">Nothing found.</li>}
+            {!loading && results.length === 0 && <li className="px-3 py-3 text-sm text-muted-foreground">{t("Nothing found.")}</li>}
             {results.map((c) => {
               const on = selected.includes(c.id);
               return (

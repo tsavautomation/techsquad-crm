@@ -6,6 +6,7 @@ import { addDays } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { cn } from "@/lib/utils";
+import { getT } from "@/i18n/server";
 
 // The number tiles at the top of the dashboard (Portal design, docs/portal-features-merge.md §I).
 // Each tile shows only when the person can open what it counts; a red tile needs attention.
@@ -14,6 +15,7 @@ type Tile = { href: string; value: number; label: string; alert?: boolean };
 
 export async function DashboardKpis({ user, now }: { user: CurrentUser; now: number }) {
   const db = await recordsDb();
+  const tr = await getT();
   const can = (t: string) => canOpen(user.permissions, getTable(t), getTable);
   const today = todayET();
   const from = fromDateTimeLocalET(`${today}T00:00`);
@@ -80,7 +82,7 @@ export async function DashboardKpis({ user, now }: { user: CurrentUser; now: num
           )}
         >
           <b className={cn("block text-[28px] leading-tight font-semibold tracking-tight", t.alert && "text-bad-fg")}>{t.value}</b>
-          <span className="text-[12.5px] text-text-2">{t.label}</span>
+          <span className="text-[12.5px] text-text-2">{tr(t.label)}</span>
         </Link>
       ))}
     </div>

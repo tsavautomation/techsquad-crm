@@ -4,11 +4,13 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 type Filter = { name: string; label: string; options: { label: string; value: string }[] };
 
 /** Search box (applies as you type, after a short pause), quick filters and the archived toggle. */
 export function ListControls({ filters }: { filters: Filter[] }) {
+  const tr = useT();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -37,9 +39,9 @@ export function ListControls({ filters }: { filters: Filter[] }) {
   return (
     <div className="mb-4 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
       <label className="relative md:w-72">
-        <span className="sr-only">Search</span>
+        <span className="sr-only">{tr("Search")}</span>
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <input type="search" placeholder="Search by name…" value={q} onChange={(e) => setQ(e.target.value)} className={cn(box, "w-full pl-9")} />
+        <input type="search" placeholder={tr("Search by name…")} value={q} onChange={(e) => setQ(e.target.value)} className={cn(box, "w-full pl-9")} />
       </label>
       <div className="flex flex-wrap gap-2">
         {filters.map((f) => (
@@ -50,7 +52,7 @@ export function ListControls({ filters }: { filters: Filter[] }) {
             value={params.get(`f.${f.name}`) ?? ""}
             onChange={(e) => apply({ [`f.${f.name}`]: e.target.value || null })}
           >
-            <option value="">{f.label}: all</option>
+            <option value="">{tr("{label}: all", { label: f.label })}</option>
             {f.options.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -64,7 +66,7 @@ export function ListControls({ filters }: { filters: Filter[] }) {
           onClick={() => apply({ archived: archived ? null : "1" })}
           className={cn(box, "text-sm", archived && "border-foreground bg-foreground text-background")}
         >
-          {archived ? "Showing archived" : "Archived"}
+          {tr(archived ? "Showing archived" : "Archived")}
         </button>
       </div>
     </div>

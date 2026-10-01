@@ -10,6 +10,7 @@ import { moveVisitAction } from "@/lib/schedule/actions";
 import { addDays, clock, fromMinutes, lanes, toMinutes } from "@/lib/schedule/dates";
 import type { CalPerson, CalVisit } from "@/lib/schedule/week";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 type View = "week" | "team" | "list";
 type Props = { weekStart: string; today: string; view: View; tech: number | null; visits: CalVisit[]; people: CalPerson[]; canEdit: boolean; canCreate: boolean };
@@ -18,6 +19,7 @@ const HS = 6; // first hour shown
 const HE = 21; // last hour shown (exclusive)
 const PX = 48; // pixels per hour
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const VIEW_LABEL: Record<View, string> = { week: "Week", team: "Team", list: "List" };
 const BASE = "/schedule/calendar";
 
 const dayLabel = (d: string) => {
@@ -29,6 +31,7 @@ const windowText = (v: CalVisit) => (v.window > 0 ? `${clock(v.start.slice(11))}
 const visitHref = (v: CalVisit) => `/schedule/visits/${v.id}`;
 
 export function Calendar({ weekStart, today, view, tech, visits, people, canEdit, canCreate }: Props) {
+  const tr = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [drag, setDrag] = useState<{ id: number; offset: number } | null>(null);
@@ -57,8 +60,8 @@ export function Calendar({ weekStart, today, view, tech, visits, people, canEdit
     if (!v || (v.start === `${date}T${time}` && (!techId || techId === v.techId))) return;
     start(async () => {
       const r = await moveVisitAction(id, fromDateTimeLocalET(`${date}T${time}`), techId);
-      if (!r.ok) return void toast.error(r.message);
-      toast.success(`Moved to ${dayLabel(date).dow} ${dayLabel(date).md}, ${clock(time)}${techId && techId !== v.techId ? ` · ${name.get(techId) ?? ""}` : ""}`);
+      if (!r.ok) return void toast.error(tr(r.message));
+      toast.success(`${tr("Moved to {when}", { when: `${tr(dayLabel(date).dow)} ${dayLabel(date).md}, ${clock(time)}` })}${techId && techId !== v.techId ? ` · ${name.get(techId) ?? ""}` : ""}`);
       router.refresh();
     });
   };
@@ -73,32 +76,32 @@ export function Calendar({ weekStart, today, view, tech, visits, people, canEdit
       {/* toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1">
-          <Link href={q({ week: addDays(weekStart, -7) })} aria-label="Previous week" className="inline-flex size-10 items-center justify-center rounded-lg border hover:bg-muted">
+          <Link href={q({ week: addDays(weekStart, -7) })} aria-label={tr("Previous week")} className="inline-flex size-10 items-center justify-center rounded-lg border hover:bg-muted">
             <ChevronLeft className="size-4" aria-hidden />
           </Link>
           <Link href={q({ week: today })} className="inline-flex h-10 items-center rounded-lg border px-3 text-sm hover:bg-muted">
-            Today
+            {tr("Today")}
           </Link>
-          <Link href={q({ week: addDays(weekStart, 7) })} aria-label="Next week" className="inline-flex size-10 items-center justify-center rounded-lg border hover:bg-muted">
+          <Link href={q({ week: addDays(weekStart, 7) })} aria-label={tr("Next week")} className="inline-flex size-10 items-center justify-center rounded-lg border hover:bg-muted">
             <ChevronRight className="size-4" aria-hidden />
           </Link>
         </div>
         <span className="text-base font-medium">{title}</span>
         <span className="grow" />
-        <div className="flex rounded-lg border p-0.5 text-sm" role="tablist" aria-label="View">
+        <div className="flex rounded-lg border p-0.5 text-sm" role="tablist" aria-label={tr("View")}>
           {(["week", "team", "list"] as View[]).map((v) => (
             <Link key={v} href={q({ view: v })} role="tab" aria-selected={view === v} className={cn("rounded-md px-3 py-1.5 capitalize", view === v ? "bg-foreground text-background" : "hover:bg-muted")}>
-              {v}
+              {tr(VIEW_LABEL[v])}
             </Link>
           ))}
         </div>
         <select
-          aria-label="Technician"
+          aria-label={tr("Technician")}
           className="h-10 rounded-lg border bg-card px-2 text-base md:text-sm"
           value={tech ?? ""}
           onChange={(e) => router.push(q({ tech: e.target.value ? Number(e.target.value) : null }))}
         >
-          <option value="">Everyone</option>
+          <option value="">{tr("Everyone")}</option>
           {people.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -107,7 +110,7 @@ export function Calendar({ weekStart, today, view, tech, visits, people, canEdit
         </select>
         {canCreate && (
           <Link href={newHref(days.includes(today) ? today : weekStart)} className="inline-flex h-10 items-center gap-1 rounded-lg border border-foreground bg-foreground px-3 text-sm font-medium text-background">
-            <Plus className="size-4" aria-hidden /> New visit
+            <Plus className="size-4" aria-hidden /> {tr("New visit")}
           </Link>
         )}
       </div>
@@ -124,7 +127,7 @@ export function Calendar({ weekStart, today, view, tech, visits, people, canEdit
       )}
       {view === "team" && <TeamGrid days={days} today={today} visits={shown} people={tech ? people.filter((p) => p.id === tech) : people} canEdit={canEdit} canCreate={canCreate} drag={drag} setDrag={setDrag} move={move} newHref={newHref} />}
       {view === "list" && <DayList days={days} today={today} visits={shown} name={name} />}
-      {!shown.length && <p className="mt-4 text-center text-sm text-muted-foreground">No visits this week{tech ? " for this person" : ""}.</p>}
+      {!shown.length && <p className="mt-4 text-center text-sm text-muted-foreground">{tr(tech ? "No visits this week for this person." : "No visits this week.")}</p>}
     </div>
   );
 }
@@ -156,6 +159,7 @@ function VisitBlock({ v, name, compact }: { v: CalVisit; name?: Map<number, stri
 }
 
 function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag, move, newHref }: GridProps & { name: Map<number, string> }) {
+  const tr = useT();
   const router = useRouter();
   const hours = Array.from({ length: HE - HS }, (_, i) => HS + i);
   return (
@@ -164,7 +168,7 @@ function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag
         <div />
         {days.map((d) => (
           <div key={d} className={cn("border-l px-2 py-2 text-center", d === today && "font-semibold text-primary")}>
-            {dayLabel(d).dow} {dayLabel(d).md}
+            {tr(dayLabel(d).dow)} {dayLabel(d).md}
           </div>
         ))}
       </div>
@@ -206,7 +210,7 @@ function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag
                 const min = Math.round((HS * 60 + ((e.clientY - rect.top) / PX) * 60) / 30) * 30;
                 router.push(newHref(d, fromMinutes(min)));
               }}
-              title={canCreate ? "Double-click to schedule a visit here" : undefined}
+              title={canCreate ? tr("Double-click to schedule a visit here") : undefined}
             >
               {items.map(({ v, start, end, lane, lanes: n }) => (
                 <Link
@@ -239,15 +243,16 @@ function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag
 }
 
 function TeamGrid({ days, today, visits, people, canEdit, canCreate, drag, setDrag, move, newHref }: GridProps & { people: CalPerson[] }) {
+  const tr = useT();
   return (
     <div className="overflow-x-auto rounded-2xl border bg-card shadow-card">
       <table className="w-full min-w-[56rem] table-fixed border-collapse text-sm">
         <thead className="bg-muted/40">
           <tr>
-            <th className="w-36 px-2 py-2 text-left font-medium">Technician</th>
+            <th className="w-36 px-2 py-2 text-left font-medium">{tr("Technician")}</th>
             {days.map((d) => (
               <th key={d} className={cn("border-l px-2 py-2 font-medium", d === today && "text-primary")}>
-                {dayLabel(d).dow} {dayLabel(d).md}
+                {tr(dayLabel(d).dow)} {dayLabel(d).md}
               </th>
             ))}
           </tr>
@@ -286,7 +291,7 @@ function TeamGrid({ days, today, visits, people, canEdit, canCreate, drag, setDr
                           onDragEnd={() => setDrag(null)}
                           className={cn("block rounded-md border-l-4 bg-card px-1.5 py-1 text-xs ring-1 ring-border hover:shadow-md", v.techId !== p.id && "border-dashed opacity-80", v.status === "Cancelled" && "line-through opacity-60")}
                           style={{ borderLeftColor: v.color }}
-                          title={v.techId !== p.id ? "Going along (not the lead technician)" : undefined}
+                          title={v.techId !== p.id ? tr("Going along (not the lead technician)") : undefined}
                         >
                           <VisitBlock v={v} compact />
                         </Link>
@@ -309,6 +314,7 @@ function TeamGrid({ days, today, visits, people, canEdit, canCreate, drag, setDr
 }
 
 function DayList({ days, today, visits, name }: { days: string[]; today: string; visits: CalVisit[]; name: Map<number, string> }) {
+  const tr = useT();
   return (
     <div className="flex flex-col gap-4">
       {days.map((d) => {
@@ -316,8 +322,8 @@ function DayList({ days, today, visits, name }: { days: string[]; today: string;
         return (
           <section key={d}>
             <h2 className={cn("mb-1 text-sm font-semibold", d === today ? "text-primary" : "text-muted-foreground")}>
-              {dayLabel(d).dow} {dayLabel(d).md}
-              {d === today && " · Today"}
+              {tr(dayLabel(d).dow)} {dayLabel(d).md}
+              {d === today && ` · ${tr("Today")}`}
             </h2>
             {!items.length ? (
               <p className="text-sm text-muted-foreground">—</p>
@@ -330,11 +336,11 @@ function DayList({ days, today, visits, name }: { days: string[]; today: string;
                       <span className="min-w-0 flex-1">
                         <span className={cn("block truncate text-base font-medium", v.status === "Cancelled" && "line-through")}>{v.project}</span>
                         <span className="block text-sm text-muted-foreground">
-                          {windowText(v)} · until {clock(endOf(v))} · {[v.techId, ...v.team].filter((x): x is number => x !== null).map((id) => name.get(id) ?? "").join(", ") || "No technician"}
+                          {windowText(v)} · {tr("until {time}", { time: clock(endOf(v)) })} · {[v.techId, ...v.team].filter((x): x is number => x !== null).map((id) => name.get(id) ?? "").join(", ") || tr("No technician")}
                         </span>
                         {v.address && <span className="block truncate text-xs text-muted-foreground">{v.address}</span>}
                       </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">{v.status}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{tr(v.status)}</span>
                     </Link>
                   </li>
                 ))}

@@ -99,6 +99,11 @@ declare
     ["sa",       "insert into public.group_members (group_id, user_id) select id, '00000000-0000-4000-a000-000000000004' from public.groups where slug = 'system_administrators'", "ok"],
     ["admin",    "update public.profiles set first_name = 'Renamed' where id = '00000000-0000-4000-a000-000000000004'", "ok"],
 
+    ["tech",     "update public.profiles set language = 'pt' where id = '00000000-0000-4000-a000-000000000001'", "ok"],
+    ["tech",     "update public.profiles set language = 'pt' where id = '00000000-0000-4000-a000-000000000002'", "none"],
+    ["tech",     "update public.profiles set language = 'xx' where id = '00000000-0000-4000-a000-000000000001'", "error"],
+    ["tech",     "update public.profiles set active = false where id = '00000000-0000-4000-a000-000000000001'", "error"],
+    ["tech",     "update public.profiles set email = 'x@y.z' where id = '00000000-0000-4000-a000-000000000001'", "error"],
     [null,       "update public.profiles set active = false where id = '00000000-0000-4000-a000-000000000001'", "ok"],
     ["tech",     "select count(*) from public.projects where id = 900001", "rows=0"]
   ]$steps$;

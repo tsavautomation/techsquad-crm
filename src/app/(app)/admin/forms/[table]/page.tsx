@@ -4,10 +4,14 @@ import { FormSettingsEditor, type FieldState } from "@/components/admin/form-set
 import { requireUser } from "@/lib/auth/session";
 import { REGISTRY } from "@/registry";
 import { baseFields } from "@/registry/overrides";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Form settings" };
+export async function generateMetadata() {
+  return { title: (await getT())("Form settings") };
+}
 
 export default async function FormSettingsPage(props: PageProps<"/admin/forms/[table]">) {
+  const tr = await getT();
   const user = await requireUser(); // also loads the current settings into the registry
   if (!user.permissions.has("projects.module.design_design")) notFound();
   const { table } = await props.params;
@@ -39,11 +43,11 @@ export default async function FormSettingsPage(props: PageProps<"/admin/forms/[t
     <div className="mx-auto max-w-2xl">
       <p className="text-sm text-muted-foreground">
         <Link href="/admin/forms" className="underline underline-offset-4">
-          Form settings
+          {tr("Form settings")}
         </Link>
       </p>
       <h1 className="mb-1 text-2xl font-semibold">{t.label}</h1>
-      <p className="mb-4 text-sm text-muted-foreground">Tap a field to change it. Use the arrows to change the order. Save when done.</p>
+      <p className="mb-4 text-sm text-muted-foreground">{tr("Tap a field to change it. Use the arrows to change the order. Save when done.")}</p>
       <FormSettingsEditor key={JSON.stringify(initial)} table={t.name} initial={initial} canEdit />
     </div>
   );

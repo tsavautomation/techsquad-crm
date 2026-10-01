@@ -21,19 +21,24 @@ import { HistoryList, RelatedList, Section, SubListTable } from "@/components/re
 import { canModule, loadChecklist, loadHistory, loadNotes, loadPeople, loadPodFiles, loadRelated, loadSubLists, type ModuleAction } from "@/lib/records/extras";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getLang, getT } from "@/i18n/server";
+import { localized } from "@/i18n/registry";
+
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]/[id]">) {
   const { module, tab, id } = await props.params;
   const t = tableFromRoute(module, tab);
+  const tr = await getT();
   const row = t && Number.isInteger(Number(id)) ? await getRecord(t, Number(id)) : null;
-  return { title: row?.title ?? (t ? `${t.itemLabel} #${id}` : "Not found") };
+  return { title: row?.title ?? (t ? `${tr(t.itemLabel)} #${id}` : tr("Not found")) };
 }
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]">) {
+  const tr = await getT();
   const { module, tab, id } = await props.params;
-  const t = tableFromRoute(module, tab);
+  const t = localized(tableFromRoute(module, tab), await getLang());
   const recordId = Number(id);
   if (!t || !Number.isInteger(recordId)) notFound();
   const user = await requireUser();
@@ -85,15 +90,15 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
             <span>#{row.id}</span>
             {locked && (
               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5">
-                <Lock className="size-3" aria-hidden /> Submitted
+                <Lock className="size-3" aria-hidden /> {tr("Submitted")}
               </span>
             )}
-            {row.archived_at ? <span className="rounded-full bg-muted px-2 py-0.5">Archived</span> : null}
+            {row.archived_at ? <span className="rounded-full bg-muted px-2 py-0.5">{tr("Archived")}</span> : null}
           </p>
         </div>
         {canEdit && (
           <Link href={`${recordHref(t, row.id)}/edit`} className={cn(buttonVariants(), "h-11 shrink-0 gap-1.5 px-4")}>
-            <Pencil className="size-4" aria-hidden /> Edit
+            <Pencil className="size-4" aria-hidden /> {tr("Edit")}
           </Link>
         )}
       </div>
@@ -135,11 +140,11 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
           </Section>
         ))}
         {related.length > 0 && (
-          <Section title="Related records" count={related.reduce((n, r) => n + r.count, 0)} open>
+          <Section title={tr("Related records")} count={related.reduce((n, r) => n + r.count, 0)} open>
             <RelatedList items={related} />
           </Section>
         )}
-        <Section id="checklist" title="Checklist" count={checklist.filter((c) => !c.completed_at).length} open={checklist.some((c) => !c.completed_at)}>
+        <Section id="checklist" title={tr("Checklist")} count={checklist.filter((c) => !c.completed_at).length} open={checklist.some((c) => !c.completed_at)}>
           <ChecklistPanel
             table={t.name}
             id={recordId}
@@ -148,7 +153,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
         </Section>
         <OpenFromLink />
         {may.activity_history_view && (
-          <Section id="notes" title="Notes" count={notes.length}>
+          <Section id="notes" title={tr("Notes")} count={notes.length}>
             <NotesPanel
               table={t.name}
               id={recordId}
@@ -160,21 +165,21 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
           </Section>
         )}
         {may.files_view_files_pod && (
-          <Section title="Files" count={podFiles.length}>
+          <Section title={tr("Files")} count={podFiles.length}>
             <FilesPod table={t.name} id={recordId} files={podFiles} canAdd={may.files_add_new} canRemove={may.files_allow_delete} />
           </Section>
         )}
         {may.audit_log && (
-          <Section title="History" count={history.length}>
+          <Section title={tr("History")} count={history.length}>
             <HistoryList table={t} entries={history} />
           </Section>
         )}
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Created {formatDateTime(String(row.created_at))}
-        {row.created_by ? ` by ${names.get(row.created_by as string) ?? "someone"}` : ""} · Modified {formatDateTime(String(row.updated_at))}
-        {row.updated_by ? ` by ${names.get(row.updated_by as string) ?? "someone"}` : ""}
+        {tr("Created {when}", { when: formatDateTime(String(row.created_at)) })}
+        {row.created_by ? ` ${tr("by {who}", { who: names.get(row.created_by as string) ?? tr("someone") })}` : ""} · {tr("Modified {when}", { when: formatDateTime(String(row.updated_at)) })}
+        {row.updated_by ? ` ${tr("by {who}", { who: names.get(row.updated_by as string) ?? tr("someone") })}` : ""}
       </p>
     </div>
   );

@@ -7,8 +7,11 @@ import type { Action } from "@/lib/engine/automations";
 import { createClient } from "@/lib/supabase/server";
 import { REGISTRY } from "@/registry";
 import { recordHref } from "@/registry/routes";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Automations" };
+export async function generateMetadata() {
+  return { title: (await getT())("Automations") };
+}
 
 type AutomationRow = { id: number; table_name: string; title: string; active: boolean; events: string[]; conditions: Conditions; actions: Action[]; notes: string | null };
 type RunRow = { id: number; automation_id: number; table_name: string; record_id: number; event: string; status: string; detail: { actions?: string[]; error?: string }; at: string };
@@ -34,6 +37,7 @@ function describeAction(a: Action, label: (f: string) => string): string {
 
 /** The automations (SPEC §5), scheduled checks, run log and email outbox. Each opens in the editor (M12). */
 export default async function AutomationsPage() {
+  const tr = await getT();
   const user = await requireUser();
   if (!user.permissions.has("projects.module.design_triggers")) notFound();
   const db = await createClient();
@@ -51,20 +55,22 @@ export default async function AutomationsPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Automations</h1>
+        <h1 className="text-2xl font-semibold">{tr("Automations")}</h1>
         {user.isSysadmin && (
           <Link href="/admin/automations/new" className="inline-flex h-11 items-center rounded-lg border px-4 text-sm font-medium hover:bg-muted">
-            New automation
+            {tr("New automation")}
           </Link>
         )}
       </div>
       <p className="mt-1 mb-2 text-sm text-muted-foreground">
-        The {automations.length} WebAuthor triggers ({automations.filter((a) => a.active).length} active). They run right after a record is saved; daily checks run
-        just after midnight (Eastern) and hourly checks every hour. Tap one to see or change it.
+        {tr(
+          "The {n} WebAuthor triggers ({active} active). They run right after a record is saved; daily checks run just after midnight (Eastern) and hourly checks every hour. Tap one to see or change it.",
+          { n: automations.length, active: automations.filter((a) => a.active).length },
+        )}
       </p>
       {testMode && (
         <p className="mb-6 rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-          Email test mode is on: every email goes to {process.env.EMAIL_TEST_RECIPIENT || "the test recipient"} only, marked [TEST].
+          {tr("Email test mode is on: every email goes to {who} only, marked [TEST].", { who: process.env.EMAIL_TEST_RECIPIENT || tr("the test recipient") })}
         </p>
       )}
 
@@ -85,15 +91,15 @@ export default async function AutomationsPage() {
                     {!a.active && <span className="rounded bg-muted px-1.5 text-xs">off</span>}
                   </div>
                   <dl className="mt-1 grid grid-cols-[4.5rem_1fr] gap-x-2 gap-y-0.5">
-                    <dt className="text-muted-foreground">When</dt>
+                    <dt className="text-muted-foreground">{tr("When")}</dt>
                     <dd>{describeEvents(a.events, label)}</dd>
-                    <dt className="text-muted-foreground">If</dt>
+                    <dt className="text-muted-foreground">{tr("If")}</dt>
                     <dd>{describeConditions(a.conditions, label)}</dd>
-                    <dt className="text-muted-foreground">Then</dt>
+                    <dt className="text-muted-foreground">{tr("Then")}</dt>
                     <dd>{a.actions.map((x) => describeAction(x, label)).join("; ")}</dd>
                     {a.notes && (
                       <>
-                        <dt className="text-muted-foreground">Note</dt>
+                        <dt className="text-muted-foreground">{tr("Note")}</dt>
                         <dd className="text-muted-foreground">{a.notes}</dd>
                       </>
                     )}
@@ -106,9 +112,9 @@ export default async function AutomationsPage() {
       })}
 
       <section className="mb-8">
-        <h2 className="mb-2 text-lg font-semibold">Scheduled checks</h2>
+        <h2 className="mb-2 text-lg font-semibold">{tr("Scheduled checks")}</h2>
         {!slots?.length ? (
-          <p className="text-sm text-muted-foreground">No scheduled check has run yet.</p>
+          <p className="text-sm text-muted-foreground">{tr("No scheduled check has run yet.")}</p>
         ) : (
           <ul className="divide-y rounded-lg border text-sm">
             {(slots as unknown as SlotRow[]).map((s) => (
@@ -129,9 +135,9 @@ export default async function AutomationsPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-2 text-lg font-semibold">Recent runs</h2>
+        <h2 className="mb-2 text-lg font-semibold">{tr("Recent runs")}</h2>
         {!runs?.length ? (
-          <p className="text-sm text-muted-foreground">Nothing has run yet.</p>
+          <p className="text-sm text-muted-foreground">{tr("Nothing has run yet.")}</p>
         ) : (
           <ul className="divide-y rounded-lg border text-sm">
             {(runs as unknown as RunRow[]).map((r) => {
@@ -160,9 +166,9 @@ export default async function AutomationsPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-2 text-lg font-semibold">Recent emails</h2>
+        <h2 className="mb-2 text-lg font-semibold">{tr("Recent emails")}</h2>
         {!emails?.length ? (
-          <p className="text-sm text-muted-foreground">No emails yet.</p>
+          <p className="text-sm text-muted-foreground">{tr("No emails yet.")}</p>
         ) : (
           <ul className="divide-y rounded-lg border text-sm">
             {(emails as unknown as EmailRow[]).map((m) => (
@@ -172,8 +178,8 @@ export default async function AutomationsPage() {
                   <span className="text-xs text-muted-foreground">{formatDateTime(m.created_at)}</span>
                 </div>
                 <div className="text-muted-foreground">
-                  To {m.to_addresses.join(", ")}
-                  {m.test_mode && " (test mode)"} ·{" "}
+                  {tr("To")} {m.to_addresses.join(", ")}
+                  {m.test_mode && ` (${tr("test mode")})`} ·{" "}
                   <span className={m.status === "failed" ? "text-destructive" : m.status === "sent" ? "text-emerald-700 dark:text-emerald-400" : ""}>
                     {m.status}
                     {m.error ? `: ${m.error}` : ""}

@@ -21,18 +21,20 @@ import {
 import { mentionQuery, splitMentions, type Mentionable } from "@/lib/records/mentions";
 import { POD_FIELD, type FileItem } from "@/lib/records/values";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 type Base = { table: string; id: number };
 
 const INPUT = "w-full rounded-lg border border-input bg-card px-3 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function useRun() {
+  const tr = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const run = (fn: () => Promise<ActionResult>, onOk?: () => void) =>
     start(async () => {
       const r = await fn();
-      if (!r.ok) return void toast.error(r.message);
+      if (!r.ok) return void toast.error(tr(r.message));
       onOk?.();
       router.refresh();
     });
@@ -62,6 +64,7 @@ export type NoteView = { id: number; body: string; follow_up_date: string | null
 
 /** `people`: everyone who can be tagged (and whose @Name is highlighted); `meId` is left out of the picker. */
 export function NotesPanel({ table, id, notes, canAdd, people, meId }: Base & { notes: NoteView[]; canAdd: boolean; people: Mentionable[]; meId: string }) {
+  const tr = useT();
   const { pending, run } = useRun();
   const [body, setBody] = useState("");
   const [follow, setFollow] = useState("");
@@ -120,8 +123,8 @@ export function NotesPanel({ table, id, notes, canAdd, people, meId }: Base & { 
           <div className="relative">
             <textarea
               ref={box}
-              aria-label="New note"
-              placeholder="Add a note… type @ to tag someone"
+              aria-label={tr("New note")}
+              placeholder={tr("Add a note… type @ to tag someone")}
               rows={3}
               className={cn(INPUT, "py-2")}
               value={body}
@@ -130,7 +133,7 @@ export function NotesPanel({ table, id, notes, canAdd, people, meId }: Base & { 
               onBlur={() => setTimeout(() => setTagging(null), 150)}
             />
             {matches.length > 0 && (
-              <ul role="listbox" aria-label="People to tag" className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border bg-card p-1 shadow-float">
+              <ul role="listbox" aria-label={tr("People to tag")} className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border bg-card p-1 shadow-float">
                 {matches.map((p, i) => (
                   <li key={p.id} role="option" aria-selected={i === pick}>
                     <button
@@ -156,17 +159,17 @@ export function NotesPanel({ table, id, notes, canAdd, people, meId }: Base & { 
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CalendarClock className="size-4" aria-hidden /> Follow up
+              <CalendarClock className="size-4" aria-hidden /> {tr("Follow up")}
               <input type="date" className={cn(INPUT, "h-11 w-auto")} value={follow} onChange={(e) => setFollow(e.target.value)} />
             </label>
             <button type="submit" disabled={pending || !body.trim()} className="ml-auto inline-flex h-11 items-center gap-1.5 rounded-lg bg-foreground px-4 text-sm text-background disabled:opacity-50">
-              {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} Add note
+              {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} {tr("Add note")}
             </button>
           </div>
         </form>
       )}
       {notes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No notes yet.</p>
+        <p className="text-sm text-muted-foreground">{tr("No notes yet.")}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {notes.map((n) => (
@@ -174,10 +177,10 @@ export function NotesPanel({ table, id, notes, canAdd, people, meId }: Base & { 
               <div className="mb-1 flex items-start justify-between gap-2 text-xs text-muted-foreground">
                 <span>
                   {n.author} · {formatDateTime(n.created_at)}
-                  {n.follow_up_date && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-amber-900">Follow up {formatDate(n.follow_up_date)}</span>}
+                  {n.follow_up_date && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-amber-900">{tr("Follow up")} {formatDate(n.follow_up_date)}</span>}
                 </span>
                 {n.canDelete && (
-                  <button type="button" disabled={pending} onClick={() => confirm("Delete this note?") && run(() => deleteNoteAction(table, id, n.id))} aria-label="Delete note" className="inline-flex size-8 items-center justify-center rounded hover:bg-muted">
+                  <button type="button" disabled={pending} onClick={() => confirm(tr("Delete this note?")) && run(() => deleteNoteAction(table, id, n.id))} aria-label={tr("Delete note")} className="inline-flex size-8 items-center justify-center rounded hover:bg-muted">
                     <Trash2 className="size-4" aria-hidden />
                   </button>
                 )}
@@ -206,13 +209,14 @@ export function NotesPanel({ table, id, notes, canAdd, people, meId }: Base & { 
 export type ChecklistView = { id: number; item: string; due_date: string | null; completed_at: string | null; source: string | null; canDelete: boolean };
 
 export function ChecklistPanel({ table, id, items }: Base & { items: ChecklistView[] }) {
+  const tr = useT();
   const { pending, run } = useRun();
   const [text, setText] = useState("");
 
   return (
     <div className="flex flex-col gap-3">
       <ul className="flex flex-col divide-y rounded-lg border">
-        {items.length === 0 && <li className="p-3 text-sm text-muted-foreground">No checklist items.</li>}
+        {items.length === 0 && <li className="p-3 text-sm text-muted-foreground">{tr("No checklist items.")}</li>}
         {items.map((c) => (
           <li key={c.id} className="flex min-h-12 items-center gap-3 px-3 py-2">
             <input
@@ -243,9 +247,9 @@ export function ChecklistPanel({ table, id, items }: Base & { items: ChecklistVi
           run(() => addChecklistItemAction(table, id, text, null), () => setText(""));
         }}
       >
-        <input aria-label="New checklist item" placeholder="Add an item…" className={cn(INPUT, "h-11")} value={text} onChange={(e) => setText(e.target.value)} />
+        <input aria-label={tr("New checklist item")} placeholder={tr("Add an item…")} className={cn(INPUT, "h-11")} value={text} onChange={(e) => setText(e.target.value)} />
         <button type="submit" disabled={pending || !text.trim()} className="inline-flex h-11 shrink-0 items-center gap-1 rounded-lg border px-3 text-sm disabled:opacity-50">
-          <Plus className="size-4" aria-hidden /> Add
+          <Plus className="size-4" aria-hidden /> {tr("Add")}
         </button>
       </form>
     </div>
@@ -255,6 +259,7 @@ export function ChecklistPanel({ table, id, items }: Base & { items: ChecklistVi
 // ---------------------------------------------------------------- files pod
 
 export function FilesPod({ table, id, files, canAdd, canRemove }: Base & { files: FileItem[]; canAdd: boolean; canRemove: boolean }) {
+  const tr = useT();
   const { pending, run } = useRun();
   const [progress, setProgress] = useState<Record<string, Progress>>({});
   const busy = Object.keys(progress).length > 0;
@@ -267,7 +272,7 @@ export function FilesPod({ table, id, files, canAdd, canRemove }: Base & { files
       for (const file of [...list]) {
         setProgress((p) => ({ ...p, [file.name]: { sent: 0, total: file.size, state: "sending" } }));
         const r = await uploadFile(table, POD_FIELD, id, file, (x) => setProgress((p) => ({ ...p, [file.name]: x })));
-        if (!r.ok) toast.error(r.message);
+        if (!r.ok) toast.error(tr(r.message));
         else done.push(r.item);
       }
       if (done.length) run(() => addPodFilesAction(table, id, done), () => toast.success(`${done.length} file${done.length > 1 ? "s" : ""} added`));
@@ -279,7 +284,7 @@ export function FilesPod({ table, id, files, canAdd, canRemove }: Base & { files
   return (
     <div className="flex flex-col gap-3">
       {files.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No files attached.</p>
+        <p className="text-sm text-muted-foreground">{tr("No files attached.")}</p>
       ) : (
         <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {files.map((x) => (
@@ -296,7 +301,7 @@ export function FilesPod({ table, id, files, canAdd, canRemove }: Base & { files
                 )}
               </a>
               {canRemove && (
-                <button type="button" disabled={pending} onClick={() => confirm(`Remove ${x.name}?`) && run(() => removePodFileAction(table, id, x.id!))} aria-label={`Remove ${x.name}`} className="absolute top-1 right-1 inline-flex size-8 items-center justify-center rounded-full bg-card/90 shadow">
+                <button type="button" disabled={pending} onClick={() => confirm(tr("Remove {name}?", { name: x.name })) && run(() => removePodFileAction(table, id, x.id!))} aria-label={tr("Remove {name}", { name: x.name })} className="absolute top-1 right-1 inline-flex size-8 items-center justify-center rounded-full bg-card/90 shadow">
                   <Trash2 className="size-4" aria-hidden />
                 </button>
               )}
@@ -311,7 +316,7 @@ export function FilesPod({ table, id, files, canAdd, canRemove }: Base & { files
         <>
           <button type="button" disabled={busy || pending} onClick={() => input.current?.click()} className="inline-flex h-11 w-fit items-center gap-2 rounded-lg border px-4 text-sm hover:bg-muted disabled:opacity-50">
             {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Paperclip className="size-4" aria-hidden />}
-            {busy ? "Uploading…" : "Add files"}
+            {tr(busy ? "Uploading…" : "Add files")}
           </button>
           <input
             ref={input}

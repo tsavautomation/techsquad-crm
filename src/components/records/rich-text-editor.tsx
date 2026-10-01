@@ -4,11 +4,13 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Bold, Heading2, Italic, List, ListOrdered, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 type Props = { id: string; value: string | null; onChange: (html: string) => void; disabled?: boolean; invalid?: boolean };
 
 /** Rich text (Knowledge Base › Content). HTML is cleaned again on the server before saving. */
 export function RichTextEditor({ id, value, onChange, disabled, invalid }: Props) {
+  const t = useT();
   const editor = useEditor({
     extensions: [StarterKit.configure({ heading: { levels: [2, 3] } })],
     content: value ?? "",
@@ -35,9 +37,9 @@ export function RichTextEditor({ id, value, onChange, disabled, invalid }: Props
   return (
     <div className={cn("rounded-lg border bg-card", invalid && "border-destructive")}>
       {!disabled && (
-        <div role="toolbar" aria-label="Formatting" className="flex flex-wrap gap-1 border-b p-1">
+        <div role="toolbar" aria-label={t("Formatting")} className="flex flex-wrap gap-1 border-b p-1">
           {tools.map(({ icon: Icon, label, run, on }) => (
-            <button key={label} type="button" onClick={run} aria-label={label} aria-pressed={Boolean(on)} className={cn("inline-flex size-10 items-center justify-center rounded hover:bg-muted", on && "bg-muted")}>
+            <button key={label} type="button" onClick={run} aria-label={t(label)} aria-pressed={Boolean(on)} className={cn("inline-flex size-10 items-center justify-center rounded hover:bg-muted", on && "bg-muted")}>
               <Icon className="size-4" aria-hidden />
             </button>
           ))}

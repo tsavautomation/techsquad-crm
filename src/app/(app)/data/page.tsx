@@ -6,8 +6,11 @@ import type { Address } from "@/lib/records/values";
 import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
 import { cn } from "@/lib/utils";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Data" };
+export async function generateMetadata() {
+  return { title: (await getT())("Data") };
+}
 
 // Data quality (the Portal design's "Dados"): incomplete records and possible duplicates.
 // Merging duplicates comes after the WebAuthor import (Fred 2026-09-30).
@@ -29,6 +32,7 @@ function Kpi({ value, label, alert }: { value: string; label: string; alert?: bo
 }
 
 export default async function DataPage(props: PageProps<"/data">) {
+  const t = await getT();
   const user = await requireUser();
   const contactsT = getTable("contacts");
   if (!canOpen(user.permissions, contactsT, getTable)) notFound();
@@ -87,20 +91,20 @@ export default async function DataPage(props: PageProps<"/data">) {
 
   return (
     <div className="mx-auto max-w-[960px]">
-      <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">Data</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">Incomplete records and possible duplicates. Merging duplicates comes after the WebAuthor import.</p>
+      <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("Data")}</h1>
+      <p className="mb-4 text-[12.5px] text-muted-foreground">{t("Incomplete records and possible duplicates. Merging duplicates comes after the WebAuthor import.")}</p>
       <div className="mb-[18px] grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Kpi value={`${pct}%`} label="Complete overall" />
-        <Kpi value={String(gaps.length)} label="Incomplete records" alert={gaps.length > 0} />
-        <Kpi value={String(dupes.length)} label="Possible duplicate contacts" alert={dupes.length > 0} />
-        <Kpi value={String(samePlace.length)} label="Projects at the same address" />
+        <Kpi value={`${pct}%`} label={t("Complete overall")} />
+        <Kpi value={String(gaps.length)} label={t("Incomplete records")} alert={gaps.length > 0} />
+        <Kpi value={String(dupes.length)} label={t("Possible duplicate contacts")} alert={dupes.length > 0} />
+        <Kpi value={String(samePlace.length)} label={t("Projects at the same address")} />
       </div>
 
       <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[15px] font-semibold tracking-tight">Incomplete records</h2>
+          <h2 className="text-[15px] font-semibold tracking-tight">{t("Incomplete records")}</h2>
           <Link href={onlyActive ? "/data?active=all" : "/data"} className="text-[13px] text-primary underline-offset-2 hover:underline">
-            {onlyActive ? "Include completed / lost projects" : "Only open projects"}
+            {t(onlyActive ? "Include completed / lost projects" : "Only open projects")}
           </Link>
         </div>
         {gaps.length ? (
@@ -118,20 +122,20 @@ export default async function DataPage(props: PageProps<"/data">) {
                   </span>
                 </span>
                 <Link href={canEdit ? `${g.href}/edit` : g.href} className="inline-flex h-9 shrink-0 items-center rounded-[10px] border bg-card px-3 text-[13px] hover:bg-muted">
-                  {canEdit ? "Edit" : "Open"}
+                  {t(canEdit ? "Edit" : "Open")}
                 </Link>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-[13px] text-text-2">Everything has its phone, email and address.</p>
+          <p className="text-[13px] text-text-2">{t("Everything has its phone, email and address.")}</p>
         )}
-        {gaps.length > 40 && <p className="mt-1 text-[12.5px] text-muted-foreground">+ {gaps.length - 40} more</p>}
+        {gaps.length > 40 && <p className="mt-1 text-[12.5px] text-muted-foreground">{t("+ {n} more", { n: gaps.length - 40 })}</p>}
       </section>
 
       <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
-        <h2 className="mb-1 text-[15px] font-semibold tracking-tight">Possible duplicate contacts</h2>
-        <p className="mb-2 text-[12.5px] text-text-2">Same phone, same email or same name. Open both to compare.</p>
+        <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Possible duplicate contacts")}</h2>
+        <p className="mb-2 text-[12.5px] text-text-2">{t("Same phone, same email or same name. Open both to compare.")}</p>
         {dupes.length ? (
           <ul className="flex flex-col gap-2">
             {dupes.map((g) => (
@@ -146,14 +150,14 @@ export default async function DataPage(props: PageProps<"/data">) {
             ))}
           </ul>
         ) : (
-          <p className="text-[13px] text-text-2">No likely duplicates.</p>
+          <p className="text-[13px] text-text-2">{t("No likely duplicates.")}</p>
         )}
       </section>
 
       {samePlace.length > 0 && (
         <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
-          <h2 className="mb-1 text-[15px] font-semibold tracking-tight">Projects at the same address</h2>
-          <p className="mb-2 text-[12.5px] text-text-2">Often fine (a new job at an old client), sometimes a duplicate.</p>
+          <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Projects at the same address")}</h2>
+          <p className="mb-2 text-[12.5px] text-text-2">{t("Often fine (a new job at an old client), sometimes a duplicate.")}</p>
           <ul className="flex flex-col gap-2">
             {samePlace.map((ids) => (
               <li key={ids.join()} className="rounded-xl border bg-muted px-3 py-2">

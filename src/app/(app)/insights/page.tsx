@@ -7,8 +7,11 @@ import { addDays } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { cn } from "@/lib/utils";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Insights" };
+export async function generateMetadata() {
+  return { title: (await getT())("Insights") };
+}
 
 // Insights (the Portal design's "Relatórios"): charts and numbers over the real tables. Everything is
 // read with the viewer's own permissions, so each person sees totals of what they can see; money cards
@@ -63,6 +66,7 @@ type Project = {
 };
 
 export default async function InsightsPage(props: PageProps<"/insights">) {
+  const tr = await getT();
   const user = await requireUser();
   const can = (t: string) => canOpen(user.permissions, getTable(t), getTable);
   if (!can("projects")) notFound();
@@ -122,7 +126,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
   const { data: orgs } = partnerIds.size ? await db.from("organizations").select("id, title").in("id", [...partnerIds.keys()]) : { data: [] };
   const orgName = new Map(((orgs ?? []) as { id: number; title: string | null }[]).map((o) => [o.id, o.title ?? `#${o.id}`]));
   const partners = [...partnerIds.entries()]
-    .map(([id, e]) => ({ id, name: orgName.get(id) ?? `#${id}`, roles: [...e.roles].join(", "), n: e.n, v: e.v }))
+    .map(([id, e]) => ({ id, name: orgName.get(id) ?? `#${id}`, roles: [...e.roles].map((r) => tr(r)).join(", "), n: e.n, v: e.v }))
     .sort((a, b) => (showMoney ? b.v - a.v : 0) || b.n - a.n)
     .slice(0, 8);
 
@@ -140,12 +144,12 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
     const byTech = new Map<string, number>();
     const byType = new Map<string, { n: number; min: number }>();
     for (const x of v.filter((y) => y.status !== "Cancelled")) {
-      const name = x.technician_id ? (tn.get(x.technician_id) ?? "—") : "No technician";
+      const name = x.technician_id ? (tn.get(x.technician_id) ?? "—") : tr("No technician");
       byTech.set(name, (byTech.get(name) ?? 0) + 1);
-      const t = byType.get(x.service_type ?? "No service type") ?? { n: 0, min: 0 };
+      const t = byType.get(x.service_type ?? tr("No service type")) ?? { n: 0, min: 0 };
       t.n++;
       t.min += Number(x.duration ?? 0);
-      byType.set(x.service_type ?? "No service type", t);
+      byType.set(x.service_type ?? tr("No service type"), t);
     }
     ops = {
       total: v.filter((x) => x.status !== "Cancelled").length,
@@ -180,14 +184,14 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
     <div className="mx-auto max-w-[1100px]">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">Insights</h1>
-          <p className="text-[12.5px] text-muted-foreground">Pipeline, money, partners, field work and maintenance plans.</p>
+          <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Insights")}</h1>
+          <p className="text-[12.5px] text-muted-foreground">{tr("Pipeline, money, partners, field work and maintenance plans.")}</p>
         </div>
         {ops && (
-          <div className="flex rounded-[10px] border bg-muted p-0.5 text-[13px]" role="tablist" aria-label="Period for field work">
+          <div className="flex rounded-[10px] border bg-muted p-0.5 text-[13px]" role="tablist" aria-label={tr("Period for field work")}>
             {[7, 30, 90].map((d) => (
               <Link key={d} href={`/insights?days=${d}`} role="tab" aria-selected={d === days} className={cn("rounded-lg px-3 py-1.5", d === days ? "bg-card font-semibold shadow-card" : "text-text-2")}>
-                {d} days
+                {tr("{n} days", { n: d })}
               </Link>
             ))}
           </div>
@@ -195,84 +199,85 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
       </div>
 
       <div className="grid items-start gap-3.5 md:grid-cols-2">
-        <Card title="Pipeline">
+        <Card title={tr("Pipeline")}>
           {stages.map((s) => (
-            <Bar key={s.k} label={s.k} value={s.n} max={maxStage} text={`${s.n}${showMoney && s.v ? ` · ${money.format(s.v)}` : ""}`} />
+            <Bar key={s.k} label={tr(s.k)} value={s.n} max={maxStage} text={`${s.n}${showMoney && s.v ? ` · ${money.format(s.v)}` : ""}`} />
           ))}
           <p className="mt-2 text-[12.5px] text-text-2">
-            {won} approved or further, {lost} lost.{showMoney && ` Values come from ${withValue} projects with an approved proposal.`}
+            {tr("{won} approved or further, {lost} lost.", { won, lost })}
+            {showMoney && ` ${tr("Values come from {n} projects with an approved proposal.", { n: withValue })}`}
           </p>
         </Card>
 
         {showMoney && (
-          <Card title="Money (Apply to Project transactions)">
-            <Bar label="Approved" value={totals.approved} max={totals.approved} text={money.format(totals.approved)} />
-            <Bar label="Invoiced" value={totals.invoiced} max={totals.approved} text={money.format(totals.invoiced)} />
-            <Bar label="Paid" value={totals.paid} max={totals.approved} text={money.format(totals.paid)} />
+          <Card title={tr("Money (Apply to Project transactions)")}>
+            <Bar label={tr("Approved")} value={totals.approved} max={totals.approved} text={money.format(totals.approved)} />
+            <Bar label={tr("Invoiced")} value={totals.invoiced} max={totals.approved} text={money.format(totals.invoiced)} />
+            <Bar label={tr("Paid")} value={totals.paid} max={totals.approved} text={money.format(totals.paid)} />
             <div className="mt-3 rounded-xl border bg-muted px-3">
-              <Stat label="To collect (invoiced − paid)" value={money.format(Math.max(0, totals.invoiced - totals.paid))} />
-              <Stat label="Approved, not invoiced yet" value={money.format(Math.max(0, totals.approved - totals.invoiced))} />
+              <Stat label={tr("To collect (invoiced − paid)")} value={money.format(Math.max(0, totals.invoiced - totals.paid))} />
+              <Stat label={tr("Approved, not invoiced yet")} value={money.format(Math.max(0, totals.approved - totals.invoiced))} />
             </div>
           </Card>
         )}
 
-        <Card title={showMoney ? "Partners by approved value" : "Partners by number of projects"}>
+        <Card title={tr(showMoney ? "Partners by approved value" : "Partners by number of projects")}>
           {partners.length ? (
             partners.map((p) => (
-              <Bar key={p.id} label={`${p.name} (${p.roles})`} value={showMoney ? p.v : p.n} max={showMoney ? partners[0].v || 1 : partners[0].n} text={showMoney ? money.format(p.v) : `${p.n} projects`} />
+              <Bar key={p.id} label={`${p.name} (${p.roles})`} value={showMoney ? p.v : p.n} max={showMoney ? partners[0].v || 1 : partners[0].n} text={showMoney ? money.format(p.v) : tr(p.n === 1 ? "{n} project" : "{n} projects", { n: p.n })} />
             ))
           ) : (
-            <p className="text-[13px] text-text-2">No GC, designer or builder linked to projects yet.</p>
+            <p className="text-[13px] text-text-2">{tr("No GC, designer or builder linked to projects yet.")}</p>
           )}
         </Card>
 
         {ops && (
-          <Card title={`Field work (last ${days} days)`}>
+          <Card title={tr("Field work (last {n} days)", { n: days })}>
             <div className="mb-2 rounded-xl border bg-muted px-3">
-              <Stat label="Visits" value={String(ops.total)} />
-              <Stat label="Done" value={String(ops.done)} />
-              <Stat label="Cancelled" value={String(ops.cancelled)} />
+              <Stat label={tr("Visits")} value={String(ops.total)} />
+              <Stat label={tr("Done")} value={String(ops.done)} />
+              <Stat label={tr("Cancelled")} value={String(ops.cancelled)} />
             </div>
             {ops.byType.length > 0 && (
               <>
-                <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Planned time by service type</p>
+                <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Planned time by service type")}</p>
                 {ops.byType.map(([t, v]) => (
-                  <Bar key={t} label={t} value={v.min} max={Math.max(...ops!.byType.map(([, x]) => x.min), 1)} text={`${v.n} · ${Math.round(v.min / 60)} h`} />
+                  <Bar key={t} label={tr(t)} value={v.min} max={Math.max(...ops!.byType.map(([, x]) => x.min), 1)} text={`${v.n} · ${Math.round(v.min / 60)} h`} />
                 ))}
               </>
             )}
             {ops.byTech.length > 0 && (
               <>
-                <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Visits by technician</p>
+                <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Visits by technician")}</p>
                 {ops.byTech.map(([n, c]) => (
                   <Bar key={n} label={n} value={c} max={ops!.byTech[0][1]} text={String(c)} />
                 ))}
               </>
             )}
-            <p className="mt-2 text-[12px] text-muted-foreground">Real time on site (check-in / check-out) comes with the technician&apos;s Today screen.</p>
+            <p className="mt-2 text-[12px] text-muted-foreground">{tr("Real time on site (check-in / check-out) comes with the technician's Today screen.")}</p>
           </Card>
         )}
 
-        <Card title="Maintenance plans">
+        <Card title={tr("Maintenance plans")}>
           <div className="mb-2 rounded-xl border bg-muted px-3">
-            <Stat label="Active plans" value={String(active.length)} />
-            <Stat label="Renewal due" value={String(plans.filter((p) => p.maintenance_status === "Renewal Alert").length)} />
-            <Stat label="Expired" value={String(plans.filter((p) => p.maintenance_status === "Expired").length)} />
-            {showMoney && <Stat label="Yearly value of active plans" value={money.format(active.reduce((n, p) => n + Number(p.maintenance_amount ?? 0), 0))} />}
+            <Stat label={tr("Active plans")} value={String(active.length)} />
+            <Stat label={tr("Renewal due")} value={String(plans.filter((p) => p.maintenance_status === "Renewal Alert").length)} />
+            <Stat label={tr("Expired")} value={String(plans.filter((p) => p.maintenance_status === "Expired").length)} />
+            {showMoney && <Stat label={tr("Yearly value of active plans")} value={money.format(active.reduce((n, p) => n + Number(p.maintenance_amount ?? 0), 0))} />}
           </div>
           {[...tiers.entries()].map(([t, v]) => (
-            <Bar key={t} label={t} value={v.n} max={Math.max(1, active.length)} text={`${v.n}${showMoney ? ` · ${money.format(v.v)}` : ""}`} />
+            <Bar key={t} label={tr(t)} value={v.n} max={Math.max(1, active.length)} text={`${v.n}${showMoney ? ` · ${money.format(v.v)}` : ""}`} />
           ))}
-          <p className="mt-2 rounded-[10px] bg-ok-bg px-3 py-2 text-[12.5px] text-ok-fg">Opportunity: {completeNoPlan} completed projects without a maintenance plan.</p>
+          <p className="mt-2 rounded-[10px] bg-ok-bg px-3 py-2 text-[12.5px] text-ok-fg">{tr("Opportunity: {n} completed projects without a maintenance plan.", { n: completeNoPlan })}</p>
         </Card>
 
         {quality !== null && (
-          <Card title="Data quality">
-            <Bar label="Contacts complete" value={quality} max={100} text={`${quality}%`} />
+          <Card title={tr("Data quality")}>
+            <Bar label={tr("Contacts complete")} value={quality} max={100} text={`${quality}%`} />
             <p className="mt-2 text-[12.5px] text-text-2">
-              Phone and email filled in. Fix the gaps in{" "}
+              {tr("Phone and email filled in. Fix the gaps in")}{" "}
               <Link href="/data" className="text-primary underline underline-offset-2">
-                Data
+                {tr("Data")}
               </Link>
               .
             </p>

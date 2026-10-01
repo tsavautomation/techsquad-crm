@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/shell/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { I18nProvider } from "@/i18n/client";
+import { getLang } from "@/i18n/server";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,13 +29,16 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const lang = await getLang();
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} h-full antialiased`}>
+    <html lang={lang === "pt" ? "pt-BR" : "en"} suppressHydrationWarning className={`${inter.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
-          {children}
-          <Toaster />
+          <I18nProvider lang={lang}>
+            {children}
+            <Toaster />
+          </I18nProvider>
         </ThemeProvider>
       </body>
     </html>

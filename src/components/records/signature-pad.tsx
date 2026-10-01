@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { createUploadAction, previewUrlAction } from "@/lib/records/field-actions";
 import type { FileItem } from "@/lib/records/values";
 import type { FieldDef } from "@/registry/types";
+import { useT } from "@/i18n/client";
 
 type Props = {
   table: string;
@@ -19,6 +20,7 @@ type Props = {
 
 /** Finger/mouse signature (TV Installation › Signature). Saved as a PNG attachment. */
 export function SignaturePad({ table, recordId, field: f, value, onChange, disabled }: Props) {
+  const t = useT();
   const files = (Array.isArray(value) ? value : []) as FileItem[];
   const canvas = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
@@ -82,8 +84,8 @@ export function SignaturePad({ table, recordId, field: f, value, onChange, disab
       if (!blob) return;
       const name = "signature.png";
       const slot = await createUploadAction(table, f.name, recordId, { name, type: "image/png", size: blob.size });
-      if (!slot.ok) return void toast.error(slot.message);
-      if (slot.kind !== "crm") return void toast.error("Signatures are kept in the CRM."); // never OneDrive
+      if (!slot.ok) return void toast.error(t(slot.message));
+      if (slot.kind !== "crm") return void toast.error(t("Signatures are kept in the CRM.")); // never OneDrive
       const { error } = await createClient().storage.from("attachments").uploadToSignedUrl(slot.path, slot.token, blob, { contentType: "image/png" });
       if (error) return void toast.error(error.message);
       onChange([{ path: slot.path, name, mime: "image/png", size: blob.size, url: (await previewUrlAction(slot.path)) ?? undefined }]);
@@ -97,10 +99,10 @@ export function SignaturePad({ table, recordId, field: f, value, onChange, disab
     return (
       <div className="flex items-end gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element -- signed storage URL */}
-        {files[0].url && <img src={files[0].url} alt="Signature" className="h-28 rounded-lg border bg-white object-contain p-1" />}
+        {files[0].url && <img src={files[0].url} alt={t("Signature")} className="h-28 rounded-lg border bg-white object-contain p-1" />}
         {!disabled && (
           <button type="button" onClick={() => onChange([])} className="h-11 rounded-lg border px-4 text-sm hover:bg-muted">
-            Sign again
+            {t("Sign again")}
           </button>
         )}
       </div>
@@ -112,7 +114,7 @@ export function SignaturePad({ table, recordId, field: f, value, onChange, disab
       <canvas
         ref={canvas}
         id={`f-${f.name}`}
-        aria-label="Sign here"
+        aria-label={t("Sign here")}
         className="h-40 w-full touch-none rounded-lg border bg-white"
         onPointerDown={start}
         onPointerMove={move}
@@ -121,13 +123,13 @@ export function SignaturePad({ table, recordId, field: f, value, onChange, disab
       />
       <div className="flex gap-2">
         <button type="button" onClick={accept} disabled={!dirty || saving || disabled} className="inline-flex h-11 items-center gap-2 rounded-lg bg-foreground px-4 text-sm text-background disabled:opacity-50">
-          {saving && <Loader2 className="size-4 animate-spin" aria-hidden />} Use this signature
+          {saving && <Loader2 className="size-4 animate-spin" aria-hidden />} {t("Use this signature")}
         </button>
         <button type="button" onClick={clear} disabled={!dirty || saving} className="h-11 rounded-lg border px-4 text-sm disabled:opacity-50">
-          Clear
+          {t("Clear")}
         </button>
       </div>
-      <p className="text-xs text-muted-foreground">Sign with your finger inside the box.</p>
+      <p className="text-xs text-muted-foreground">{t("Sign with your finger inside the box.")}</p>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { saveGroupPermissionsAction } from "@/lib/admin/permission-actions";
+import { useT } from "@/i18n/client";
 
 export type Perm = { key: string; module: string; area: string; kind: string; label: string; description: string; used: boolean };
 
@@ -27,6 +28,7 @@ type Props = {
 
 /** One group's permissions as checkboxes, by module and area. Changes are saved together. */
 export function PermissionMatrix({ groupId, groupName, perms, granted, viaEveryone }: Props) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const initial = useMemo(() => new Set(granted), [granted]);
@@ -55,7 +57,7 @@ export function PermissionMatrix({ groupId, groupName, perms, granted, viaEveryo
   const save = () =>
     start(async () => {
       const r = await saveGroupPermissionsAction(groupId, add, remove);
-      if (!r.ok) return void toast.error(r.message);
+      if (!r.ok) return void toast.error(t(r.message));
       toast.success(`Saved: ${r.added} added, ${r.removed} removed`);
       router.refresh();
     });
@@ -63,21 +65,21 @@ export function PermissionMatrix({ groupId, groupName, perms, granted, viaEveryo
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search permissions" className="h-11 min-w-0 flex-1 rounded-lg border bg-card px-3 text-base" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("Search permissions")} className="h-11 min-w-0 flex-1 rounded-lg border bg-card px-3 text-base" />
         <label className="flex min-h-11 items-center gap-2 text-sm">
           <input type="checkbox" className="size-5" checked={showUnused} onChange={(e) => setShowUnused(e.target.checked)} />
-          Show WebAuthor-only permissions
+          {t("Show WebAuthor-only permissions")}
         </label>
       </div>
       {!showUnused && (
         <p className="mb-4 text-sm text-muted-foreground">
-          Hidden: WebAuthor permissions for features this app doesn&apos;t have (they change nothing here). Ones this group already holds stay visible, greyed.
+          {t("Hidden: WebAuthor permissions for features this app doesn't have (they change nothing here). Ones this group already holds stay visible, greyed.")}
         </p>
       )}
 
       {[...byModule.entries()].map(([module, list]) => (
         <section key={module} className="mb-6">
-          <h2 className="mb-2 text-lg font-semibold">{MODULE_TITLES[module] ?? module}</h2>
+          <h2 className="mb-2 text-lg font-semibold">{t(MODULE_TITLES[module] ?? module)}</h2>
           {[...Map.groupBy(list, (p) => p.area).entries()].map(([area, items]) => {
             const keys = items.map((p) => p.key);
             const all = keys.every((k) => on.has(k));
@@ -95,7 +97,7 @@ export function PermissionMatrix({ groupId, groupName, perms, granted, viaEveryo
                       toggle(keys, !all);
                     }}
                   >
-                    {all ? "None" : "All"}
+                    {t(all ? "None" : "All")}
                   </button>
                 </summary>
                 <ul className="border-t">
@@ -123,19 +125,19 @@ export function PermissionMatrix({ groupId, groupName, perms, granted, viaEveryo
           })}
         </section>
       ))}
-      {!visible.length && <p className="text-sm text-muted-foreground">No permissions match.</p>}
+      {!visible.length && <p className="text-sm text-muted-foreground">{t("No permissions match.")}</p>}
 
       {(add.length > 0 || remove.length > 0) && (
         <div className="sticky bottom-16 z-20 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card shadow-card p-3 shadow-lg md:bottom-4">
           <span className="text-sm">
-            {groupName}: <strong>{add.length}</strong> to add, <strong>{remove.length}</strong> to remove
+            {groupName}: <strong>{add.length}</strong> {t("to add,")} <strong>{remove.length}</strong> {t("to remove")}
           </span>
           <span className="flex gap-2">
             <button type="button" className="h-11 rounded-lg border px-4 text-sm hover:bg-muted" onClick={() => setOn(new Set(initial))} disabled={pending}>
-              Undo
+              {t("Undo")}
             </button>
             <button type="button" className="h-11 rounded-lg border border-foreground bg-foreground px-4 text-sm font-medium text-background disabled:opacity-50" onClick={save} disabled={pending}>
-              Save changes
+              {t("Save changes")}
             </button>
           </span>
         </div>

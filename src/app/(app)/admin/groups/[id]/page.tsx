@@ -3,22 +3,26 @@ import { notFound } from "next/navigation";
 import { GroupForm } from "@/components/admin/user-forms";
 import { requireUser } from "@/lib/auth/session";
 import { recordsDb } from "@/lib/records/data";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Group" };
+export async function generateMetadata() {
+  return { title: (await getT())("Group") };
+}
 
 type Member = { profiles: { id: string; email: string; first_name: string | null; last_name: string | null; active: boolean } | null };
 
 /** /admin/groups/new creates a group; /admin/groups/<id> edits one and lists its members. */
 export default async function GroupPage(props: PageProps<"/admin/groups/[id]">) {
+  const t = await getT();
   const me = await requireUser();
   if (!me.permissions.has("site.admin.groups")) notFound();
   const { id } = await props.params;
   if (id === "new")
     return (
       <div className="mx-auto max-w-xl">
-        <h1 className="mb-4 text-2xl font-semibold">New group</h1>
+        <h1 className="mb-4 text-2xl font-semibold">{t("New group")}</h1>
         <GroupForm groupId={null} initial={{ name: "", active: true }} editable />
-        <p className="mt-4 text-sm text-muted-foreground">A new group has no permissions until a System Administrator grants them on the Permissions screen.</p>
+        <p className="mt-4 text-sm text-muted-foreground">{t("A new group has no permissions until a System Administrator grants them on the Permissions screen.")}</p>
       </div>
     );
 
@@ -44,9 +48,9 @@ export default async function GroupPage(props: PageProps<"/admin/groups/[id]">) 
           </Link>
         </p>
       )}
-      <h2 className="mt-8 mb-2 text-lg font-semibold">Members</h2>
+      <h2 className="mt-8 mb-2 text-lg font-semibold">{t("Members")}</h2>
       {g.name === "Everyone" ? (
-        <p className="text-sm text-muted-foreground">Every signed-in user is in this group automatically.</p>
+        <p className="text-sm text-muted-foreground">{t("Every signed-in user is in this group automatically.")}</p>
       ) : (
         <>
           <ul className="divide-y rounded-2xl border bg-card shadow-card">
@@ -59,9 +63,9 @@ export default async function GroupPage(props: PageProps<"/admin/groups/[id]">) 
                 </Link>
               </li>
             ))}
-            {!people.length && <li className="px-4 py-3 text-sm text-muted-foreground">No members.</li>}
+            {!people.length && <li className="px-4 py-3 text-sm text-muted-foreground">{t("No members.")}</li>}
           </ul>
-          <p className="mt-2 text-sm text-muted-foreground">To add or remove someone, open the person under Users and tick their groups.</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t("To add or remove someone, open the person under Users and tick their groups.")}</p>
         </>
       )}
     </div>

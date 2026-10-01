@@ -7,6 +7,7 @@ import { addDays } from "@/lib/schedule/dates";
 import { getTable, REGISTRY } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
+import { getT } from "@/i18n/server";
 
 // The alerts bell in the top bar: what is waiting for the signed-in person, each linking to its record.
 // Tags in notes stay until the record is opened (or "Mark tags read"); the rest are live: they drop out
@@ -22,6 +23,7 @@ const known = new Set(REGISTRY.map((t) => t.name));
 export async function alertsAction(): Promise<Alerts> {
   const user = await requireUser();
   const db = await recordsDb();
+  const tr = await getT();
   const can = (t: string) => known.has(t) && canOpen(user.permissions, getTable(t), getTable);
   const today = todayET();
 
@@ -39,7 +41,7 @@ export async function alertsAction(): Promise<Alerts> {
           .select("id, title")
           .in("id", [...new Set(list.map((p) => p.id))])
           .is("deleted_at", null);
-        for (const r of (data ?? []) as { id: number; title: string | null }[]) out.set(`${table}:${r.id}`, r.title || `${getTable(table).itemLabel} #${r.id}`);
+        for (const r of (data ?? []) as { id: number; title: string | null }[]) out.set(`${table}:${r.id}`, r.title || `${tr(getTable(table).itemLabel)} #${r.id}`);
       }),
     );
     return out;
@@ -79,7 +81,7 @@ export async function alertsAction(): Promise<Alerts> {
           key: `tag:${r.id}`,
           href: `${link(r.table_name, r.record_id)}#notes`,
           title: t.get(`${r.table_name}:${r.record_id}`)!,
-          meta: `${(r.created_by && names.get(r.created_by)) || "Someone"} tagged you · ${formatDateTime(r.created_at)}${body ? ` · “${body.length > 70 ? `${body.slice(0, 70)}…` : body}”` : ""}`,
+          meta: `${tr("{who} tagged you", { who: (r.created_by && names.get(r.created_by)) || tr("Someone") })} · ${formatDateTime(r.created_at)}${body ? ` · “${body.length > 70 ? `${body.slice(0, 70)}…` : body}”` : ""}`,
           urgent: true,
         };
       });
@@ -95,7 +97,7 @@ export async function alertsAction(): Promise<Alerts> {
         key: `wf:${r.table_name}:${r.record_id}`,
         href: link(r.table_name, r.record_id)!,
         title: t.get(`${r.table_name}:${r.record_id}`)!,
-        meta: `${r.level_title} · since ${formatDate(r.entered_at)}`,
+        meta: `${tr(r.level_title)} · ${tr("since {date}", { date: formatDate(r.entered_at) })}`,
       }));
   })();
 
@@ -112,8 +114,8 @@ export async function alertsAction(): Promise<Alerts> {
     return ((data ?? []) as { id: number; title: string | null; starts_at: string; status: string }[]).map((v) => ({
       key: `visit:${v.id}`,
       href: recordHref(getTable("visits"), v.id),
-      title: v.title || `Visit #${v.id}`,
-      meta: `${formatDateTime(v.starts_at).split(" ").slice(1).join(" ")} · ${v.status}`,
+      title: v.title || tr("Visit #{id}", { id: v.id }),
+      meta: `${formatDateTime(v.starts_at).split(" ").slice(1).join(" ")} · ${tr(v.status)}`,
     }));
   })();
 
@@ -134,8 +136,8 @@ export async function alertsAction(): Promise<Alerts> {
       return {
         key: `task:${r.id}`,
         href: recordHref(getTable("tasks"), r.id),
-        title: r.title || `Task #${r.id}`,
-        meta: [r.status, r.due_date && (late ? `overdue since ${formatDate(r.due_date)}` : r.due_date === today ? "due today" : `due ${formatDate(r.due_date)}`)].filter(Boolean).join(" · "),
+        title: r.title || tr("Task #{id}", { id: r.id }),
+        meta: [r.status && tr(r.status), r.due_date && (late ? tr("overdue since {date}", { date: formatDate(r.due_date) }) : r.due_date === today ? tr("due today") : tr("due {date}", { date: formatDate(r.due_date) }))].filter(Boolean).join(" · "),
         urgent: late,
       };
     });
@@ -157,7 +159,7 @@ export async function alertsAction(): Promise<Alerts> {
         key: `check:${r.id}`,
         href: `${link(r.table_name, r.record_id)}#checklist`,
         title: r.item,
-        meta: [t.get(`${r.table_name}:${r.record_id}`), r.due_date && `due ${formatDate(r.due_date)}`].filter(Boolean).join(" · "),
+        meta: [t.get(`${r.table_name}:${r.record_id}`), r.due_date && tr("due {date}", { date: formatDate(r.due_date) })].filter(Boolean).join(" · "),
         urgent: Boolean(r.due_date && r.due_date < today),
       }));
   })();
@@ -180,19 +182,19 @@ export async function alertsAction(): Promise<Alerts> {
         key: `follow:${r.id}`,
         href: `${link(r.table_name, r.record_id)}#notes`,
         title: t.get(`${r.table_name}:${r.record_id}`)!,
-        meta: `${r.follow_up_date === today ? "Follow up today" : `Follow up since ${formatDate(r.follow_up_date)}`} · “${r.body.length > 60 ? `${r.body.slice(0, 60)}…` : r.body}”`,
+        meta: `${r.follow_up_date === today ? tr("Follow up today") : tr("Follow up since {date}", { date: formatDate(r.follow_up_date) })} · “${r.body.length > 60 ? `${r.body.slice(0, 60)}…` : r.body}”`,
         urgent: r.follow_up_date < today,
       }));
   })();
 
   const [a, b, c, d, e, f] = await Promise.all([tags, approvals, visits, tasks, checklist, followups]);
   const sections: AlertSection[] = [
-    { key: "tags" as const, title: "Tagged you", items: a },
-    { key: "approvals" as const, title: "Waiting for your approval", items: b },
-    { key: "visits" as const, title: "Your visits today", items: c },
-    { key: "tasks" as const, title: "Your open tasks", items: d },
-    { key: "checklist" as const, title: "Checklist items for you", items: e },
-    { key: "followups" as const, title: "Follow-ups", items: f },
+    { key: "tags" as const, title: tr("Tagged you"), items: a },
+    { key: "approvals" as const, title: tr("Waiting for your approval"), items: b },
+    { key: "visits" as const, title: tr("Your visits today"), items: c },
+    { key: "tasks" as const, title: tr("Your open tasks"), items: d },
+    { key: "checklist" as const, title: tr("Checklist items for you"), items: e },
+    { key: "followups" as const, title: tr("Follow-ups"), items: f },
   ].filter((s) => s.items.length);
   const all = sections.flatMap((s) => s.items);
   return { count: all.length, urgent: all.some((i) => i.urgent), sections };

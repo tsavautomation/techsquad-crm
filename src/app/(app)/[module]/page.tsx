@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth/session";
 import { recordsDb } from "@/lib/records/data";
 import { REGISTRY } from "@/registry";
 import { LISTS_MODULE, tableFromRoute, tableHref } from "@/registry/routes";
+import { getT } from "@/i18n/server";
 
 /** Number of live records in a table the person can see (row-level security decides). */
 async function counts(tables: (string | null)[]) {
@@ -21,6 +22,7 @@ async function counts(tables: (string | null)[]) {
 }
 
 export default async function ModulePage(props: PageProps<"/[module]">) {
+  const tr = await getT();
   const { module: slug } = await props.params;
   const user = await requireUser();
 
@@ -29,7 +31,7 @@ export default async function ModulePage(props: PageProps<"/[module]">) {
     const lists = REGISTRY.filter((t) => t.module === "utility");
     const n = await counts(lists.map((t) => t.name));
     return (
-      <Page title="Lists" subtitle="Shared lists used across the forms">
+      <Page title={tr("Lists")} subtitle={tr("Shared lists used across the forms")}>
         <Tiles items={lists.map((t, i) => ({ href: tableHref(t), title: t.label, subtitle: TILE_TEXT[t.name], icon: t.name, badge: String(n[i] ?? "") }))} />
       </Page>
     );
@@ -43,7 +45,7 @@ export default async function ModulePage(props: PageProps<"/[module]">) {
   const tiles: Tile[] = mod.tabs.map((t, i) => ({ href: `/${mod.slug}/${t.slug}`, title: t.title, subtitle: TILE_TEXT[t.slug], icon: t.slug, badge: n[i] === null ? undefined : String(n[i]) }));
 
   return (
-    <Page title={mod.title}>
+    <Page title={tr(mod.title)}>
       <Tiles items={tiles} />
       <div className="mt-6">
         <DashboardWidgets user={user} module={mod.slug} />

@@ -4,12 +4,16 @@ import { UserPlus } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { formatDateTime } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Users" };
+export async function generateMetadata() {
+  return { title: (await getT())("Users") };
+}
 
 type Row = { id: string; email: string; first_name: string | null; last_name: string | null; active: boolean; group_members: { groups: { name: string } | null }[] };
 
 export default async function UsersPage(props: PageProps<"/admin/users">) {
+  const t = await getT();
   const user = await requireUser();
   const canList = user.permissions.has("site.admin.members");
   const canInvite = user.permissions.has("site.admin.add_new_member");
@@ -30,21 +34,21 @@ export default async function UsersPage(props: PageProps<"/admin/users">) {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Users</h1>
+        <h1 className="text-2xl font-semibold">{t("Users")}</h1>
         {canInvite && (
           <Link href="/admin/users/new" className="inline-flex h-11 items-center gap-1.5 rounded-lg border border-foreground bg-foreground px-4 text-sm font-medium text-background">
-            <UserPlus className="size-4" aria-hidden /> Invite
+            <UserPlus className="size-4" aria-hidden /> {t("Invite")}
           </Link>
         )}
       </div>
       {canList ? (
         <>
           <form className="mb-3 flex gap-2">
-            <input name="q" defaultValue={q} placeholder="Search name or email" className="h-11 min-w-0 flex-1 rounded-lg border bg-card px-3 text-base" />
+            <input name="q" defaultValue={q} placeholder={t("Search name or email")} className="h-11 min-w-0 flex-1 rounded-lg border bg-card px-3 text-base" />
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="show" value="all" defaultChecked={show === "all"} className="size-5" /> Inactive too
+              <input type="checkbox" name="show" value="all" defaultChecked={show === "all"} className="size-5" /> {t("Inactive too")}
             </label>
-            <button className="h-11 rounded-lg border px-3 text-sm">Go</button>
+            <button className="h-11 rounded-lg border px-3 text-sm">{t("Go")}</button>
           </form>
           <ul className="divide-y rounded-2xl border bg-card shadow-card">
             {rows.map((r) => {
@@ -55,22 +59,22 @@ export default async function UsersPage(props: PageProps<"/admin/users">) {
                     <span className="flex flex-wrap items-baseline gap-x-2">
                       <span className="text-base font-medium">{[r.first_name, r.last_name].filter(Boolean).join(" ") || r.email}</span>
                       {!r.active && <span className="rounded bg-muted px-1.5 text-xs">inactive</span>}
-                      {r.active && lastSeen.size > 0 && !seen && <span className="rounded bg-amber-100 px-1.5 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">never signed in</span>}
+                      {r.active && lastSeen.size > 0 && !seen && <span className="rounded bg-amber-100 px-1.5 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">{t("never signed in")}</span>}
                     </span>
                     <span className="block text-sm text-muted-foreground">{r.email}</span>
                     <span className="block text-xs text-muted-foreground">
-                      {r.group_members.map((m) => m.groups?.name).filter(Boolean).join(", ") || "No groups"}
+                      {r.group_members.map((m) => m.groups?.name).filter(Boolean).join(", ") || t("No groups")}
                       {seen && ` · last sign-in ${formatDateTime(seen)}`}
                     </span>
                   </Link>
                 </li>
               );
             })}
-            {!rows.length && <li className="px-4 py-3 text-sm text-muted-foreground">No users match.</li>}
+            {!rows.length && <li className="px-4 py-3 text-sm text-muted-foreground">{t("No users match.")}</li>}
           </ul>
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">You can invite people, but not see the user list.</p>
+        <p className="text-sm text-muted-foreground">{t("You can invite people, but not see the user list.")}</p>
       )}
     </div>
   );

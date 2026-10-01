@@ -11,6 +11,7 @@ import { FileField } from "./file-field";
 import { LookupPicker } from "./lookup-picker";
 import { RichTextEditor } from "./rich-text-editor";
 import { SignaturePad } from "./signature-pad";
+import { useT } from "@/i18n/client";
 
 // Native inputs: on iPhone they bring up the right keyboard, date wheel and picker.
 // text-base (16px) stops Safari zooming in on focus; h-11 = 44px tap targets.
@@ -74,6 +75,7 @@ function choosable(f: FieldDef, value: unknown) {
 }
 
 export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }: Props) {
+  const tr = useT();
   const id = `f-${f.name}`;
   const common = { id, name: f.name, disabled, "aria-invalid": invalid || undefined };
   const str = typeof value === "string" ? value : value === null || value === undefined ? "" : String(value);
@@ -113,7 +115,7 @@ export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }
     case "select":
       return (
         <select {...common} className={cn(BOX, "h-11")} value={str} onChange={(e) => onChange(e.target.value || null)}>
-          <option value="">Select one</option>
+          <option value="">{tr("Select one")}</option>
           {choosable(f, value).map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
@@ -160,10 +162,10 @@ export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }
       return (
         <div role="radiogroup" aria-labelledby={`${id}-label`} className="flex gap-2">
           <Choice selected={value === true} disabled={disabled} onClick={() => onChange(true)} color="#77af63">
-            Yes
+            {tr("Yes")}
           </Choice>
           <Choice selected={value !== true} disabled={disabled} onClick={() => onChange(false)} color="#d36c5e">
-            No
+            {tr("No")}
           </Choice>
         </div>
       );
@@ -241,7 +243,7 @@ export function FieldInput({ ctx, field: f, value, onChange, invalid, disabled }
     }
 
     default:
-      return <p className="rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground">Calculated automatically.</p>;
+      return <p className="rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground">{tr("Calculated automatically.")}</p>;
   }
 }
 function Choice({

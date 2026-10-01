@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { AtSign, Bell, CalendarClock, CheckSquare, ClipboardCheck, MapPin, SquareKanban, X, type LucideIcon } from "lucide-react";
 import { alertsAction, markTagsSeenAction, type Alerts, type AlertSection } from "@/lib/alerts/actions";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 // Alerts bell next to the account initials: a red count of what is waiting for me (tags in notes,
 // approvals, today's visits, open tasks, checklist items, follow-ups), each linking to its record.
@@ -22,8 +23,9 @@ const ICONS: Record<AlertSection["key"], { icon: LucideIcon; tint: string }> = {
 };
 
 function List({ alerts, onPick, onTagsRead }: { alerts: Alerts | null; onPick: () => void; onTagsRead: () => void }) {
-  if (!alerts) return <p className="px-4 py-6 text-center text-sm text-muted-foreground">Loading…</p>;
-  if (!alerts.sections.length) return <p className="px-4 py-8 text-center text-sm text-muted-foreground">You&apos;re all caught up.</p>;
+  const t = useT();
+  if (!alerts) return <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t("Loading…")}</p>;
+  if (!alerts.sections.length) return <p className="px-4 py-8 text-center text-sm text-muted-foreground">{t("You're all caught up.")}</p>;
   return (
     <div className="flex flex-col gap-1 py-1">
       {alerts.sections.map((s) => {
@@ -39,7 +41,7 @@ function List({ alerts, onPick, onTagsRead }: { alerts: Alerts | null; onPick: (
               </span>
               {s.key === "tags" && (
                 <button type="button" onClick={onTagsRead} className="rounded-md px-2 py-1 text-[12.5px] font-medium text-primary hover:bg-muted">
-                  Mark read
+                  {t("Mark read")}
                 </button>
               )}
             </div>
@@ -61,6 +63,7 @@ function List({ alerts, onPick, onTagsRead }: { alerts: Alerts | null; onPick: (
 }
 
 export function AlertsBell() {
+  const t = useT();
   const pathname = usePathname();
   const [alerts, setAlerts] = useState<Alerts | null>(null);
   const [open, setOpen] = useState(false);
@@ -118,7 +121,7 @@ export function AlertsBell() {
   }
 
   const count = alerts?.count ?? 0;
-  const label = count ? `Alerts: ${count} waiting` : "Alerts";
+  const label = count ? t("Alerts: {n} waiting", { n: count }) : t("Alerts");
 
   return (
     <div ref={box} className="relative">
@@ -151,12 +154,12 @@ export function AlertsBell() {
           <div
             id="alerts-panel"
             role="dialog"
-            aria-label="Alerts"
+            aria-label={t("Alerts")}
             className="fixed inset-0 z-50 flex flex-col bg-background md:inset-auto md:top-[60px] md:right-4 md:max-h-[75vh] md:w-[420px] md:rounded-2xl md:border md:bg-card md:shadow-float"
           >
             <div className="flex items-center justify-between border-b bg-card px-4 pt-[env(safe-area-inset-top)] md:rounded-t-2xl md:pt-0">
-              <span className="flex h-14 items-center text-[15px] font-semibold">Alerts</span>
-              <button type="button" onClick={() => setOpen(false)} className="grid size-11 place-items-center rounded-full hover:bg-muted" aria-label="Close alerts">
+              <span className="flex h-14 items-center text-[15px] font-semibold">{t("Alerts")}</span>
+              <button type="button" onClick={() => setOpen(false)} className="grid size-11 place-items-center rounded-full hover:bg-muted" aria-label={t("Close alerts")}>
                 <X className="size-5" aria-hidden />
               </button>
             </div>

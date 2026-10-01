@@ -7,8 +7,11 @@ import type { AutomationInput } from "@/lib/engine/automation-schema";
 import { recordsDb } from "@/lib/records/data";
 import { REGISTRY } from "@/registry";
 import type { TableDef } from "@/registry/types";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Automation" };
+export async function generateMetadata() {
+  return { title: (await getT())("Automation") };
+}
 
 const SYSTEM_FIELDS: FieldMeta[] = [
   { name: "submitted_at", label: "Date Submitted", type: "datetime" },
@@ -27,6 +30,7 @@ function fieldsFor(t: TableDef): FieldMeta[] {
 
 /** /admin/automations/<id> edits one; /admin/automations/new?table=<name> creates one. */
 export default async function AutomationPage(props: PageProps<"/admin/automations/[id]">) {
+  const tr = await getT();
   const me = await requireUser();
   if (!me.permissions.has("projects.module.design_triggers") && !me.isSysadmin) notFound();
   const { id } = await props.params;
@@ -38,8 +42,8 @@ export default async function AutomationPage(props: PageProps<"/admin/automation
     if (!t)
       return (
         <div className="mx-auto max-w-xl">
-          <h1 className="mb-4 text-2xl font-semibold">New automation</h1>
-          <p className="mb-2 text-sm text-muted-foreground">Which kind of record is it about?</p>
+          <h1 className="mb-4 text-2xl font-semibold">{tr("New automation")}</h1>
+          <p className="mb-2 text-sm text-muted-foreground">{tr("Which kind of record is it about?")}</p>
           <ul className="divide-y rounded-2xl border bg-card shadow-card">
             {REGISTRY.filter((x) => !x.parent && x.module !== "utility").map((x) => (
               <li key={x.name}>
@@ -54,7 +58,7 @@ export default async function AutomationPage(props: PageProps<"/admin/automation
     const initial: AutomationInput = { title: "", active: true, events: ["added"], conditions: { match: "all", rules: [] }, actions: [], notes: null };
     return (
       <div className="mx-auto max-w-2xl">
-        <h1 className="mb-4 text-2xl font-semibold">New {t.label} automation</h1>
+        <h1 className="mb-4 text-2xl font-semibold">{tr("New {table} automation", { table: tr(t.label) })}</h1>
         <AutomationEditor id={null} table={t.name} tableLabel={t.label} fields={fieldsFor(t)} initial={initial} editable={me.isSysadmin} />
       </div>
     );
@@ -75,17 +79,17 @@ export default async function AutomationPage(props: PageProps<"/admin/automation
     <div className="mx-auto max-w-2xl">
       <p className="text-sm text-muted-foreground">
         <Link href="/admin/automations" className="underline underline-offset-4">
-          Automations
+          {tr("Automations")}
         </Link>{" "}
         · {t.label} · #{autoId}
       </p>
       <h1 className="mb-4 text-2xl font-semibold">{data.title}</h1>
-      {!me.isSysadmin && <p className="mb-4 text-sm text-muted-foreground">Only System Administrators can change automations.</p>}
+      {!me.isSysadmin && <p className="mb-4 text-sm text-muted-foreground">{tr("Only System Administrators can change automations.")}</p>}
       <AutomationEditor id={autoId} table={t.name} tableLabel={t.label} fields={fieldsFor(t)} initial={initial} editable={me.isSysadmin} />
 
-      <h2 className="mt-8 mb-2 text-lg font-semibold">Recent runs</h2>
+      <h2 className="mt-8 mb-2 text-lg font-semibold">{tr("Recent runs")}</h2>
       {!runs?.length ? (
-        <p className="text-sm text-muted-foreground">It hasn&apos;t run yet.</p>
+        <p className="text-sm text-muted-foreground">{tr("It hasn't run yet.")}</p>
       ) : (
         <ul className="divide-y rounded-2xl border bg-card shadow-card text-sm">
           {(runs as { id: number; record_id: number; event: string; status: string; detail: { actions?: string[]; error?: string }; at: string }[]).map((r) => (

@@ -8,6 +8,7 @@ import { saveAutomationAction } from "@/lib/admin/automation-actions";
 import type { AutomationInput } from "@/lib/engine/automation-schema";
 import type { Action } from "@/lib/engine/automations";
 import type { ConditionRule } from "@/lib/engine/conditions";
+import { useT } from "@/i18n/client";
 
 export type FieldMeta = { name: string; label: string; type: string; options?: { label: string; value: string }[]; lookup?: boolean };
 
@@ -43,17 +44,18 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 
 /** A value input that offers the field's options when it has them. */
 function ValueInput({ field, value, onChange }: { field?: FieldMeta; value: unknown; onChange: (v: string | boolean | null) => void }) {
+  const t = useT();
   if (field?.type === "boolean")
     return (
       <select className={SELECT} value={String(Boolean(value))} onChange={(e) => onChange(e.target.value === "true")}>
-        <option value="true">Yes</option>
-        <option value="false">No</option>
+        <option value="true">{t("Yes")}</option>
+        <option value="false">{t("No")}</option>
       </select>
     );
   if (field?.options?.length)
     return (
       <select className={SELECT} value={value === null || value === undefined ? "" : String(value)} onChange={(e) => onChange(e.target.value || null)}>
-        <option value="">(empty)</option>
+        <option value="">{t("(empty)")}</option>
         {field.options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
@@ -61,13 +63,14 @@ function ValueInput({ field, value, onChange }: { field?: FieldMeta; value: unkn
         ))}
       </select>
     );
-  return <input className={INPUT} value={value === null || value === undefined ? "" : String(value)} placeholder="(empty)" onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)} />;
+  return <input className={INPUT} value={value === null || value === undefined ? "" : String(value)} placeholder={t("(empty)")} onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)} />;
 }
 
 function FieldSelect({ fields, value, onChange, filter }: { fields: FieldMeta[]; value: string; onChange: (v: string) => void; filter?: (f: FieldMeta) => boolean }) {
+  const t = useT();
   return (
     <select className={SELECT} value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">Choose a field…</option>
+      <option value="">{t("Choose a field…")}</option>
       {fields.filter(filter ?? (() => true)).map((f) => (
         <option key={f.name} value={f.name}>
           {f.label}
@@ -78,6 +81,7 @@ function FieldSelect({ fields, value, onChange, filter }: { fields: FieldMeta[];
 }
 
 function RuleRow({ rule, fields, onChange, onRemove }: { rule: ConditionRule; fields: FieldMeta[]; onChange: (r: ConditionRule) => void; onRemove: () => void }) {
+  const t = useT();
   const f = fields.find((x) => x.name === rule.field);
   const mode = rule.days ? "days" : rule.field2 !== undefined ? "field" : "value";
   const noValue = rule.op === "empty" || rule.op === "not_empty";
@@ -85,7 +89,7 @@ function RuleRow({ rule, fields, onChange, onRemove }: { rule: ConditionRule; fi
     <div className="space-y-2 rounded-lg bg-muted/40 p-2">
       <div className="flex gap-2">
         <FieldSelect fields={fields} value={rule.field} onChange={(field) => onChange({ field, op: "=", value: null })} />
-        <button type="button" className={ICON_BTN} aria-label="Remove condition" onClick={onRemove}>
+        <button type="button" className={ICON_BTN} aria-label={t("Remove condition")} onClick={onRemove}>
           <Trash2 className="size-4" aria-hidden />
         </button>
       </div>
@@ -101,14 +105,14 @@ function RuleRow({ rule, fields, onChange, onRemove }: { rule: ConditionRule; fi
               else onChange({ field: rule.field, op: "=", value: null });
             }}
           >
-            <option value="value">its value</option>
-            {isDate(f) && <option value="days">days since it (past = positive)</option>}
-            <option value="field">compared with another field</option>
+            <option value="value">{t("its value")}</option>
+            {isDate(f) && <option value="days">{t("days since it (past = positive)")}</option>}
+            <option value="field">{t("compared with another field")}</option>
           </select>
           <select className={SELECT} value={rule.op} onChange={(e) => onChange({ ...rule, op: e.target.value as ConditionRule["op"] })}>
             {OPS.filter((o) => mode === "value" || (o.value !== "empty" && o.value !== "not_empty")).map((o) => (
               <option key={o.value} value={o.value}>
-                {o.label}
+                {t(o.label)}
               </option>
             ))}
           </select>
@@ -127,12 +131,13 @@ function RuleRow({ rule, fields, onChange, onRemove }: { rule: ConditionRule; fi
 }
 
 function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; fields: FieldMeta[]; onChange: (a: Action) => void; onRemove: () => void }) {
+  const t = useT();
   const TITLES = { update: "Set fields", archive: "Archive the record", checklist: "Add a checklist item", email: "Send an email" };
   return (
     <div className="space-y-2 rounded-lg bg-muted/40 p-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium">{TITLES[action.type]}</span>
-        <button type="button" className={ICON_BTN} aria-label="Remove action" onClick={onRemove}>
+        <span className="font-medium">{t(TITLES[action.type])}</span>
+        <button type="button" className={ICON_BTN} aria-label={t("Remove action")} onClick={onRemove}>
           <Trash2 className="size-4" aria-hidden />
         </button>
       </div>
@@ -154,7 +159,7 @@ function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; 
               <button
                 type="button"
                 className={ICON_BTN}
-                aria-label="Remove field"
+                aria-label={t("Remove field")}
                 onClick={() => {
                   const set = { ...action.set };
                   delete set[k];
@@ -166,27 +171,27 @@ function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; 
             </div>
           ))}
           <button type="button" className={BTN} onClick={() => onChange({ ...action, set: { ...action.set, "": null } })} disabled={"" in action.set}>
-            <Plus className="size-4" aria-hidden /> Field to set
+            <Plus className="size-4" aria-hidden /> {t("Field to set")}
           </button>
         </>
       )}
       {action.type === "checklist" && (
         <>
           <label className="block text-sm">
-            Add it to
+            {t("Add it to")}
             <select className={SELECT} value={action.target ?? ""} onChange={(e) => onChange({ ...action, target: e.target.value || undefined })}>
-              <option value="">this record</option>
+              <option value="">{t("this record")}</option>
               {fields
                 .filter((f) => f.lookup)
                 .map((f) => (
                   <option key={f.name} value={f.name}>
-                    the linked {f.label}
+                    {t("the linked")} {f.label}
                   </option>
                 ))}
             </select>
           </label>
           <label className="block text-sm">
-            Item text (use {"{field}"} to insert a value)
+            {t("Item text (use {field} to insert a value)", { field: "{field}" })}
             <input className={INPUT} value={action.item} onChange={(e) => onChange({ ...action, item: e.target.value })} />
           </label>
         </>
@@ -195,19 +200,19 @@ function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; 
         <>
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="block text-sm">
-              From (a name, or a tsav.net address)
+              {t("From (a name, or a tsav.net address)")}
               <input className={INPUT} value={action.from} onChange={(e) => onChange({ ...action, from: e.target.value })} />
             </label>
             <label className="block text-sm">
-              To (commas between; {"{email}"} = the record&apos;s email)
+              {t("To (commas between; {email} = the record's email)", { email: "{email}" })}
               <input className={INPUT} value={csv(action.to)} onChange={(e) => onChange({ ...action, to: fromCsv(e.target.value) })} />
             </label>
             <label className="block text-sm">
-              Bcc
+              {t("Bcc")}
               <input className={INPUT} value={csv(action.bcc)} onChange={(e) => onChange({ ...action, bcc: fromCsv(e.target.value) })} />
             </label>
             <label className="block text-sm">
-              Subject (use {"{field}"} to insert a value)
+              {t("Subject (use {field} to insert a value)", { field: "{field}" })}
               <input className={INPUT} value={action.subject} onChange={(e) => onChange({ ...action, subject: e.target.value })} />
             </label>
           </div>
@@ -221,13 +226,13 @@ function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; 
             ).map(([k, l]) => (
               <label key={k} className="flex min-h-11 items-center gap-2 text-sm">
                 <input type="checkbox" className="size-5" checked={Boolean(action[k])} onChange={(e) => onChange({ ...action, [k]: e.target.checked })} />
-                {l}
+                {t(l)}
               </label>
             ))}
           </div>
           {fields.some((f) => ["file", "image", "signature"].includes(f.type)) && (
             <div className="text-sm">
-              Attach files from:
+              {t("Attach files from:")}
               <div className="flex flex-wrap gap-x-4">
                 {fields
                   .filter((f) => ["file", "image", "signature"].includes(f.type))
@@ -254,6 +259,7 @@ function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; 
 type Props = { id: number | null; table: string; tableLabel: string; fields: FieldMeta[]; initial: AutomationInput; editable: boolean };
 
 export function AutomationEditor({ id, table, tableLabel, fields, initial, editable }: Props) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [a, setA] = useState<AutomationInput>(initial);
@@ -270,8 +276,8 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
           const clean = { ...a, actions: a.actions.map((x) => (x.type === "update" ? { ...x, set: Object.fromEntries(Object.entries(x.set).filter(([k]) => k)) } : x)) };
           const r = await saveAutomationAction(id, table, clean);
           setProblems(r.ok ? [] : (r.problems ?? [r.message]));
-          if (!r.ok) return void toast.error(r.message);
-          toast.success("Saved");
+          if (!r.ok) return void toast.error(t(r.message));
+          toast.success(t("Saved"));
           if (!id && r.id) router.push(`/admin/automations/${r.id}`);
           else router.refresh();
         });
@@ -280,15 +286,15 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
       <fieldset disabled={!editable || pending} className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
           <label className="block text-sm font-medium">
-            Title
+            {t("Title")}
             <input className={INPUT} value={a.title} onChange={(e) => setA({ ...a, title: e.target.value })} />
           </label>
           <label className="flex min-h-11 items-center gap-2 self-end text-base">
-            <input type="checkbox" className="size-5" checked={a.active} onChange={(e) => setA({ ...a, active: e.target.checked })} /> Active
+            <input type="checkbox" className="size-5" checked={a.active} onChange={(e) => setA({ ...a, active: e.target.checked })} /> {t("Active")}
           </label>
         </div>
 
-        <Section title="When" hint={`Which ${tableLabel} events start it.`}>
+        <Section title={t("When")} hint={t("Which {table} events start it.", { table: tableLabel })}>
           <div className="flex flex-wrap gap-x-4">
             {(
               [
@@ -300,12 +306,12 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
             ).map(([e, l]) => (
               <label key={e} className="flex min-h-11 items-center gap-2 text-sm">
                 <input type="checkbox" className="size-5" checked={a.events.includes(e)} onChange={(ev) => setEvent(e, ev.target.checked)} />
-                {l}
+                {t(l)}
               </label>
             ))}
           </div>
           <div className="text-sm">
-            A specific field changes:
+            {t("A specific field changes:")}
             <div className="mt-1 flex flex-wrap gap-2">
               {fieldEvents.map((f) => (
                 <button key={f} type="button" className="rounded-full border px-3 py-1.5 text-sm hover:bg-muted" onClick={() => setEvent(`field:${f}`, false)}>
@@ -313,7 +319,7 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
                 </button>
               ))}
               <select className="h-9 rounded-lg border bg-card px-2 text-sm" value="" onChange={(e) => e.target.value && setEvent(`field:${e.target.value}`, true)}>
-                <option value="">+ add field…</option>
+                <option value="">{t("+ add field…")}</option>
                 {fields
                   .filter((f) => !fieldEvents.includes(f.name))
                   .map((f) => (
@@ -326,11 +332,11 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
           </div>
         </Section>
 
-        <Section title="If" hint="Leave empty to always run.">
+        <Section title={t("If")} hint={t("Leave empty to always run.")}>
           {a.conditions.rules.length > 1 && (
             <select className={SELECT} value={a.conditions.match} onChange={(e) => setA({ ...a, conditions: { ...a.conditions, match: e.target.value as "all" | "any" } })}>
-              <option value="all">All of these are true</option>
-              <option value="any">Any of these is true</option>
+              <option value="all">{t("All of these are true")}</option>
+              <option value="any">{t("Any of these is true")}</option>
             </select>
           )}
           {a.conditions.rules.map((r, i) => (
@@ -343,11 +349,11 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
             />
           ))}
           <button type="button" className={BTN} onClick={() => setA({ ...a, conditions: { ...a.conditions, rules: [...a.conditions.rules, { field: "", op: "=", value: null }] } })}>
-            <Plus className="size-4" aria-hidden /> Condition
+            <Plus className="size-4" aria-hidden /> {t("Condition")}
           </button>
         </Section>
 
-        <Section title="Then">
+        <Section title={t("Then")}>
           {a.actions.map((x, i) => (
             <ActionEditor
               key={i}
@@ -371,16 +377,16 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
               if (blank[type]) setA({ ...a, actions: [...a.actions, blank[type]] });
             }}
           >
-            <option value="">+ Add an action…</option>
-            <option value="update">Set fields</option>
-            <option value="email">Send an email</option>
-            <option value="checklist">Add a checklist item</option>
-            <option value="archive">Archive the record</option>
+            <option value="">{t("+ Add an action…")}</option>
+            <option value="update">{t("Set fields")}</option>
+            <option value="email">{t("Send an email")}</option>
+            <option value="checklist">{t("Add a checklist item")}</option>
+            <option value="archive">{t("Archive the record")}</option>
           </select>
         </Section>
 
         <label className="block text-sm font-medium">
-          Notes
+          {t("Notes")}
           <textarea className="min-h-20 w-full rounded-lg border bg-card p-3 text-base" value={a.notes ?? ""} onChange={(e) => setA({ ...a, notes: e.target.value })} />
         </label>
 
@@ -393,7 +399,7 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
         )}
         {editable && (
           <button type="submit" className="h-11 rounded-lg border border-foreground bg-foreground px-5 text-sm font-medium text-background disabled:opacity-50">
-            {id ? "Save" : "Create automation"}
+            {t(id ? "Save" : "Create automation")}
           </button>
         )}
       </fieldset>

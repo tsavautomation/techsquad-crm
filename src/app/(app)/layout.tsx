@@ -5,6 +5,7 @@ import { ADMIN_SCREENS, canSeeScreen } from "@/lib/admin/screens";
 import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
 import { tableHref } from "@/registry/routes";
+import { getT } from "@/i18n/server";
 
 // What the Create button offers, most used first (only tables the person may add to).
 // Names are our own: WebAuthor's item labels are vague here ("Record", "Item").
@@ -20,18 +21,19 @@ const CREATE: [table: string, label: string][] = [
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
+  const t = await getT();
   const navItems: NavItem[] = visibleModules(user.permissions).map((m) => ({
     slug: m.slug,
     href: `/${m.slug}`,
-    title: m.title,
-    shortTitle: m.shortTitle,
+    title: t(m.title),
+    shortTitle: t(m.shortTitle),
     icon: m.icon,
-    tabs: m.tabs.map((t) => ({ href: `/${m.slug}/${t.slug}`, title: t.title })),
+    tabs: m.tabs.map((tb) => ({ href: `/${m.slug}/${tb.slug}`, title: t(tb.title) })),
   }));
-  const create: CreateItem[] = CREATE.map(([n, label]) => ({ t: getTable(n), label }))
-    .filter(({ t }) => canDo(user.permissions, t, "create", getTable))
-    .map(({ t, label }) => ({ href: `${tableHref(t)}/new`, label, icon: t.tab ?? t.name }));
-  const opens = (t: string) => canOpen(user.permissions, getTable(t), getTable);
+  const create: CreateItem[] = CREATE.map(([n, label]) => ({ table: getTable(n), label }))
+    .filter(({ table }) => canDo(user.permissions, table, "create", getTable))
+    .map(({ table, label }) => ({ href: `${tableHref(table)}/new`, label: t(label), icon: table.tab ?? table.name }));
+  const opens = (name: string) => canOpen(user.permissions, getTable(name), getTable);
   const extras: Extras = { tasks: opens("tasks"), insights: opens("projects"), data: opens("contacts") };
   const showAdmin = ADMIN_SCREENS.some((s) => canSeeScreen(s, user.permissions, user.isSysadmin));
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;

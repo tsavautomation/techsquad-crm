@@ -3,8 +3,11 @@ import { MODULES } from "@/config/modules";
 import { requireUser } from "@/lib/auth/session";
 import { REGISTRY } from "@/registry";
 import { describeNotes, describeRule, describeType } from "@/registry/describe";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Field catalogue" };
+export async function generateMetadata() {
+  return { title: (await getT())("Field catalogue") };
+}
 
 const MODULE_TITLES: Record<string, string> = {
   ...Object.fromEntries(MODULES.map((m) => [m.slug, m.title])),
@@ -13,6 +16,7 @@ const MODULE_TITLES: Record<string, string> = {
 
 /** Read-only review page for the registry (M3). Visible to people who may design forms. */
 export default async function CataloguePage() {
+  const tr = await getT();
   const user = await requireUser();
   if (!user.permissions.has("projects.module.design_design")) notFound();
 
@@ -21,14 +25,14 @@ export default async function CataloguePage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="text-2xl font-semibold">Field catalogue</h1>
+      <h1 className="text-2xl font-semibold">{tr("Field catalogue")}</h1>
       <p className="mt-1 mb-6 text-sm text-muted-foreground">
         Every table, field, option and rule carried over from WebAuthor ({REGISTRY.length} tables,{" "}
         {REGISTRY.reduce((n, t) => n + t.fields.length, 0)} fields, {REGISTRY.reduce((n, t) => n + t.rules.length, 0)}{" "}
         rules). Read-only.
       </p>
 
-      <nav aria-label="Tables" className="mb-8 flex flex-wrap gap-2 text-sm">
+      <nav aria-label={tr("Tables")} className="mb-8 flex flex-wrap gap-2 text-sm">
         {REGISTRY.map((t) => (
           <a key={t.name} href={`#${t.name}`} className="rounded-full border px-3 py-1 hover:bg-muted">
             {t.label}
@@ -79,14 +83,14 @@ export default async function CataloguePage() {
 
               {t.rules.length > 0 && (
                 <div className="mt-3">
-                  <h4 className="mb-1 text-sm font-medium">Rules</h4>
+                  <h4 className="mb-1 text-sm font-medium">{tr("Rules")}</h4>
                   <ul className="space-y-1 text-sm">
                     {t.rules.map((r) => {
                       const d = describeRule(r, t);
                       return (
                         <li key={r.id} className="rounded bg-muted/50 px-3 py-2">
                           <span className="text-muted-foreground">#{r.id} </span>
-                          When {d.when} → {d.then}
+                          {tr("When")} {d.when} → {d.then}
                           {r.dropped && <span className="block text-xs text-amber-700">⚠ ignored from WebAuthor: {r.dropped.join("; ")}</span>}
                         </li>
                       );

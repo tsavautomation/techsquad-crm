@@ -52,7 +52,7 @@ Replacement for the WebAuthor CRM at techsquad.webauthor.com.
 - `npm run gen:registry`: regenerate `src/registry/tables/*` from the JSON. **This overwrites hand edits**, so check `git diff`.
 - `npx tsx scripts/generate-schema.ts <file>`: SQL for record tables. It generated the M4 migration; never regenerate an applied migration.
 - `npm run db:push`: apply new migrations to the linked **dev** project. `npm run db:types` regenerates `database.types.ts` after every migration.
-- `npm run db:test-rls` (68 permission checks) and `npm run db:test-workflows` (34 workflow checks) run against dev and are fully rolled back. Run both after any change to policies, permissions or workflows.
+- `npm run db:test-rls` (73 permission checks) and `npm run db:test-workflows` (34 workflow checks) run against dev and are fully rolled back. Run both after any change to policies, permissions or workflows.
 - `npm run users:sync -- --apply [--only a@b.c]`: create logins and sync groups from `scripts/data/users.ts`. Sign-up links go to `.invite-links.txt`.
 - Agent PowerShell sessions must refresh PATH (Machine + User) before calling node/npm/npx. In the user's own terminal, use `npx.cmd` (script execution is disabled).
 - Migration file names must sort after the last applied one. Check before `db push`.
@@ -88,6 +88,7 @@ Replacement for the WebAuthor CRM at techsquad.webauthor.com.
   - The app is installable as a PWA (manifest + icons).
 - Modules and tab order follow SPEC §1.1. Record forms follow the field order and section headings in SPEC §3.
 - Dates are shown as m/d/yyyy and date-times as m/d/yyyy h:mm AM/PM, all in America/New_York.
+- **Two screen languages** (SPEC §9.1 I-a). Write English in code and wrap every on-screen text: `const t = useT()` (client) or `const tr = await getT()` (server, where `t` is usually the table), then `t("Text {x}", { x })`. Add the Portuguese to `src/i18n/pt.ts` (registry texts live in `pt-registry.ts`); `tests/i18n.test.ts` fails on a missing one. Pages hand forms and lists `localizeTable(t, lang)`, never translate stored values, and keep emails/PDFs in English.
 
 ## Email
 - The sender identities (info@tsav.net, saulo@tsav.net, "TS CRM") require the tsav.net domain to be verified in Resend.

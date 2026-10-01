@@ -5,11 +5,15 @@ import { todayET } from "@/lib/dates";
 import { loadWeek } from "@/lib/schedule/week";
 import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Calendar" };
+export async function generateMetadata() {
+  return { title: (await getT())("Calendar") };
+}
 
 /** Schedule › Calendar (F1): week / team / list of visits. */
 export default async function CalendarPage(props: PageProps<"/schedule/calendar">) {
+  const tr = await getT();
   const user = await requireUser();
   const t = getTable("visits");
   if (!canOpen(user.permissions, t, getTable)) notFound();
@@ -20,7 +24,7 @@ export default async function CalendarPage(props: PageProps<"/schedule/calendar"
 
   return (
     <div className="mx-auto max-w-7xl">
-      <h1 className="mb-3 text-2xl font-semibold">Calendar</h1>
+      <h1 className="mb-3 text-2xl font-semibold">{tr("Calendar")}</h1>
       <Calendar
         weekStart={weekStart}
         today={todayET()}

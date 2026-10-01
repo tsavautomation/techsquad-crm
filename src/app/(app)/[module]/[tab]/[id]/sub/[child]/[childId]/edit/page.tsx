@@ -9,12 +9,16 @@ import { canDo } from "@/registry/permissions";
 import { recordHref, tableFromRoute } from "@/registry/routes";
 import { RecordForm } from "@/components/records/record-form";
 import { RecordToolbar } from "@/components/records/record-toolbar";
+import { getLang, getT } from "@/i18n/server";
+import { localized } from "@/i18n/registry";
+
 
 /** Edit (or delete) a sub-list row, e.g. a Contact's Interaction. */
 export default async function EditSubRecordPage(props: PageProps<"/[module]/[tab]/[id]/sub/[child]/[childId]/edit">) {
+  const tr = await getT();
   const { module, tab, id, child, childId } = await props.params;
   const parent = tableFromRoute(module, tab);
-  const t = REGISTRY.find((c) => c.name === child && c.parent?.table === parent?.name);
+  const t = localized(REGISTRY.find((c) => c.name === child && c.parent?.table === parent?.name), await getLang());
   const parentId = Number(id);
   const rowId = Number(childId);
   if (!parent || !t || !Number.isInteger(parentId) || !Number.isInteger(rowId)) notFound();
@@ -30,7 +34,7 @@ export default async function EditSubRecordPage(props: PageProps<"/[module]/[tab
       <Link href={back} className="mb-2 inline-flex h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden /> {parentRow.title ?? `#${parentId}`}
       </Link>
-      <h1 className="mb-4 text-2xl font-semibold">Edit {rec.row.title ?? t.label.toLowerCase()}</h1>
+      <h1 className="mb-4 text-2xl font-semibold">{tr("Edit")} {rec.row.title ?? t.label.toLowerCase()}</h1>
       <RecordToolbar
         table={t.name}
         id={rowId}

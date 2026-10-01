@@ -7,6 +7,7 @@ import type { Progress } from "@/lib/files/resumable";
 import { uploadFile } from "@/lib/files/upload-file";
 import type { FileItem } from "@/lib/records/values";
 import type { FieldDef } from "@/registry/types";
+import { useT } from "@/i18n/client";
 
 type Props = {
   table: string;
@@ -29,6 +30,7 @@ function formatSize(bytes: number | null) {
  * then become attachments when the record is saved.
  */
 export function FileField({ table, recordId, field: f, value, onChange, disabled }: Props) {
+  const t = useT();
   const files = (Array.isArray(value) ? value : []) as FileItem[];
   const [busy, setBusy] = useState<Record<string, Progress>>({});
   const pickRef = useRef<HTMLInputElement>(null);
@@ -51,7 +53,7 @@ export function FileField({ table, recordId, field: f, value, onChange, disabled
       try {
         const r = await uploadFile(table, f.name, recordId, file, (p) => setBusy((b) => ({ ...b, [file.name]: p })));
         if (!r.ok) {
-          toast.error(r.message);
+          toast.error(t(r.message));
           continue;
         }
         onChange(single ? [r.item] : [...filesRef.current, r.item]);
@@ -111,12 +113,12 @@ export function FileField({ table, recordId, field: f, value, onChange, disabled
             className="inline-flex h-11 items-center gap-2 rounded-lg border px-4 text-sm hover:bg-muted"
           >
             <Paperclip className="size-4" aria-hidden />
-            {imagesOnly ? "Choose photo" : "Choose files"}
+            {t(imagesOnly ? "Choose photo" : "Choose files")}
           </button>
           {(imagesOnly || !f.fileTypes) && (
             <button type="button" onClick={() => cameraRef.current?.click()} className="inline-flex h-11 items-center gap-2 rounded-lg border px-4 text-sm hover:bg-muted">
               <Camera className="size-4" aria-hidden />
-              Take photo
+              {t("Take photo")}
             </button>
           )}
         </div>
@@ -154,17 +156,18 @@ export function FileField({ table, recordId, field: f, value, onChange, disabled
 
 /** Progress of one upload; "paused" while the phone is in a call, locked or offline. */
 export function UploadBar({ name, p }: { name: string; p: Progress }) {
+  const t = useT();
   const pct = p.total ? Math.floor((p.sent / p.total) * 100) : 0;
   return (
     <div className="rounded-[10px] border bg-card px-3 py-2" role="status" aria-live="polite">
       <div className="flex items-center justify-between gap-2 text-[13px]">
         <span className="min-w-0 truncate">{name}</span>
-        <span className={p.state === "paused" ? "shrink-0 text-warn-fg" : "shrink-0 text-muted-foreground"}>{p.state === "paused" ? "Paused" : `${pct}%`}</span>
+        <span className={p.state === "paused" ? "shrink-0 text-warn-fg" : "shrink-0 text-muted-foreground"}>{p.state === "paused" ? t("Paused") : `${pct}%`}</span>
       </div>
       <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
         <div className={p.state === "paused" ? "h-full rounded-full bg-warn-fg/60" : "h-full rounded-full bg-primary transition-[width]"} style={{ width: `${Math.max(2, pct)}%` }} />
       </div>
-      {p.state === "paused" && <p className="mt-1 text-xs text-warn-fg">Interrupted. Keep the CRM open: it continues from {pct}% when the connection is back.</p>}
+      {p.state === "paused" && <p className="mt-1 text-xs text-warn-fg">{t("Interrupted. Keep the CRM open: it continues from {pct}% when the connection is back.", { pct })}</p>}
     </div>
   );
 }

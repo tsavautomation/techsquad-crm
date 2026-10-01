@@ -5,11 +5,13 @@ import { MapPin } from "lucide-react";
 import { addressDetailsAction, addressSuggestAction, type AddressSuggestion } from "@/lib/records/address-actions";
 import type { Address } from "@/lib/records/values";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 type Props = { value: Address; onChange: (a: Address) => void; disabled?: boolean; box: string };
 
 /** Street / line 2 / city / state / ZIP, with US address suggestions under the street box (Google Places). */
 export function AddressInput({ value: a, onChange, disabled, box }: Props) {
+  const t = useT();
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const session = useRef<string>("");
@@ -48,8 +50,8 @@ export function AddressInput({ value: a, onChange, disabled, box }: Props) {
     <div className="grid grid-cols-6 gap-2">
       <div className="relative col-span-6">
         <input
-          aria-label="Street"
-          placeholder="Street (start typing to search)"
+          aria-label={t("Street")}
+          placeholder={t("Street (start typing to search)")}
           autoComplete="off"
           disabled={disabled}
           className={cn(box, "h-11")}
@@ -83,14 +85,14 @@ export function AddressInput({ value: a, onChange, disabled, box }: Props) {
                 </button>
               </li>
             ))}
-            <li className="px-3 py-1 text-right text-[10px] text-muted-foreground">Powered by Google</li>
+            <li className="px-3 py-1 text-right text-[10px] text-muted-foreground">{t("Powered by Google")}</li>
           </ul>
         )}
       </div>
-      <input aria-label="Address line 2" placeholder="Apt, suite (optional)" autoComplete="off" disabled={disabled} className={cn(box, "col-span-6 h-11")} value={a.address_2 ?? ""} onChange={(e) => set("address_2", e.target.value)} />
-      <input aria-label="City" placeholder="City" autoComplete="off" disabled={disabled} className={cn(box, "col-span-3 h-11")} value={a.city ?? ""} onChange={(e) => set("city", e.target.value)} />
-      <input aria-label="State" placeholder="State" autoComplete="off" maxLength={2} disabled={disabled} className={cn(box, "col-span-1 h-11 uppercase")} value={a.state ?? ""} onChange={(e) => set("state", e.target.value.toUpperCase())} />
-      <input aria-label="ZIP" placeholder="ZIP" inputMode="numeric" autoComplete="off" maxLength={10} disabled={disabled} className={cn(box, "col-span-2 h-11")} value={a.zip ?? ""} onChange={(e) => set("zip", e.target.value)} />
+      <input aria-label={t("Address line 2")} placeholder={t("Apt, suite (optional)")} autoComplete="off" disabled={disabled} className={cn(box, "col-span-6 h-11")} value={a.address_2 ?? ""} onChange={(e) => set("address_2", e.target.value)} />
+      <input aria-label={t("City")} placeholder={t("City")} autoComplete="off" disabled={disabled} className={cn(box, "col-span-3 h-11")} value={a.city ?? ""} onChange={(e) => set("city", e.target.value)} />
+      <input aria-label={t("State")} placeholder={t("State")} autoComplete="off" maxLength={2} disabled={disabled} className={cn(box, "col-span-1 h-11 uppercase")} value={a.state ?? ""} onChange={(e) => set("state", e.target.value.toUpperCase())} />
+      <input aria-label={t("ZIP")} placeholder={t("ZIP")} inputMode="numeric" autoComplete="off" maxLength={10} disabled={disabled} className={cn(box, "col-span-2 h-11")} value={a.zip ?? ""} onChange={(e) => set("zip", e.target.value)} />
     </div>
   );
 }

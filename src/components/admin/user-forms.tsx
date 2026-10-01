@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Copy, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { inviteUserAction, saveGroupAction, sendPasswordLinkAction, setUserGroupsAction, updateUserAction } from "@/lib/admin/user-actions";
+import { useT } from "@/i18n/client";
 
 export type GroupChoice = { id: number; name: string; system: boolean; active: boolean };
 
@@ -23,9 +24,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 /** Group checkboxes. Built-in groups are locked for non-System Administrators (the database enforces it too). */
 function GroupPicker({ groups, value, onChange, disabled, isSysadmin }: { groups: GroupChoice[]; value: number[]; onChange: (v: number[]) => void; disabled?: boolean; isSysadmin: boolean }) {
+  const t = useT();
   return (
     <fieldset className="rounded-lg border p-3" disabled={disabled}>
-      <legend className="px-1 text-sm font-medium">Groups</legend>
+      <legend className="px-1 text-sm font-medium">{t("Groups")}</legend>
       <div className="grid gap-1 sm:grid-cols-2">
         {groups
           .filter((g) => g.name !== "Everyone")
@@ -45,32 +47,34 @@ function GroupPicker({ groups, value, onChange, disabled, isSysadmin }: { groups
             </label>
           ))}
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">Everyone is included automatically.</p>
+      <p className="mt-2 text-xs text-muted-foreground">{t("Everyone is included automatically.")}</p>
     </fieldset>
   );
 }
 
 function LinkBox({ link, emailed }: { link: string; emailed: boolean }) {
+  const t = useT();
   return (
     <div className="rounded-lg border bg-muted/40 p-3 text-sm">
       <p className="mb-2">
-        {emailed ? "The sign-up link was emailed (in test mode it goes to the test inbox only)." : "The email could not be sent."} You can also copy the link and text it. It works once, for 24 hours.
+        {t(emailed ? "The sign-up link was emailed (in test mode it goes to the test inbox only)." : "The email could not be sent.")} {t("You can also copy the link and text it. It works once, for 24 hours.")}
       </p>
       <button
         type="button"
         className={BTN}
         onClick={() => {
           void navigator.clipboard.writeText(link);
-          toast.success("Link copied");
+          toast.success(t("Link copied"));
         }}
       >
-        <Copy className="size-4" aria-hidden /> Copy sign-up link
+        <Copy className="size-4" aria-hidden /> {t("Copy sign-up link")}
       </button>
     </div>
   );
 }
 
 export function InviteForm({ groups, canSetGroups, isSysadmin }: { groups: GroupChoice[]; canSetGroups: boolean; isSysadmin: boolean }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [email, setEmail] = useState("");
@@ -83,15 +87,15 @@ export function InviteForm({ groups, canSetGroups, isSysadmin }: { groups: Group
     return (
       <div className="space-y-4">
         <p className="text-base">
-          Login created for <strong>{email}</strong>.
+          {t("Login created for")} <strong>{email}</strong>.
         </p>
         <LinkBox link={done.link} emailed={done.emailed} />
         <div className="flex gap-2">
           <button type="button" className={PRIMARY} onClick={() => router.push(`/admin/users/${done.userId}`)}>
-            Open user
+            {t("Open user")}
           </button>
           <button type="button" className={BTN} onClick={() => router.push("/admin/users")}>
-            Back to users
+            {t("Back to users")}
           </button>
         </div>
       </div>
@@ -104,25 +108,25 @@ export function InviteForm({ groups, canSetGroups, isSysadmin }: { groups: Group
         e.preventDefault();
         start(async () => {
           const r = await inviteUserAction({ email, firstName, lastName, groupIds });
-          if (!r.ok) return void toast.error(r.message);
+          if (!r.ok) return void toast.error(t(r.message));
           setDone({ link: r.link ?? "", emailed: Boolean(r.emailed), userId: r.userId ?? "" });
         });
       }}
     >
-      <Field label="Email">
+      <Field label={t("Email")}>
         <input className={INPUT} type="email" required autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="First name">
+        <Field label={t("First name")}>
           <input className={INPUT} required value={firstName} onChange={(e) => setFirst(e.target.value)} />
         </Field>
-        <Field label="Last name">
+        <Field label={t("Last name")}>
           <input className={INPUT} value={lastName} onChange={(e) => setLast(e.target.value)} />
         </Field>
       </div>
       {canSetGroups && <GroupPicker groups={groups} value={groupIds} onChange={setGroups} isSysadmin={isSysadmin} />}
       <button type="submit" disabled={pending} className={PRIMARY}>
-        Create login and send sign-up link
+        {t("Create login and send sign-up link")}
       </button>
     </form>
   );
@@ -139,6 +143,7 @@ type UserProps = {
 };
 
 export function UserForm({ userId, email, initial, groups, can, isSysadmin, isMe }: UserProps) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [firstName, setFirst] = useState(initial.firstName);
@@ -151,13 +156,13 @@ export function UserForm({ userId, email, initial, groups, can, isSysadmin, isMe
     start(async () => {
       if (can.edit) {
         const r = await updateUserAction(userId, { firstName, lastName, active });
-        if (!r.ok) return void toast.error(r.message);
+        if (!r.ok) return void toast.error(t(r.message));
       }
       if (can.groups) {
         const r = await setUserGroupsAction(userId, groupIds);
-        if (!r.ok) return void toast.error(r.message);
+        if (!r.ok) return void toast.error(t(r.message));
       }
-      toast.success("Saved");
+      toast.success(t("Saved"));
       router.refresh();
     });
 
@@ -169,14 +174,14 @@ export function UserForm({ userId, email, initial, groups, can, isSysadmin, isMe
         save();
       }}
     >
-      <Field label="Email">
+      <Field label={t("Email")}>
         <input className={`${INPUT} bg-muted`} value={email} readOnly />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="First name">
+        <Field label={t("First name")}>
           <input className={INPUT} required disabled={!can.edit} value={firstName} onChange={(e) => setFirst(e.target.value)} />
         </Field>
-        <Field label="Last name">
+        <Field label={t("Last name")}>
           <input className={INPUT} disabled={!can.edit} value={lastName} onChange={(e) => setLast(e.target.value)} />
         </Field>
       </div>
@@ -188,7 +193,7 @@ export function UserForm({ userId, email, initial, groups, can, isSysadmin, isMe
       <div className="flex flex-wrap gap-2">
         {(can.edit || can.groups) && (
           <button type="submit" disabled={pending} className={PRIMARY}>
-            Save
+            {t("Save")}
           </button>
         )}
         {can.link && active && (
@@ -199,12 +204,12 @@ export function UserForm({ userId, email, initial, groups, can, isSysadmin, isMe
             onClick={() =>
               start(async () => {
                 const r = await sendPasswordLinkAction(userId);
-                if (!r.ok) return void toast.error(r.message);
+                if (!r.ok) return void toast.error(t(r.message));
                 setLink({ link: r.link ?? "", emailed: Boolean(r.emailed) });
               })
             }
           >
-            <KeyRound className="size-4" aria-hidden /> Send set-password link
+            <KeyRound className="size-4" aria-hidden /> {t("Send set-password link")}
           </button>
         )}
       </div>
@@ -214,6 +219,7 @@ export function UserForm({ userId, email, initial, groups, can, isSysadmin, isMe
 }
 
 export function GroupForm({ groupId, initial, editable }: { groupId: number | null; initial: { name: string; active: boolean }; editable: boolean }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [name, setName] = useState(initial.name);
@@ -225,14 +231,14 @@ export function GroupForm({ groupId, initial, editable }: { groupId: number | nu
         e.preventDefault();
         start(async () => {
           const r = await saveGroupAction(groupId, { name, active });
-          if (!r.ok) return void toast.error(r.message);
-          toast.success("Saved");
+          if (!r.ok) return void toast.error(t(r.message));
+          toast.success(t("Saved"));
           if (!groupId && r.id) router.push(`/admin/groups/${r.id}`);
           else router.refresh();
         });
       }}
     >
-      <Field label="Group name">
+      <Field label={t("Group name")}>
         <input className={INPUT} required disabled={!editable} value={name} onChange={(e) => setName(e.target.value)} />
       </Field>
       <label className="flex min-h-11 items-center gap-3">
@@ -241,7 +247,7 @@ export function GroupForm({ groupId, initial, editable }: { groupId: number | nu
       </label>
       {editable && (
         <button type="submit" disabled={pending} className={PRIMARY}>
-          {groupId ? "Save" : "Create group"}
+          {t(groupId ? "Save" : "Create group")}
         </button>
       )}
     </form>

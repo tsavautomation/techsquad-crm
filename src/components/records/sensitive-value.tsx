@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useT } from "@/i18n/client";
 
 /** Sensitive values (passwords, SSN, credentials) stay masked until the viewer asks to see them. */
 export function SensitiveValue({ value }: { value: string }) {
+  const t = useT();
   const [shown, setShown] = useState(false);
   return (
     <span className="inline-flex items-start gap-2">
@@ -16,7 +18,7 @@ export function SensitiveValue({ value }: { value: string }) {
         aria-pressed={shown}
       >
         {shown ? <EyeOff className="size-3.5" aria-hidden /> : <Eye className="size-3.5" aria-hidden />}
-        {shown ? "Hide" : "Show"}
+        {t(shown ? "Hide" : "Show")}
       </button>
     </span>
   );

@@ -5,13 +5,17 @@ import { todayET } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
 import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Tasks" };
+export async function generateMetadata() {
+  return { title: (await getT())("Tasks") };
+}
 
 type Row = { id: number; details: string | null; member_id: number | null; due_date: string | null; priority: string | null; status: string | null };
 
 /** Tasks board (Portal "Tarefas"): the Administrative › Tasks records as columns by status. */
 export default async function TasksPage(props: PageProps<"/tasks">) {
+  const tr = await getT();
   const user = await requireUser();
   const t = getTable("tasks");
   if (!canOpen(user.permissions, t, getTable)) notFound();
@@ -56,7 +60,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">Tasks</h1>
+      <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Tasks")}</h1>
       <p className="mb-4 text-[12.5px] text-muted-foreground">Team board by status. Drag a card to move it; open it for details, checklist and notes.</p>
       <TaskBoard
         columns={columns}

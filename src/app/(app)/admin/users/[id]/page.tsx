@@ -2,8 +2,11 @@ import { notFound } from "next/navigation";
 import { UserForm, type GroupChoice } from "@/components/admin/user-forms";
 import { requireUser } from "@/lib/auth/session";
 import { recordsDb } from "@/lib/records/data";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "User" };
+export async function generateMetadata() {
+  return { title: (await getT())("User") };
+}
 
 export default async function UserPage(props: PageProps<"/admin/users/[id]">) {
   const me = await requireUser();

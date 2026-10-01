@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import type { TableDef } from "@/registry/types";
 import { FieldInput, type FieldContext } from "./field-input";
 import { VisitAddon } from "./form-addons";
+import { useT } from "@/i18n/client";
 
 type Props = {
   table: TableDef;
@@ -31,6 +32,7 @@ type Props = {
 };
 
 export function RecordForm({ table, recordId, initialValues, baseHref, cancelHref, labels: initialLabels = {}, lockedMessage, redirectTo }: Props) {
+  const t = useT();
   const router = useRouter();
   const [values, setValues] = useState<Values>(initialValues);
   const [labels, setLabels] = useState(initialLabels);
@@ -74,7 +76,7 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
     const reading = toast.loading(`Reading ${target?.label ?? "the date"} from the photo…`);
     void extractFromUploadAction(table.name, name, added.path).then((r) => {
       toast.dismiss(reading);
-      if (!r.ok) return void toast.error(r.message);
+      if (!r.ok) return void toast.error(t(r.message));
       if (!r.value) return void toast.warning(`Couldn't read ${target?.label ?? "it"} from the photo. Please type it in.`);
       setValues((prev) => ({ ...prev, [r.field]: r.value }));
       toast.success(`${target?.label ?? "Date"} filled in from the photo: ${formatDate(r.value)}. Please check it.`);
@@ -86,14 +88,14 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
     startTransition(async () => {
       const result = await saveRecordAction(table.name, recordId, rules.values);
       if (result.ok) {
-        toast.success(recordId ? "Saved" : "Created");
+        toast.success(t(recordId ? "Saved" : "Created"));
         router.push(redirectTo ?? `${baseHref}/${result.id}`);
         router.refresh();
         return;
       }
       setErrors(result.errors);
       const count = Object.keys(result.errors).length;
-      toast.error(result.message ?? `Please fix ${count} field${count === 1 ? "" : "s"}`);
+      toast.error(result.message ? t(result.message) : t(count === 1 ? "Please fix {n} field" : "Please fix {n} fields", { n: count }));
       const first = Object.keys(result.errors)[0];
       if (first) document.getElementById(`f-${first}`)?.focus();
     });
@@ -136,7 +138,7 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
             {f.help && <p className="text-sm text-muted-foreground">{f.help}</p>}
             {err && (
               <p role="alert" className="text-sm text-destructive">
-                {err}
+                {t(err)}
               </p>
             )}
           </div>
@@ -153,10 +155,10 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
         )}
       >
         <Button type="submit" className="h-11 flex-1 md:flex-none md:px-8" disabled={pending || uploading > 0}>
-          {uploading > 0 ? `Uploading ${uploading} file${uploading > 1 ? "s" : ""}…` : pending ? "Saving…" : recordId ? "Save" : `Create ${table.newRecordLabel.replace(/^New /, "").toLowerCase()}`}
+          {uploading > 0 ? t(uploading > 1 ? "Uploading {n} files…" : "Uploading {n} file…", { n: uploading }) : pending ? t("Saving…") : recordId ? t("Save") : t("Create")}
         </Button>
         <Link href={cancelHref} className={cn(buttonVariants({ variant: "outline" }), "h-11 flex-1 md:flex-none md:px-6")}>
-          Cancel
+          {t("Cancel")}
         </Link>
       </div>
     </form>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import type { Address } from "@/lib/records/values";
 import type { FieldDef } from "@/registry/types";
+import { getT } from "@/i18n/server";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
@@ -31,7 +32,8 @@ type Props = {
 };
 
 /** Read-only rendering of one field's value (lists and detail pages). */
-export function FieldValue({ field: f, value, display, href, compact }: Props) {
+export async function FieldValue({ field: f, value, display, href, compact }: Props) {
+  const tr = await getT();
   const empty = <span className="text-muted-foreground">—</span>;
   if (value === null || value === undefined || value === "" || (Array.isArray(value) && !value.length)) return empty;
 
@@ -57,7 +59,7 @@ export function FieldValue({ field: f, value, display, href, compact }: Props) {
         </span>
       );
     case "boolean":
-      return <OptionChip label={value ? "Yes" : "No"} color={value ? "#77af63" : "#d36c5e"} />;
+      return <OptionChip label={tr(value ? "Yes" : "No")} color={value ? "#77af63" : "#d36c5e"} />;
     case "date":
       return <>{formatDate(String(value))}</>;
     case "datetime":

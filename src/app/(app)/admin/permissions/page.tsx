@@ -4,13 +4,17 @@ import { PermissionMatrix, type Perm } from "@/components/admin/permission-matri
 import { usedPermissionKeys } from "@/lib/admin/permission-usage";
 import { requireUser } from "@/lib/auth/session";
 import { recordsDb } from "@/lib/records/data";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Permissions" };
+export async function generateMetadata() {
+  return { title: (await getT())("Permissions") };
+}
 
 type Group = { id: number; name: string; slug: string; active: boolean };
 
 /** Editable permission matrix, one group at a time (PLAN M12). System Administrators only. */
 export default async function PermissionsPage(props: PageProps<"/admin/permissions">) {
+  const t = await getT();
   const me = await requireUser();
   if (!me.isSysadmin) notFound();
   const { group } = (await props.searchParams) as { group?: string };
@@ -32,11 +36,11 @@ export default async function PermissionsPage(props: PageProps<"/admin/permissio
 
   return (
     <div className="mx-auto max-w-3xl pb-20">
-      <h1 className="text-2xl font-semibold">Permissions</h1>
+      <h1 className="text-2xl font-semibold">{t("Permissions")}</h1>
       <p className="mt-1 mb-4 text-sm text-muted-foreground">
-        What each group may see and do. A person gets everything from all their groups plus Everyone. System Administrators always have everything.
+        {t("What each group may see and do. A person gets everything from all their groups plus Everyone. System Administrators always have everything.")}
       </p>
-      <nav aria-label="Groups" className="mb-4 flex gap-2 overflow-x-auto pb-1">
+      <nav aria-label={t("Groups")} className="mb-4 flex gap-2 overflow-x-auto pb-1">
         {groups.map((x) => (
           <Link
             key={x.id}
