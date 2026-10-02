@@ -1,5 +1,5 @@
 /**
- * Creates missing logins and syncs names + group memberships from scripts/data/users.ts.
+ * Creates missing logins and syncs names + permissions from scripts/data/users.ts and user-permissions.ts.
  *
  *   npx tsx --env-file=.env.local scripts/sync-users.ts           # dry run: shows what would change
  *   npx tsx --env-file=.env.local scripts/sync-users.ts --apply   # makes the changes
@@ -11,8 +11,8 @@
  */
 import { writeFileSync } from "node:fs";
 import { createClient, type User } from "@supabase/supabase-js";
+import { USER_PERMISSIONS, seedKeys } from "./data/user-permissions";
 import { USERS } from "./data/users";
-import { GROUPS } from "./lib/permissions-map";
 
 const apply = process.argv.includes("--apply");
 const onlyArg = process.argv[process.argv.indexOf("--only") + 1];
@@ -40,13 +40,15 @@ function confirmLink(hashedToken: string, type: "invite" | "recovery") {
 }
 
 async function main() {
-  const known = new Set(GROUPS.map((g) => g.slug));
-  for (const u of USERS) for (const g of u.groups) if (!known.has(g)) throw new Error(`${u.email}: unknown group ${g}`);
-
-  const { data: groups, error: gErr } = await db.from("groups").select("id, slug");
-  if (gErr) throw gErr;
-  const groupId = new Map(groups.map((g) => [g.slug, g.id as number]));
-  console.log(`Database: ${groups.length} groups.`);
+  const { data: catalogue, error: cErr } = await db.from("permissions").select("key");
+  if (cErr) throw cErr;
+  const known = new Set(catalogue.map((p) => p.key as string));
+  for (const u of USERS) {
+    const seed = USER_PERMISSIONS[u.email];
+    if (!seed) throw new Error(`${u.email}: no entry in scripts/data/user-permissions.ts`);
+    for (const k of seedKeys(seed)) if (!known.has(k)) throw new Error(`${u.email}: unknown permission ${k}`);
+  }
+  console.log(`Database: ${known.size} permission keys.`);
 
   const existing = new Map((await allAuthUsers()).map((u) => [u.email?.toLowerCase(), u]));
   const links: string[] = [];
@@ -55,6 +57,8 @@ async function main() {
     if (only && !only.has(u.email.toLowerCase())) continue;
     let authUser = existing.get(u.email.toLowerCase());
     const label = `${u.firstName} ${u.lastName} <${u.email}>`;
+    const seed = USER_PERMISSIONS[u.email];
+    const want = new Set(seedKeys(seed));
 
     if (!authUser) {
       console.log(`+ create login   ${label}`);
@@ -79,32 +83,34 @@ async function main() {
       console.log(`= existing       ${label}`);
     }
 
-    // Names + groups (for a user created in a dry run there is nothing to sync yet).
+    // Names + permissions (for a user created in a dry run there is nothing to sync yet).
     if (!authUser) {
-      console.log(`    groups → ${u.groups.join(", ")}`);
+      console.log(`    ${seed.admin ? "administrator" : `${want.size} permissions`}`);
       continue;
     }
-    const { data: current } = await db.from("group_members").select("group_id").eq("user_id", authUser.id);
-    const have = new Set((current ?? []).map((r) => r.group_id as number));
-    const want = new Set(u.groups.map((g) => groupId.get(g)!));
-    const add = [...want].filter((id) => !have.has(id));
-    const remove = [...have].filter((id) => !want.has(id));
-    const slug = (id: number) => groups.find((g) => g.id === id)?.slug;
-    if (add.length) console.log(`    add to       ${add.map(slug).join(", ")}`);
-    if (remove.length) console.log(`    remove from  ${remove.map(slug).join(", ")}`);
+    const [{ data: profile }, { data: current }] = await Promise.all([
+      db.from("profiles").select("is_admin").eq("id", authUser.id).maybeSingle(),
+      db.from("user_permissions").select("permission_key").eq("user_id", authUser.id),
+    ]);
+    const have = new Set((current ?? []).map((r) => r.permission_key as string));
+    const add = [...want].filter((k) => !have.has(k));
+    const remove = [...have].filter((k) => !want.has(k));
+    if (Boolean(profile?.is_admin) !== seed.admin) console.log(`    administrator ${seed.admin ? "yes" : "no"}`);
+    if (add.length) console.log(`    add          ${add.length}: ${add.slice(0, 6).join(", ")}${add.length > 6 ? ", …" : ""}`);
+    if (remove.length) console.log(`    remove       ${remove.length}: ${remove.slice(0, 6).join(", ")}${remove.length > 6 ? ", …" : ""}`);
 
     if (apply) {
       const { error: pErr } = await db
         .from("profiles")
-        .update({ first_name: u.firstName, last_name: u.lastName })
+        .update({ first_name: u.firstName, last_name: u.lastName, is_admin: seed.admin })
         .eq("id", authUser.id);
       if (pErr) throw pErr;
       if (add.length) {
-        const { error } = await db.from("group_members").insert(add.map((group_id) => ({ group_id, user_id: authUser!.id })));
+        const { error } = await db.from("user_permissions").insert(add.map((permission_key) => ({ permission_key, user_id: authUser!.id })));
         if (error) throw error;
       }
       if (remove.length) {
-        const { error } = await db.from("group_members").delete().eq("user_id", authUser.id).in("group_id", remove);
+        const { error } = await db.from("user_permissions").delete().eq("user_id", authUser.id).in("permission_key", remove);
         if (error) throw error;
       }
     }

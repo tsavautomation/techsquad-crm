@@ -935,99 +935,6 @@ export type Database = {
           },
         ]
       }
-      group_members: {
-        Row: {
-          created_at: string
-          group_id: number
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          group_id: number
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          group_id?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "group_members_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "group_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      group_permissions: {
-        Row: {
-          group_id: number
-          permission_key: string
-        }
-        Insert: {
-          group_id: number
-          permission_key: string
-        }
-        Update: {
-          group_id?: number
-          permission_key?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "group_permissions_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "group_permissions_permission_key_fkey"
-            columns: ["permission_key"]
-            isOneToOne: false
-            referencedRelation: "permissions"
-            referencedColumns: ["key"]
-          },
-        ]
-      }
-      groups: {
-        Row: {
-          active: boolean
-          created_at: string
-          id: number
-          is_system: boolean
-          legacy_code: string | null
-          name: string
-          slug: string
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          id?: number
-          is_system?: boolean
-          legacy_code?: string | null
-          name: string
-          slug: string
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          id?: number
-          is_system?: boolean
-          legacy_code?: string | null
-          name?: string
-          slug?: string
-        }
-        Relationships: []
-      }
       inventory_checkouts: {
         Row: {
           archived_at: string | null
@@ -1840,6 +1747,7 @@ export type Database = {
           email: string
           first_name: string | null
           id: string
+          is_admin: boolean
           language: string
           last_name: string | null
           updated_at: string
@@ -1850,6 +1758,7 @@ export type Database = {
           email: string
           first_name?: string | null
           id: string
+          is_admin?: boolean
           language?: string
           last_name?: string | null
           updated_at?: string
@@ -1860,6 +1769,7 @@ export type Database = {
           email?: string
           first_name?: string | null
           id?: string
+          is_admin?: boolean
           language?: string
           last_name?: string | null
           updated_at?: string
@@ -3359,6 +3269,39 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          created_at: string
+          permission_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          permission_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          permission_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "user_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           archived_at: string | null
@@ -3645,36 +3588,6 @@ export type Database = {
             columns: ["workflow_id"]
             isOneToOne: false
             referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      workflow_level_groups: {
-        Row: {
-          group_id: number
-          level_id: number
-        }
-        Insert: {
-          group_id: number
-          level_id: number
-        }
-        Update: {
-          group_id?: number
-          level_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "workflow_level_groups_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workflow_level_groups_level_id_fkey"
-            columns: ["level_id"]
-            isOneToOne: false
-            referencedRelation: "workflow_levels"
             referencedColumns: ["id"]
           },
         ]

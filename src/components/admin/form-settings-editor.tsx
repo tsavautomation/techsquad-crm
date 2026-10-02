@@ -173,7 +173,7 @@ export function FormSettingsEditor({ table, initial, canEdit }: { table: string;
             className="inline-flex h-11 items-center gap-1.5 rounded-lg border px-3 text-sm hover:bg-muted"
             disabled={pending}
             onClick={() => {
-              if (!confirm(t("Put this whole form back as it came from WebAuthor? Labels, options, order and help text changes are removed."))) return;
+              if (!confirm(t("Put this whole form back to how it started? Labels, options, order and help text changes are removed."))) return;
               start(async () => {
                 const r = await resetFormSettingsAction(table);
                 if (!r.ok) return void toast.error(t(r.message));

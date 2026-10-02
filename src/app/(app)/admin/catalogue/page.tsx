@@ -27,7 +27,7 @@ export default async function CataloguePage() {
     <div className="mx-auto max-w-5xl">
       <h1 className="text-2xl font-semibold">{tr("Field catalogue")}</h1>
       <p className="mt-1 mb-6 text-sm text-muted-foreground">
-        Every table, field, option and rule carried over from WebAuthor ({REGISTRY.length} tables,{" "}
+        Every table, field, option and rule in this CRM ({REGISTRY.length} tables,{" "}
         {REGISTRY.reduce((n, t) => n + t.fields.length, 0)} fields, {REGISTRY.reduce((n, t) => n + t.rules.length, 0)}{" "}
         rules). Read-only.
       </p>
@@ -91,7 +91,7 @@ export default async function CataloguePage() {
                         <li key={r.id} className="rounded bg-muted/50 px-3 py-2">
                           <span className="text-muted-foreground">#{r.id} </span>
                           {tr("When")} {d.when} → {d.then}
-                          {r.dropped && <span className="block text-xs text-amber-700">⚠ ignored from WebAuthor: {r.dropped.join("; ")}</span>}
+                          {r.dropped && <span className="block text-xs text-amber-700">⚠ not carried over: {r.dropped.join("; ")}</span>}
                         </li>
                       );
                     })}

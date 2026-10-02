@@ -10,7 +10,7 @@ export async function generateMetadata() {
   return { title: (await getT())("Users") };
 }
 
-type Row = { id: string; email: string; first_name: string | null; last_name: string | null; active: boolean; group_members: { groups: { name: string } | null }[] };
+type Row = { id: string; email: string; first_name: string | null; last_name: string | null; active: boolean; is_admin: boolean; user_permissions: { count: number }[] };
 
 export default async function UsersPage(props: PageProps<"/admin/users">) {
   const t = await getT();
@@ -22,7 +22,7 @@ export default async function UsersPage(props: PageProps<"/admin/users">) {
 
   const db = await recordsDb();
   const [{ data }, { data: signIns }] = await Promise.all([
-    db.from("profiles").select("id, email, first_name, last_name, active, group_members(groups(name))").order("first_name"),
+    db.from("profiles").select("id, email, first_name, last_name, active, is_admin, user_permissions(count)").order("first_name"),
     db.rpc("user_last_sign_in"),
   ]);
   const lastSeen = new Map(((signIns ?? []) as { id: string; last_sign_in_at: string | null }[]).map((r) => [r.id, r.last_sign_in_at]));
@@ -53,18 +53,20 @@ export default async function UsersPage(props: PageProps<"/admin/users">) {
           <ul className="divide-y rounded-2xl border bg-card shadow-card">
             {rows.map((r) => {
               const seen = lastSeen.get(r.id);
+              const n = r.user_permissions[0]?.count ?? 0;
               return (
                 <li key={r.id}>
                   <Link href={`/admin/users/${r.id}`} className="block px-4 py-3 hover:bg-muted/50 active:bg-muted">
                     <span className="flex flex-wrap items-baseline gap-x-2">
                       <span className="text-base font-medium">{[r.first_name, r.last_name].filter(Boolean).join(" ") || r.email}</span>
-                      {!r.active && <span className="rounded bg-muted px-1.5 text-xs">inactive</span>}
+                      {r.is_admin && <span className="rounded bg-primary/10 px-1.5 text-xs text-primary">{t("Administrator")}</span>}
+                      {!r.active && <span className="rounded bg-muted px-1.5 text-xs">{t("inactive")}</span>}
                       {r.active && lastSeen.size > 0 && !seen && <span className="rounded bg-amber-100 px-1.5 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">{t("never signed in")}</span>}
                     </span>
                     <span className="block text-sm text-muted-foreground">{r.email}</span>
                     <span className="block text-xs text-muted-foreground">
-                      {r.group_members.map((m) => m.groups?.name).filter(Boolean).join(", ") || t("No groups")}
-                      {seen && ` · last sign-in ${formatDateTime(seen)}`}
+                      {r.is_admin ? t("Everything") : n ? t("{n} permissions", { n }) : t("No permissions yet")}
+                      {seen && ` · ${t("last sign-in {when}", { when: formatDateTime(seen) })}`}
                     </span>
                   </Link>
                 </li>

@@ -13,7 +13,7 @@ export type CurrentUser = {
   /** Language of this person's screens (their choice in the account menu). */
   language: Lang;
   permissions: ReadonlySet<string>;
-  /** Member of the active System Administrators group (bypasses every permission check). */
+  /** Administrator (profiles.is_admin): bypasses every permission check and may edit permissions. */
   isSysadmin: boolean;
 };
 
@@ -31,10 +31,9 @@ export const getSession = cache(async (): Promise<SessionState> => {
   const userId = claimsData?.claims?.sub;
   if (!userId) return { status: "signed-out" };
 
-  const [{ data: profile }, { data: permissions, error }, { data: sysadmin }] = await Promise.all([
-    supabase.from("profiles").select("email, first_name, last_name, active, language").eq("id", userId).maybeSingle(),
+  const [{ data: profile }, { data: permissions, error }] = await Promise.all([
+    supabase.from("profiles").select("email, first_name, last_name, active, language, is_admin").eq("id", userId).maybeSingle(),
     supabase.rpc("my_permissions"),
-    supabase.from("group_members").select("group_id, groups!inner(slug, active)").eq("user_id", userId).eq("groups.slug", "system_administrators").eq("groups.active", true),
   ]);
   if (error) throw new Error(`Could not load permissions: ${error.message}`);
   if (!profile?.active) return { status: "inactive" };
@@ -48,7 +47,7 @@ export const getSession = cache(async (): Promise<SessionState> => {
       lastName: profile.last_name,
       language: isLang(profile.language) ? profile.language : "en",
       permissions: new Set((permissions as string[] | null) ?? []),
-      isSysadmin: Boolean(sysadmin?.length),
+      isSysadmin: Boolean(profile.is_admin),
     },
   };
 });

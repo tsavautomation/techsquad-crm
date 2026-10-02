@@ -4,13 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { deliver, queueEmail } from "@/lib/engine/email";
+import { checklistKeys } from "@/lib/permissions/checklist";
 import { recordsDb } from "@/lib/records/data";
 import type { ActionResult } from "@/lib/records/record-actions";
 import { adminDb } from "@/lib/supabase/admin";
 
-// Users & groups (PLAN M12). Permissions follow WebAuthor's site-admin pages (SPEC §7):
+// Users (PLAN M12, permissions per person since SPEC §9.1 P1):
 //   site.admin.add_new_member  invite people        site.admin.members  edit names / deactivate
-//   site.admin.groups          groups and memberships (built-in groups: System Administrators only, see migration m12)
+//   administrators (profiles.is_admin) set what each person may do; the database policy enforces the same.
 // Everything except creating the login and its sign-up link runs as the signed-in admin, so row-level security applies.
 
 /** The link is returned too, so an admin can text it (in email test mode the email only reaches the test inbox). */
@@ -48,7 +49,6 @@ const InviteInput = z.object({
   email: z.email().transform((s) => s.trim().toLowerCase()),
   firstName: z.string().trim().min(1, "First name is required").max(80),
   lastName: z.string().trim().max(80),
-  groupIds: z.array(z.number().int()),
 });
 
 export async function inviteUserAction(input: z.input<typeof InviteInput>): Promise<ActionResult & LinkResult & { userId?: string }> {
@@ -56,8 +56,7 @@ export async function inviteUserAction(input: z.input<typeof InviteInput>): Prom
   if (!me.permissions.has("site.admin.add_new_member")) return DENIED;
   const parsed = InviteInput.safeParse(input);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
-  const { email, firstName, lastName, groupIds } = parsed.data;
-  if (groupIds.length && !me.permissions.has("site.admin.groups")) return { ok: false, message: "You may invite people, but not choose their groups." };
+  const { email, firstName, lastName } = parsed.data;
 
   const db = await recordsDb();
   const { data: existing } = await db.from("profiles").select("id").ilike("email", email).maybeSingle();
@@ -66,11 +65,6 @@ export async function inviteUserAction(input: z.input<typeof InviteInput>): Prom
   const { data, error } = await adminDb().auth.admin.generateLink({ type: "invite", email, options: { data: { first_name: firstName, last_name: lastName } } });
   if (error) return { ok: false, message: error.message };
   const userId = data.user.id;
-
-  if (groupIds.length) {
-    const { error: gErr } = await db.from("group_members").insert(groupIds.map((group_id) => ({ group_id, user_id: userId })));
-    if (gErr) return { ok: false, message: `Login created, but groups could not be set: ${gErr.message}`, userId } as ActionResult & { userId: string };
-  }
   const link = confirmLink(data.properties.hashed_token, "invite");
   const sent = await emailLink(email, firstName, link, true);
   revalidatePath("/admin/users");
@@ -118,48 +112,40 @@ export async function updateUserAction(userId: string, input: z.input<typeof Pro
   return { ok: true };
 }
 
-/** Replace a person's group memberships with `groupIds`. */
-export async function setUserGroupsAction(userId: string, groupIds: number[]): Promise<ActionResult> {
+const PermissionsInput = z.object({ isAdmin: z.boolean(), keys: z.array(z.string().max(120)).max(500) });
+
+/**
+ * Replace what a person may do (SPEC §9.1 P1): the administrator flag and the full list of keys.
+ * Administrators only; the database enforces the same. Keys outside the checklist are ignored.
+ */
+export async function savePermissionsAction(userId: string, input: z.input<typeof PermissionsInput>): Promise<ActionResult> {
   const me = await requireUser();
-  if (!me.permissions.has("site.admin.groups")) return DENIED;
+  if (!me.isSysadmin) return { ok: false, message: "Only an administrator can change permissions." };
+  const parsed = PermissionsInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
+  if (userId === me.id && !parsed.data.isAdmin) return { ok: false, message: "You can't stop being an administrator yourself. Ask another administrator." };
+  const allowed = checklistKeys();
+  const want = new Set(parsed.data.keys.filter((k) => allowed.has(k)));
+
   const db = await recordsDb();
-  const { data: groups } = await db.from("groups").select("id, slug");
-  const sysadmin = (groups ?? []).find((g) => g.slug === "system_administrators")?.id;
-  const { data: current } = await db.from("group_members").select("group_id").eq("user_id", userId);
-  const have = new Set((current ?? []).map((r) => r.group_id as number));
-  const want = new Set(groupIds);
-  if (userId === me.id && sysadmin && have.has(sysadmin) && !want.has(sysadmin)) return { ok: false, message: "You can't remove yourself from System Administrators." };
-  const add = [...want].filter((id) => !have.has(id));
-  const remove = [...have].filter((id) => !want.has(id));
+  const { data: current, error: cErr } = await db.from("user_permissions").select("permission_key").eq("user_id", userId);
+  if (cErr) return { ok: false, message: cErr.message };
+  const have = new Set((current ?? []).map((r) => r.permission_key));
+  const add = [...want].filter((k) => !have.has(k));
+  const remove = [...have].filter((k) => !want.has(k));
+
+  const { data: prof, error: pErr } = await db.from("profiles").update({ is_admin: parsed.data.isAdmin }).eq("id", userId).select("id");
+  if (pErr) return { ok: false, message: pErr.message };
+  if (!prof?.length) return { ok: false, message: "User not found." };
   if (add.length) {
-    const { error } = await db.from("group_members").insert(add.map((group_id) => ({ group_id, user_id: userId })));
-    if (error) return { ok: false, message: /row-level security/.test(error.message) ? "Only System Administrators can change the built-in groups." : error.message };
+    const { error } = await db.from("user_permissions").insert(add.map((permission_key) => ({ user_id: userId, permission_key })));
+    if (error) return { ok: false, message: error.message };
   }
   if (remove.length) {
-    const { data, error } = await db.from("group_members").delete().eq("user_id", userId).in("group_id", remove).select("group_id");
+    const { error } = await db.from("user_permissions").delete().eq("user_id", userId).in("permission_key", remove);
     if (error) return { ok: false, message: error.message };
-    if ((data?.length ?? 0) < remove.length) return { ok: false, message: "Only System Administrators can change the built-in groups." };
   }
   revalidatePath("/admin/users");
-  revalidatePath("/admin/groups");
+  revalidatePath("/", "layout"); // menus depend on permissions
   return { ok: true };
-}
-
-const GroupInput = z.object({ name: z.string().trim().min(1, "Name is required").max(60), active: z.boolean() });
-
-export async function saveGroupAction(groupId: number | null, input: z.input<typeof GroupInput>): Promise<ActionResult & { id?: number }> {
-  const me = await requireUser();
-  if (!me.permissions.has("site.admin.groups")) return DENIED;
-  const parsed = GroupInput.safeParse(input);
-  if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
-  const db = await recordsDb();
-  const row = { name: parsed.data.name, active: parsed.data.active };
-  const q = groupId
-    ? db.from("groups").update(row).eq("id", groupId).select("id")
-    : db.from("groups").insert({ ...row, slug: parsed.data.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "group" }).select("id");
-  const { data, error } = await q;
-  if (error) return { ok: false, message: /duplicate/.test(error.message) ? "A group with that name already exists." : error.message };
-  if (!data?.length) return { ok: false, message: "Only System Administrators can change the built-in groups." };
-  revalidatePath("/admin/groups");
-  return { ok: true, id: data[0].id as number };
 }

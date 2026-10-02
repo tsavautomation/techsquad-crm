@@ -68,7 +68,7 @@ export default async function AutomationsPage() {
       </div>
       <p className="mt-1 mb-2 text-sm text-muted-foreground">
         {tr(
-          "The {n} WebAuthor triggers ({active} active). They run right after a record is saved; daily checks run just after midnight (Eastern) and hourly checks every hour. Tap one to see or change it.",
+          "{n} automations ({active} active). They run right after a record is saved; daily checks run just after midnight (Eastern) and hourly checks every hour. Tap one to see or change it.",
           { n: automations.length, active: automations.filter((a) => a.active).length },
         )}
       </p>

@@ -83,7 +83,7 @@ export default async function DataPage(props: PageProps<"/data">) {
   return (
     <div className="mx-auto max-w-[960px]">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("Data")}</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">{t("Incomplete records and possible duplicates. Merging duplicates comes after the WebAuthor import.")}</p>
+      <p className="mb-4 text-[12.5px] text-muted-foreground">{t("Incomplete records and possible duplicates. Merging duplicates comes after the data import.")}</p>
       <div className="mb-[18px] grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi value={`${pct}%`} label={t("Complete overall")} />
         <Kpi value={String(gaps.length)} label={t("Incomplete records")} alert={gaps.length > 0} />

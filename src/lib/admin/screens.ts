@@ -1,11 +1,9 @@
-// The admin screens (PLAN M12) and who sees each. Keys are WebAuthor permissions (SPEC §7);
-// "sysadmin" means System Administrators only.
+// The admin screens (PLAN M12) and who sees each. Keys are permissions from the checklist
+// (src/lib/permissions/checklist.ts); "sysadmin" means administrators only.
 export type AdminScreen = { href: string; title: string; description: string; anyOf: string[] | "sysadmin" };
 
 export const ADMIN_SCREENS: AdminScreen[] = [
-  { href: "/admin/users", title: "Users", description: "Invite people, edit names, deactivate logins, choose groups", anyOf: ["site.admin.members", "site.admin.add_new_member"] },
-  { href: "/admin/groups", title: "Groups", description: "Create and rename groups, see who is in each", anyOf: ["site.admin.groups"] },
-  { href: "/admin/permissions", title: "Permissions", description: "What each group may see and do", anyOf: "sysadmin" },
+  { href: "/admin/users", title: "Users", description: "Invite people, edit names, deactivate logins, set what each person may do", anyOf: ["site.admin.members", "site.admin.add_new_member"] },
   { href: "/admin/forms", title: "Form settings", description: "Labels, dropdown options, required fields, order and help text", anyOf: ["projects.module.design_design"] },
   { href: "/admin/onedrive", title: "OneDrive", description: "Where photos, videos and files are stored", anyOf: "sysadmin" },
   { href: "/admin/field-day", title: "Field day", description: "Who gets return cards, when they're due, checklists and tools per service type", anyOf: ["projects.module.design_design"] },
