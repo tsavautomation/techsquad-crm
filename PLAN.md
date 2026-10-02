@@ -54,7 +54,7 @@ Phase 2 will also need a Microsoft 365 / Entra app registration (OneDrive), a Go
 | **F6** | Client portal (customer logins, EN / PT / ES + dark/light in its top bar) + website quote form | **after M14 import** (Fred 2026-09-30); security review |
 | **F7** | *(done: search and alerts bell earlier; undo built 2026-10-02, awaiting OK; SPEC §9.1 F7-a)* Global search, notification bell, undo | can be spread over F1–F6 |
 | **P1** | *(pushed 2026-10-02; SPEC §9.1 P1-a…d)* Simple permissions: per-person checklist + Administrator flag instead of groups; WebAuthor-only permissions and on-screen mentions removed | |
-| **P2** | *(built 2026-10-02, awaiting OK; SPEC §9.1 P2-a…e)* Time clock with GPS (clock in / out, visit arrivals, office view, reminders) + employee performance (reports with aspect and weight, score engine, field signals, skills) | |
+| **P2** | *(pushed 2026-10-02; SPEC §9.1 P2-a…f)* Time clock with GPS (clock in / out, visit arrivals, office view, reminders) + employee performance (reports with aspect and weight, score engine, field signals, skills) | |
 
 ---
 
