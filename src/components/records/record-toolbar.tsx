@@ -6,6 +6,7 @@ import { Archive, ArchiveRestore, Lock, LockOpen, Send, Trash2 } from "lucide-re
 import { toast } from "sonner";
 import {
   deleteRecordAction,
+  restoreRecordAction,
   setArchivedAction,
   setLockedAction,
   submitRecordAction,
@@ -31,11 +32,26 @@ export function RecordToolbar({ table, id, listHref, locked, archived, can }: Pr
   const router = useRouter();
   const [pending, start] = useTransition();
 
-  const run = (fn: () => Promise<ActionResult>, done: string, after?: () => void) =>
+  // `undo` reverses the action from the toast (F7); the record page is shown again afterwards.
+  const run = (fn: () => Promise<ActionResult>, done: string, after?: () => void, undo?: () => Promise<ActionResult>) =>
     start(async () => {
       const r = await fn();
       if (!r.ok) return void toast.error(t(r.message));
-      toast.success(t(done));
+      toast.success(t(done), {
+        duration: undo ? 8000 : undefined,
+        action: undo
+          ? {
+              label: t("Undo"),
+              onClick: () =>
+                void undo().then((u) => {
+                  if (!u.ok) return void toast.error(t(u.message));
+                  toast.success(t("Undone"));
+                  router.push(`${listHref}/${id}`);
+                  router.refresh();
+                }),
+            }
+          : undefined,
+      });
       if (after) after();
       else router.refresh();
     });
@@ -63,7 +79,7 @@ export function RecordToolbar({ table, id, listHref, locked, archived, can }: Pr
         </button>
       )}
       {can.archive && (
-        <button type="button" disabled={pending} className={BTN} onClick={() => run(() => setArchivedAction(table, id, !archived), archived ? "Restored from archive" : "Archived")}>
+        <button type="button" disabled={pending} className={BTN} onClick={() => run(() => setArchivedAction(table, id, !archived), archived ? "Restored from archive" : "Archived", undefined, () => setArchivedAction(table, id, archived))}>
           {archived ? <ArchiveRestore className="size-4" aria-hidden /> : <Archive className="size-4" aria-hidden />}
           {t(archived ? "Unarchive" : "Archive")}
         </button>
@@ -75,10 +91,15 @@ export function RecordToolbar({ table, id, listHref, locked, archived, can }: Pr
           className={cn(BTN, "text-destructive")}
           onClick={() => {
             if (confirm(t("Delete this record? It goes to Deleted Items and can be restored.")))
-              run(() => deleteRecordAction(table, id), "Deleted", () => {
-                router.push(listHref);
-                router.refresh();
-              });
+              run(
+                () => deleteRecordAction(table, id),
+                "Deleted",
+                () => {
+                  router.push(listHref);
+                  router.refresh();
+                },
+                () => restoreRecordAction(table, id),
+              );
           }}
         >
           <Trash2 className="size-4" aria-hidden /> {t("Delete")}

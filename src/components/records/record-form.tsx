@@ -8,6 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { onUploadsChange, uploadsInProgress } from "@/lib/files/resumable";
 import { saveRecordAction } from "@/lib/records/actions";
 import { extractFromUploadAction } from "@/lib/records/field-actions";
+import { undoChangeAction } from "@/lib/records/record-actions";
 import { formatDate } from "@/lib/dates";
 import { evaluateRules, type Values } from "@/lib/rules/evaluate";
 import { isEditable, type FileItem } from "@/lib/records/values";
@@ -88,7 +89,21 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
     startTransition(async () => {
       const result = await saveRecordAction(table.name, recordId, rules.values);
       if (result.ok) {
-        toast.success(t(recordId ? "Saved" : "Created"));
+        const undoId = result.undoId;
+        toast.success(t(recordId ? "Saved" : "Created"), {
+          duration: undoId ? 8000 : undefined,
+          action: undoId
+            ? {
+                label: t("Undo"),
+                onClick: () =>
+                  void undoChangeAction(table.name, result.id, undoId).then((r) => {
+                    if (!r.ok) return void toast.error(t(r.message));
+                    toast.success(t("Change undone"));
+                    router.refresh();
+                  }),
+              }
+            : undefined,
+        });
         router.push(redirectTo ?? `${baseHref}/${result.id}`);
         router.refresh();
         return;

@@ -3,14 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { requireUser } from "@/lib/auth/session";
-import { runAutomationsSafely } from "@/lib/engine/automations";
+import { runAutomationsNow, runAutomationsSafely, sendQueuedSafely } from "@/lib/engine/automations";
 import { getTable } from "@/registry";
 import { canDo, canLockAction } from "@/registry/permissions";
 import { recordHref, tableHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
-import { getRecord, recordsDb } from "./data";
+import { getRecord, recordsDb, rowValues } from "./data";
 import { canModule, loadPeople } from "./extras";
 import { mentionedIn } from "./mentions";
+import { saveRecord } from "./save";
+import { undoPatch, type AuditChanges } from "./undo-patch";
 import { isPendingOneDrive } from "@/lib/files/paths";
 import { attachOneDriveUploads } from "@/lib/files/store";
 import type { FileItem } from "./values";
@@ -95,6 +97,47 @@ export async function restoreRecordAction(table: string, id: number): Promise<Ac
     if (t.tab) revalidatePath(`${tableHref(t)}/deleted`);
   }
   return r;
+}
+
+/**
+ * Undo (F7): put back the fields a history entry changed, through the normal save path, so
+ * permissions, rules and the audit log apply as for any edit. Fields someone changed since are kept.
+ */
+export async function undoChangeAction(table: string, id: number, auditId: number): Promise<ActionResult & { skipped: string[] }> {
+  const user = await requireUser();
+  const t = getTable(table);
+  if (!canDo(user.permissions, t, "modify", getTable)) return { ...DENIED, skipped: [] };
+  const db = await recordsDb();
+  const { data: entry } = await db.from("audit_log").select("action, changes").eq("id", auditId).eq("table_name", t.name).eq("record_id", id).maybeSingle();
+  if (!entry || entry.action !== "update") return { ok: false, message: "That change can't be undone.", skipped: [] };
+  const row = await getRecord(t, id);
+  if (!row) return { ok: false, message: "This record no longer exists or you can't see it.", skipped: [] };
+  const { patch, skipped } = undoPatch(t, row, entry.changes as AuditChanges);
+  if (!Object.keys(patch).length) return { ok: false, message: "Nothing to undo: those fields have changed since.", skipped };
+  const r = await saveRecord(t.name, id, rowValues(t, { ...row, ...patch }, user.permissions));
+  if (!r.ok) return { ok: false, message: r.message ?? Object.values(r.errors)[0] ?? "Could not undo.", skipped };
+  await runAutomationsNow();
+  after(sendQueuedSafely);
+  refresh(t, id);
+  return { ok: true, skipped };
+}
+
+/** The history entry a just-saved edit wrote, for the "Undo" on the Saved toast (F7). */
+export async function lastChangeId(table: string, id: number): Promise<number | null> {
+  const user = await requireUser();
+  const db = await recordsDb();
+  const { data } = await db
+    .from("audit_log")
+    .select("id")
+    .eq("table_name", table)
+    .eq("record_id", id)
+    .eq("action", "update")
+    .eq("actor", user.id)
+    .gte("at", new Date(Date.now() - 60_000).toISOString())
+    .order("at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data?.id as number | undefined) ?? null;
 }
 
 // ---------------------------------------------------------------- notes

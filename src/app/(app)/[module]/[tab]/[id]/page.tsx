@@ -208,7 +208,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
         )}
         {may.audit_log && (
           <Section title={tr("History")} count={history.length}>
-            <HistoryList table={t} entries={history} />
+            <HistoryList table={t} entries={history} recordId={recordId} canUndo={canEdit} />
           </Section>
         )}
       </div>

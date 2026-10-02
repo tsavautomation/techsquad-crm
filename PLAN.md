@@ -52,7 +52,7 @@ Phase 2 will also need a Microsoft 365 / Entra app registration (OneDrive), a Go
 | **F4** | *(built 2026-10-01, awaiting OK; SPEC §9.1 F4-a…e)* Pipeline board on the Project workflow + auto tasks; client timeline and communication log; message templates in EN / PT / ES; partner stats | |
 | **F5** | *(built 2026-10-02, awaiting OK; SPEC §9.1 F5-a, F5-b; merge after M14)* Insights (pipeline, money, partners, salespeople, operations real vs planned, maintenance plans) + data quality (completeness, duplicates, merge) | |
 | **F6** | Client portal (customer logins, EN / PT / ES + dark/light in its top bar) + website quote form | **after M14 import** (Fred 2026-09-30); security review |
-| **F7** | Global search, notification bell, undo | can be spread over F1–F6 |
+| **F7** | *(done: search and alerts bell earlier; undo built 2026-10-02, awaiting OK; SPEC §9.1 F7-a)* Global search, notification bell, undo | can be spread over F1–F6 |
 | **P1** | *(built 2026-10-02, awaiting OK; SPEC §9.1 P1-a…c)* Simple permissions: per-person checklist + Administrator flag instead of groups; WebAuthor-only permissions and on-screen mentions removed | |
 
 ---

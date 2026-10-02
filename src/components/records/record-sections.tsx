@@ -6,6 +6,7 @@ import { listFields } from "@/lib/records/data";
 import type { TableDef } from "@/registry/types";
 import { FieldValue } from "./field-value";
 import { formatAddress } from "./field-value";
+import { UndoButton } from "./undo-button";
 import { getLang, getT } from "@/i18n/server";
 import { localizeTable } from "@/i18n/registry";
 import type { T } from "@/i18n/core";
@@ -58,7 +59,7 @@ function describe(t: TableDef, col: string, value: unknown, tr: T): string {
   return s.length > 80 ? `${s.slice(0, 80)}…` : s;
 }
 
-export async function HistoryList({ table: source, entries }: { table: TableDef; entries: HistoryEntry[] }) {
+export async function HistoryList({ table: source, entries, recordId, canUndo }: { table: TableDef; entries: HistoryEntry[]; recordId?: number; canUndo?: boolean }) {
   const tr = await getT();
   const table = localizeTable(source, await getLang());
   if (!entries.length) return <p className="text-sm text-muted-foreground">{tr("No history yet.")}</p>;
@@ -68,9 +69,12 @@ export async function HistoryList({ table: source, entries }: { table: TableDef;
         const changes = Object.entries(e.changes).filter(([k]) => e.action === "update" || e.action === "create" ? !["id"].includes(k) : false);
         return (
           <li key={e.id} className="text-sm">
-            <p>
-              <span className="font-medium">{tr(ACTION_LABEL[e.action] ?? e.action)}</span>
-              <span className="text-muted-foreground"> {tr("by {who} · {when}", { who: e.actor, when: formatDateTime(e.at) })}</span>
+            <p className="flex items-center justify-between gap-2">
+              <span>
+                <span className="font-medium">{tr(ACTION_LABEL[e.action] ?? e.action)}</span>
+                <span className="text-muted-foreground"> {tr("by {who} · {when}", { who: e.actor, when: formatDateTime(e.at) })}</span>
+              </span>
+              {canUndo && recordId && e.action === "update" && changes.length > 0 && <UndoButton table={source.name} id={recordId} auditId={e.id} />}
             </p>
             {changes.length > 0 && e.action === "update" && (
               <ul className="mt-1 ml-4 list-disc text-xs text-muted-foreground">
