@@ -18,8 +18,8 @@ export default async function LoginPage(props: PageProps<"/login">) {
       </div>
       <Card className="w-full max-w-sm rounded-2xl shadow-card">
         <CardHeader>
-          <Logo className="mb-2 size-11 rounded-[13px] text-sm" />
-          <CardTitle className="text-xl">TechSquad CRM</CardTitle>
+          <Logo className="mb-2 size-12" />
+          <CardTitle className="text-xl">Managing System</CardTitle>
           <CardDescription>{t("Sign in with your work email.")}</CardDescription>
         </CardHeader>
         <CardContent>

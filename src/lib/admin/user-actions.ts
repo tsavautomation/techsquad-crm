@@ -29,7 +29,7 @@ async function emailLink(to: string, name: string, link: string, isNew: boolean)
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
   const html = `<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;font-size:15px;color:#111827;max-width:560px">
 <p>Hi ${esc(name || to)},</p>
-<p>${isNew ? "You've been given a login to the TechSquad CRM." : "Here is a link to set your TechSquad CRM password."} Tap the button to choose your password. The link works once and expires in 24 hours.</p>
+<p>${isNew ? "You've been given a login to the Tech Squad Managing System." : "Here is a link to set your Managing System password."} Tap the button to choose your password. The link works once and expires in 24 hours.</p>
 <p style="margin:24px 0"><a href="${esc(link)}" style="background:#111827;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block">Set my password</a></p>
 <p style="color:#6b7280;font-size:13px">Then sign in at ${esc(site())} with ${esc(to)}. On iPhone, open it in Safari and use Share → Add to Home Screen.</p></div>`;
   const id = await queueEmail(db, {
@@ -38,7 +38,7 @@ async function emailLink(to: string, name: string, link: string, isNew: boolean)
     recordId: null,
     from: "TS CRM",
     to: [to],
-    subject: isNew ? "Your TechSquad CRM login" : "Set your TechSquad CRM password",
+    subject: isNew ? "Your Managing System login" : "Set your Managing System password",
     html,
     attachments: [],
   });

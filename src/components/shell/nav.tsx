@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChartColumn, ChevronRight, Clock, Columns3, Database, List, LogOut, Menu, Monitor, Moon, Plus, Settings, SquareKanban, Sun, X } from "lucide-react";
@@ -36,12 +37,9 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/** The Tech Squad mark (public/logo.png, Fred 2026-10-02). */
 export function Logo({ className }: { className?: string }) {
-  return (
-    <span className={cn("grid size-9 shrink-0 place-items-center rounded-[11px] bg-gradient-to-br from-[#29abe2] to-[#0e76ad] text-[13px] font-bold tracking-wide text-white", className)} aria-hidden>
-      TS
-    </span>
-  );
+  return <Image src="/logo.png" alt="" width={36} height={36} className={cn("size-9 shrink-0 rounded-full", className)} priority />;
 }
 
 function Avatar({ me, className }: { me: Me; className?: string }) {
@@ -219,7 +217,7 @@ export function Sidebar({ items, create, me, showAdmin, extras }: { items: NavIt
         <Logo />
         <span>
           <span className="block text-[15px] leading-tight font-semibold text-white">Tech Squad</span>
-          <span className="block text-[11px] text-[#8fa3bd]">TechSquad CRM</span>
+          <span className="block text-[11px] text-[#8fa3bd]">Managing System</span>
         </span>
       </Link>
       {create.length > 0 && (

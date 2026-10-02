@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "TechSquad CRM",
-    short_name: "TechSquad",
-    description: "TechSquad projects, staff, inventory and field reports.",
+    name: "Managing System",
+    short_name: "Tech Squad",
+    description: "Tech Squad projects, staff, inventory and field reports.",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

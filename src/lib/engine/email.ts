@@ -42,10 +42,10 @@ export function cardHtml(opts: { title: string; tableLabel: string; fields: { la
     )
     .join("");
   const button = opts.link
-    ? `<p style="margin:20px 0"><a href="${escape(opts.link)}" style="background:#111827;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">Open in TechSquad CRM</a></p>`
+    ? `<p style="margin:20px 0"><a href="${escape(opts.link)}" style="background:#111827;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">Open in the Managing System</a></p>`
     : "";
   return `<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;font-size:14px;color:#111827;max-width:640px">
-<p style="margin:0 0 4px;color:#6b7280;font-size:12px">TechSquad CRM · ${escape(opts.tableLabel)}</p>
+<p style="margin:0 0 4px;color:#6b7280;font-size:12px">Tech Squad Managing System · ${escape(opts.tableLabel)}</p>
 <h2 style="margin:0 0 12px;font-size:18px">${escape(opts.title)}</h2>
 ${rows ? `<table style="border-collapse:collapse;font-size:14px">${rows}</table>` : ""}
 ${button}</div>`;

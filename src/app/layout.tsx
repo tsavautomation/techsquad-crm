@@ -12,10 +12,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: { default: "TechSquad CRM", template: "%s · TechSquad CRM" },
-  description: "TechSquad projects, staff, inventory and field reports.",
-  applicationName: "TechSquad CRM",
-  appleWebApp: { capable: true, title: "TechSquad", statusBarStyle: "default" },
+  title: { default: "Managing System", template: "%s · Managing System" },
+  description: "Tech Squad projects, staff, inventory and field reports.",
+  applicationName: "Managing System",
+  appleWebApp: { capable: true, title: "Tech Squad", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 
