@@ -1,7 +1,9 @@
 import Link from "next/link";
 import type { CurrentUser } from "@/lib/auth/session";
 import { formatDate, fromDateTimeLocalET, todayET, toDateTimeLocalET } from "@/lib/dates";
+import { loadFieldDay } from "@/lib/field-day/return-card";
 import { recordsDb } from "@/lib/records/data";
+import { pastTime } from "@/lib/time-clock/clock";
 import { addDays, clock } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
@@ -73,6 +75,32 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
     const l = toDateTimeLocalET(iso);
     return `${formatDate(l.slice(0, 10))} ${clock(l.slice(11))}`;
   };
+
+  // P2: people still clocked in past their group's reminder time (office view; RLS limits it to employee viewers).
+  if (can("employees")) {
+    jobs.push(
+      (async () => {
+        const [{ data }, settings] = await Promise.all([
+          db.from("time_entries").select("employee_id, kind, at, employees:employee_id(title, clock_group)").in("kind", ["clock_in", "clock_out"]).gte("at", dayStart).is("deleted_at", null).order("at"),
+          loadFieldDay(db),
+        ]);
+        const localNow = toDateTimeLocalET(new Date(now).toISOString()).slice(11, 16);
+        const open = new Map<number, { title: string; group: string; since: string }>();
+        for (const r of (data ?? []) as unknown as { employee_id: number; kind: string; at: string; employees: { title: string | null; clock_group: string | null } | null }[]) {
+          if (r.kind === "clock_in") open.set(r.employee_id, { title: r.employees?.title ?? `#${r.employee_id}`, group: r.employees?.clock_group ?? "Field", since: r.at });
+          else open.delete(r.employee_id);
+        }
+        const employeesT = getTable("employees");
+        return {
+          id: "clocked-in",
+          title: tr("Still clocked in"),
+          rows: [...open.entries()]
+            .filter(([, o]) => pastTime(localNow, settings.time_clock.reminder[o.group === "Office" ? "Office" : "Field"]))
+            .map(([id, o]) => ({ href: recordHref(employeesT, id), title: o.title, meta: tr("Since {when}", { when: when(o.since) }), tone: "warn" as const })),
+        };
+      })(),
+    );
+  }
 
   if (can("visits")) {
     jobs.push(

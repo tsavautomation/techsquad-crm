@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { saveFieldDayAction } from "@/lib/field-day/actions";
 import type { FieldDaySettings } from "@/lib/field-day/day";
+import { currentPosition } from "@/lib/time-clock/geo-client";
 import { useT } from "@/i18n/client";
 
 // Admin › Field day (F2): one screen, one Save.
@@ -20,12 +21,14 @@ export function FieldDayEditor({ initial, people, reasons, services }: { initial
   const [text, setText] = useState(() => Object.fromEntries(services.map((o) => [o.value, { checklist: (initial.service_lists[o.value]?.checklist ?? []).join("\n"), tools: (initial.service_lists[o.value]?.tools ?? []).join("\n") }])));
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [tc, setTc] = useState(initial.time_clock);
+  const [locating, setLocating] = useState(false);
 
   const save = () =>
     start(async () => {
       const service_lists = { ...s.service_lists };
       for (const [k, v] of Object.entries(text)) service_lists[k] = { checklist: lines(v.checklist), tools: lines(v.tools) };
-      const r = await saveFieldDayAction({ ...s, service_lists });
+      const r = await saveFieldDayAction({ ...s, service_lists, time_clock: tc });
       setMsg(r.ok ? { ok: true, text: t("Saved.") } : { ok: false, text: t(r.message) });
     });
 
@@ -63,6 +66,52 @@ export function FieldDayEditor({ initial, people, reasons, services }: { initial
             </label>
           ))}
         </div>
+      </section>
+
+      <section className="rounded-2xl border bg-card p-4 shadow-card">
+        <h2 className="mb-1 font-semibold">{t("Time clock")}</h2>
+        <p className="mb-3 text-sm text-muted-foreground">{t("Where the office is (for “at the office”), the normal start of the day, and when people are reminded to clock out.")}</p>
+        <label className="block text-sm font-medium">
+          {t("Office address")}
+          <input className={`${BOX} mt-1 h-11`} value={tc.office_address} onChange={(e) => setTc({ ...tc, office_address: e.target.value, office_lat: null, office_lng: null })} placeholder="123 Main St, Miami, FL 33101" />
+        </label>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+          <button
+            type="button"
+            className="inline-flex h-11 items-center gap-1.5 rounded-lg border px-3 text-sm hover:bg-muted disabled:opacity-50"
+            disabled={locating}
+            onClick={() => {
+              setLocating(true);
+              void currentPosition().then((g) => {
+                setLocating(false);
+                if (!g) return setMsg({ ok: false, text: t("Couldn't read this phone's location. Allow location for this site and try again.") });
+                setTc({ ...tc, office_lat: Math.round(g.lat * 1e6) / 1e6, office_lng: Math.round(g.lng * 1e6) / 1e6 });
+              });
+            }}
+          >
+            {locating ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <MapPin className="size-4" aria-hidden />} {t("I'm at the office now: use this phone's location")}
+          </button>
+          <span className="text-muted-foreground">{tc.office_lat !== null && tc.office_lng !== null ? t("Position set ({lat}, {lng})", { lat: tc.office_lat, lng: tc.office_lng }) : t("No position yet: the address is looked up when you save.")}</span>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-medium">
+            {t("Counts as “there” within (metres)")}
+            <input type="number" inputMode="numeric" min={50} max={2000} className={`${BOX} mt-1 h-11`} value={tc.radius_m} onChange={(e) => setTc({ ...tc, radius_m: Math.max(50, Math.min(2000, Number(e.target.value) || 150)) })} />
+          </label>
+          <label className="block text-sm font-medium">
+            {t("Normal start of the day")}
+            <input type="time" className={`${BOX} mt-1 h-11`} value={tc.start_time} onChange={(e) => setTc({ ...tc, start_time: e.target.value || "08:00" })} />
+          </label>
+          <label className="block text-sm font-medium">
+            {t("Clock-out reminder, field people")}
+            <input type="time" className={`${BOX} mt-1 h-11`} value={tc.reminder.Field} onChange={(e) => setTc({ ...tc, reminder: { ...tc.reminder, Field: e.target.value || "17:00" } })} />
+          </label>
+          <label className="block text-sm font-medium">
+            {t("Clock-out reminder, office people")}
+            <input type="time" className={`${BOX} mt-1 h-11`} value={tc.reminder.Office} onChange={(e) => setTc({ ...tc, reminder: { ...tc.reminder, Office: e.target.value || "18:00" } })} />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{t("Each employee's group (Field / Office) is on their Employee record.")}</p>
       </section>
 
       <section className="rounded-2xl border bg-card p-4 shadow-card">

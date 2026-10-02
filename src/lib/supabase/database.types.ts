@@ -716,9 +716,49 @@ export type Database = {
           },
         ]
       }
+      employee_skills: {
+        Row: {
+          employee_id: number
+          level: string
+          skill: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          employee_id: number
+          level: string
+          skill: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          employee_id?: number
+          level?: string
+          skill?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_skills_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_skills_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           archived_at: string | null
+          clock_group: string
           company_name: string | null
           created_at: string
           created_by: string | null
@@ -748,6 +788,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          clock_group?: string
           company_name?: string | null
           created_at?: string
           created_by?: string | null
@@ -777,6 +818,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          clock_group?: string
           company_name?: string | null
           created_at?: string
           created_by?: string | null
@@ -934,6 +976,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      geocodes: {
+        Row: {
+          address: string
+          created_at: string
+          lat: number
+          lng: number
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          lat: number
+          lng: number
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          lat?: number
+          lng?: number
+        }
+        Relationships: []
       }
       inventory_checkouts: {
         Row: {
@@ -2619,6 +2682,7 @@ export type Database = {
       staff_performance: {
         Row: {
           archived_at: string | null
+          aspect: string | null
           created_at: string
           created_by: string | null
           date: string | null
@@ -2627,14 +2691,18 @@ export type Database = {
           employee_id: number | null
           id: number
           locked: boolean
+          project_id: number | null
           submitted_at: string | null
           title: string | null
           type: string | null
           updated_at: string
           updated_by: string | null
+          visit_id: number | null
+          weight: string | null
         }
         Insert: {
           archived_at?: string | null
+          aspect?: string | null
           created_at?: string
           created_by?: string | null
           date?: string | null
@@ -2643,14 +2711,18 @@ export type Database = {
           employee_id?: number | null
           id?: number
           locked?: boolean
+          project_id?: number | null
           submitted_at?: string | null
           title?: string | null
           type?: string | null
           updated_at?: string
           updated_by?: string | null
+          visit_id?: number | null
+          weight?: string | null
         }
         Update: {
           archived_at?: string | null
+          aspect?: string | null
           created_at?: string
           created_by?: string | null
           date?: string | null
@@ -2659,11 +2731,14 @@ export type Database = {
           employee_id?: number | null
           id?: number
           locked?: boolean
+          project_id?: number | null
           submitted_at?: string | null
           title?: string | null
           type?: string | null
           updated_at?: string
           updated_by?: string | null
+          visit_id?: number | null
+          weight?: string | null
         }
         Relationships: [
           {
@@ -2681,10 +2756,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "staff_performance_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "staff_performance_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_performance_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
             referencedColumns: ["id"]
           },
         ]
@@ -3042,6 +3131,95 @@ export type Database = {
           },
           {
             foreignKeyName: "tasks_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entries: {
+        Row: {
+          accuracy_m: number | null
+          at: string
+          corrected_at: string | null
+          corrected_by: string | null
+          created_at: string
+          deleted_at: string | null
+          distance_m: number | null
+          employee_id: number
+          id: number
+          kind: string
+          lat: number | null
+          lng: number | null
+          note: string | null
+          original_at: string | null
+          place: string
+          user_id: string
+          visit_id: number | null
+        }
+        Insert: {
+          accuracy_m?: number | null
+          at?: string
+          corrected_at?: string | null
+          corrected_by?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          distance_m?: number | null
+          employee_id: number
+          id?: number
+          kind: string
+          lat?: number | null
+          lng?: number | null
+          note?: string | null
+          original_at?: string | null
+          place?: string
+          user_id: string
+          visit_id?: number | null
+        }
+        Update: {
+          accuracy_m?: number | null
+          at?: string
+          corrected_at?: string | null
+          corrected_by?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          distance_m?: number | null
+          employee_id?: number
+          id?: number
+          kind?: string
+          lat?: number | null
+          lng?: number | null
+          note?: string | null
+          original_at?: string | null
+          place?: string
+          user_id?: string
+          visit_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_corrected_by_fkey"
+            columns: ["corrected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_visit_id_fkey"
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visits"

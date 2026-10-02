@@ -51,3 +51,6 @@ export function fromDateTimeLocalET(local: string): string {
   const asET = new Date(toDateTimeLocalET(new Date(guess).toISOString()) + ":00Z").getTime();
   return new Date(guess + (guess - asET)).toISOString();
 }
+
+/** The current time in ms, as a function so server components stay pure for the linter. */
+export const nowMs = () => Date.now();

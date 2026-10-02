@@ -132,5 +132,5 @@ export type TableDef = {
   /** Extra panel the form shows for this table (src/components/records/form-addons.tsx). */
   formAddon?: "visit";
   /** Extra panel on the record page (src/components/field-day/*): visit check-in + briefing, return card scheduling. */
-  detailAddon?: "visit" | "task" | "project" | "contact" | "organization";
+  detailAddon?: "visit" | "task" | "project" | "contact" | "organization" | "employee";
 };

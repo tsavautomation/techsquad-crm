@@ -1,5 +1,6 @@
 // Generated from techsquad_crm_spec.json (WebAuthor table frx_techsquad_staff_performance) by scripts/generate-registry.ts.
 // Now maintained by hand: edit freely, but keep labels and options identical to SPEC.md.
+// P2 (SPEC §9.1 P2-c): Aspect, Weight and the Project / Visit it happened on feed the performance score.
 import type { TableDef } from "../types";
 
 export const staffPerformance: TableDef = {
@@ -72,6 +73,36 @@ export const staffPerformance: TableDef = {
       ]
     },
     {
+      "name": "aspect",
+      "label": "Aspect",
+      "type": "select",
+      "legacy": { "column": "", "fieldId": 0 },
+      "help": "What this is about. Each aspect has its own score on the employee's page.",
+      "options": [
+        { "label": "Speed", "value": "Speed" },
+        { "label": "Quality of work", "value": "Quality of work" },
+        { "label": "Punctuality", "value": "Punctuality" },
+        { "label": "Communication", "value": "Communication" },
+        { "label": "Safety", "value": "Safety" },
+        { "label": "Teamwork", "value": "Teamwork" },
+        { "label": "Customer care", "value": "Customer care" },
+        { "label": "Initiative", "value": "Initiative" }
+      ]
+    },
+    {
+      "name": "weight",
+      "label": "Weight",
+      "type": "radio",
+      "legacy": { "column": "", "fieldId": 0 },
+      "default": "Normal",
+      "help": "How much it counts: Minor 1, Normal 2, Major 3 (×5 points on the score).",
+      "options": [
+        { "label": "Minor", "value": "Minor" },
+        { "label": "Normal", "value": "Normal" },
+        { "label": "Major", "value": "Major" }
+      ]
+    },
+    {
       "name": "description",
       "label": "Description",
       "type": "textarea",
@@ -80,6 +111,20 @@ export const staffPerformance: TableDef = {
         "fieldId": 86725
       },
       "maxLength": 2500
+    },
+    {
+      "name": "project_id",
+      "label": "Project",
+      "type": "lookup",
+      "legacy": { "column": "", "fieldId": 0 },
+      "lookup": { "table": "projects" }
+    },
+    {
+      "name": "visit_id",
+      "label": "Visit",
+      "type": "lookup",
+      "legacy": { "column": "", "fieldId": 0 },
+      "lookup": { "table": "visits" }
     },
     {
       "name": "picture",

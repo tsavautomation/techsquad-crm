@@ -10,6 +10,8 @@ export const employees: TableDef = {
   "itemLabel": "Employees",
   "newRecordLabel": "New Employee",
   "titleFormula": "{first_name} {last_name}",
+  // P2: Performance section (reports, scores, skills) and the time clock group.
+  detailAddon: "employee",
   "fields": [
     {
       "name": "title",
@@ -97,6 +99,19 @@ export const employees: TableDef = {
           "value": "Freelance",
           "color": "#ffeb3b"
         }
+      ]
+    },
+    {
+      // P2 time clock: when the "still clocked in" reminder fires (Admin › Field day).
+      "name": "clock_group",
+      "label": "Time clock group",
+      "type": "select",
+      "legacy": { "column": "", "fieldId": 0 },
+      "default": "Field",
+      "help": "Field people are reminded to clock out at 5 PM, office people at 6 PM (Admin › Field day).",
+      "options": [
+        { "label": "Field", "value": "Field" },
+        { "label": "Office", "value": "Office" }
       ]
     },
     {

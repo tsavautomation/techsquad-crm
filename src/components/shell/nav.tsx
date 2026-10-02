@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChartColumn, ChevronRight, Columns3, Database, List, LogOut, Menu, Monitor, Moon, Plus, Settings, SquareKanban, Sun, X } from "lucide-react";
+import { ChartColumn, ChevronRight, Clock, Columns3, Database, List, LogOut, Menu, Monitor, Moon, Plus, Settings, SquareKanban, Sun, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { ModuleDef } from "@/config/modules";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ export type NavItem = { slug: string; href: string; title: string; shortTitle: s
 export type CreateItem = { href: string; label: string; icon: string };
 export type Me = { name: string; email: string; initials: string };
 /** Pages outside the modules (Portal design): Tasks board, Insights, Data. */
-export type Extras = { tasks: boolean; pipeline: boolean; insights: boolean; data: boolean };
+export type Extras = { tasks: boolean; pipeline: boolean; insights: boolean; data: boolean; timeClock: boolean };
 
 const GROUPS: { title: string; slugs: string[] }[] = [
   { title: "", slugs: ["schedule"] },
@@ -246,10 +246,11 @@ export function Sidebar({ items, create, me, showAdmin, extras }: { items: NavIt
           </div>
         );
       })}
-      {(extras.insights || extras.data) && (
+      {(extras.insights || extras.data || extras.timeClock) && (
         <>
           <p className="mx-2.5 mt-[18px] mb-1.5 text-[10.5px] tracking-[0.08em] text-[#7c8da6] uppercase">{t("Management")}</p>
           <ul className="flex flex-col gap-0.5">
+            {extras.timeClock && link("/time-clock", t("Time clock"), <Clock className="size-[18px]" aria-hidden />)}
             {extras.insights && link("/insights", t("Insights"), <ChartColumn className="size-[18px]" aria-hidden />)}
             {extras.data && link("/data", t("Data"), <Database className="size-[18px]" aria-hidden />)}
           </ul>
@@ -351,6 +352,7 @@ export function BottomNav({ items, create, showAdmin, extras }: { items: NavItem
   const extraPages = [
     ...(extras.pipeline ? [{ href: "/pipeline", title: t("Pipeline"), icon: <Columns3 className="size-5" aria-hidden /> }] : []),
     ...(extras.tasks ? [{ href: "/tasks", title: t("Tasks"), icon: <SquareKanban className="size-5" aria-hidden /> }] : []),
+    ...(extras.timeClock ? [{ href: "/time-clock", title: t("Time clock"), icon: <Clock className="size-5" aria-hidden /> }] : []),
     ...(extras.insights ? [{ href: "/insights", title: t("Insights"), icon: <ChartColumn className="size-5" aria-hidden /> }] : []),
     ...(extras.data ? [{ href: "/data", title: t("Data"), icon: <Database className="size-5" aria-hidden /> }] : []),
   ];

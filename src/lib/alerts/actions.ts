@@ -1,9 +1,12 @@
 "use server";
 
 import { requireUser } from "@/lib/auth/session";
-import { formatDate, formatDateTime, fromDateTimeLocalET, todayET } from "@/lib/dates";
+import { formatDate, formatDateTime, fromDateTimeLocalET, toDateTimeLocalET, todayET } from "@/lib/dates";
+import { loadFieldDay } from "@/lib/field-day/return-card";
 import { recordsDb } from "@/lib/records/data";
-import { addDays } from "@/lib/schedule/dates";
+import { addDays, clock as clockTime } from "@/lib/schedule/dates";
+import { pastTime } from "@/lib/time-clock/clock";
+import { myClockToday } from "@/lib/time-clock/record";
 import { getTable, REGISTRY } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
@@ -14,7 +17,7 @@ import { getT } from "@/i18n/server";
 // once done (approved, task completed, checklist ticked, visit done…). Row-level security applies throughout.
 
 export type AlertItem = { key: string; href: string; title: string; meta: string; urgent?: boolean };
-export type AlertSection = { key: "tags" | "approvals" | "visits" | "tasks" | "checklist" | "followups"; title: string; items: AlertItem[] };
+export type AlertSection = { key: "clock" | "tags" | "approvals" | "visits" | "tasks" | "checklist" | "followups"; title: string; items: AlertItem[] };
 export type Alerts = { count: number; urgent: boolean; sections: AlertSection[] };
 
 const MAX = 20;
@@ -187,8 +190,19 @@ export async function alertsAction(): Promise<Alerts> {
       }));
   })();
 
-  const [a, b, c, d, e, f] = await Promise.all([tags, approvals, visits, tasks, checklist, followups]);
+  // P2: still clocked in past the reminder time for my group.
+  const clock = (async (): Promise<AlertItem[]> => {
+    const mine = await myClockToday(db, user);
+    if (!mine?.day.openSince) return [];
+    const settings = await loadFieldDay(db);
+    const localNow = toDateTimeLocalET(new Date().toISOString()).slice(11, 16);
+    if (!pastTime(localNow, settings.time_clock.reminder[mine.group])) return [];
+    return [{ key: "clock:open", href: "/#clock", title: tr("Still clocked in"), meta: tr("Since {time} — clock out when you're done.", { time: clockTime(toDateTimeLocalET(mine.day.openSince).slice(11)) }), urgent: true }];
+  })();
+
+  const [a, b, c, d, e, f, g] = await Promise.all([tags, approvals, visits, tasks, checklist, followups, clock]);
   const sections: AlertSection[] = [
+    { key: "clock" as const, title: tr("Time clock"), items: g },
     { key: "tags" as const, title: tr("Tagged you"), items: a },
     { key: "approvals" as const, title: tr("Waiting for your approval"), items: b },
     { key: "visits" as const, title: tr("Your visits today"), items: c },

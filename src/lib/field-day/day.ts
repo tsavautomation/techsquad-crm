@@ -2,6 +2,7 @@
 // the return-card automation and the tests. No database here.
 import { z } from "zod";
 import { addDays } from "@/lib/schedule/dates";
+import { TimeClockSchema } from "@/lib/time-clock/clock";
 
 // ---------------------------------------------------------------- settings (app_settings 'field_day')
 
@@ -14,6 +15,8 @@ export const FieldDaySchema = z.object({
   return_days: z.record(z.string(), z.number().int().min(0).max(90)).default({}),
   /** Per Visit › Service type: checklist added to the visit at check-in, and tools to bring. */
   service_lists: z.record(z.string(), ServiceList).default({}),
+  /** P2: office position, radius, start time and clock-out reminders (src/lib/time-clock/clock.ts). */
+  time_clock: TimeClockSchema.prefault({}),
 });
 export type FieldDaySettings = z.infer<typeof FieldDaySchema>;
 
