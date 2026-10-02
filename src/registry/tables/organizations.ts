@@ -9,6 +9,7 @@ export const organizations: TableDef = {
   "tab": "organizations",
   "itemLabel": "Organization",
   "newRecordLabel": "New Organization",
+  detailAddon: "organization",
   "titleFormula": null,
   "fields": [
     {

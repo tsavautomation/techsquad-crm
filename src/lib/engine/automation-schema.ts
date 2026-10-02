@@ -21,6 +21,14 @@ export const ActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("checklist"), target: z.string().optional(), item: z.string().trim().min(1), lines: z.boolean().optional() }),
   // F2: a Partial / Not done Job Report creates a return card (task) for the scheduler.
   z.object({ type: z.literal("return_card") }),
+  // F4: a task (e.g. "follow up on the proposal"), for the person in `assign` or whoever made the change.
+  z.object({
+    type: z.literal("task"),
+    text: z.string().trim().min(1, "The task needs some text"),
+    due_days: z.number().int().min(0).max(365),
+    assign: z.string().optional(),
+    labels: z.array(z.string()).optional(),
+  }),
   z.object({
     type: z.literal("email"),
     from: z.string().trim().min(1),
@@ -88,6 +96,10 @@ export function check(t: TableDef, a: AutomationInput): string[] {
         break;
       case "return_card":
         if (t.name !== "job_reports") errors.push("A return card can only come from a Job Report.");
+        break;
+      case "task":
+        if (act.assign && field(act.assign)?.lookup?.table !== "employees") errors.push(`${label(act.assign)} is not a link to an Employee.`);
+        for (const tok of tokens(act.text)) if (!has(tok)) errors.push(`Unknown field {${tok}} in the task text.`);
         break;
       case "email":
         if (!act.to.length && !(act.bcc ?? []).length) errors.push("An email needs at least one recipient.");

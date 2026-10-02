@@ -2,6 +2,8 @@
 // Now maintained by hand: edit freely, but keep labels and options identical to SPEC.md.
 import type { TableDef } from "../types";
 
+const NEW = { column: "", fieldId: 0 };
+
 export const projects: TableDef = {
   "name": "projects",
   "label": "Projects",
@@ -9,6 +11,7 @@ export const projects: TableDef = {
   "tab": "projects",
   "itemLabel": "Projects",
   "newRecordLabel": "New Project",
+  detailAddon: "project",
   "submit": {
     "showButton": true,
     "workflow": "project_proposal"
@@ -137,6 +140,8 @@ export const projects: TableDef = {
         }
       ]
     },
+    // F4 (not from WebAuthor, SPEC §9.1 F4-b): gets the stage auto tasks; Insights by salesperson.
+    { name: "salesperson_id", label: "Salesperson", type: "lookup", lookup: { table: "employees", filter: { status: ["Active", "Reports"] } }, legacy: NEW },
     {
       "name": "job_owner_id",
       "label": "Job Owner",

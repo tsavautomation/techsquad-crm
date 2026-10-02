@@ -10,7 +10,7 @@ import type { Action } from "@/lib/engine/automations";
 import type { ConditionRule } from "@/lib/engine/conditions";
 import { useT } from "@/i18n/client";
 
-export type FieldMeta = { name: string; label: string; type: string; options?: { label: string; value: string }[]; lookup?: boolean };
+export type FieldMeta = { name: string; label: string; type: string; options?: { label: string; value: string }[]; lookup?: boolean; lookupTable?: string };
 
 const INPUT = "h-11 w-full min-w-0 rounded-lg border bg-card px-3 text-base";
 const SELECT = INPUT;
@@ -132,7 +132,7 @@ function RuleRow({ rule, fields, onChange, onRemove }: { rule: ConditionRule; fi
 
 function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; fields: FieldMeta[]; onChange: (a: Action) => void; onRemove: () => void }) {
   const t = useT();
-  const TITLES = { update: "Set fields", archive: "Archive the record", checklist: "Add a checklist item", email: "Send an email", return_card: "Create a return card" };
+  const TITLES = { update: "Set fields", archive: "Archive the record", checklist: "Add a checklist item", email: "Send an email", return_card: "Create a return card", task: "Create a task" };
   return (
     <div className="space-y-2 rounded-lg bg-muted/40 p-2">
       <div className="flex items-center justify-between gap-2">
@@ -197,6 +197,37 @@ function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; 
           <label className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" className="size-5" checked={Boolean(action.lines)} onChange={(e) => onChange({ ...action, lines: e.target.checked || undefined })} />
             {t("One item per line")}
+          </label>
+        </>
+      )}
+      {action.type === "task" && (
+        <>
+          <label className="block text-sm">
+            {t("Task text (use {field} to insert a value)", { field: "{field}" })}
+            <input className={INPUT} value={action.text} onChange={(e) => onChange({ ...action, text: e.target.value })} />
+          </label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="block text-sm">
+              {t("Due in (days)")}
+              <input className={INPUT} type="number" inputMode="numeric" min={0} max={365} value={String(action.due_days)} onChange={(e) => onChange({ ...action, due_days: Math.max(0, Number(e.target.value) || 0) })} />
+            </label>
+            <label className="block text-sm">
+              {t("For")}
+              <select className={SELECT} value={action.assign ?? ""} onChange={(e) => onChange({ ...action, assign: e.target.value || undefined })}>
+                <option value="">{t("whoever made the change")}</option>
+                {fields
+                  .filter((f) => f.lookupTable === "employees")
+                  .map((f) => (
+                    <option key={f.name} value={f.name}>
+                      {t("the record's {field} (else whoever made the change)", { field: f.label })}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </div>
+          <label className="block text-sm">
+            {t("Labels (commas between)")}
+            <input className={INPUT} value={csv(action.labels ?? [])} onChange={(e) => onChange({ ...action, labels: fromCsv(e.target.value) })} />
           </label>
         </>
       )}
@@ -379,6 +410,7 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
                 checklist: { type: "checklist", item: "" },
                 archive: { type: "archive" },
                 return_card: { type: "return_card" },
+                task: { type: "task", text: "", due_days: 1 },
               };
               if (blank[type]) setA({ ...a, actions: [...a.actions, blank[type]] });
             }}
@@ -388,6 +420,7 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
             <option value="email">{t("Send an email")}</option>
             <option value="checklist">{t("Add a checklist item")}</option>
             <option value="archive">{t("Archive the record")}</option>
+            <option value="task">{t("Create a task")}</option>
             {table === "job_reports" && <option value="return_card">{t("Create a return card")}</option>}
           </select>
         </Section>

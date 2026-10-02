@@ -11,7 +11,7 @@ import { getT } from "@/i18n/server";
 import type { T } from "@/i18n/core";
 
 // "Today" sections from the Portal design (docs/portal-features-merge.md §I), built on what exists now.
-// Review requests and the contact log (calls, texts, emails) arrive with F4; until then follow-ups go by project notes.
+// F4: follow-ups count logged calls / messages (Interactions) as contact, and call-backs.
 
 type Row = { href: string; title: string; meta: string; action?: { href: string; label: string }; tone?: "bad" | "warn" };
 type Section = { id: string; title: string; rows: Row[] };
@@ -188,20 +188,58 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
         const { data } = await db.from("projects").select("id, title, job_status, created_at, updated_at").in("job_status", ["Surveying", "Proposal Sent"]).is("deleted_at", null).is("archived_at", null);
         const projects = (data ?? []) as { id: number; title: string | null; job_status: string; created_at: string; updated_at: string }[];
         if (!projects.length) return null;
-        const { data: notes } = await db.from("record_notes").select("record_id, created_at").eq("table_name", "projects").in("record_id", projects.map((p) => p.id));
+        const ids = projects.map((p) => p.id);
+        const [{ data: notes }, { data: calls }] = await Promise.all([
+          db.from("record_notes").select("record_id, created_at").eq("table_name", "projects").in("record_id", ids),
+          can("contact_interactions") ? db.from("contact_interactions").select("record_id:project_id, created_at").in("project_id", ids).is("deleted_at", null) : Promise.resolve({ data: [] }),
+        ]);
         const lastNote = new Map<number, string>();
-        for (const n of (notes ?? []) as { record_id: number; created_at: string }[]) if ((lastNote.get(n.record_id) ?? "") < n.created_at) lastNote.set(n.record_id, n.created_at);
+        for (const n of [...(notes ?? []), ...(calls ?? [])] as { record_id: number; created_at: string }[]) if ((lastNote.get(n.record_id) ?? "") < n.created_at) lastNote.set(n.record_id, n.created_at);
         const daysAgo = (iso: string) => Math.floor((now - Date.parse(iso)) / 86_400_000);
         const rows: (Row & { days: number })[] = [];
         for (const p of projects) {
           const last = lastNote.get(p.id);
           if (p.job_status === "Surveying" && !last && daysAgo(p.created_at) >= 2) {
-            rows.push({ days: daysAgo(p.created_at), href: `/projects/projects/${p.id}#notes`, title: p.title ?? tr("Project #{id}", { id: p.id }), meta: tr("New {n} days ago, no contact noted yet", { n: daysAgo(p.created_at) }), tone: "warn" });
+            rows.push({ days: daysAgo(p.created_at), href: `/projects/projects/${p.id}#message`, title: p.title ?? tr("Project #{id}", { id: p.id }), meta: tr("New {n} days ago, no contact noted yet", { n: daysAgo(p.created_at) }), tone: "warn" });
           } else if (p.job_status === "Proposal Sent" && daysAgo(last ?? p.updated_at) >= 7) {
-            rows.push({ days: daysAgo(last ?? p.updated_at), href: `/projects/projects/${p.id}#notes`, title: p.title ?? tr("Project #{id}", { id: p.id }), meta: tr("Proposal sent, no contact for {n} days", { n: daysAgo(last ?? p.updated_at) }), tone: "warn" });
+            rows.push({ days: daysAgo(last ?? p.updated_at), href: `/projects/projects/${p.id}#message`, title: p.title ?? tr("Project #{id}", { id: p.id }), meta: tr("Proposal sent, no contact for {n} days", { n: daysAgo(last ?? p.updated_at) }), tone: "warn" });
           }
         }
         return { id: "contact", title: tr("Follow up with the client"), rows: rows.sort((a, b) => b.days - a.days) };
+      })(),
+    );
+  }
+
+  // F4: call-backs (an Interaction's Follow Up Date has come, and nothing newer was logged with that contact).
+  if (can("contact_interactions") && can("contacts")) {
+    jobs.push(
+      (async () => {
+        const { data } = await db
+          .from("contact_interactions")
+          .select("id, contact_id, project_id, type, result, follow_up_date, created_at, contacts(title), projects(title)")
+          .lte("follow_up_date", today)
+          .gte("follow_up_date", addDays(today, -60))
+          .is("deleted_at", null)
+          .order("follow_up_date");
+        const due = (data ?? []) as unknown as { id: number; contact_id: number; project_id: number | null; type: string | null; result: string | null; follow_up_date: string; created_at: string; contacts: { title: string | null } | null; projects: { title: string | null } | null }[];
+        if (!due.length) return null;
+        const { data: later } = await db.from("contact_interactions").select("contact_id, created_at").in("contact_id", [...new Set(due.map((d) => d.contact_id))]).is("deleted_at", null);
+        const last = new Map<number, string>();
+        for (const l of (later ?? []) as { contact_id: number; created_at: string }[]) if ((last.get(l.contact_id) ?? "") < l.created_at) last.set(l.contact_id, l.created_at);
+        const seen = new Set<number>();
+        const contactsT = getTable("contacts");
+        return {
+          id: "call-backs",
+          title: tr("Call back"),
+          rows: due
+            .filter((d) => (last.get(d.contact_id) ?? "") <= d.created_at && !seen.has(d.contact_id) && seen.add(d.contact_id))
+            .map((d) => ({
+              href: d.project_id ? `/projects/projects/${d.project_id}#message` : `${recordHref(contactsT, d.contact_id)}#message`,
+              title: d.contacts?.title ?? tr("Contact #{id}", { id: d.contact_id }),
+              meta: [d.projects?.title, d.type ? tr(d.type) : null, d.result ? tr(d.result) : null, d.follow_up_date < today ? tr("since {date}", { date: formatDate(d.follow_up_date) }) : tr("today")].filter(Boolean).join(" · "),
+              tone: d.follow_up_date < today ? ("bad" as const) : ("warn" as const),
+            })),
+        };
       })(),
     );
   }

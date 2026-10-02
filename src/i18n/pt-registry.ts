@@ -475,4 +475,7 @@ export const PT_REGISTRY: Record<string, string> = {
   "Year": "Ano",
   "Yes": "Sim",
   "Zelle or wire transfer": "Zelle ou transferência bancária",
+  // F4
+  "Message sent": "Mensagem enviada",
+  "Salesperson": "Vendedor",
 };

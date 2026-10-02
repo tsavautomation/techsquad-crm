@@ -8,6 +8,7 @@ import { recordHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
 import { missingLines } from "@/lib/field-day/day";
 import { createReturnCard } from "@/lib/field-day/return-card";
+import { createAutoTask } from "./task-action";
 import { cleanupOrphanUploads } from "./cleanup";
 import { conditionsMatch, eventsForChange, renderTokens, type Conditions } from "./conditions";
 import { cardHtml, deliverQueued, queueEmail, type OutboxAttachment } from "./email";
@@ -26,6 +27,7 @@ export type Action =
   | { type: "archive" }
   | { type: "checklist"; target?: string; item: string; lines?: boolean }
   | { type: "return_card" }
+  | { type: "task"; text: string; due_days: number; assign?: string; labels?: string[] }
   | { type: "email"; from: string; to: string[]; cc?: string[]; bcc?: string[]; subject: string; card?: boolean; link?: boolean; pdf?: boolean; files?: string[] };
 
 export type Automation = { id: number; table_name: string; title: string; events: string[]; conditions: Conditions; actions: Action[] };
@@ -43,7 +45,7 @@ async function activeAutomations(db: SupabaseClient, table?: string): Promise<Au
 }
 
 /** Run one automation's actions on one record. Returns what it did (empty = nothing to do). */
-async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: EngineRecord): Promise<string[]> {
+async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: EngineRecord, actor: string | null): Promise<string[]> {
   const did: string[] = [];
   let display: Record<string, string> | null = null;
   const show = async () => (display ??= await displayStrings(db, t, rec));
@@ -95,6 +97,12 @@ async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: E
         if (r) did.push(r);
         break;
       }
+      case "task": {
+        const d = await show();
+        const r = await createAutoTask(db, a.id, action, t, rec, (f) => d[f] ?? String(rec.values[f] ?? ""), actor);
+        if (r) did.push(r);
+        break;
+      }
       case "email": {
         const d = await show();
         const token = (f: string) => d[f] ?? String(rec.values[f] ?? "");
@@ -142,10 +150,10 @@ async function logRun(db: SupabaseClient, a: Automation, recordId: number, event
 }
 
 /** Check one automation against one record and run it if the conditions hold. */
-async function apply(db: SupabaseClient, a: Automation, t: TableDef, rec: EngineRecord, event: string, today: string = todayET()) {
+async function apply(db: SupabaseClient, a: Automation, t: TableDef, rec: EngineRecord, event: string, today: string = todayET(), actor: string | null = null) {
   if (!conditionsMatch(a.conditions, rec.values, today)) return;
   try {
-    const did = await runActions(db, a, t, rec);
+    const did = await runActions(db, a, t, rec, actor);
     if (did.length) await logRun(db, a, rec.id, event, "done", { actions: did });
   } catch (e) {
     await logRun(db, a, rec.id, event, "error", { error: e instanceof Error ? e.message : String(e) });
@@ -194,7 +202,7 @@ export async function processPendingEvents(limit = 50): Promise<{ processed: num
       const key = `${a.id}:${rec.id}`;
       if (ran.has(key)) continue;
       ran.add(key);
-      await apply(db, a, t, rec, a.events.find((e) => events.includes(e))!);
+      await apply(db, a, t, rec, a.events.find((e) => events.includes(e))!, todayET(), row.actor);
     }
   }
   if (ids.length === limit) return { processed: rows.length + (await processPendingEvents(limit)).processed };

@@ -35,6 +35,7 @@ import {
   UsersRound,
   Wallet,
   Zap,
+  MessageSquareText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -81,6 +82,7 @@ export const TILE_ICONS: Record<string, { icon: LucideIcon; tint: string }> = {
   automations: { icon: Zap, tint: "#8b5cf6" },
   catalogue: { icon: BookOpen, tint: "#64748b" },
   "field-day": { icon: Truck, tint: "#0891b2" },
+  messages: { icon: MessageSquareText, tint: "#16a34a" },
   // Modules and other pages (sheets)
   schedule: { icon: CalendarDays, tint: "#0e76ad" },
   administrative: { icon: Briefcase, tint: "#6366f1" },

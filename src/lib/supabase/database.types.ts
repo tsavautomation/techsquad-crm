@@ -416,8 +416,11 @@ export type Database = {
           follow_up_date: string | null
           id: number
           locked: boolean
+          notes: string | null
+          project_id: number | null
           result: string | null
           submitted_at: string | null
+          template: string | null
           title: string | null
           type: string | null
           updated_at: string
@@ -433,8 +436,11 @@ export type Database = {
           follow_up_date?: string | null
           id?: number
           locked?: boolean
+          notes?: string | null
+          project_id?: number | null
           result?: string | null
           submitted_at?: string | null
+          template?: string | null
           title?: string | null
           type?: string | null
           updated_at?: string
@@ -450,8 +456,11 @@ export type Database = {
           follow_up_date?: string | null
           id?: number
           locked?: boolean
+          notes?: string | null
+          project_id?: number | null
           result?: string | null
           submitted_at?: string | null
+          template?: string | null
           title?: string | null
           type?: string | null
           updated_at?: string
@@ -470,6 +479,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_interactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -1896,6 +1912,7 @@ export type Database = {
           referral_contact_id: number | null
           referral_organization_id: number | null
           referral_type: string | null
+          salesperson_id: number | null
           special_orders: boolean
           start_date: string | null
           submitted_at: string | null
@@ -1953,6 +1970,7 @@ export type Database = {
           referral_contact_id?: number | null
           referral_organization_id?: number | null
           referral_type?: string | null
+          salesperson_id?: number | null
           special_orders?: boolean
           start_date?: string | null
           submitted_at?: string | null
@@ -2010,6 +2028,7 @@ export type Database = {
           referral_contact_id?: number | null
           referral_organization_id?: number | null
           referral_type?: string | null
+          salesperson_id?: number | null
           special_orders?: boolean
           start_date?: string | null
           submitted_at?: string | null
@@ -2105,6 +2124,13 @@ export type Database = {
             columns: ["referral_organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
@@ -3012,6 +3038,7 @@ export type Database = {
           priority: string | null
           private: boolean
           project_id: number | null
+          source: string | null
           status: string | null
           submitted_at: string | null
           title: string | null
@@ -3035,6 +3062,7 @@ export type Database = {
           priority?: string | null
           private?: boolean
           project_id?: number | null
+          source?: string | null
           status?: string | null
           submitted_at?: string | null
           title?: string | null
@@ -3058,6 +3086,7 @@ export type Database = {
           priority?: string | null
           private?: boolean
           project_id?: number | null
+          source?: string | null
           status?: string | null
           submitted_at?: string | null
           title?: string | null
@@ -3834,6 +3863,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      workflow_board: { Args: { p_table: string }; Returns: Json }
       workflow_move: {
         Args: {
           p_comment?: string

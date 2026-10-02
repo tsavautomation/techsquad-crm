@@ -2,6 +2,8 @@
 // Now maintained by hand: edit freely, but keep labels and options identical to SPEC.md.
 import type { TableDef } from "../types";
 
+const NEW = { column: "", fieldId: 0 };
+
 export const contactInteractions: TableDef = {
   "name": "contact_interactions",
   "label": "Interactions",
@@ -117,7 +119,11 @@ export const contactInteractions: TableDef = {
         "column": "follow_up_date",
         "fieldId": 76848
       }
-    }
+    },
+    // F4 contact log (SPEC §9.1 F4-c): what it was about and what was said.
+    { name: "project_id", label: "Project", type: "lookup", lookup: { table: "projects" }, legacy: NEW },
+    { name: "notes", label: "Notes", type: "textarea", legacy: NEW },
+    { name: "template", label: "Message sent", type: "text", formHidden: true, legacy: NEW },
   ],
   "rules": [],
   "legacy": {

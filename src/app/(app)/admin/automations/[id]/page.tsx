@@ -23,7 +23,7 @@ function fieldsFor(t: TableDef): FieldMeta[] {
   return [
     ...t.fields
       .filter((f) => !f.sensitive && f.type !== "richtext")
-      .map((f) => ({ name: f.name, label: f.label, type: f.type, options: f.options?.map((o) => ({ label: o.label, value: o.value })), lookup: Boolean(f.lookup) })),
+      .map((f) => ({ name: f.name, label: f.label, type: f.type, options: f.options?.map((o) => ({ label: o.label, value: o.value })), lookup: Boolean(f.lookup), lookupTable: f.lookup?.table })),
     ...(t.submit ? SYSTEM_FIELDS : SYSTEM_FIELDS.slice(1)),
   ];
 }

@@ -9,6 +9,7 @@ export const contacts: TableDef = {
   "tab": "contacts",
   "itemLabel": "Contact",
   "newRecordLabel": "New Contact",
+  detailAddon: "contact",
   "titleFormula": "{first_name} {last_name}",
   "fields": [
     {

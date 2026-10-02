@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChartColumn, ChevronRight, Database, List, LogOut, Menu, Monitor, Moon, Plus, Settings, SquareKanban, Sun, X } from "lucide-react";
+import { ChartColumn, ChevronRight, Columns3, Database, List, LogOut, Menu, Monitor, Moon, Plus, Settings, SquareKanban, Sun, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { ModuleDef } from "@/config/modules";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ export type NavItem = { slug: string; href: string; title: string; shortTitle: s
 export type CreateItem = { href: string; label: string; icon: string };
 export type Me = { name: string; email: string; initials: string };
 /** Pages outside the modules (Portal design): Tasks board, Insights, Data. */
-export type Extras = { tasks: boolean; insights: boolean; data: boolean };
+export type Extras = { tasks: boolean; pipeline: boolean; insights: boolean; data: boolean };
 
 const GROUPS: { title: string; slugs: string[] }[] = [
   { title: "", slugs: ["schedule"] },
@@ -234,6 +234,7 @@ export function Sidebar({ items, create, me, showAdmin, extras }: { items: NavIt
             <ul key="main" className="flex flex-col gap-0.5">
               {link("/", t("Today"), <ModuleIcon name="dashboard" className="size-[18px]" />)}
               {list.map((i) => link(i.href, i.title, <ModuleIcon name={i.icon} className="size-[18px]" />, i.tabs))}
+              {extras.pipeline && link("/pipeline", t("Pipeline"), <Columns3 className="size-[18px]" aria-hidden />)}
               {extras.tasks && link("/tasks", t("Tasks"), <SquareKanban className="size-[18px]" aria-hidden />)}
             </ul>
           );
@@ -348,13 +349,14 @@ export function BottomNav({ items, create, showAdmin, extras }: { items: NavItem
     </Link>
   );
   const extraPages = [
+    ...(extras.pipeline ? [{ href: "/pipeline", title: t("Pipeline"), icon: <Columns3 className="size-5" aria-hidden /> }] : []),
     ...(extras.tasks ? [{ href: "/tasks", title: t("Tasks"), icon: <SquareKanban className="size-5" aria-hidden /> }] : []),
     ...(extras.insights ? [{ href: "/insights", title: t("Insights"), icon: <ChartColumn className="size-5" aria-hidden /> }] : []),
     ...(extras.data ? [{ href: "/data", title: t("Data"), icon: <Database className="size-5" aria-hidden /> }] : []),
   ];
   const moreActive = rest.some((i) => isActive(pathname, i.href)) || [...extraPages.map((p) => p.href), "/admin", "/lists"].some((h) => isActive(pathname, h));
-  // Forms (new / edit) get the whole screen; their Save bar sits where this bar would be.
-  if (/\/(new|edit)$/.test(pathname)) return null;
+  // Forms (new / edit) and settings screens with a Save bar get the whole screen; the bar sits where this one would be.
+  if (/\/(new|edit)$/.test(pathname) || /^\/admin\/(field-day|messages)$/.test(pathname)) return null;
 
   return (
     <>

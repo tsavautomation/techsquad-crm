@@ -24,6 +24,11 @@ import { cn } from "@/lib/utils";
 import { getLang, getT } from "@/i18n/server";
 import { ReturnCardPanel, VisitFieldPanel } from "@/components/field-day/record-panels";
 import { localized } from "@/i18n/registry";
+import { MessagePanel } from "@/components/contact/message-panel";
+import { PartnerStats } from "@/components/contact/partner-stats";
+import { Timeline } from "@/components/contact/timeline";
+import { loadMessagePanel } from "@/lib/messages/load";
+import { loadTimeline } from "@/lib/records/timeline";
 
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]/[id]">) {
@@ -89,7 +94,13 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
     db.from("record_mentions").update({ seen_at: new Date().toISOString() }).eq("user_id", user.id).eq("table_name", t.name).eq("record_id", recordId).is("seen_at", null),
   ]);
   const canModify = canDo(perms, t, "modify", getTable);
-  const { data: workflow } = await db.rpc("workflow_panel", { p_table: t.name, p_id: recordId });
+  // F4: contact log, message templates and the client timeline on Projects and Contacts.
+  const client = t.detailAddon === "project" || t.detailAddon === "contact" ? t.name as "projects" | "contacts" : null;
+  const [{ data: workflow }, messages, timeline] = await Promise.all([
+    db.rpc("workflow_panel", { p_table: t.name, p_id: recordId }),
+    client ? loadMessagePanel(db, user, client, recordId) : Promise.resolve(null),
+    client ? loadTimeline(db, perms, client, recordId) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -119,6 +130,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {workflow && <WorkflowPanel table={t.name} id={recordId} data={workflow as WorkflowPanelData} />}
       {t.detailAddon === "visit" && <VisitFieldPanel visitId={recordId} />}
       {t.detailAddon === "task" && <ReturnCardPanel taskId={recordId} />}
+      {t.detailAddon === "organization" && <PartnerStats orgId={recordId} user={user} />}
 
       <RecordToolbar
         table={t.name}
@@ -149,6 +161,16 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       </dl>
 
       <div className="mt-6 flex flex-col gap-3">
+        {messages && (messages.templates.length > 0 || messages.canLog) && (
+          <Section id="message" title={client === "projects" ? tr("Contact the client") : tr("Contact")} open>
+            <MessagePanel data={messages} projectId={client === "projects" ? recordId : null} />
+          </Section>
+        )}
+        {timeline && (
+          <Section id="timeline" title={tr("Timeline")} count={timeline.length} open={timeline.length > 0}>
+            <Timeline items={timeline} />
+          </Section>
+        )}
         {subLists.map((s) => (
           <Section key={s.table.name} title={s.table.label} count={s.rows.length} open>
             <SubListTable list={s} baseHref={recordHref(t, recordId)} />
