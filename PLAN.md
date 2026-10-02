@@ -50,7 +50,7 @@ Phase 2 will also need a Microsoft 365 / Entra app registration (OneDrive), a Go
 | **F2** | *(built 2026-10-01, awaiting OK; SPEC §9.1 F2-a…d)* Field day: technician Today screen, route, "on my way", check-in / check-out, extended Job Report (structured result, missing items, materials, checklist per service type, signature, dictation), automatic return cards + briefing, day hours | before go-live |
 | **F3** | *(built 2026-10-01, awaiting OK; SPEC §9.1 F3-a, F3-b; review requests moved to F4)* Office Today dashboard (late / in field / follow-ups / renewals / reviews / expiring documents / delinquent) + tasks board (Kanban, labels, comments, private tasks) | before go-live |
 | **F4** | *(built 2026-10-01, awaiting OK; SPEC §9.1 F4-a…e)* Pipeline board on the Project workflow + auto tasks; client timeline and communication log; message templates in EN / PT / ES; partner stats | |
-| **F5** | *(started 2026-09-30: Insights + Data pages; merge after M14)* Insights (pipeline, money, partners, salespeople, operations real vs planned, maintenance plans) + data quality (completeness, duplicates, merge) | |
+| **F5** | *(built 2026-10-02, awaiting OK; SPEC §9.1 F5-a, F5-b; merge after M14)* Insights (pipeline, money, partners, salespeople, operations real vs planned, maintenance plans) + data quality (completeness, duplicates, merge) | |
 | **F6** | Client portal (customer logins, EN / PT / ES + dark/light in its top bar) + website quote form | **after M14 import** (Fred 2026-09-30); security review |
 | **F7** | Global search, notification bell, undo | can be spread over F1–F6 |
 

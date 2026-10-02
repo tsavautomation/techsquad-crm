@@ -153,8 +153,19 @@ export const PT: Record<string, string> = {
   "Pipeline": "Funil",
   "Pipeline, money, partners, field work and maintenance plans.": "Funil, financeiro, parceiros, trabalho de campo e planos de manutenção.",
   "Planned time by service type": "Tempo planejado por tipo de serviço",
-  "Real time on site (check-in / check-out) comes with the technician's Today screen.":
-    "O tempo real no local (check-in / check-out) virá com a tela Hoje do técnico.",
+  "Planned vs real time by service type": "Tempo planejado vs real por tipo de serviço",
+  "{planned} planned → {real} real": "{planned} planejado → {real} real",
+  "{planned} planned, no check-outs": "{planned} planejado, sem check-outs",
+  "Average per visit: light bar planned, dark bar real (check-in to check-out). {timed} of {total} visits were timed.":
+    "Média por visita: barra clara planejado, barra escura real (do check-in ao check-out). {timed} de {total} visitas foram cronometradas.",
+  "Visits and hours on site by technician": "Visitas e horas no local por técnico",
+  "Job report results": "Resultados dos relatórios",
+  "No result": "Sem resultado",
+  "No projects yet.": "Nenhum projeto ainda.",
+  "Salespeople by approved value": "Vendedores por valor aprovado",
+  "Salespeople by number of projects": "Vendedores por número de projetos",
+  "The percentage is the win rate: approved or further out of approved + lost. Open projects don't count yet.":
+    "A porcentagem é a taxa de conversão: aprovados ou adiante sobre aprovados + perdidos. Projetos abertos ainda não contam.",
   "Renewal due": "Renovação pendente",
   "To collect (invoiced − paid)": "A receber (faturado − pago)",
   "Values come from {n} projects with an approved proposal.": "Os valores vêm de {n} projetos com proposta aprovada.",
@@ -174,6 +185,11 @@ export const PT: Record<string, string> = {
   "Incomplete records and possible duplicates. Merging duplicates comes after the WebAuthor import.":
     "Registros incompletos e possíveis duplicados. A junção de duplicados vem depois da importação do WebAuthor.",
   "No likely duplicates.": "Nenhum provável duplicado.",
+  "Possible duplicates": "Possíveis duplicados",
+  "Possible duplicate organizations": "Possíveis organizações duplicadas",
+  "Same phone": "Mesmo telefone",
+  "Same email": "Mesmo e-mail",
+  "Same name": "Mesmo nome",
   "Often fine (a new job at an old client), sometimes a duplicate.": "Muitas vezes está certo (novo serviço para um cliente antigo), às vezes é duplicado.",
   "Only open projects": "Só projetos abertos",
   "Open": "Abrir",

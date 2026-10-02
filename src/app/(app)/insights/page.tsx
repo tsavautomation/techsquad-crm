@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { fromDateTimeLocalET, todayET } from "@/lib/dates";
+import { formatMinutes } from "@/lib/field-day/day";
+import { onSiteByTech, realVsPlanned, reportResults, salespeople, type VisitTimes } from "@/lib/insights/stats";
 import { recordsDb } from "@/lib/records/data";
 import { addDays } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
@@ -59,6 +61,7 @@ type Project = {
   general_contractor_id: number | null;
   design_firm_id: number | null;
   builder_developer_id: number | null;
+  salesperson_id: number | null;
   maintenance_plan: boolean;
   maintenance_status: string | null;
   maintenance_type: string | null;
@@ -77,7 +80,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
 
   const { data: pData } = await db
     .from("projects")
-    .select("id, job_status, general_contractor_id, design_firm_id, builder_developer_id, maintenance_plan, maintenance_status, maintenance_type, maintenance_amount")
+    .select("id, job_status, general_contractor_id, design_firm_id, builder_developer_id, salesperson_id, maintenance_plan, maintenance_status, maintenance_type, maintenance_amount")
     .is("deleted_at", null);
   const projects = (pData ?? []) as Project[];
 
@@ -130,33 +133,49 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
     .sort((a, b) => (showMoney ? b.v - a.v : 0) || b.n - a.n)
     .slice(0, 8);
 
-  // Operations: visits in the period.
-  let ops: { total: number; done: number; cancelled: number; byTech: [string, number][]; byType: [string, { n: number; min: number }][] } | null = null;
+  // Salespeople (F5): projects per salesperson, win rate over decided ones, approved value.
+  const salesIds = [...new Set(projects.map((p) => p.salesperson_id).filter((x): x is number => x !== null))];
+  const { data: salesEmp } = salesIds.length ? await db.from("employees").select("id, title").in("id", salesIds) : { data: [] };
+  const salesName = new Map(((salesEmp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
+  const sales = salespeople(projects, (i) => approvedOf(projects[i].id)).map((s) => ({ ...s, name: s.id === null ? tr("No salesperson") : (salesName.get(s.id) ?? `#${s.id}`) }));
+  const maxSales = Math.max(1, ...sales.map((s) => (showMoney ? s.value : s.n)));
+
+  // Field work (F5): visits in the period, planned vs real time (check-in / check-out) and the
+  // Job Report results of the same days.
+  let ops: {
+    total: number;
+    done: number;
+    cancelled: number;
+    timed: number;
+    byType: ReturnType<typeof realVsPlanned>;
+    byTech: { name: string; visits: number; min: number }[];
+    results: { result: string; n: number }[];
+  } | null = null;
   if (can("visits")) {
     const today = todayET();
-    const since = fromDateTimeLocalET(`${addDays(today, -days + 1)}T00:00`);
+    const from = addDays(today, -days + 1);
+    const since = fromDateTimeLocalET(`${from}T00:00`);
     const until = fromDateTimeLocalET(`${addDays(today, 1)}T00:00`);
-    const { data } = await db.from("visits").select("status, duration, service_type, technician_id").gte("starts_at", since).lt("starts_at", until).is("deleted_at", null);
-    const v = (data ?? []) as { status: string | null; duration: string | null; service_type: string | null; technician_id: number | null }[];
+    const [{ data }, { data: rep }] = await Promise.all([
+      db.from("visits").select("status, duration, service_type, technician_id, checked_in_at, checked_out_at").gte("starts_at", since).lt("starts_at", until).is("deleted_at", null),
+      can("job_reports") ? db.from("job_reports").select("result").gte("date", from).lte("date", today).is("deleted_at", null) : Promise.resolve({ data: [] }),
+    ]);
+    const v = (data ?? []) as VisitTimes[];
     const techIds = [...new Set(v.map((x) => x.technician_id).filter((x): x is number => x !== null))];
     const { data: emp } = techIds.length ? await db.from("employees").select("id, title").in("id", techIds) : { data: [] };
     const tn = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
-    const byTech = new Map<string, number>();
-    const byType = new Map<string, { n: number; min: number }>();
-    for (const x of v.filter((y) => y.status !== "Cancelled")) {
-      const name = x.technician_id ? (tn.get(x.technician_id) ?? "—") : tr("No technician");
-      byTech.set(name, (byTech.get(name) ?? 0) + 1);
-      const t = byType.get(x.service_type ?? tr("No service type")) ?? { n: 0, min: 0 };
-      t.n++;
-      t.min += Number(x.duration ?? 0);
-      byType.set(x.service_type ?? tr("No service type"), t);
-    }
+    const live = v.filter((x) => x.status !== "Cancelled");
     ops = {
-      total: v.filter((x) => x.status !== "Cancelled").length,
+      total: live.length,
       done: v.filter((x) => x.status === "Done").length,
-      cancelled: v.filter((x) => x.status === "Cancelled").length,
-      byTech: [...byTech.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8),
-      byType: [...byType.entries()].sort((a, b) => b[1].n - a[1].n),
+      cancelled: v.length - live.length,
+      timed: live.filter((x) => x.checked_in_at && x.checked_out_at).length,
+      byType: realVsPlanned(v, tr("No service type")),
+      byTech: [...onSiteByTech(v).entries()]
+        .map(([id, e]) => ({ name: id === null ? tr("No technician") : (tn.get(id) ?? `#${id}`), ...e }))
+        .sort((a, b) => b.visits - a.visits)
+        .slice(0, 8),
+      results: reportResults((rep ?? []) as { result: string | null }[]),
     };
   }
 
@@ -238,25 +257,69 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
               <Stat label={tr("Done")} value={String(ops.done)} />
               <Stat label={tr("Cancelled")} value={String(ops.cancelled)} />
             </div>
+            {ops.results.length > 0 && (
+              <>
+                <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Job report results")}</p>
+                {ops.results.map((r) => (
+                  <Bar key={r.result} label={tr(r.result)} value={r.n} max={Math.max(1, ...ops!.results.map((x) => x.n))} text={String(r.n)} />
+                ))}
+              </>
+            )}
             {ops.byType.length > 0 && (
               <>
-                <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Planned time by service type")}</p>
-                {ops.byType.map(([t, v]) => (
-                  <Bar key={t} label={tr(t)} value={v.min} max={Math.max(...ops!.byType.map(([, x]) => x.min), 1)} text={`${v.n} · ${Math.round(v.min / 60)} h`} />
+                <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Planned vs real time by service type")}</p>
+                {ops.byType.map((t) => (
+                  <div key={t.type} className="py-1 text-[13px]">
+                    <div className="flex justify-between gap-2">
+                      <span className="truncate text-text-2">
+                        {tr(t.type)} · {t.n}
+                      </span>
+                      <span className={cn("shrink-0 font-medium tabular-nums", t.realAvg > 0 && t.plannedAvg > 0 && t.realAvg > t.plannedAvg * 1.2 && "text-bad-fg", t.realAvg > 0 && t.plannedAvg > 0 && t.realAvg < t.plannedAvg * 0.8 && "text-ok-fg")}>
+                        {t.real > 0 ? tr("{planned} planned → {real} real", { planned: formatMinutes(t.plannedAvg), real: formatMinutes(t.realAvg) }) : tr("{planned} planned, no check-outs", { planned: formatMinutes(t.plannedAvg) })}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-col gap-0.5">
+                      <span className="h-1.5 overflow-hidden rounded-full bg-muted">
+                        <span className="block h-full rounded-full bg-primary/40" style={{ width: `${Math.min(100, (t.plannedAvg / Math.max(t.plannedAvg, t.realAvg, 1)) * 100)}%` }} />
+                      </span>
+                      <span className="h-1.5 overflow-hidden rounded-full bg-muted">
+                        <span className="block h-full rounded-full bg-gradient-to-r from-primary to-brand" style={{ width: `${t.real > 0 ? Math.min(100, (t.realAvg / Math.max(t.plannedAvg, t.realAvg, 1)) * 100) : 0}%` }} />
+                      </span>
+                    </div>
+                  </div>
                 ))}
+                <p className="mt-1 text-[12px] text-muted-foreground">{tr("Average per visit: light bar planned, dark bar real (check-in to check-out). {timed} of {total} visits were timed.", { timed: ops.timed, total: ops.total })}</p>
               </>
             )}
             {ops.byTech.length > 0 && (
               <>
-                <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Visits by technician")}</p>
-                {ops.byTech.map(([n, c]) => (
-                  <Bar key={n} label={n} value={c} max={ops!.byTech[0][1]} text={String(c)} />
+                <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Visits and hours on site by technician")}</p>
+                {ops.byTech.map((e) => (
+                  <Bar key={e.name} label={e.name} value={e.visits} max={ops!.byTech[0].visits} text={`${e.visits}${e.min ? ` · ${formatMinutes(e.min)}` : ""}`} />
                 ))}
               </>
             )}
-            <p className="mt-2 text-[12px] text-muted-foreground">{tr("Real time on site (check-in / check-out) comes with the technician's Today screen.")}</p>
           </Card>
         )}
+
+        <Card title={tr(showMoney ? "Salespeople by approved value" : "Salespeople by number of projects")}>
+          {sales.length ? (
+            <>
+              {sales.map((s) => (
+                <Bar
+                  key={String(s.id)}
+                  label={s.name}
+                  value={showMoney ? s.value : s.n}
+                  max={maxSales}
+                  text={`${showMoney ? money.format(s.value) : tr(s.n === 1 ? "{n} project" : "{n} projects", { n: s.n })}${s.winRate !== null ? ` · ${s.winRate}%` : ""}`}
+                />
+              ))}
+              <p className="mt-2 text-[12.5px] text-text-2">{tr("The percentage is the win rate: approved or further out of approved + lost. Open projects don't count yet.")}</p>
+            </>
+          ) : (
+            <p className="text-[13px] text-text-2">{tr("No projects yet.")}</p>
+          )}
+        </Card>
 
         <Card title={tr("Maintenance plans")}>
           <div className="mb-2 rounded-xl border bg-muted px-3">

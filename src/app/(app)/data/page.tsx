@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
+import { findDuplicates } from "@/lib/insights/stats";
 import { recordsDb } from "@/lib/records/data";
 import type { Address } from "@/lib/records/values";
 import { getTable } from "@/registry";
@@ -19,7 +20,6 @@ type Contact = { id: number; title: string | null; first_name: string | null; la
 type Org = { id: number; title: string | null; main_phone: string | null; main_email: string | null };
 type Project = { id: number; title: string | null; job_address: Address | null; job_status: string | null };
 
-const digits = (s: string | null) => (s ?? "").replace(/\D/g, "").slice(-10);
 const norm = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 function Kpi({ value, label, alert }: { value: string; label: string; alert?: boolean }) {
@@ -61,22 +61,13 @@ export default async function DataPage(props: PageProps<"/data">) {
   const filled = slots - gaps.reduce((n, g) => n + g.missing.length, 0);
   const pct = slots ? Math.round((filled / slots) * 100) : 100;
 
-  // Possible duplicates: same phone or email with different names, or same full name.
-  const groups = new Map<string, { label: string; ids: number[] }>();
-  const add = (key: string, label: string, id: number) => {
-    const g = groups.get(key) ?? { label, ids: [] };
-    if (!g.ids.includes(id)) g.ids.push(id);
-    groups.set(key, g);
-  };
-  for (const x of contacts) {
-    const d = digits(x.main_phone);
-    if (d.length === 10) add(`t${d}`, `Same phone: ${x.main_phone}`, x.id);
-    if (x.email) add(`e${x.email.toLowerCase()}`, `Same email: ${x.email}`, x.id);
-    const name = norm(`${x.first_name}${x.last_name}`);
-    if (name.length > 3) add(`n${name}`, `Same name: ${[x.first_name, x.last_name].filter(Boolean).join(" ")}`, x.id);
-  }
+  // Possible duplicates: same phone or email, or same name (contacts and organizations, each apart).
+  const kinds = { phone: t("Same phone"), email: t("Same email"), name: t("Same name") };
+  const dupeLabel = (g: { kind: keyof typeof kinds; value: string }) => `${kinds[g.kind]}: ${g.value}`;
   const byId = new Map(contacts.map((x) => [x.id, x]));
-  const dupes = [...groups.values()].filter((g) => g.ids.length > 1);
+  const dupes = findDuplicates(contacts.map((x) => ({ id: x.id, name: [x.first_name, x.last_name].filter(Boolean).join(" ") || null, phone: x.main_phone, email: x.email })));
+  const orgById = new Map(orgs.map((x) => [x.id, x]));
+  const orgDupes = findDuplicates(orgs.map((x) => ({ id: x.id, name: x.title, phone: x.main_phone, email: x.main_email })));
 
   // Projects at the same address and unit.
   const places = new Map<string, number[]>();
@@ -96,7 +87,7 @@ export default async function DataPage(props: PageProps<"/data">) {
       <div className="mb-[18px] grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi value={`${pct}%`} label={t("Complete overall")} />
         <Kpi value={String(gaps.length)} label={t("Incomplete records")} alert={gaps.length > 0} />
-        <Kpi value={String(dupes.length)} label={t("Possible duplicate contacts")} alert={dupes.length > 0} />
+        <Kpi value={String(dupes.length + orgDupes.length)} label={t("Possible duplicates")} alert={dupes.length + orgDupes.length > 0} />
         <Kpi value={String(samePlace.length)} label={t("Projects at the same address")} />
       </div>
 
@@ -139,8 +130,8 @@ export default async function DataPage(props: PageProps<"/data">) {
         {dupes.length ? (
           <ul className="flex flex-col gap-2">
             {dupes.map((g) => (
-              <li key={g.label + g.ids.join()} className="rounded-xl border bg-muted px-3 py-2">
-                <span className="block text-[12px] text-muted-foreground">{g.label}</span>
+              <li key={g.kind + g.value + g.ids.join()} className="rounded-xl border bg-muted px-3 py-2">
+                <span className="block text-[12px] text-muted-foreground">{dupeLabel(g)}</span>
                 {g.ids.map((id) => (
                   <Link key={id} href={`/projects/contacts/${id}`} className="block text-[14px] text-primary hover:underline">
                     {byId.get(id)?.title ?? `Contact #${id}`}
@@ -153,6 +144,29 @@ export default async function DataPage(props: PageProps<"/data">) {
           <p className="text-[13px] text-text-2">{t("No likely duplicates.")}</p>
         )}
       </section>
+
+      {orgs.length > 0 && (
+        <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+          <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Possible duplicate organizations")}</h2>
+          <p className="mb-2 text-[12.5px] text-text-2">{t("Same phone, same email or same name. Open both to compare.")}</p>
+          {orgDupes.length ? (
+            <ul className="flex flex-col gap-2">
+              {orgDupes.map((g) => (
+                <li key={g.kind + g.value + g.ids.join()} className="rounded-xl border bg-muted px-3 py-2">
+                  <span className="block text-[12px] text-muted-foreground">{dupeLabel(g)}</span>
+                  {g.ids.map((id) => (
+                    <Link key={id} href={`/projects/organizations/${id}`} className="block text-[14px] text-primary hover:underline">
+                      {orgById.get(id)?.title ?? `Organization #${id}`}
+                    </Link>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[13px] text-text-2">{t("No likely duplicates.")}</p>
+          )}
+        </section>
+      )}
 
       {samePlace.length > 0 && (
         <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
