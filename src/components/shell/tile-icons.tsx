@@ -18,6 +18,7 @@ import {
   FileSignature,
   FolderKanban,
   ListChecks,
+  Map,
   MapPin,
   Package,
   PackageMinus,
@@ -45,6 +46,7 @@ export const TILE_ICONS: Record<string, { icon: LucideIcon; tint: string }> = {
   // Schedule
   calendar: { icon: CalendarDays, tint: "#0e76ad" },
   visits: { icon: MapPin, tint: "#0ea5e9" },
+  map: { icon: Map, tint: "#16a34a" },
   // Projects
   projects: { icon: FolderKanban, tint: "#0e76ad" },
   contacts: { icon: Contact, tint: "#8b5cf6" },
@@ -79,6 +81,7 @@ export const TILE_ICONS: Record<string, { icon: LucideIcon; tint: string }> = {
   permissions: { icon: ShieldCheck, tint: "#16a34a" },
   "form-settings": { icon: SlidersHorizontal, tint: "#f59e0b" },
   onedrive: { icon: Cloud, tint: "#0ea5e9" },
+  bouncie: { icon: Truck, tint: "#f97316" },
   automations: { icon: Zap, tint: "#8b5cf6" },
   catalogue: { icon: BookOpen, tint: "#64748b" },
   "field-day": { icon: Truck, tint: "#0891b2" },
@@ -116,6 +119,7 @@ export function TileIcon({ name, size = "md" }: { name: string; size?: "sm" | "m
 export const TILE_TEXT: Record<string, string> = {
   calendar: "Week, team and list of visits",
   visits: "Every scheduled visit",
+  map: "The day's jobs and the vans, live",
   projects: "Jobs from survey to completion",
   contacts: "Clients, owners and people",
   organizations: "GCs, designers, builders, partners",

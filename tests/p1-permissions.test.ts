@@ -20,7 +20,7 @@ describe("checklist", () => {
       expect(sections.find((s) => s.id === `${m.slug}-more`)?.kind).toBe("list");
     }
     // Calendar and Visits share one resource, so one row.
-    expect(sections.find((s) => s.id === "schedule")!.rows.map((r) => r.title)).toEqual(["Calendar and visits"]);
+    expect(sections.find((s) => s.id === "schedule")!.rows.map((r) => r.title)).toEqual(["Calendar, map and visits"]);
     expect(sections.at(-2)!.id).toBe("workflows");
     expect(sections.at(-1)!.id).toBe("admin");
   });
@@ -65,7 +65,7 @@ describe("seed (scripts/data/user-permissions.ts)", () => {
   it("keeps what the old groups gave: Fred administrator, Jessica the office, the technician the field", () => {
     expect(USER_PERMISSIONS["fred@tsav.net"].admin).toBe(true);
     const menu = (email: string) => visibleModules(new Set(seedKeys(USER_PERMISSIONS[email]))).flatMap((m) => m.tabs.map((t) => `${m.slug}/${t.slug}`));
-    expect(menu("info@tsav.net")).toEqual(["schedule/calendar", "schedule/visits", "projects/projects", "projects/buildings", "projects/permits", "projects/punch-list", "administrative/rma", "administrative/tasks", "administrative/inventory-checkout", "forms/job-reports", "forms/notes", "forms/survey-and-proposals", "forms/tv-installations"]);
+    expect(menu("info@tsav.net")).toEqual(["schedule/calendar", "schedule/map", "schedule/visits", "projects/projects", "projects/buildings", "projects/permits", "projects/punch-list", "administrative/rma", "administrative/tasks", "administrative/inventory-checkout", "forms/job-reports", "forms/notes", "forms/survey-and-proposals", "forms/tv-installations"]);
     expect(menu("jessica@tsav.net")).toContain("administrative/transactions");
     expect(menu("lucas@tsav.net")).not.toContain("administrative/transactions");
     const jessica = new Set(seedKeys(USER_PERMISSIONS["jessica@tsav.net"]));

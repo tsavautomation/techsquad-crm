@@ -58,15 +58,21 @@ export function checklist(): ChecklistSection[] {
   const out: ChecklistSection[] = [];
   for (const m of MODULES) {
     const rows: ChecklistRow[] = [];
-    const seen = new Set<string>();
+    const titles = new Map<string, string[]>();
     for (const tab of m.tabs) {
       const resource = tab.permission.replace(/^.*?\.(.*)\.view_page$/, "$1");
-      if (seen.has(resource)) {
-        rows[rows.length - 1].title = `${rows[rows.length - 1].title} and ${tab.title.toLowerCase()}`;
+      const t = titles.get(resource);
+      if (t) {
+        // Several pages on one permission (Calendar, Map and Visits): one row, named after all of them.
+        t.push(tab.title.toLowerCase());
         continue;
       }
-      seen.add(resource);
+      titles.set(resource, [tab.title]);
       rows.push({ id: `${m.slug}.${resource}`, title: tab.title, items: RECORD_COLUMNS.map(([a, label]) => ({ key: `${m.slug}.${resource}.${a}`, label })) });
+    }
+    for (const row of rows) {
+      const [first, ...rest] = titles.get(row.id.slice(m.slug.length + 1)) ?? [row.title];
+      row.title = rest.length ? `${[first, ...rest.slice(0, -1)].join(", ")} and ${rest[rest.length - 1]}` : first;
     }
     out.push({ id: m.slug, title: m.title, kind: "grid", rows });
 

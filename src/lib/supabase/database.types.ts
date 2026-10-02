@@ -3483,9 +3483,11 @@ export type Database = {
       vehicles: {
         Row: {
           archived_at: string | null
+          bouncie_imei: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
+          driver_id: number | null
           id: number
           locked: boolean
           make_and_model: string | null
@@ -3500,9 +3502,11 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          bouncie_imei?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          driver_id?: number | null
           id?: number
           locked?: boolean
           make_and_model?: string | null
@@ -3517,9 +3521,11 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          bouncie_imei?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          driver_id?: number | null
           id?: number
           locked?: boolean
           make_and_model?: string | null
@@ -3538,6 +3544,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {

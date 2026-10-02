@@ -2,6 +2,8 @@
 // Now maintained by hand: edit freely, but keep labels and options identical to SPEC.md.
 import type { TableDef } from "../types";
 
+const NEW = { column: "", fieldId: 0 };
+
 export const vehicles: TableDef = {
   "name": "vehicles",
   "label": "Fleet",
@@ -11,6 +13,16 @@ export const vehicles: TableDef = {
   "newRecordLabel": "New Vehicle",
   "titleFormula": "{year} {make_and_model} ({tag_number})",
   "fields": [
+    // F8 (not from WebAuthor, SPEC §9.1 F8-b): who usually drives it, and the Bouncie device when the VIN differs.
+    { name: "driver_id", label: "Usual driver", type: "lookup", lookup: { table: "employees" }, legacy: NEW },
+    {
+      name: "bouncie_imei",
+      label: "Bouncie device",
+      type: "text",
+      maxLength: 20,
+      help: "Only needed when Bouncie reports a different VIN. The 15-digit IMEI from the Bouncie app.",
+      legacy: NEW,
+    },
     {
       "name": "populate_on_reports",
       "label": "Populate on Reports",

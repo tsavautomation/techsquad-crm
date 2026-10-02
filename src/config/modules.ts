@@ -24,7 +24,7 @@ export const MODULES: ModuleDef[] = [
     title: "Schedule",
     shortTitle: "Schedule",
     icon: "calendar",
-    tabs: [tab("schedule", "calendar", "Calendar", "visits"), tab("schedule", "visits", "Visits")],
+    tabs: [tab("schedule", "calendar", "Calendar", "visits"), tab("schedule", "map", "Map", "visits"), tab("schedule", "visits", "Visits")],
   },
   {
     slug: "projects",

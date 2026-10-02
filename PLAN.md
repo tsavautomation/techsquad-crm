@@ -39,7 +39,7 @@ Phase 2 will also need a Microsoft 365 / Entra app registration (OneDrive), a Go
 | **M12** | **Dashboards + admin.** Per-module dashboard (My Assigned, My Tasks, Recently Modified); admin screens: users ↔ groups, **editable permission matrix**, utility lists, automations; **"Form settings" screen: edit labels, dropdown options (add / rename / re-colour / retire), required yes/no, field order and help text without code**; **permission review session with Fred** (several WebAuthor grants need adjusting) | manage users without me | admins can do everything SPEC §7 gives them |
 | **M13** | **Hardening + go-live of the empty system.** Parity walk-through against SPEC (checklist per table), iPhone QA, security review (RLS, secrets, sensitive fields), prod Supabase project, crm.tsav.net domain, backups on, email test mode off | use it for real (still without the old data) | you sign off |
 
-**After Phase 1 (separate, optional): M14 data import.** A script that reads a full WebAuthor data export and loads it using the legacy name map and legacy IDs. It is planned now (legacy IDs + mapping are kept) so it's cheap later.
+**M14 data import** *(done on dev 2026-10-02 from WebAuthor grid exports with Record IDs — `scripts/import-webauthor.ts`, `scripts/sql/import-pre.sql` / `import-post.sql`; files and photos not included; repeat on production at M13).* A script that reads a full WebAuthor data export and loads it using the legacy name map and legacy IDs. It is planned now (legacy IDs + mapping are kept) so it's cheap later.
 
 
 **Portal features (from the colleague's prototype, see docs/portal-features-merge.md).** Rebuilt on this base; the WebAuthor import (M14) stays last.
@@ -55,6 +55,7 @@ Phase 2 will also need a Microsoft 365 / Entra app registration (OneDrive), a Go
 | **F7** | *(done: search and alerts bell earlier; undo built 2026-10-02, awaiting OK; SPEC §9.1 F7-a)* Global search, notification bell, undo | can be spread over F1–F6 |
 | **P1** | *(pushed 2026-10-02; SPEC §9.1 P1-a…d)* Simple permissions: per-person checklist + Administrator flag instead of groups; WebAuthor-only permissions and on-screen mentions removed | |
 | **P2** | *(pushed 2026-10-02; SPEC §9.1 P2-a…f)* Time clock with GPS (clock in / out, visit arrivals, office view, reminders) + employee performance (reports with aspect and weight, score engine, field signals, skills) | |
+| **F8** | *(built 2026-10-02, awaiting OK; SPEC §9.1 F8-a, F8-b)* Schedule › Map: the day's job stops per technician on a map + Bouncie live vehicle positions (Admin › Bouncie connection; Usual driver and Bouncie device on Fleet) | Bouncie keys from Fred (bouncie.dev) |
 
 ---
 
