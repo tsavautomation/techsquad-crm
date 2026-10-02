@@ -44,7 +44,8 @@ describe("checklist", () => {
 
   it("the migration keeps exactly the checklist keys (plus the workflow keys it adds)", () => {
     const kept = new Set([...migration.matchAll(/^'([a-z_.-]+)',?$/gm)].map((m) => m[1]));
-    const expected = new Set([...keys].filter((k) => !k.startsWith("workflow.")));
+    // Workflow keys are inserted by the same migration; Insights got its own key later (20261002020000).
+    const expected = new Set([...keys].filter((k) => !k.startsWith("workflow.") && k !== "insights.page.view"));
     expect([...kept].sort()).toEqual([...expected].sort());
     expect(migration).toContain(`'workflow.' || w.id || '.act'`);
     for (const w of WORKFLOW_ITEMS) expect(w.key).toMatch(/^workflow\.[a-z_]+\.act$/);

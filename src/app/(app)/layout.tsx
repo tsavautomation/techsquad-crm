@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     .filter(({ table }) => canDo(user.permissions, table, "create", getTable))
     .map(({ table, label }) => ({ href: `${tableHref(table)}/new`, label: t(label), icon: table.tab ?? table.name }));
   const opens = (name: string) => canOpen(user.permissions, getTable(name), getTable);
-  const extras: Extras = { tasks: opens("tasks"), pipeline: opens("projects"), insights: opens("projects"), data: opens("contacts") };
+  const extras: Extras = { tasks: opens("tasks"), pipeline: opens("projects"), insights: user.permissions.has("insights.page.view"), data: opens("contacts") };
   const showAdmin = ADMIN_SCREENS.some((s) => canSeeScreen(s, user.permissions, user.isSysadmin));
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const me: Me = {

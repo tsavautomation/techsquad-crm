@@ -72,7 +72,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
   const tr = await getT();
   const user = await requireUser();
   const can = (t: string) => canOpen(user.permissions, getTable(t), getTable);
-  if (!can("projects")) notFound();
+  if (!user.permissions.has("insights.page.view")) notFound();
   const { days: daysParam } = (await props.searchParams) as { days?: string };
   const days = [7, 30, 90].includes(Number(daysParam)) ? Number(daysParam) : 30;
   const showMoney = can("transactions");

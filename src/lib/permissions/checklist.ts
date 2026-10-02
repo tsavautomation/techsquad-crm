@@ -44,6 +44,8 @@ export const WORKFLOW_ITEMS: ChecklistItem[] = [
   { key: "workflow.stock_status.act", label: "Change stock status" },
 ];
 
+export const PAGE_ITEMS: ChecklistItem[] = [{ key: "insights.page.view", label: "Insights (charts and numbers)" }];
+
 export const ADMIN_ITEMS: ChecklistItem[] = [
   { key: "site.admin.add_new_member", label: "Invite people" },
   { key: "site.admin.members", label: "Edit users and deactivate logins" },
@@ -74,6 +76,7 @@ export function checklist(): ChecklistSection[] {
     extras.push(...MODULE_ITEMS.map(([a, label]) => ({ key: `${m.slug}.module.${a}`, label })));
     out.push({ id: `${m.slug}-more`, title: `${m.title}: more`, kind: "list", rows: [{ id: `${m.slug}.more`, title: "", items: extras }] });
   }
+  out.push({ id: "pages", title: "Pages", kind: "list", rows: [{ id: "pages", title: "", items: PAGE_ITEMS }] });
   out.push({ id: "workflows", title: "Workflows", kind: "list", rows: [{ id: "workflows", title: "", items: WORKFLOW_ITEMS }] });
   out.push({ id: "admin", title: "Admin", kind: "list", rows: [{ id: "admin", title: "", items: ADMIN_ITEMS }] });
   return out;
