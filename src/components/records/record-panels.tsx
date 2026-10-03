@@ -11,6 +11,7 @@ import { UploadBar } from "./file-field";
 import {
   addChecklistItemAction,
   addNoteAction,
+  assignChecklistItemAction,
   addPodFilesAction,
   deleteChecklistItemAction,
   deleteNoteAction,
@@ -206,12 +207,17 @@ export function NotesPanel({ table, id, notes, canAdd, people, meId }: Base & { 
 
 // ---------------------------------------------------------------- checklist
 
-export type ChecklistView = { id: number; item: string; due_date: string | null; completed_at: string | null; source: string | null; canDelete: boolean };
+export type ChecklistView = { id: number; item: string; due_date: string | null; completed_at: string | null; source: string | null; assigned_to: string | null; canDelete: boolean };
 
-export function ChecklistPanel({ table, id, items }: Base & { items: ChecklistView[] }) {
+const SELECT = "h-9 max-w-40 rounded-lg border border-input bg-card px-2 text-[13px] text-text-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+
+/** Checklist with an "assign to" box per item (F11-a); the person sees open items in the alerts bell. */
+export function ChecklistPanel({ table, id, items, people = [] }: Base & { items: ChecklistView[]; people?: Mentionable[] }) {
   const tr = useT();
   const { pending, run } = useRun();
   const [text, setText] = useState("");
+  const [assignee, setAssignee] = useState("");
+  const nameOf = (uid: string | null) => (uid ? (people.find((p) => p.id === uid)?.name ?? tr("someone")) : null);
 
   return (
     <div className="flex flex-col gap-3">
@@ -230,8 +236,25 @@ export function ChecklistPanel({ table, id, items }: Base & { items: ChecklistVi
             <span className={cn("flex-1 text-sm whitespace-pre-wrap", c.completed_at && "text-muted-foreground line-through")}>
               {c.item}
               {c.source && <span className="ml-2 text-xs text-muted-foreground no-underline">from {c.source.replace(/_/g, " ").replace(":", " #")}</span>}
+              {c.completed_at && c.assigned_to && <span className="ml-2 text-xs text-muted-foreground no-underline">{nameOf(c.assigned_to)}</span>}
             </span>
             {c.due_date && <span className="text-xs text-muted-foreground">{formatDate(c.due_date)}</span>}
+            {!c.completed_at && people.length > 0 && (
+              <select
+                aria-label={tr("Assign to")}
+                className={cn(SELECT, c.assigned_to && "text-foreground")}
+                value={c.assigned_to ?? ""}
+                disabled={pending}
+                onChange={(e) => run(() => assignChecklistItemAction(table, id, c.id, e.target.value || null))}
+              >
+                <option value="">{tr("Assign to…")}</option>
+                {people.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            )}
             {c.canDelete && (
               <button type="button" disabled={pending} onClick={() => run(() => deleteChecklistItemAction(table, id, c.id))} aria-label={`Remove ${c.item}`} className="inline-flex size-8 items-center justify-center rounded hover:bg-muted">
                 <Trash2 className="size-4" aria-hidden />
@@ -241,13 +264,29 @@ export function ChecklistPanel({ table, id, items }: Base & { items: ChecklistVi
         ))}
       </ul>
       <form
-        className="flex gap-2"
+        className="flex flex-wrap gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          run(() => addChecklistItemAction(table, id, text, null), () => setText(""));
+          run(
+            () => addChecklistItemAction(table, id, text, null, assignee || null),
+            () => {
+              setText("");
+              setAssignee("");
+            },
+          );
         }}
       >
-        <input aria-label={tr("New checklist item")} placeholder={tr("Add an item…")} className={cn(INPUT, "h-11")} value={text} onChange={(e) => setText(e.target.value)} />
+        <input aria-label={tr("New checklist item")} placeholder={tr("Add an item…")} className={cn(INPUT, "h-11 min-w-0 flex-1")} value={text} onChange={(e) => setText(e.target.value)} />
+        {people.length > 0 && (
+          <select aria-label={tr("Assign to")} className={cn(SELECT, "h-11", assignee && "text-foreground")} value={assignee} onChange={(e) => setAssignee(e.target.value)}>
+            <option value="">{tr("Nobody")}</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        )}
         <button type="submit" disabled={pending || !text.trim()} className="inline-flex h-11 shrink-0 items-center gap-1 rounded-lg border px-3 text-sm disabled:opacity-50">
           <Plus className="size-4" aria-hidden /> {tr("Add")}
         </button>

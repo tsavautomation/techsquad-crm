@@ -91,7 +91,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
     loadChecklist(db, t, recordId),
     may.files_view_files_pod ? loadPodFiles(db, t, recordId) : Promise.resolve([]),
     may.audit_log ? loadHistory(db, t, recordId) : Promise.resolve([]),
-    may.activity_history_view ? loadPeople(db) : Promise.resolve([]),
+    loadPeople(db), // notes' @tags and the checklist's "assign to" (F11-a)
     // Opening the record clears my tags on it from the alerts bell.
     db.from("record_mentions").update({ seen_at: new Date().toISOString() }).eq("user_id", user.id).eq("table_name", t.name).eq("record_id", recordId).is("seen_at", null),
   ]);
@@ -189,6 +189,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
           <ChecklistPanel
             table={t.name}
             id={recordId}
+            people={people}
             items={checklist.map((c) => ({ ...c, canDelete: c.created_by === user.id || canModify }))}
           />
         </Section>

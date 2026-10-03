@@ -18,12 +18,15 @@ export default async function UserPage(props: PageProps<"/admin/users/[id]">) {
   if (!me.permissions.has("site.admin.members")) notFound();
   const { id } = await props.params;
   const db = await recordsDb();
-  const [{ data: p }, { data: catalogue }, { data: grants }, { data: people }] = await Promise.all([
+  const [{ data: p }, { data: catalogue }, { data: grants }, { data: people }, { data: signIns }] = await Promise.all([
     db.from("profiles").select("id, email, first_name, last_name, active, is_admin").eq("id", id).maybeSingle(),
     db.from("permissions").select("key"),
     db.from("user_permissions").select("user_id, permission_key"),
     db.from("profiles").select("id, email, first_name, last_name, is_admin").eq("active", true).neq("id", id).order("first_name"),
+    db.rpc("user_last_sign_in"),
   ]);
+  // F11-b: a login that never signed in can be deleted for good (administrators).
+  const neverSignedIn = !((signIns ?? []) as { id: string; last_sign_in_at: string | null }[]).find((r) => r.id === id)?.last_sign_in_at;
   if (!p) notFound();
   const profile = p as Profile;
   const name = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || profile.email;
@@ -42,7 +45,7 @@ export default async function UserPage(props: PageProps<"/admin/users/[id]">) {
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{name}</h1>
       <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
         <h2 className="mb-3 text-[15px] font-semibold tracking-tight">{t("Login")}</h2>
-        <UserForm userId={profile.id} email={profile.email} initial={{ firstName: profile.first_name ?? "", lastName: profile.last_name ?? "", active: profile.active }} can={{ edit: true, link: true }} isMe={me.id === profile.id} />
+        <UserForm userId={profile.id} email={profile.email} initial={{ firstName: profile.first_name ?? "", lastName: profile.last_name ?? "", active: profile.active }} can={{ edit: true, link: true, delete: me.isSysadmin && neverSignedIn }} isMe={me.id === profile.id} />
       </section>
       <PermissionChecklist key={profile.id} userId={profile.id} initialAdmin={profile.is_admin} initialKeys={byUser.get(profile.id) ?? []} sections={sections} others={others} canEdit={me.isSysadmin} isMe={me.id === profile.id} />
     </div>

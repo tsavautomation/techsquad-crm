@@ -180,13 +180,13 @@ export async function deleteNoteAction(table: string, id: number, noteId: number
 
 // ---------------------------------------------------------------- checklist
 
-export async function addChecklistItemAction(table: string, id: number, item: string, due: string | null): Promise<ActionResult> {
+export async function addChecklistItemAction(table: string, id: number, item: string, due: string | null, assignedTo: string | null = null): Promise<ActionResult> {
   const user = await requireUser();
   const t = getTable(table);
   const text = item.trim();
   if (!text) return { ok: false, message: "Write the item first." };
   const db = await recordsDb();
-  const { error } = await db.from("record_checklist_items").insert({ table_name: t.name, record_id: id, item: text.slice(0, 1000), due_date: due || null, created_by: user.id });
+  const { error } = await db.from("record_checklist_items").insert({ table_name: t.name, record_id: id, item: text.slice(0, 1000), due_date: due || null, assigned_to: assignedTo || null, created_by: user.id });
   if (error) return { ok: false, message: error.message };
   refresh(t, id);
   return { ok: true };
@@ -203,6 +203,18 @@ export async function toggleChecklistItemAction(table: string, id: number, itemI
     .eq("table_name", t.name)
     .eq("record_id", id)
     .select("id");
+  if (error) return { ok: false, message: error.message };
+  if (!data?.length) return DENIED;
+  refresh(t, id);
+  return { ok: true };
+}
+
+/** F11-a: hand a checklist item to a person (null = nobody). They see it in the alerts bell until it is ticked. */
+export async function assignChecklistItemAction(table: string, id: number, itemId: number, userId: string | null): Promise<ActionResult> {
+  await requireUser();
+  const t = getTable(table);
+  const db = await recordsDb();
+  const { data, error } = await db.from("record_checklist_items").update({ assigned_to: userId || null }).eq("id", itemId).eq("table_name", t.name).eq("record_id", id).select("id");
   if (error) return { ok: false, message: error.message };
   if (!data?.length) return DENIED;
   refresh(t, id);

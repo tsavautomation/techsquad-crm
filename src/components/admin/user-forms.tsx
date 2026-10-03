@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, KeyRound } from "lucide-react";
+import { Copy, KeyRound, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { inviteUserAction, sendPasswordLinkAction, updateUserAction } from "@/lib/admin/user-actions";
+import { deleteUserAction, inviteUserAction, sendPasswordLinkAction, updateUserAction } from "@/lib/admin/user-actions";
 import { useT } from "@/i18n/client";
 
 const INPUT = "h-11 w-full rounded-lg border bg-card px-3 text-base";
@@ -102,7 +102,8 @@ type UserProps = {
   userId: string;
   email: string;
   initial: { firstName: string; lastName: string; active: boolean };
-  can: { edit: boolean; link: boolean };
+  /** delete: F11-b, administrators, only for logins that never signed in. */
+  can: { edit: boolean; link: boolean; delete?: boolean };
   isMe: boolean;
 };
 
@@ -168,7 +169,27 @@ export function UserForm({ userId, email, initial, can, isMe }: UserProps) {
             <KeyRound className="size-4" aria-hidden /> {t("Send set-password link")}
           </button>
         )}
+        {can.delete && !isMe && (
+          <button
+            type="button"
+            disabled={pending}
+            className={`${BTN} text-bad-fg`}
+            onClick={() => {
+              if (!confirm(t("Delete this login for good? It never signed in, so nothing else is lost."))) return;
+              start(async () => {
+                const r = await deleteUserAction(userId);
+                if (!r.ok) return void toast.error(t(r.message));
+                toast.success(t("Login deleted"));
+                router.push("/admin/users");
+                router.refresh();
+              });
+            }}
+          >
+            <Trash2 className="size-4" aria-hidden /> {t("Delete login")}
+          </button>
+        )}
       </div>
+      {can.delete && !isMe && <p className="text-[12.5px] text-muted-foreground">{t("This person never signed in, so the login can be deleted for good. Logins that were used are deactivated instead, so their name stays on what they did.")}</p>}
       {link && <LinkBox {...link} />}
     </form>
   );

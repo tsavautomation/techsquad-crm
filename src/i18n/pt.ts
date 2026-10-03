@@ -1030,6 +1030,19 @@ export const PT: Record<string, string> = {
   "Bouncie disconnected": "Bouncie desconectado",
   "Disconnect Bouncie": "Desconectar Bouncie",
 
+  // ---------------------------------------------------------------- F11 small items
+  "Assign to": "Atribuir a",
+  "Assign to…": "Atribuir a…",
+  "Nobody": "Ninguém",
+  "Delete this login for good? It never signed in, so nothing else is lost.": "Excluir este login definitivamente? Ele nunca entrou, então nada mais se perde.",
+  "Login deleted": "Login excluído",
+  "Delete login": "Excluir login",
+  "This person never signed in, so the login can be deleted for good. Logins that were used are deactivated instead, so their name stays on what they did.": "Esta pessoa nunca entrou, então o login pode ser excluído definitivamente. Logins que foram usados são desativados, para o nome continuar no que a pessoa fez.",
+  "Only an administrator can delete a login.": "Só um administrador pode excluir um login.",
+  "You can't delete your own login.": "Você não pode excluir o seu próprio login.",
+  "This login no longer exists.": "Este login não existe mais.",
+  "This person has signed in before. Deactivate the login instead, so their name stays on what they did.": "Esta pessoa já entrou antes. Desative o login em vez disso, para o nome continuar no que ela fez.",
+
   // ---------------------------------------------------------------- F12 AI (Claude)
   "AI": "IA",
   "The Claude connection: reads licence photos today, proof-reads reports later": "A conexão com o Claude: hoje lê fotos de carteira, depois revisa relatórios",

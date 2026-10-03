@@ -112,6 +112,24 @@ export async function updateUserAction(userId: string, input: z.input<typeof Pro
   return { ok: true };
 }
 
+/**
+ * F11-b: really delete a login that was never used (invited, never signed in). Logins that have signed
+ * in are only deactivated, so their name stays on the records they created. Administrators only.
+ */
+export async function deleteUserAction(userId: string): Promise<ActionResult> {
+  const me = await requireUser();
+  if (!me.isSysadmin) return { ok: false, message: "Only an administrator can delete a login." };
+  if (userId === me.id) return { ok: false, message: "You can't delete your own login." };
+  const admin = adminDb();
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  if (error || !data.user) return { ok: false, message: "This login no longer exists." };
+  if (data.user.last_sign_in_at) return { ok: false, message: "This person has signed in before. Deactivate the login instead, so their name stays on what they did." };
+  const { error: delErr } = await admin.auth.admin.deleteUser(userId);
+  if (delErr) return { ok: false, message: delErr.message };
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
 const PermissionsInput = z.object({ isAdmin: z.boolean(), keys: z.array(z.string().max(120)).max(500) });
 
 /**

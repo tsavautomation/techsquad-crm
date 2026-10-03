@@ -40,7 +40,7 @@ export async function canModule(perms: ReadonlySet<string>, t: TableDef, action:
 // ---------------------------------------------------------------- notes, checklist, files pod, history
 
 export type Note = { id: number; body: string; follow_up_date: string | null; created_at: string; created_by: string | null; author: string };
-export type ChecklistItem = { id: number; item: string; due_date: string | null; completed_at: string | null; source: string | null; created_by: string | null };
+export type ChecklistItem = { id: number; item: string; due_date: string | null; completed_at: string | null; source: string | null; created_by: string | null; assigned_to: string | null };
 export type HistoryEntry = { id: number; action: string; at: string; actor: string; changes: Record<string, [unknown, unknown]> };
 
 export async function loadNotes(db: SupabaseClient, t: TableDef, id: number): Promise<Note[]> {
@@ -61,7 +61,7 @@ export async function loadPeople(db: SupabaseClient): Promise<Mentionable[]> {
 export async function loadChecklist(db: SupabaseClient, t: TableDef, id: number): Promise<ChecklistItem[]> {
   const { data } = await db
     .from("record_checklist_items")
-    .select("id, item, due_date, completed_at, source, created_by")
+    .select("id, item, due_date, completed_at, source, created_by, assigned_to")
     .eq("table_name", t.name)
     .eq("record_id", id)
     .order("completed_at", { ascending: true, nullsFirst: true })
