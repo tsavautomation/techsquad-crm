@@ -14,7 +14,7 @@ export default async function AdminPage() {
   const screens = ADMIN_SCREENS.filter((s) => canSeeScreen(s, user.permissions, user.isSysadmin));
   if (!screens.length) notFound();
   return (
-    <div className="mx-auto max-w-[960px]">
+    <div className="mx-auto max-w-[1200px]">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("Admin")}</h1>
       <p className="mb-4 text-[12.5px] text-muted-foreground">{t("People, permissions, forms, files and automations")}</p>
       <Tiles items={screens.map((s) => ({ href: s.href, title: s.title, subtitle: s.description, icon: s.href === "/admin/forms" ? "form-settings" : s.href.split("/").pop()! }))} />

@@ -131,7 +131,7 @@ export async function DashboardWidgets({ user, module }: { user: CurrentUser; mo
   const showTasks = !module || module === getTable("tasks").module;
   const [assigned, tasks, recent] = await Promise.all([myAssigned(user, tr, module), showTasks ? myTasks(user, tr) : Promise.resolve(null), recentlyModified(user, tr, module)]);
   return (
-    <div className="grid gap-3.5 md:grid-cols-2">
+    <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-1">
       <Widget title={tr("My Assigned")} empty={tr("Nothing waiting for you.")} items={assigned} />
       {tasks && <Widget title={tr("My Tasks")} empty={tr("No open tasks assigned to you.")} items={tasks} />}
       <Widget title={tr("Recently Modified")} empty={tr("No recent changes.")} items={recent} />

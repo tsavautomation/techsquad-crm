@@ -26,7 +26,7 @@ export default async function NewSubRecordPage(props: PageProps<"/[module]/[tab]
 
   const back = recordHref(parent, parentId);
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-5xl">
       <Link href={back} className="mb-2 inline-flex h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden /> {parentRow.title ?? `#${parentId}`}
       </Link>

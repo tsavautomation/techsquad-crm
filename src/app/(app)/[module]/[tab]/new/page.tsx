@@ -45,7 +45,7 @@ export default async function NewRecordPage(props: PageProps<"/[module]/[tab]/ne
   const labels = Object.fromEntries(Object.entries(titles).map(([k, m]) => [k, Object.fromEntries([...m].map(([id, title]) => [String(id), title]))]));
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-5xl">
       <Link href={base} className="mb-2 inline-flex h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden /> {t.label}
       </Link>

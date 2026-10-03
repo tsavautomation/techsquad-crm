@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   const date = new Intl.DateTimeFormat((await getLang()) === "pt" ? "pt-BR" : "en-US", { timeZone: TIME_ZONE, weekday: "long", month: "long", day: "numeric" }).format(now);
 
   return (
-    <div className="mx-auto max-w-[960px]">
+    <div className="mx-auto max-w-[1500px]">
       <h1 className="text-[21px] leading-tight font-semibold tracking-tight md:text-2xl">
         {t(greeting(now))}
         {user.firstName ? `, ${user.firstName}` : ""}
@@ -49,8 +49,11 @@ export default async function DashboardPage() {
             <MySkills user={user} />
           </div>
           <DashboardKpis user={user} now={now.getTime()} />
-          <div className="grid gap-3.5">
-            <TodaySections user={user} now={now.getTime()} />
+          {/* Wide screens: what needs attention on the left, my assigned work on the right (same order on phones). */}
+          <div className="grid gap-3.5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start">
+            <div className="grid gap-3.5">
+              <TodaySections user={user} now={now.getTime()} />
+            </div>
             <div id="assigned">
               <DashboardWidgets user={user} />
             </div>

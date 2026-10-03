@@ -83,7 +83,7 @@ export default async function DataPage(props: PageProps<"/data">) {
   const samePlace = [...places.values()].filter((ids) => ids.length > 1);
 
   return (
-    <div className="mx-auto max-w-[960px]">
+    <div className="mx-auto max-w-[1500px]">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("Data")}</h1>
       <p className="mb-4 text-[12.5px] text-muted-foreground">{t("Incomplete records and possible duplicates, with Merge for the duplicates.")}</p>
       <div className="mb-[18px] grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -126,6 +126,7 @@ export default async function DataPage(props: PageProps<"/data">) {
         {gaps.length > 40 && <p className="mt-1 text-[12.5px] text-muted-foreground">{t("+ {n} more", { n: gaps.length - 40 })}</p>}
       </section>
 
+      <div className="xl:grid xl:grid-cols-2 xl:items-start xl:gap-3.5">
       <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
         <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Possible duplicate contacts")}</h2>
         <p className="mb-2 text-[12.5px] text-text-2">{t(canMergeT("contacts") ? "Same phone, same email or same name. Open them to compare; keep the right one and merge the others into it." : "Same phone, same email or same name. Open both to compare.")}</p>
@@ -167,6 +168,7 @@ export default async function DataPage(props: PageProps<"/data">) {
           )}
         </section>
       )}
+      </div>
 
       {samePlace.length > 0 && (
         <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, useTransition, Fragment } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { undoChangeAction } from "@/lib/records/record-actions";
 import { formatDate } from "@/lib/dates";
 import { evaluateRules, type Values } from "@/lib/rules/evaluate";
 import { isEditable, type FileItem } from "@/lib/records/values";
+import type { FieldDef } from "@/registry/types";
 import { cn } from "@/lib/utils";
 import type { TableDef } from "@/registry/types";
 import { FieldInput, type FieldContext } from "./field-input";
@@ -31,6 +32,9 @@ type Props = {
   /** Where to go after saving; default is the saved record's page. */
   redirectTo?: string;
 };
+
+/** Field types that take the whole row when the form sits in two columns (wide screens). */
+const WIDE_TYPES = new Set<FieldDef["type"]>(["textarea", "richtext", "file", "image", "signature", "address"]);
 
 export function RecordForm({ table, recordId, initialValues, baseHref, cancelHref, labels: initialLabels = {}, lockedMessage, redirectTo }: Props) {
   const t = useT();
@@ -138,14 +142,15 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
   );
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-5 pb-24 md:pb-0">
-      {lockedMessage && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{lockedMessage}</p>}
+    <form onSubmit={submit} noValidate className="flex flex-col gap-5 pb-24 md:pb-0 lg:grid lg:grid-cols-2 lg:gap-x-8">
+      {lockedMessage && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 lg:col-span-2">{lockedMessage}</p>}
       {fields.map((f) => {
         const err = errors[f.name];
         const editable = isEditable(f);
         return (
-          <div key={f.name} className="flex flex-col gap-1.5">
-            {f.heading && <h2 className="mt-4 border-b pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase first:mt-0">{f.heading}</h2>}
+          <Fragment key={f.name}>
+          {f.heading && <h2 className="mt-4 border-b pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase first:mt-0 lg:col-span-2">{f.heading}</h2>}
+          <div className={cn("flex flex-col gap-1.5", WIDE_TYPES.has(f.type) && "lg:col-span-2")}>
             <label id={`f-${f.name}-label`} htmlFor={`f-${f.name}`} className="text-sm font-medium">
               {f.label}
               {rules.required.has(f.name) && <span className="text-destructive"> *</span>}
@@ -158,16 +163,21 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
               </p>
             )}
           </div>
+          </Fragment>
         );
       })}
 
-      {table.formAddon === "visit" && <VisitAddon form={rules.values} recordId={recordId} setMany={ctx.setMany} />}
+      {table.formAddon === "visit" && (
+        <div className="lg:col-span-2">
+          <VisitAddon form={rules.values} recordId={recordId} setMany={ctx.setMany} />
+        </div>
+      )}
 
       {/* Sticky action bar on phones so Save is always reachable. */}
       <div
         className={cn(
           "fixed inset-x-0 bottom-0 z-30 flex gap-3 border-t bg-card p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgb(16_24_40/0.06)]",
-          "md:static md:border-0 md:p-0 md:pt-2",
+          "md:static md:border-0 md:p-0 md:pt-2 lg:col-span-2",
         )}
       >
         <Button type="submit" className="h-11 flex-1 md:flex-none md:px-8" disabled={pending || uploading > 0}>

@@ -84,7 +84,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
   };
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-[1600px]">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{t.label}</h1>

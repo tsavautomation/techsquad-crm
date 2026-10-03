@@ -46,7 +46,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
   const time = (iso: string) => clock(toDateTimeLocalET(iso).slice(11));
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div className="mx-auto max-w-[1300px]">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Time clock")}</h1>

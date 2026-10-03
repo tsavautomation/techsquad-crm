@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, FileText, Lock, Pencil } from "lucide-react";
@@ -106,8 +107,11 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
     client ? loadTimeline(db, perms, client, recordId) : Promise.resolve(null),
   ]);
 
+  // Phones: one column — header, workflow, add-on cards, toolbar, fields, sections (flex `order`).
+  // Wide screens (xl): toolbar and fields on the left; workflow, cards and sections stacked on the right.
+  // The column wrappers are `contents` on phones, so every block is ordered by the outer flex column.
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-[1600px]">
       <Link href={tableHref(t)} className="mb-2 inline-flex h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden /> {t.label}
       </Link>
@@ -131,6 +135,8 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
         )}
       </div>
 
+      <div className="flex flex-col xl:grid xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:items-start xl:gap-6">
+      <div className="contents xl:col-start-2 xl:row-start-1 xl:block">
       {workflow && <WorkflowPanel table={t.name} id={recordId} data={workflow as WorkflowPanelData} />}
       {t.detailAddon === "visit" && <VisitFieldPanel visitId={recordId} />}
       {t.detailAddon === "task" && <ReturnCardPanel taskId={recordId} />}
@@ -139,36 +145,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "project" && <ProjectHours projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <JobCosting projectId={recordId} user={user} />}
       {t.detailAddon === "employee" && <PayRatePanel employeeId={recordId} user={user} />}
-
-      <RecordToolbar
-        table={t.name}
-        id={recordId}
-        listHref={tableHref(t)}
-        locked={locked}
-        archived={Boolean(row.archived_at)}
-        can={{
-          submit: Boolean(t.submit?.showButton) && canModify,
-          lock: canLockAction(perms, t, "lock_unlock", getTable),
-          archive: canDo(perms, t, "archive", getTable),
-          delete: canDo(perms, t, "delete", getTable) && (!locked || canLockAction(perms, t, "delete_locked", getTable)),
-        }}
-      />
-
-      <dl className="divide-y rounded-2xl border bg-card shadow-card">
-        {fields.map((f) => (
-          <div key={f.name}>
-            {f.heading && <h2 className="bg-muted/40 px-4 py-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{f.heading}</h2>}
-            <div className="grid gap-1 px-4 py-3 sm:grid-cols-3 sm:gap-4">
-              <dt className="text-sm text-muted-foreground">{f.label}</dt>
-              <dd className="min-w-0 text-sm break-words sm:col-span-2">
-                <DetailValue field={f} value={f.type === "computed" ? computed[f.name] : values[f.name]} labels={labels[f.name] ?? {}} />
-              </dd>
-            </div>
-          </div>
-        ))}
-      </dl>
-
-      <div className="mt-6 flex flex-col gap-3">
+      <div className="order-3 mt-6 flex flex-col gap-3 xl:mt-0">
         {messages && (messages.templates.length > 0 || messages.canLog) && (
           <Section id="message" title={client === "projects" ? tr("Contact the client") : tr("Contact")} open>
             <MessagePanel data={messages} projectId={client === "projects" ? recordId : null} />
@@ -221,6 +198,40 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
           </Section>
         )}
       </div>
+      </div>
+
+      <div className="contents xl:col-start-1 xl:row-start-1 xl:block">
+      <div className="order-2">
+      <RecordToolbar
+        table={t.name}
+        id={recordId}
+        listHref={tableHref(t)}
+        locked={locked}
+        archived={Boolean(row.archived_at)}
+        can={{
+          submit: Boolean(t.submit?.showButton) && canModify,
+          lock: canLockAction(perms, t, "lock_unlock", getTable),
+          archive: canDo(perms, t, "archive", getTable),
+          delete: canDo(perms, t, "delete", getTable) && (!locked || canLockAction(perms, t, "delete_locked", getTable)),
+        }}
+      />
+
+      <dl className="divide-y overflow-hidden rounded-2xl border bg-card shadow-card xl:grid xl:grid-cols-2 xl:divide-y-0">
+        {fields.map((f) => (
+          <Fragment key={f.name}>
+            {f.heading && <h2 className="bg-muted/40 px-4 py-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase xl:col-span-2 xl:border-b">{f.heading}</h2>}
+            <div className={cn("grid gap-1 px-4 py-3 sm:grid-cols-3 sm:gap-4 xl:border-b", WIDE_TYPES.has(f.type) && "xl:col-span-2")}>
+              <dt className="text-sm text-muted-foreground">{f.label}</dt>
+              <dd className="min-w-0 text-sm break-words sm:col-span-2">
+                <DetailValue field={f} value={f.type === "computed" ? computed[f.name] : values[f.name]} labels={labels[f.name] ?? {}} />
+              </dd>
+            </div>
+          </Fragment>
+        ))}
+      </dl>
+      </div>
+      </div>
+      </div>
 
       <p className="mt-4 text-xs text-muted-foreground">
         {tr("Created {when}", { when: formatDateTime(String(row.created_at)) })}
@@ -230,6 +241,9 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
     </div>
   );
 }
+
+/** Field types that take the whole row when the fields sit in two columns (wide screens). */
+const WIDE_TYPES = new Set<FieldDef["type"]>(["textarea", "richtext", "file", "image", "signature", "address"]);
 
 const isBlank = (v: unknown) => v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0);
 

@@ -32,7 +32,7 @@ export default async function DeletedItemsPage(props: PageProps<"/[module]/[tab]
   const canRestore = canDo(user.permissions, t, "delete", getTable);
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-[1600px]">
       <Link href={tableHref(t)} className="mb-2 inline-flex h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden /> {t.label}
       </Link>

@@ -25,7 +25,7 @@ export default async function MapPage(props: PageProps<"/schedule/map">) {
   const vehiclesMode = !canVehicles ? "hidden" : bouncieConfigured() && (await isConnected()) ? "on" : "off";
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-[1600px]">
       <h1 className="mb-3 text-2xl font-semibold">{tr("Map")}</h1>
       <MapView date={date} today={todayET()} tech={tech} stops={stops} people={people} office={office} vehiclesMode={vehiclesMode} isAdmin={user.isSysadmin} />
     </div>

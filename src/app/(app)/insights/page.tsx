@@ -219,7 +219,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
   }
 
   return (
-    <div className="mx-auto max-w-[1100px]">
+    <div className="mx-auto max-w-[1600px]">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Insights")}</h1>
@@ -236,7 +236,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
         )}
       </div>
 
-      <div className="grid items-start gap-3.5 md:grid-cols-2">
+      <div className="grid items-start gap-3.5 md:grid-cols-2 xl:grid-cols-3">
         <Card title={tr("Pipeline")}>
           {stages.map((s) => (
             <Bar key={s.k} label={tr(s.k)} value={s.n} max={maxStage} text={`${s.n}${showMoney && s.v ? ` · ${money.format(s.v)}` : ""}`} />

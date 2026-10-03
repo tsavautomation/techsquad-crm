@@ -23,7 +23,7 @@ export default async function CalendarPage(props: PageProps<"/schedule/calendar"
   const { weekStart, visits, people } = await loadWeek(sp.week);
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-[1600px]">
       <h1 className="mb-3 text-2xl font-semibold">{tr("Calendar")}</h1>
       <Calendar
         weekStart={weekStart}
