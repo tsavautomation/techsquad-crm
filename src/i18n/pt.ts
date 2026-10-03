@@ -1032,6 +1032,15 @@ export const PT: Record<string, string> = {
 
   // ---------------------------------------------------------------- F9 Job hours
   "Hours on this job": "Horas neste trabalho",
+  "Visits and hours on this job": "Visitas e horas neste trabalho",
+  "Times visited": "Vezes visitado",
+  "last on {date}": "última em {date}",
+  "days with a report or check-in": "dias com relatório ou check-in",
+  "technician-hours": "horas-técnico",
+  "no check-ins yet": "ainda sem check-ins",
+  "Scheduled visits": "Visitas agendadas",
+  "Clock time {t} (check-in to check-out, people not multiplied).": "Tempo de relógio {t} (do check-in ao check-out, sem multiplicar pessoas).",
+  "Times visited counts the days with a Job Report. Hours start once visits are checked in and out from Today.": "Vezes visitado conta os dias com Relatório de Serviço. As horas começam quando as visitas tiverem check-in e check-out pelo Hoje.",
   "Planned": "Planejado",
   "technician-hours, {n} people": "horas-técnico, {n} pessoas",
   "on plan so far": "dentro do planejado até agora",

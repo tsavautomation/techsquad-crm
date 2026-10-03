@@ -31,14 +31,22 @@ export async function ProjectHours({ projectId, user }: { projectId: number; use
     .order("starts_at", { ascending: false })
     .limit(400);
   const rows = (data ?? []) as Row[];
-  if (!rows.length) return null;
+  // F9-d: how many days we were on the job (Job Report dates ∪ check-in days, the Visits field) and the last one,
+  // so old projects with WebAuthor reports but no Visit records get the card too.
+  const [{ data: daysRow }, { data: lastReport }] = await Promise.all([
+    db.rpc("project_visit_days", { p_project_ids: [projectId] }),
+    db.from("job_reports").select("date").eq("project_id", projectId).is("deleted_at", null).not("date", "is", null).order("date", { ascending: false }).limit(1),
+  ]);
+  const visitDays = ((daysRow as { visit_days: number }[] | null) ?? [])[0]?.visit_days ?? 0;
+  const lastCheckIn = rows.map((r) => r.checked_in_at).filter((x): x is string => Boolean(x)).map((x) => toDateTimeLocalET(x).slice(0, 10)).sort().at(-1);
+  const lastVisit = [((lastReport ?? []) as { date: string }[])[0]?.date, lastCheckIn].filter((x): x is string => Boolean(x)).sort().at(-1) ?? null;
+  if (!rows.length && !visitDays) return null;
 
-  const { data: team } = await db.from("visits_team").select("record_id, target_id").in("record_id", rows.map((r) => r.id));
+  const { data: team } = rows.length ? await db.from("visits_team").select("record_id, target_id").in("record_id", rows.map((r) => r.id)) : { data: [] };
   const teamOf = new Map<number, number[]>();
   for (const x of (team ?? []) as { record_id: number; target_id: number }[]) teamOf.set(x.record_id, [...(teamOf.get(x.record_id) ?? []), x.target_id]);
   const visits: HoursVisit[] = rows.map((r) => ({ ...r, team_ids: teamOf.get(r.id) ?? [] }));
   const h = projectHours(visits, nowMs());
-  if (!h.visits.length) return null;
 
   const ids = [...new Set(h.visits.flatMap((v) => v.people))];
   const { data: emp } = ids.length ? await db.from("employees").select("id, title").in("id", ids) : { data: [] };
@@ -64,15 +72,16 @@ export async function ProjectHours({ projectId, user }: { projectId: number; use
   return (
     <section id="hours" className="mb-4 scroll-mt-20 rounded-2xl border bg-card px-4 py-3 shadow-card">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-semibold tracking-tight">{tr("Hours on this job")}</h2>
+        <h2 className="text-[15px] font-semibold tracking-tight">{tr("Visits and hours on this job")}</h2>
         {h.open && <span className="rounded-full bg-warn-bg px-2 py-0.5 text-[12px] font-medium text-warn-fg">{tr("On site now")}</span>}
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {stat(tr("On site"), formatMinutes(h.onSiteMin), h.people > 1 ? tr("technician-hours, {n} people", { n: h.people }) : undefined)}
-        {stat(tr("Planned"), formatMinutes(h.plannedMin), h.timed > 0 && plannedTimed > 0 ? (diff === 0 ? tr("on plan so far") : diff > 0 ? tr("{t} over plan so far", { t: formatMinutes(diff) }) : tr("{t} under plan so far", { t: formatMinutes(-diff) })) : undefined)}
-        {stat(tr("Visits"), String(h.visits.length), tr("{n} timed", { n: h.timed }))}
-        {stat(tr("Clock time"), formatMinutes(h.clockMin), tr("check-in to check-out"))}
+        {stat(tr("Times visited"), String(visitDays), lastVisit ? tr("last on {date}", { date: formatDate(lastVisit) }) : tr("days with a report or check-in"))}
+        {stat(tr("On site"), h.timed ? formatMinutes(h.onSiteMin) : "—", h.timed ? (h.people > 1 ? tr("technician-hours, {n} people", { n: h.people }) : tr("technician-hours")) : tr("no check-ins yet"))}
+        {h.visits.length > 0 && stat(tr("Planned"), formatMinutes(h.plannedMin), h.timed > 0 && plannedTimed > 0 ? (diff === 0 ? tr("on plan so far") : diff > 0 ? tr("{t} over plan so far", { t: formatMinutes(diff) }) : tr("{t} under plan so far", { t: formatMinutes(-diff) })) : undefined)}
+        {h.visits.length > 0 && stat(tr("Scheduled visits"), String(h.visits.length), tr("{n} timed", { n: h.timed }))}
       </div>
+      {h.visits.length > 0 && <p className="mt-2 text-[12.5px] text-text-2">{tr("Clock time {t} (check-in to check-out, people not multiplied).", { t: formatMinutes(h.clockMin) })}</p>}
 
       {h.byTech.length > 0 && (
         <>
@@ -91,7 +100,7 @@ export async function ProjectHours({ projectId, user }: { projectId: number; use
         </>
       )}
 
-      <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Visits")}</p>
+      {h.visits.length > 0 && <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Visits")}</p>}
       <ul className="-mx-1 divide-y">
         {h.visits.slice(0, SHOW).map((v) => {
           const local = toDateTimeLocalET(v.starts_at);
@@ -118,7 +127,11 @@ export async function ProjectHours({ projectId, user }: { projectId: number; use
         })}
       </ul>
       {h.visits.length > SHOW && <p className="mt-1 text-[12.5px] text-muted-foreground">{tr("+ {n} more", { n: h.visits.length - SHOW })}</p>}
-      <p className="mt-2 text-[11.5px] text-muted-foreground">{tr("Everyone on a visit (technician and also going) earns the time between check-in and check-out.")}</p>
+      <p className="mt-2 text-[11.5px] text-muted-foreground">
+        {h.visits.length > 0
+          ? tr("Everyone on a visit (technician and also going) earns the time between check-in and check-out.")
+          : tr("Times visited counts the days with a Job Report. Hours start once visits are checked in and out from Today.")}
+      </p>
     </section>
   );
 }
