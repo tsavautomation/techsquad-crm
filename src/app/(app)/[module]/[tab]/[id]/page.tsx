@@ -156,7 +156,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
             {f.heading && <h2 className="bg-muted/40 px-4 py-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{f.heading}</h2>}
             <div className="grid gap-1 px-4 py-3 sm:grid-cols-3 sm:gap-4">
               <dt className="text-sm text-muted-foreground">{f.label}</dt>
-              <dd className="min-w-0 text-sm sm:col-span-2">
+              <dd className="min-w-0 text-sm break-words sm:col-span-2">
                 <DetailValue field={f} value={f.type === "computed" ? computed[f.name] : values[f.name]} labels={labels[f.name] ?? {}} />
               </dd>
             </div>
@@ -309,7 +309,7 @@ function DetailValue({ field: f, value, labels }: { field: FieldDef; value: unkn
   if (f.type === "richtext") {
     if (!value) return none;
     // Sanitised on save (lib/records/save.ts), so it is safe to render as HTML.
-    return <div className="prose prose-sm max-w-none [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: String(value) }} />;
+    return <div className="prose prose-sm max-w-none break-words [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: String(value) }} />;
   }
 
   if (f.type === "ssn" || f.type === "ein") {

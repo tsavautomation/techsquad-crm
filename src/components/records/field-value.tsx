@@ -12,6 +12,26 @@ export function formatAddress(a: Address | null | undefined): string {
   return [a.street, a.address_2, cityLine].filter(Boolean).join(", ");
 }
 
+const URL_RE = /(https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)\]])/g;
+
+/**
+ * Plain text with any pasted links clickable, and long unbroken strings (links, codes) allowed to wrap
+ * inside the box instead of pushing the page wider (Fred 2026-10-02, a OneDrive link in Plans).
+ */
+export function linkify(text: string): React.ReactNode {
+  const parts = text.split(URL_RE);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <a key={i} href={part} target="_blank" rel="noreferrer" className="break-all text-primary underline-offset-4 hover:underline">
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
 /** A coloured option chip, as WebAuthor showed dropdown values. */
 export function OptionChip({ label, color }: { label: string; color?: string }) {
   return (
@@ -101,8 +121,8 @@ export async function FieldValue({ field: f, value, display, href, compact }: Pr
         <>{display}</>
       );
     case "textarea":
-      return <span className={compact ? "line-clamp-2" : "whitespace-pre-wrap"}>{String(value)}</span>;
+      return <span className={compact ? "line-clamp-2 break-words" : "break-words whitespace-pre-wrap"}>{compact ? String(value) : linkify(String(value))}</span>;
     default:
-      return <>{String(value)}</>;
+      return <span className="break-words">{compact ? String(value) : linkify(String(value))}</span>;
   }
 }
