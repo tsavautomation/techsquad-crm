@@ -26,6 +26,8 @@ export type MapStop = {
   techId: number | null;
   techName: string | null;
   team: { id: number; name: string }[];
+  /** Fleet title of the van going (F10-a). */
+  vehicle: string | null;
   status: string;
   color: string;
   service: string | null;
@@ -44,6 +46,7 @@ type Row = {
   technician_id: number | null;
   project_id: number | null;
   visits_team: { target_id: number }[];
+  vehicles: { title: string | null } | null;
   projects: { title: string | null; job_address: Address | null } | null;
 };
 
@@ -55,7 +58,7 @@ export async function loadMapDay(date: string | undefined): Promise<{ date: stri
   const [{ data }, { data: emp }, settings] = await Promise.all([
     db
       .from("visits")
-      .select("id, starts_at, duration, status, service_type, technician_id, project_id, visits_team(target_id), projects(title, job_address)")
+      .select("id, starts_at, duration, status, service_type, technician_id, project_id, visits_team(target_id), vehicles(title), projects(title, job_address)")
       .gte("starts_at", from)
       .lt("starts_at", to)
       .is("deleted_at", null)
@@ -92,6 +95,7 @@ export async function loadMapDay(date: string | undefined): Promise<{ date: stri
       techId: r.technician_id,
       techName: r.technician_id ? (names.get(r.technician_id) ?? null) : null,
       team: r.visits_team.map((t) => ({ id: t.target_id, name: names.get(t.target_id) ?? `#${t.target_id}` })),
+      vehicle: r.vehicles?.title ?? null,
       status: r.status ?? "Scheduled",
       color: statusField.options?.find((o) => o.value === r.status)?.color ?? "#2563eb",
       service: r.service_type,

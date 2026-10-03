@@ -28,6 +28,16 @@ describe("matching Bouncie vehicles to Fleet records", () => {
     expect(v.driverName).toBe("Lucas");
   });
 
+  it("names the van after the technician of today's visit that uses it, else the usual driver (F10-a)", () => {
+    const people = new Map([[1006, "Lucas"], [1012, "Saulo"]]);
+    const van = fleet({ vin: "1HGBIQOJXMN109186" });
+    const [withVisit] = matchVehicles([live()], [van], people, new Map([[7, 1012]]));
+    expect(withVisit.driverId).toBe(1012);
+    expect(withVisit.driverName).toBe("Saulo");
+    const [fallback] = matchVehicles([live()], [van], people, new Map([[99, 1012]]));
+    expect(fallback.driverName).toBe("Lucas");
+  });
+
   it("prefers the Bouncie device (IMEI) over the VIN", () => {
     const rows = [fleet({ id: 1, vin: "1HGBIQOJXMN109186" }), fleet({ id: 2, bouncie_imei: "123456789012345", driver_id: null })];
     const [v] = matchVehicles([live()], rows, names);

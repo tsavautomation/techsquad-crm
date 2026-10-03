@@ -55,6 +55,8 @@ export const visits: TableDef = {
       legacy: NEW,
     },
     { name: "technician_id", label: "Technician", type: "lookup", required: true, heading: "Team", lookup: { table: "employees" }, legacy: NEW },
+    // F10-a: no designated driver per van, so every visit says which vehicle goes.
+    { name: "vehicle_id", label: "Vehicle", type: "lookup", required: true, lookup: { table: "vehicles" }, legacy: NEW },
     { name: "team_ids", label: "Also going", type: "lookup", multiple: true, lookup: { table: "employees" }, legacy: NEW },
     // Starts with no options; admins add them in Form settings (Fred 2026-09-30, option C).
     { name: "service_type", label: "Service type", type: "select", options: [], legacy: NEW },

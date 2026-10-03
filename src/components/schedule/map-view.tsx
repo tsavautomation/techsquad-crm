@@ -181,6 +181,7 @@ export function MapView({ date, today, tech, stops, people, office, vehiclesMode
                             {clock(s.start.slice(11))} · {tr(s.status)}
                             {s.service ? ` · ${tr(s.service)}` : ""}
                             {s.team.length > 0 && ` · ${tr("with {names}", { names: s.team.map((t) => t.name).join(", ") })}`}
+                            {s.vehicle ? ` · ${s.vehicle}` : ""}
                           </span>
                           <span className="block truncate text-xs text-muted-foreground">{s.address ?? tr("No job address")}{s.address && s.lat === null ? ` · ${tr("position unknown")}` : ""}</span>
                         </span>

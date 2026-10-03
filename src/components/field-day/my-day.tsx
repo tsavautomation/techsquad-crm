@@ -105,6 +105,7 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
             {time(v.starts_at)}
             {v.arrival_window > 0 && ` – ${time(plus(v.starts_at, v.arrival_window))} ${tr("arrival")}`} · {formatMinutes(v.duration)}
             {v.service && ` · ${v.service}`}
+            {v.vehicle && ` · ${v.vehicle}`}
           </p>
           <Link href={visitHref} className="block truncate text-[15px] font-semibold hover:underline">
             {v.project}

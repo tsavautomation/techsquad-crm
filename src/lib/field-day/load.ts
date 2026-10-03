@@ -24,6 +24,8 @@ export type MyVisit = {
   projectId: number | null;
   address: string | null;
   service: string | null;
+  /** The van going (F10-a). */
+  vehicle: string | null;
   instructions: string | null;
   access: string | null;
   tools: string[];
@@ -46,9 +48,10 @@ type VisitRow = {
   on_way_at: string | null;
   checked_in_at: string | null;
   checked_out_at: string | null;
+  vehicles: { title: string | null } | null;
   projects: { title: string | null; job_address: Address | null } | null;
 };
-const COLS = "id, starts_at, duration, arrival_window, status, project_id, service_type, instructions, access_notes, on_way_at, checked_in_at, checked_out_at, projects(title, job_address)";
+const COLS = "id, starts_at, duration, arrival_window, status, project_id, service_type, instructions, access_notes, on_way_at, checked_in_at, checked_out_at, vehicles(title), projects(title, job_address)";
 
 /** The signed-in person's employee records (matched by email, as for "my tasks"). */
 export async function myEmployeeIds(db: SupabaseClient, user: CurrentUser): Promise<number[]> {
@@ -93,6 +96,7 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     projectId: v.project_id,
     address: mapAddress(v.projects?.job_address ?? null),
     service: v.service_type,
+    vehicle: v.vehicles?.title ?? null,
     instructions: v.instructions,
     access: v.access_notes,
     tools: (v.service_type && settings.service_lists[v.service_type]?.tools) || [],

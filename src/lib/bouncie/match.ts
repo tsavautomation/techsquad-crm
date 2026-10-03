@@ -39,18 +39,23 @@ export type VehiclesResponse = { connected: boolean; vehicles: MapVehicle[]; fet
 export const normalizeVin = (vin: string | null | undefined) => (vin ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 const digits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "");
 
-/** Pair each Bouncie vehicle with its Fleet record (by Bouncie device, else by VIN) and the usual driver's name. */
-export function matchVehicles(live: LiveVehicle[], fleet: FleetVehicle[], driverNames: ReadonlyMap<number, string>): MapVehicle[] {
+/**
+ * Pair each Bouncie vehicle with its Fleet record (by Bouncie device, else by VIN) and its driver: the
+ * technician of today's visit that uses the van (F10-a, `todayDrivers` vehicle id → employee id), else
+ * Fleet › Usual driver.
+ */
+export function matchVehicles(live: LiveVehicle[], fleet: FleetVehicle[], driverNames: ReadonlyMap<number, string>, todayDrivers: ReadonlyMap<number, number> = new Map()): MapVehicle[] {
   const byImei = new Map(fleet.filter((f) => digits(f.bouncie_imei)).map((f) => [digits(f.bouncie_imei), f]));
   const byVin = new Map(fleet.filter((f) => normalizeVin(f.vin)).map((f) => [normalizeVin(f.vin), f]));
   return live.map((v) => {
     const f = byImei.get(digits(v.imei)) ?? (normalizeVin(v.vin) ? byVin.get(normalizeVin(v.vin)) : undefined) ?? null;
+    const driverId = f ? (todayDrivers.get(f.id) ?? f.driver_id ?? null) : null;
     return {
       ...v,
       vehicleId: f?.id ?? null,
       vehicleTitle: f?.title ?? null,
-      driverId: f?.driver_id ?? null,
-      driverName: f?.driver_id ? (driverNames.get(f.driver_id) ?? null) : null,
+      driverId,
+      driverName: driverId ? (driverNames.get(driverId) ?? null) : null,
     };
   });
 }

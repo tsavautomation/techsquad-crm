@@ -3590,6 +3590,7 @@ export type Database = {
           title: string | null
           updated_at: string
           updated_by: string | null
+          vehicle_id: number | null
         }
         Insert: {
           access_notes?: string | null
@@ -3618,6 +3619,7 @@ export type Database = {
           title?: string | null
           updated_at?: string
           updated_by?: string | null
+          vehicle_id?: number | null
         }
         Update: {
           access_notes?: string | null
@@ -3646,6 +3648,7 @@ export type Database = {
           title?: string | null
           updated_at?: string
           updated_by?: string | null
+          vehicle_id?: number | null
         }
         Relationships: [
           {
@@ -3681,6 +3684,13 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -3966,6 +3976,7 @@ export type Database = {
           title: string | null
           updated_at: string
           updated_by: string | null
+          vehicle_id: number | null
         }
         SetofOptions: {
           from: "*"

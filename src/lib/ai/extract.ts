@@ -1,12 +1,15 @@
 import "server-only";
+import type Anthropic from "@anthropic-ai/sdk";
 import type { ExtractKind } from "@/registry/types";
+import { aiConfigured, claude, describeError } from "./claude";
 import { parseDate } from "./parse";
 
 // Reads values from uploaded photos with Claude (e.g. the expiry date on a driver's licence).
 // Needs ANTHROPIC_API_KEY. The result only pre-fills the form; the person checks it before saving.
 
-const MODEL = "claude-haiku-4-5-20251001"; // fast and inexpensive; plenty for reading a card
-const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const MODEL = "claude-haiku-4-5-20251001"; // fast and inexpensive; plenty for reading a card (SPEC §9.1 B1-a)
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
+type ImageType = (typeof IMAGE_TYPES)[number];
 
 const PROMPTS: Record<ExtractKind, string> = {
   license_expiration:
@@ -15,25 +18,30 @@ const PROMPTS: Record<ExtractKind, string> = {
     'Answer with only JSON: {"date": "YYYY-MM-DD"} or {"date": null} if you cannot read it with confidence.',
 };
 
-export const hasAiKey = () => Boolean(process.env.ANTHROPIC_API_KEY);
+export const hasAiKey = aiConfigured;
 
 export type ExtractResult = { ok: true; value: string | null } | { ok: false; message: string };
 
 export async function extractFromFile(what: ExtractKind, bytes: Buffer, mime: string): Promise<ExtractResult> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return { ok: false, message: "Photo reading isn't set up yet (no AI key)." };
+  if (!aiConfigured()) return { ok: false, message: "Photo reading isn't set up yet (no AI key)." };
   const media = mime === "image/jpg" ? "image/jpeg" : mime;
-  const source = { type: "base64", media_type: media, data: bytes.toString("base64") };
-  const block = IMAGE_TYPES.includes(media) ? { type: "image", source } : media === "application/pdf" ? { type: "document", source } : null;
+  const data = bytes.toString("base64");
+  const block: Anthropic.ContentBlockParam | null = (IMAGE_TYPES as readonly string[]).includes(media)
+    ? { type: "image", source: { type: "base64", media_type: media as ImageType, data } }
+    : media === "application/pdf"
+      ? { type: "document", source: { type: "base64", media_type: "application/pdf", data } }
+      : null;
   if (!block) return { ok: false, message: "Only JPG, PNG or PDF files can be read." };
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 100, messages: [{ role: "user", content: [block, { type: "text", text: PROMPTS[what] }] }] }),
-  });
-  if (!res.ok) return { ok: false, message: `The AI service answered ${res.status}.` };
-  const body = (await res.json()) as { content?: { type: string; text?: string }[] };
-  const text = body.content?.find((c) => c.type === "text")?.text ?? "";
-  return { ok: true, value: parseDate(text) };
+  try {
+    const res = await claude().messages.create({
+      model: MODEL,
+      max_tokens: 100,
+      messages: [{ role: "user", content: [block, { type: "text", text: PROMPTS[what] }] }],
+    });
+    const text = res.content.find((c) => c.type === "text")?.text ?? "";
+    return { ok: true, value: parseDate(text) };
+  } catch (e) {
+    return { ok: false, message: describeError(e) };
+  }
 }
