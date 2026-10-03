@@ -56,7 +56,7 @@ Phase 2 will also need a Microsoft 365 / Entra app registration (OneDrive), a Go
 | **P1** | *(pushed 2026-10-02; SPEC §9.1 P1-a…d)* Simple permissions: per-person checklist + Administrator flag instead of groups; WebAuthor-only permissions and on-screen mentions removed | |
 | **P2** | *(pushed 2026-10-02; SPEC §9.1 P2-a…f)* Time clock with GPS (clock in / out, visit arrivals, office view, reminders) + employee performance (reports with aspect and weight, score engine, field signals, skills) | |
 | **F8** | *(built 2026-10-02, awaiting OK; SPEC §9.1 F8-a, F8-b)* Schedule › Map: the day's job stops per technician on a map + Bouncie live vehicle positions (Admin › Bouncie connection; Usual driver and Bouncie device on Fleet) | Bouncie keys from Fred (bouncie.dev) |
-| **F9** | *(built 2026-10-02, awaiting OK; SPEC §9.1 F9-a…c)* Job hours: hours per project and per person from visit check-ins / check-outs, team credit for "Also going", Hours on this job card on Projects, Hours by project in Insights, computed **Visits** field on Projects (days with a Job Report or check-in, retroactive); pure engine in `src/lib/hours/` ready for Phase 2 job costing | |
+| **F9** | *(pushed 2026-10-02; SPEC §9.1 F9-a…d)* Job hours: hours per project and per person from visit check-ins / check-outs, team credit for "Also going", Hours on this job card on Projects, Hours by project in Insights, computed **Visits** field on Projects (days with a Job Report or check-in, retroactive); pure engine in `src/lib/hours/` ready for Phase 2 job costing | |
 
 ---
 
