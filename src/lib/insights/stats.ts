@@ -1,10 +1,13 @@
 // F5 Insights: pure sums over the rows the page reads with the viewer's own permissions.
+import { hoursByTech } from "@/lib/hours/engine";
 
 const ms = (iso: string | null) => (iso ? Date.parse(iso) : NaN);
 
 export type VisitTimes = {
   service_type: string | null;
   technician_id: number | null;
+  /** "Also going" (F9-a: they earn the same window as the technician). */
+  team_ids?: number[] | null;
   status: string | null;
   duration: string | number | null; // planned minutes
   checked_in_at: string | null;
@@ -44,17 +47,13 @@ export function realVsPlanned(visits: VisitTimes[], noType = "No service type"):
     .sort((a, b) => b.n - a.n);
 }
 
-/** Minutes on site per technician id (null = no technician), from timed visits only. */
+/**
+ * Visits and minutes on site per person (null = visits with nobody on them), from timed visits only.
+ * F9-a: everyone on the visit (technician + Also going) is credited the whole window.
+ */
 export function onSiteByTech(visits: VisitTimes[]): Map<number | null, { visits: number; min: number }> {
-  const by = new Map<number | null, { visits: number; min: number }>();
-  for (const v of visits) {
-    if (v.status === "Cancelled") continue;
-    const e = by.get(v.technician_id) ?? { visits: 0, min: 0 };
-    e.visits++;
-    e.min += realMinutes(v) ?? 0;
-    by.set(v.technician_id, e);
-  }
-  return by;
+  const by = hoursByTech(visits.map((v, i) => ({ id: i, starts_at: "", ...v })));
+  return new Map([...by.entries()].map(([id, e]) => [id, { visits: e.visits, min: e.min }]));
 }
 
 export const RESULTS = ["Completed", "Partial", "Not done"] as const;

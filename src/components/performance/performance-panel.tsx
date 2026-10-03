@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import type { CurrentUser } from "@/lib/auth/session";
 import { formatDate, fromDateTimeLocalET, nowMs, toDateTimeLocalET, todayET } from "@/lib/dates";
 import { NOT_FINISHED } from "@/lib/field-day/day";
+import { windowMinutes } from "@/lib/hours/engine";
 import { myEmployeeIds } from "@/lib/field-day/load";
 import { loadFieldDay } from "@/lib/field-day/return-card";
 import { aspectScores, band, byMonth, overall, signals, type Band, type Report } from "@/lib/performance/score";
@@ -63,7 +64,8 @@ export async function PerformancePanel({ employeeId, user }: { employeeId: numbe
   const sig = signals({
     clockIns: ((clockIns ?? []) as { at: string }[]).map((c) => minutesLate(toDateTimeLocalET(c.at).slice(11, 16), settings.time_clock.start_time)),
     checkIns: vs.filter((v) => v.checked_in_at).map((v) => Math.max(0, Math.round((Date.parse(v.checked_in_at!) - Date.parse(v.starts_at)) / 60_000 - Number(v.arrival_window ?? 0)))),
-    visits: vs.filter((v) => v.checked_in_at && v.checked_out_at && Number(v.duration)).map((v) => ({ planned: Number(v.duration), real: Math.round((Date.parse(v.checked_out_at!) - Date.parse(v.checked_in_at!)) / 60_000) })),
+    // F9-a: `or` above already brings the visits this person was only "also going" on; they count the same.
+    visits: vs.filter((v) => v.checked_in_at && v.checked_out_at && Number(v.duration)).map((v) => ({ planned: Number(v.duration), real: windowMinutes(v, now) ?? 0 })),
     results,
     returns: results.filter((r) => NOT_FINISHED.includes(r)).length,
   });

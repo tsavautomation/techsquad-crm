@@ -44,13 +44,16 @@ export type AutoFill = {
   to: string;
 };
 
-export type ComputedDef = {
-  kind: "sum";
-  table: string;
-  field: string;
-  /** `$id` means the current record's id. */
-  where: Record<string, string>;
-};
+export type ComputedDef =
+  | {
+      kind: "sum";
+      table: string;
+      field: string;
+      /** `$id` means the current record's id. */
+      where: Record<string, string>;
+    }
+  /** Days the project was visited: Job Report dates ∪ visit check-in days (SPEC §9.1 F9-d). A count, not money. */
+  | { kind: "visit_days" };
 
 export type FieldDef = {
   name: string;

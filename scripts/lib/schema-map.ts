@@ -14,6 +14,5 @@ export function joinTableName(table: string, field: string) {
 
 export function projectFinancialsColumns(projects: TableDef) {
   return projects.fields
-    .filter((f) => f.type === "computed" && f.computed)
-    .map((f) => ({ name: f.name, type: f.computed!.where.type }));
+    .flatMap((f) => (f.type === "computed" && f.computed?.kind === "sum" ? [{ name: f.name, type: f.computed.where.type }] : []));
 }

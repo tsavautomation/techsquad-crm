@@ -2,6 +2,7 @@
 // the return-card automation and the tests. No database here.
 import { z } from "zod";
 import { addDays } from "@/lib/schedule/dates";
+import { windowMinutes } from "@/lib/hours/engine";
 import { TimeClockSchema } from "@/lib/time-clock/clock";
 
 // ---------------------------------------------------------------- settings (app_settings 'field_day')
@@ -84,8 +85,9 @@ const ms = (iso: string | null) => (iso ? Date.parse(iso) : NaN);
 const MAX_TRAVEL = 4 * 60; // a gap longer than this is a break, not travel
 
 /**
- * Hours of a technician's day from the visits' times: on site (check-in → check-out, or → now
- * while still on site), travelling ("On my way" or the previous check-out → check-in) and the day's span.
+ * Hours of a person's day from the visits' times: on site (check-in → check-out, or → now while still
+ * on site), travelling ("On my way" or the previous check-out → check-in) and the day's span. The visits
+ * are everything the person is on, as technician or "Also going" (F9-a), so a helper's day counts too.
  */
 export function daySummary(visits: FieldTimes[], now: number = Date.now()): DaySummary {
   const done = visits.filter((v) => v.checked_in_at).sort((a, b) => ms(a.checked_in_at) - ms(b.checked_in_at));
@@ -95,7 +97,7 @@ export function daySummary(visits: FieldTimes[], now: number = Date.now()): DayS
   for (const v of done) {
     const inAt = ms(v.checked_in_at);
     const outAt = v.checked_out_at ? ms(v.checked_out_at) : now;
-    onSite += Math.max(0, outAt - inAt);
+    onSite += (windowMinutes(v, now) ?? 0) * 60_000;
     const from = v.on_way_at ? ms(v.on_way_at) : prevOut;
     if (from !== null && inAt > from && (inAt - from) / 60_000 <= MAX_TRAVEL) travel += inAt - from;
     prevOut = v.checked_out_at ? outAt : null;

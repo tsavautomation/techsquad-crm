@@ -27,6 +27,7 @@ import { localized } from "@/i18n/registry";
 import { MessagePanel } from "@/components/contact/message-panel";
 import { PartnerStats } from "@/components/contact/partner-stats";
 import { PerformancePanel } from "@/components/performance/performance-panel";
+import { ProjectHours } from "@/components/project/project-hours";
 import { Timeline } from "@/components/contact/timeline";
 import { loadMessagePanel } from "@/lib/messages/load";
 import { loadTimeline } from "@/lib/records/timeline";
@@ -133,6 +134,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "task" && <ReturnCardPanel taskId={recordId} />}
       {t.detailAddon === "organization" && <PartnerStats orgId={recordId} user={user} />}
       {t.detailAddon === "employee" && <PerformancePanel employeeId={recordId} user={user} />}
+      {t.detailAddon === "project" && <ProjectHours projectId={recordId} user={user} />}
 
       <RecordToolbar
         table={t.name}
@@ -226,18 +228,28 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
 
 const isBlank = (v: unknown) => v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0);
 
-/** Computed fields: Projects › Approved / Invoiced / Paid (SPEC §2.3). */
+/** Computed fields: Projects › Approved / Invoiced / Paid (SPEC §2.3) and Visits (SPEC §9.1 F9-d). */
 async function computedValues(t: TableDef, id: number): Promise<Values> {
-  if (!t.fields.some((f) => f.type === "computed")) return {};
+  const comps = t.fields.filter((f) => f.type === "computed");
+  if (!comps.length) return {};
   const db = await recordsDb();
-  const { data } = await db.rpc("project_financials", { p_project_ids: [id] });
-  return ((data as Values[] | null) ?? [])[0] ?? {};
+  const out: Values = {};
+  if (comps.some((f) => f.computed?.kind === "sum")) {
+    const { data } = await db.rpc("project_financials", { p_project_ids: [id] });
+    Object.assign(out, ((data as Values[] | null) ?? [])[0] ?? {});
+  }
+  const days = comps.filter((f) => f.computed?.kind === "visit_days");
+  if (days.length) {
+    const { data } = await db.rpc("project_visit_days", { p_project_ids: [id] });
+    for (const f of days) out[f.name] = ((data as { visit_days: number }[] | null) ?? [])[0]?.visit_days ?? 0;
+  }
+  return out;
 }
 
 function DetailValue({ field: f, value, labels }: { field: FieldDef; value: unknown; labels: Record<string, string> }) {
   const none = <span className="text-muted-foreground">—</span>;
 
-  if (f.type === "computed") return <>{money.format(Number(value ?? 0))}</>;
+  if (f.type === "computed") return <>{f.computed?.kind === "visit_days" ? Number(value ?? 0) : money.format(Number(value ?? 0))}</>;
 
   if (f.type === "file" || f.type === "image" || f.type === "signature") {
     const files = (value as FileItem[] | undefined) ?? [];

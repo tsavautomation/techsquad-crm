@@ -497,6 +497,15 @@ export const projects: TableDef = {
       "maxLength": 1000,
       "placeholder": "Paste One Drive links to folders and special notes here"
     },
+    // F9-d: how many days we were on the job (Job Report dates ∪ visit check-in days), computed on read.
+    {
+      "name": "visit_count",
+      "label": "Visits",
+      "type": "computed",
+      "heading": "FIELD WORK",
+      "legacy": NEW,
+      "computed": { "kind": "visit_days" },
+    },
     {
       "name": "approved_amount",
       "label": "Approved",

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { fromDateTimeLocalET, todayET } from "@/lib/dates";
 import { formatMinutes } from "@/lib/field-day/day";
+import { hoursByProject } from "@/lib/hours/engine";
 import { onSiteByTech, realVsPlanned, reportResults, salespeople, type VisitTimes } from "@/lib/insights/stats";
 import { recordsDb } from "@/lib/records/data";
 import { addDays } from "@/lib/schedule/dates";
@@ -142,6 +143,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
 
   // Field work (F5): visits in the period, planned vs real time (check-in / check-out) and the
   // Job Report results of the same days.
+  type ByProject = { id: number | null; name: string; visits: number; min: number; plannedMin: number }[];
   let ops: {
     total: number;
     done: number;
@@ -149,6 +151,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
     timed: number;
     byType: ReturnType<typeof realVsPlanned>;
     byTech: { name: string; visits: number; min: number }[];
+    byProject: ByProject;
     results: { result: string; n: number }[];
   } | null = null;
   if (can("visits")) {
@@ -157,15 +160,31 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
     const since = fromDateTimeLocalET(`${from}T00:00`);
     const until = fromDateTimeLocalET(`${addDays(today, 1)}T00:00`);
     const [{ data }, { data: rep }] = await Promise.all([
-      db.from("visits").select("status, duration, service_type, technician_id, checked_in_at, checked_out_at").gte("starts_at", since).lt("starts_at", until).is("deleted_at", null),
+      db.from("visits").select("id, project_id, status, duration, service_type, technician_id, checked_in_at, checked_out_at").gte("starts_at", since).lt("starts_at", until).is("deleted_at", null),
       can("job_reports") ? db.from("job_reports").select("result").gte("date", from).lte("date", today).is("deleted_at", null) : Promise.resolve({ data: [] }),
     ]);
-    const v = (data ?? []) as VisitTimes[];
-    const techIds = [...new Set(v.map((x) => x.technician_id).filter((x): x is number => x !== null))];
+    type Row = VisitTimes & { id: number; project_id: number | null; starts_at?: string };
+    const raw = (data ?? []) as Row[];
+    // F9-a: people "also going" earn the same window as the technician.
+    const { data: team } = raw.length ? await db.from("visits_team").select("record_id, target_id").in("record_id", raw.map((x) => x.id)) : { data: [] };
+    const teamOf = new Map<number, number[]>();
+    for (const x of (team ?? []) as { record_id: number; target_id: number }[]) teamOf.set(x.record_id, [...(teamOf.get(x.record_id) ?? []), x.target_id]);
+    const v = raw.map((x) => ({ ...x, team_ids: teamOf.get(x.id) ?? [] }));
+    const techIds = [...new Set(v.flatMap((x) => [x.technician_id, ...x.team_ids]).filter((x): x is number => x !== null))];
     const { data: emp } = techIds.length ? await db.from("employees").select("id, title").in("id", techIds) : { data: [] };
     const tn = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
     const live = v.filter((x) => x.status !== "Cancelled");
+    // F9: technician-hours per project in the period, for people who may open Projects.
+    let byProject: ByProject = [];
+    if (can("projects")) {
+      const per = [...hoursByProject(v.map((x) => ({ ...x, starts_at: x.starts_at ?? "" }))).entries()].filter(([, e]) => e.onSiteMin > 0).sort((a, b) => b[1].onSiteMin - a[1].onSiteMin).slice(0, 8);
+      const pids = per.map(([id]) => id).filter((x): x is number => x !== null);
+      const { data: pr } = pids.length ? await db.from("projects").select("id, title").in("id", pids) : { data: [] };
+      const pn = new Map(((pr ?? []) as { id: number; title: string | null }[]).map((p) => [p.id, p.title ?? `#${p.id}`]));
+      byProject = per.map(([id, e]) => ({ id, name: id === null ? tr("No project") : (pn.get(id) ?? `#${id}`), visits: e.visits, min: e.onSiteMin, plannedMin: e.plannedMin }));
+    }
     ops = {
+      byProject,
       total: live.length,
       done: v.filter((x) => x.status === "Done").length,
       cancelled: v.length - live.length,
@@ -297,6 +316,22 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
                 {ops.byTech.map((e) => (
                   <Bar key={e.name} label={e.name} value={e.visits} max={ops!.byTech[0].visits} text={`${e.visits}${e.min ? ` · ${formatMinutes(e.min)}` : ""}`} />
                 ))}
+                <p className="mt-1 text-[12px] text-muted-foreground">{tr("People also going earn the same time on site as the technician.")}</p>
+              </>
+            )}
+            {ops.byProject.length > 0 && (
+              <>
+                <p className="mt-3 mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Hours by project")}</p>
+                {ops.byProject.map((p) => (
+                  <Bar
+                    key={String(p.id)}
+                    label={p.name}
+                    value={p.min}
+                    max={ops!.byProject[0].min}
+                    text={`${p.visits} · ${formatMinutes(p.min)}`}
+                  />
+                ))}
+                <p className="mt-1 text-[12px] text-muted-foreground">{tr("Visits and technician-hours on site in the period (one person 3 h with a helper = 6 h). The whole job is on each project's page.")}</p>
               </>
             )}
           </Card>

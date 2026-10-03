@@ -61,7 +61,8 @@ export function describeNotes(f: FieldDef, table: TableDef, tables: Map<string, 
     const pairs = f.lookup.autofill.map((a) => `${target ? label(a.from, target) : a.from} → ${label(a.to)}`);
     notes.push(`fills in ${pairs.join(", ")}${f.lookup.autofillOnlyNonEmpty ? " (if not empty)" : ""}`);
   }
-  if (f.computed) notes.push(`sum of Transactions amount where type = ${f.computed.where.type}`);
+  if (f.computed?.kind === "sum") notes.push(`sum of Transactions amount where type = ${f.computed.where.type}`);
+  if (f.computed?.kind === "visit_days") notes.push("days with a Job Report or a visit check-in");
   return notes;
 }
 

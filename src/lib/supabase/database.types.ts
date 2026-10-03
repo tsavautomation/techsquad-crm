@@ -3923,6 +3923,13 @@ export type Database = {
           project_id: number
         }[]
       }
+      project_visit_days: {
+        Args: { p_project_ids: number[] }
+        Returns: {
+          project_id: number
+          visit_days: number
+        }[]
+      }
       user_last_sign_in: {
         Args: never
         Returns: {

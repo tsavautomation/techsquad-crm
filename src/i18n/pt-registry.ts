@@ -162,6 +162,7 @@ export const PT_REGISTRY: Record<string, string> = {
   "Expired": "Vencido",
   "FILE SECTION": "ARQUIVOS",
   "FINANCIAL STATUS": "SITUAÇÃO FINANCEIRA",
+  "FIELD WORK": "TRABALHO DE CAMPO",
   "FL Registration": "Registro na FL",
   "Failed Inspection, Re-schedule": "Reprovado na inspeção, reagendar",
   "Field catalogue": "Catálogo de campos",

@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { formatDate, formatDateTime } from "@/lib/dates";
+import { formatDate, formatDateTime, toDateTimeLocalET } from "@/lib/dates";
 import { pathOf } from "@/lib/files/paths";
 import { joinTable } from "@/lib/records/relations";
 import { isMultiLookup, isUpload } from "@/lib/records/values";
@@ -34,10 +34,22 @@ export async function loadEngineRecord(db: SupabaseClient, t: TableDef, id: numb
   );
 
   // Projects › Approved / Invoiced / Paid (only "Apply to Project" transactions, SPEC §9.1 M7-b).
-  if (t.fields.some((f) => f.type === "computed")) {
+  if (t.fields.some((f) => f.computed?.kind === "sum")) {
     const { data: tx } = await db.from("transactions").select("type, amount").eq("project_id", id).eq("payment_type", "Apply to Project").is("deleted_at", null);
     const sum = (type: string) => ((tx ?? []) as { type: string; amount: number }[]).filter((x) => x.type === type).reduce((n, x) => n + Number(x.amount ?? 0), 0);
-    for (const f of t.fields.filter((x) => x.computed)) values[f.name] = sum(f.computed!.where.type);
+    for (const f of t.fields) if (f.computed?.kind === "sum") values[f.name] = sum(f.computed.where.type);
+  }
+  // Projects › Visits: days with a Job Report or a visit check-in (SPEC §9.1 F9-d), same as project_visit_days().
+  if (t.fields.some((f) => f.computed?.kind === "visit_days")) {
+    const [{ data: jr }, { data: vs }] = await Promise.all([
+      db.from("job_reports").select("date").eq("project_id", id).is("deleted_at", null).not("date", "is", null),
+      db.from("visits").select("checked_in_at").eq("project_id", id).is("deleted_at", null).not("checked_in_at", "is", null).neq("status", "Cancelled"),
+    ]);
+    const days = new Set<string>([
+      ...((jr ?? []) as { date: string }[]).map((r) => r.date),
+      ...((vs ?? []) as { checked_in_at: string }[]).map((v) => toDateTimeLocalET(v.checked_in_at).slice(0, 10)),
+    ]);
+    for (const f of t.fields) if (f.computed?.kind === "visit_days") values[f.name] = days.size;
   }
 
   const files: EngineRecord["files"] = {};
@@ -86,17 +98,30 @@ export async function loadConditionValues(db: SupabaseClient, t: TableDef): Prom
     for (const l of links) (byId.get(l.record_id)?.[f.name] as number[] | undefined)?.push(l.target_id);
   }
 
-  const computed = t.fields.filter((x) => x.computed);
-  if (computed.length) {
-    for (const v of byId.values()) for (const f of computed) v[f.name] = 0;
+  const sums = t.fields.filter((x) => x.computed?.kind === "sum");
+  if (sums.length) {
+    for (const v of byId.values()) for (const f of sums) v[f.name] = 0;
     const tx = await fetchAll<{ project_id: number; type: string; amount: number }>((a, b) =>
       db.from("transactions").select("id, project_id, type, amount").eq("payment_type", "Apply to Project").is("deleted_at", null).not("project_id", "is", null).order("id").range(a, b),
     );
     for (const x of tx) {
       const v = byId.get(x.project_id);
       if (!v) continue;
-      for (const f of computed.filter((c) => c.computed!.where.type === x.type)) v[f.name] = Number(v[f.name]) + Number(x.amount ?? 0);
+      for (const f of sums.filter((c) => c.computed?.kind === "sum" && c.computed.where.type === x.type)) v[f.name] = Number(v[f.name]) + Number(x.amount ?? 0);
     }
+  }
+  // Projects › Visits (F9-d): distinct Eastern days with a Job Report or a visit check-in, per project.
+  const dayFields = t.fields.filter((x) => x.computed?.kind === "visit_days");
+  if (dayFields.length) {
+    const days = new Map<number, Set<string>>();
+    const add = (pid: number, d: string) => days.set(pid, (days.get(pid) ?? new Set<string>()).add(d));
+    const [jr, vs] = await Promise.all([
+      fetchAll<{ project_id: number; date: string }>((a, b) => db.from("job_reports").select("id, project_id, date").is("deleted_at", null).not("project_id", "is", null).not("date", "is", null).order("id").range(a, b)),
+      fetchAll<{ project_id: number; checked_in_at: string }>((a, b) => db.from("visits").select("id, project_id, checked_in_at").is("deleted_at", null).not("project_id", "is", null).not("checked_in_at", "is", null).neq("status", "Cancelled").order("id").range(a, b)),
+    ]);
+    for (const r of jr) add(r.project_id, r.date);
+    for (const v of vs) add(v.project_id, toDateTimeLocalET(v.checked_in_at).slice(0, 10));
+    for (const [id, v] of byId) for (const f of dayFields) v[f.name] = days.get(id)?.size ?? 0;
   }
   return [...byId.entries()].map(([id, values]) => ({ id, values }));
 }
@@ -120,7 +145,7 @@ export async function displayStrings(db: SupabaseClient, t: TableDef, rec: Engin
         return;
       }
       if (v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length)) {
-        out[f.name] = f.type === "computed" ? money.format(0) : "";
+        out[f.name] = f.type === "computed" ? (f.computed?.kind === "visit_days" ? "0" : money.format(0)) : "";
         return;
       }
       switch (f.type) {
@@ -158,8 +183,10 @@ export async function displayStrings(db: SupabaseClient, t: TableDef, rec: Engin
           out[f.name] = formatDateTime(String(v));
           return;
         case "money":
-        case "computed":
           out[f.name] = money.format(Number(v));
+          return;
+        case "computed":
+          out[f.name] = f.computed?.kind === "visit_days" ? String(Number(v)) : money.format(Number(v));
           return;
         case "address": {
           const a = v as Record<string, string>;
