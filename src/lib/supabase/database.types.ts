@@ -716,6 +716,51 @@ export type Database = {
           },
         ]
       }
+      employee_pay_rates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          employee_id: number
+          hourly_rate: number
+          id: number
+          note: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          employee_id: number
+          hourly_rate: number
+          id?: number
+          note?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          employee_id?: number
+          hourly_rate?: number
+          id?: number
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_pay_rates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_pay_rates_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_skills: {
         Row: {
           employee_id: number

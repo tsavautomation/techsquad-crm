@@ -28,6 +28,8 @@ import { MessagePanel } from "@/components/contact/message-panel";
 import { PartnerStats } from "@/components/contact/partner-stats";
 import { PerformancePanel } from "@/components/performance/performance-panel";
 import { ProjectHours } from "@/components/project/project-hours";
+import { JobCosting } from "@/components/project/job-costing";
+import { PayRatePanel } from "@/components/employee/pay-rate-panel";
 import { Timeline } from "@/components/contact/timeline";
 import { loadMessagePanel } from "@/lib/messages/load";
 import { loadTimeline } from "@/lib/records/timeline";
@@ -135,6 +137,8 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "organization" && <PartnerStats orgId={recordId} user={user} />}
       {t.detailAddon === "employee" && <PerformancePanel employeeId={recordId} user={user} />}
       {t.detailAddon === "project" && <ProjectHours projectId={recordId} user={user} />}
+      {t.detailAddon === "project" && <JobCosting projectId={recordId} user={user} />}
+      {t.detailAddon === "employee" && <PayRatePanel employeeId={recordId} user={user} />}
 
       <RecordToolbar
         table={t.name}

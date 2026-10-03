@@ -10,6 +10,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
   "fred@tsav.net": {
     admin: true,
     permissions: {
+      "job_costing": ["view"],
       "administrative.employees": ["create", "delete", "modify", "view_all", "view_page"],
       "administrative.inventory-checkout": ["create", "delete", "modify", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
@@ -47,6 +48,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
   "jessica@tsav.net": {
     admin: false,
     permissions: {
+      "job_costing": ["view"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
@@ -84,6 +86,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
   "luana@tsav.net": {
     admin: false,
     permissions: {
+      "job_costing": ["view"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
@@ -153,6 +156,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
   "saulo@tsav.net": {
     admin: false,
     permissions: {
+      "job_costing": ["view"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
@@ -223,6 +227,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
   "lucas@tsav.net": {
     admin: false,
     permissions: {
+      "job_costing": ["view"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],

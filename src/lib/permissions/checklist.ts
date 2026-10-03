@@ -44,7 +44,11 @@ export const WORKFLOW_ITEMS: ChecklistItem[] = [
   { key: "workflow.stock_status.act", label: "Change stock status" },
 ];
 
-export const PAGE_ITEMS: ChecklistItem[] = [{ key: "insights.page.view", label: "Insights (charts and numbers)" }];
+export const PAGE_ITEMS: ChecklistItem[] = [
+  { key: "insights.page.view", label: "Insights (charts and numbers)" },
+  // F13: costs, pay rates and margin. Fred 2026-10-03: only Lucas, Saulo, Fred, Jessica and Luana.
+  { key: "job_costing.view", label: "Job costing (costs, pay rates and margin)" },
+];
 
 export const ADMIN_ITEMS: ChecklistItem[] = [
   { key: "site.admin.add_new_member", label: "Invite people" },
