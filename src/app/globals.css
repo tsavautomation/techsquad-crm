@@ -176,3 +176,40 @@
     stroke-width: 1.8;
   }
 }
+/* ---------------------------------------------------------------- card title bands (SPEC §9.1 UI-b)
+   Fred 2026-10-03: "a contrast color on the title of each block (or tile) where the title is".
+   The first title row of every card, the summary of every collapsible section and the headings
+   inside a record's field list get a tinted band that reaches the card's edges. Unlayered on
+   purpose, so it wins over the per-card utility classes; the padding variables undo each card's
+   own padding (18/16 px by default, p-4, px-4, py-3, p-3 where used). */
+:root {
+  --card-head: color-mix(in oklab, var(--primary) 12%, var(--card));
+  --cp-x: 18px;
+  --cp-y: 16px;
+}
+.dark {
+  --card-head: color-mix(in oklab, var(--primary) 22%, var(--card));
+}
+.shadow-card.p-4 { --cp-x: 16px; --cp-y: 16px; }
+.shadow-card.px-4 { --cp-x: 16px; }
+.shadow-card.py-3 { --cp-y: 12px; }
+.shadow-card.py-3\.5 { --cp-y: 14px; }
+.shadow-card.p-3 { --cp-x: 12px; --cp-y: 12px; }
+.shadow-card > h2:first-child,
+.shadow-card > div:first-child:has(> h2) {
+  background: var(--card-head);
+  margin: calc(-1 * var(--cp-y)) calc(-1 * var(--cp-x)) 0.875rem;
+  padding: 0.625rem var(--cp-x);
+  border-bottom: 1px solid var(--border);
+  border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
+}
+details.shadow-card > summary {
+  background: var(--card-head);
+  border-radius: calc(1rem - 1px);
+}
+details[open].shadow-card > summary {
+  border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
+}
+dl.shadow-card > h2 {
+  background: var(--card-head);
+}
