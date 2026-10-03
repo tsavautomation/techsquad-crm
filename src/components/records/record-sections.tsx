@@ -38,6 +38,7 @@ const ACTION_LABEL: Record<string, string> = {
   unarchive: "Unarchived",
   delete: "Deleted",
   restore: "Restored",
+  merge: "Merged",
 };
 
 const SYSTEM_LABELS: Record<string, string> = { title: "Title", locked: "Locked", submitted_at: "Date Submitted", archived_at: "Archived", deleted_at: "Deleted" };

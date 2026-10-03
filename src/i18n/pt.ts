@@ -1043,6 +1043,22 @@ export const PT: Record<string, string> = {
   "This login no longer exists.": "Este login não existe mais.",
   "This person has signed in before. Deactivate the login instead, so their name stays on what they did.": "Esta pessoa já entrou antes. Desative o login em vez disso, para o nome continuar no que ela fez.",
 
+  // ---------------------------------------------------------------- F14 Merge duplicates
+  "Incomplete records and possible duplicates, with Merge for the duplicates.": "Registros incompletos e possíveis duplicados, com Mesclar para os duplicados.",
+  "Same phone, same email or same name. Open them to compare; keep the right one and merge the others into it.": "Mesmo telefone, mesmo e-mail ou mesmo nome. Abra para comparar; mantenha o certo e mescle os outros nele.",
+  "Keep": "Manter",
+  "Keep {title}": "Manter {title}",
+  "Merge {title} into the kept record": "Mesclar {title} no registro mantido",
+  "Merge {names} into {keep}? Their projects, notes and files move over, and they go to the trash.": "Mesclar {names} em {keep}? Os projetos, notas e arquivos passam para ele, e os outros vão para a lixeira.",
+  "Merged. {n} links now point at the kept record.": "Mesclado. {n} vínculos agora apontam para o registro mantido.",
+  "Merging…": "Mesclando…",
+  "Merge into {keep}": "Mesclar em {keep}",
+  "Merge 1 record into the kept one": "Mesclar 1 registro no mantido",
+  "Merge {n} records into the kept one": "Mesclar {n} registros no mantido",
+  "Pick the record to keep and at least one to merge.": "Escolha o registro a manter e pelo menos um para mesclar.",
+  "You need Edit and Delete on this list to merge records.": "Você precisa de Editar e Excluir nesta lista para mesclar registros.",
+  "Merged": "Mesclado",
+
   // ---------------------------------------------------------------- F13 Job costing
   "Job costing": "Custo do trabalho",
   "Job costing (costs, pay rates and margin)": "Custo do trabalho (custos, valor-hora e margem)",

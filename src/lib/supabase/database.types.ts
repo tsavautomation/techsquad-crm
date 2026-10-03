@@ -3950,6 +3950,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      merge_records: {
+        Args: { p_keep: number; p_merge: number[]; p_table: string }
+        Returns: number
+      }
       my_permissions: { Args: never; Returns: string[] }
       my_workflow_queue: {
         Args: never

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MergeGroup } from "@/components/data/merge-group";
 import { requireUser } from "@/lib/auth/session";
 import { findDuplicates } from "@/lib/insights/stats";
 import { recordsDb } from "@/lib/records/data";
@@ -13,8 +14,8 @@ export async function generateMetadata() {
   return { title: (await getT())("Data") };
 }
 
-// Data quality (the Portal design's "Dados"): incomplete records and possible duplicates.
-// Merging duplicates comes after the WebAuthor import (Fred 2026-09-30).
+// Data quality (the Portal design's "Dados"): incomplete records and possible duplicates, with Merge
+// (F14-a, after the WebAuthor import as Fred asked on 2026-09-30).
 
 type Contact = { id: number; title: string | null; first_name: string | null; last_name: string | null; main_phone: string | null; email: string | null };
 type Org = { id: number; title: string | null; main_phone: string | null; main_email: string | null };
@@ -39,6 +40,7 @@ export default async function DataPage(props: PageProps<"/data">) {
   const { active } = (await props.searchParams) as { active?: string };
   const onlyActive = active !== "all";
   const canEdit = canDo(user.permissions, contactsT, "modify", getTable);
+  const canMergeT = (name: "contacts" | "organizations") => canDo(user.permissions, getTable(name), "modify", getTable) && canDo(user.permissions, getTable(name), "delete", getTable);
   const db = await recordsDb();
 
   const [{ data: c }, { data: o }, { data: p }] = await Promise.all([
@@ -83,7 +85,7 @@ export default async function DataPage(props: PageProps<"/data">) {
   return (
     <div className="mx-auto max-w-[960px]">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("Data")}</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">{t("Incomplete records and possible duplicates. Merging duplicates comes after the data import.")}</p>
+      <p className="mb-4 text-[12.5px] text-muted-foreground">{t("Incomplete records and possible duplicates, with Merge for the duplicates.")}</p>
       <div className="mb-[18px] grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi value={`${pct}%`} label={t("Complete overall")} />
         <Kpi value={String(gaps.length)} label={t("Incomplete records")} alert={gaps.length > 0} />
@@ -126,18 +128,17 @@ export default async function DataPage(props: PageProps<"/data">) {
 
       <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
         <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Possible duplicate contacts")}</h2>
-        <p className="mb-2 text-[12.5px] text-text-2">{t("Same phone, same email or same name. Open both to compare.")}</p>
+        <p className="mb-2 text-[12.5px] text-text-2">{t(canMergeT("contacts") ? "Same phone, same email or same name. Open them to compare; keep the right one and merge the others into it." : "Same phone, same email or same name. Open both to compare.")}</p>
         {dupes.length ? (
           <ul className="flex flex-col gap-2">
             {dupes.map((g) => (
-              <li key={g.kind + g.value + g.ids.join()} className="rounded-xl border bg-muted px-3 py-2">
-                <span className="block text-[12px] text-muted-foreground">{dupeLabel(g)}</span>
-                {g.ids.map((id) => (
-                  <Link key={id} href={`/projects/contacts/${id}`} className="block text-[14px] text-primary hover:underline">
-                    {byId.get(id)?.title ?? `Contact #${id}`}
-                  </Link>
-                ))}
-              </li>
+              <MergeGroup
+                key={g.kind + g.value + g.ids.join()}
+                table="contacts"
+                label={dupeLabel(g)}
+                canMerge={canMergeT("contacts")}
+                items={[...g.ids].sort((a, b) => a - b).map((id) => ({ id, title: byId.get(id)?.title ?? `Contact #${id}`, detail: [byId.get(id)?.main_phone, byId.get(id)?.email].filter(Boolean).join(" · "), href: `/projects/contacts/${id}` }))}
+              />
             ))}
           </ul>
         ) : (
@@ -148,18 +149,17 @@ export default async function DataPage(props: PageProps<"/data">) {
       {orgs.length > 0 && (
         <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
           <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Possible duplicate organizations")}</h2>
-          <p className="mb-2 text-[12.5px] text-text-2">{t("Same phone, same email or same name. Open both to compare.")}</p>
+          <p className="mb-2 text-[12.5px] text-text-2">{t(canMergeT("organizations") ? "Same phone, same email or same name. Open them to compare; keep the right one and merge the others into it." : "Same phone, same email or same name. Open both to compare.")}</p>
           {orgDupes.length ? (
             <ul className="flex flex-col gap-2">
               {orgDupes.map((g) => (
-                <li key={g.kind + g.value + g.ids.join()} className="rounded-xl border bg-muted px-3 py-2">
-                  <span className="block text-[12px] text-muted-foreground">{dupeLabel(g)}</span>
-                  {g.ids.map((id) => (
-                    <Link key={id} href={`/projects/organizations/${id}`} className="block text-[14px] text-primary hover:underline">
-                      {orgById.get(id)?.title ?? `Organization #${id}`}
-                    </Link>
-                  ))}
-                </li>
+                <MergeGroup
+                  key={g.kind + g.value + g.ids.join()}
+                  table="organizations"
+                  label={dupeLabel(g)}
+                  canMerge={canMergeT("organizations")}
+                  items={[...g.ids].sort((a, b) => a - b).map((id) => ({ id, title: orgById.get(id)?.title ?? `Organization #${id}`, detail: [orgById.get(id)?.main_phone, orgById.get(id)?.main_email].filter(Boolean).join(" · "), href: `/projects/organizations/${id}` }))}
+                />
               ))}
             </ul>
           ) : (
