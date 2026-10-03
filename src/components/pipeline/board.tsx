@@ -97,13 +97,13 @@ export function PipelineBoard({ levels, cards, canSubmit, people, me, who, all, 
                 setDrag(null);
               }}
             >
-              <h2 className="mb-2.5 px-0.5 text-[12.5px] font-semibold">
+              <h2 className="mb-2.5 px-0.5 text-xs font-semibold">
                 <span className="flex items-center justify-between gap-2">
                   {t(col.title)}
                   <small className="rounded-full border bg-card px-2 font-semibold">{list.length}</small>
                 </span>
                 {(showMoney && total > 0) || (col.closed && !all) ? (
-                  <span className="mt-0.5 block text-[11.5px] font-normal text-text-2">
+                  <span className="mt-0.5 block text-xs font-normal text-text-2">
                     {[showMoney && total > 0 ? money.format(total) : null, col.closed && !all ? t("last 90 days") : null].filter(Boolean).join(" · ")}
                   </span>
                 ) : null}
@@ -125,8 +125,8 @@ export function PipelineBoard({ levels, cards, canSubmit, people, me, who, all, 
                         className="block px-3 pt-2.5 pb-2"
                       >
                         <span className="block text-sm font-semibold break-words">{c.title}</span>
-                        {c.client && <span className="block truncate text-[12px] text-text-2">{c.client}</span>}
-                        <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
+                        {c.client && <span className="block truncate text-xs text-text-2">{c.client}</span>}
+                        <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
                           {c.value !== null && <span className="rounded-md bg-ok-bg px-1.5 py-0.5 font-semibold text-ok-fg">{money.format(c.value)}</span>}
                           {c.days !== null && col.id !== NOT_SUBMITTED && (
                             <span className={cn("rounded-md px-1.5 py-0.5", stale ? (c.days >= STALE_DAYS * 2 ? "bg-bad-bg font-semibold text-bad-fg" : "bg-warn-bg text-warn-fg") : "bg-muted text-text-2")} title={t("Days in this stage")}>

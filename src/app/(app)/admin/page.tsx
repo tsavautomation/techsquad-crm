@@ -16,7 +16,7 @@ export default async function AdminPage() {
   return (
     <div className="mx-auto max-w-[1200px]">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("Admin")}</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">{t("People, permissions, forms, files and automations")}</p>
+      <p className="mb-4 text-xs text-muted-foreground">{t("People, permissions, forms, files and automations")}</p>
       <Tiles items={screens.map((s) => ({ href: s.href, title: s.title, subtitle: s.description, icon: s.href === "/admin/forms" ? "form-settings" : s.href.split("/").pop()! }))} />
     </div>
   );

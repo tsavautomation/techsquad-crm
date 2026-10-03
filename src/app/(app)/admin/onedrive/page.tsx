@@ -23,7 +23,7 @@ export default async function OneDrivePage(props: PageProps<"/admin/onedrive">) 
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("OneDrive")}</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">
+      <p className="mb-4 text-xs text-muted-foreground">
         {t("Every photo, video and file attached in the CRM is stored in this OneDrive, in TechSquad CRM / Projects / <project> / <form> / <date>. Signatures stay in the CRM.")}
       </p>
 

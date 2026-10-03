@@ -33,7 +33,7 @@ export async function MySkills({ user }: { user: CurrentUser }) {
             <span className="flex items-center gap-1.5 text-[15px] font-semibold tracking-tight">
               <Award className="size-4 text-primary" aria-hidden /> {tr("My skills")}
             </span>
-            <span className="block text-[12.5px] text-text-2">{rated.length ? tr("{score}% · {points} of {max} points · {n} skills rated", { score: g.score, points: g.points, max: g.max, n: rated.length }) : tr("Not rated yet — ask the office to fill in your skills.")}</span>
+            <span className="block text-xs text-text-2">{rated.length ? tr("{score}% · {points} of {max} points · {n} skills rated", { score: g.score, points: g.points, max: g.max, n: rated.length }) : tr("Not rated yet — ask the office to fill in your skills.")}</span>
           </span>
         </span>
         <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
@@ -63,11 +63,11 @@ export async function MySkills({ user }: { user: CurrentUser }) {
                 <li key={s.skill}>{s.from ? tr("{skill}: from {from} to {to}", { skill: tr(s.skill), from: tr(s.from), to: tr(s.to) }) : tr("Start on {skill} (reach {to})", { skill: tr(s.skill), to: tr(s.to) })}</li>
               ))}
             </ol>
-            <p className="mt-1 text-[12px] text-muted-foreground">{tr("Each skill is worth up to 3 points: Learning 1, Can do 2, Expert 3. Grades: A 85%+, B 70%+, C 55%+, D below.")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{tr("Each skill is worth up to 3 points: Learning 1, Can do 2, Expert 3. Grades: A 85%+, B 70%+, C 55%+, D below.")}</p>
           </div>
         )}
         {canOpen(user.permissions, employeesT, getTable) && (
-          <p className="mt-2 text-[12.5px]">
+          <p className="mt-2 text-xs">
             <Link href={recordHref(employeesT, employeeId)} className="text-primary underline underline-offset-2">
               {tr("My employee record")}
             </Link>

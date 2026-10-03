@@ -22,7 +22,7 @@ export async function PayRatePanel({ employeeId, user }: { employeeId: number; u
     <section id="pay-rate" className="mb-4 scroll-mt-20 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[15px] font-semibold tracking-tight">{tr("Pay rate")}</h2>
-        <span className="text-[12.5px] text-text-2">{tr("Only people with the Job costing permission see this.")}</span>
+        <span className="text-xs text-text-2">{tr("Only people with the Job costing permission see this.")}</span>
       </div>
       <p className="text-sm">
         {current ? (

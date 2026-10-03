@@ -27,7 +27,7 @@ function Kpi({ value, label, alert }: { value: string; label: string; alert?: bo
   return (
     <div className={cn("rounded-2xl border bg-card px-4 py-3.5 shadow-card", alert && "border-bad-border bg-gradient-to-b from-bad-bg to-card")}>
       <b className={cn("block text-[28px] leading-tight font-semibold tracking-tight", alert && "text-bad-fg")}>{value}</b>
-      <span className="text-[12.5px] text-text-2">{label}</span>
+      <span className="text-xs text-text-2">{label}</span>
     </div>
   );
 }
@@ -85,7 +85,7 @@ export default async function DataPage(props: PageProps<"/data">) {
   return (
     <div className="mx-auto max-w-[1500px]">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("Data")}</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">{t("Incomplete records and possible duplicates, with Merge for the duplicates.")}</p>
+      <p className="mb-4 text-xs text-muted-foreground">{t("Incomplete records and possible duplicates, with Merge for the duplicates.")}</p>
       <div className="mb-[18px] grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi value={`${pct}%`} label={t("Complete overall")} />
         <Kpi value={String(gaps.length)} label={t("Incomplete records")} alert={gaps.length > 0} />
@@ -105,10 +105,10 @@ export default async function DataPage(props: PageProps<"/data">) {
             {gaps.slice(0, 40).map((g) => (
               <li key={g.href} className="flex items-center gap-2 px-2 py-2">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-medium">{g.title}</span>
+                  <span className="block truncate text-sm font-medium">{g.title}</span>
                   <span className="flex flex-wrap gap-1">
                     {g.missing.map((m) => (
-                      <span key={m} className="rounded-md bg-warn-bg px-1.5 py-0.5 text-[11.5px] text-warn-fg">
+                      <span key={m} className="rounded-md bg-warn-bg px-1.5 py-0.5 text-xs text-warn-fg">
                         no {m}
                       </span>
                     ))}
@@ -123,13 +123,13 @@ export default async function DataPage(props: PageProps<"/data">) {
         ) : (
           <p className="text-[13px] text-text-2">{t("Everything has its phone, email and address.")}</p>
         )}
-        {gaps.length > 40 && <p className="mt-1 text-[12.5px] text-muted-foreground">{t("+ {n} more", { n: gaps.length - 40 })}</p>}
+        {gaps.length > 40 && <p className="mt-1 text-xs text-muted-foreground">{t("+ {n} more", { n: gaps.length - 40 })}</p>}
       </section>
 
       <div className="xl:grid xl:grid-cols-2 xl:items-start xl:gap-3.5">
       <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
         <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Possible duplicate contacts")}</h2>
-        <p className="mb-2 text-[12.5px] text-text-2">{t(canMergeT("contacts") ? "Same phone, same email or same name. Open them to compare; keep the right one and merge the others into it." : "Same phone, same email or same name. Open both to compare.")}</p>
+        <p className="mb-2 text-xs text-text-2">{t(canMergeT("contacts") ? "Same phone, same email or same name. Open them to compare; keep the right one and merge the others into it." : "Same phone, same email or same name. Open both to compare.")}</p>
         {dupes.length ? (
           <ul className="flex flex-col gap-2">
             {dupes.map((g) => (
@@ -150,7 +150,7 @@ export default async function DataPage(props: PageProps<"/data">) {
       {orgs.length > 0 && (
         <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
           <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Possible duplicate organizations")}</h2>
-          <p className="mb-2 text-[12.5px] text-text-2">{t(canMergeT("organizations") ? "Same phone, same email or same name. Open them to compare; keep the right one and merge the others into it." : "Same phone, same email or same name. Open both to compare.")}</p>
+          <p className="mb-2 text-xs text-text-2">{t(canMergeT("organizations") ? "Same phone, same email or same name. Open them to compare; keep the right one and merge the others into it." : "Same phone, same email or same name. Open both to compare.")}</p>
           {orgDupes.length ? (
             <ul className="flex flex-col gap-2">
               {orgDupes.map((g) => (
@@ -173,12 +173,12 @@ export default async function DataPage(props: PageProps<"/data">) {
       {samePlace.length > 0 && (
         <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
           <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Projects at the same address")}</h2>
-          <p className="mb-2 text-[12.5px] text-text-2">{t("Often fine (a new job at an old client), sometimes a duplicate.")}</p>
+          <p className="mb-2 text-xs text-text-2">{t("Often fine (a new job at an old client), sometimes a duplicate.")}</p>
           <ul className="flex flex-col gap-2">
             {samePlace.map((ids) => (
               <li key={ids.join()} className="rounded-xl border bg-muted px-3 py-2">
                 {ids.map((id) => (
-                  <Link key={id} href={`/projects/projects/${id}`} className="block text-[14px] text-primary hover:underline">
+                  <Link key={id} href={`/projects/projects/${id}`} className="block text-sm text-primary hover:underline">
                     {projectById.get(id)?.title ?? `Project #${id}`}
                   </Link>
                 ))}

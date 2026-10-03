@@ -82,7 +82,7 @@ export async function DashboardKpis({ user, now }: { user: CurrentUser; now: num
           )}
         >
           <b className={cn("block text-[28px] leading-tight font-semibold tracking-tight", t.alert && "text-bad-fg")}>{t.value}</b>
-          <span className="text-[12.5px] text-text-2">{tr(t.label)}</span>
+          <span className="text-xs text-text-2">{tr(t.label)}</span>
         </Link>
       ))}
     </div>

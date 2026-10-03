@@ -213,3 +213,12 @@ details[open].shadow-card > summary {
 dl.shadow-card > h2 {
   background: var(--card-head);
 }
+/* One title style for every band: 15 px semibold in the card's text colour (UI-c). */
+.shadow-card > h2:first-child,
+.shadow-card > div:first-child:has(> h2) > h2,
+details.shadow-card > summary {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--card-foreground);
+}

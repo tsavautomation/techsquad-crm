@@ -20,11 +20,11 @@ export async function Tiles({ items, columns = 3 }: { items: Tile[]; columns?: 3
           >
             <span className="flex items-start justify-between gap-2">
               <TileIcon name={t.icon} />
-              {t.badge && <span className="rounded-full bg-muted px-2 py-0.5 text-[11.5px] font-semibold text-text-2 tabular-nums">{t.badge}</span>}
+              {t.badge && <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-text-2 tabular-nums">{t.badge}</span>}
             </span>
             <span className="min-w-0">
               <span className="block text-[15px] leading-tight font-semibold">{tr(t.title)}</span>
-              {t.subtitle && <span className="mt-0.5 line-clamp-2 block text-[12.5px] text-text-2">{tr(t.subtitle)}</span>}
+              {t.subtitle && <span className="mt-0.5 line-clamp-2 block text-xs text-text-2">{tr(t.subtitle)}</span>}
             </span>
           </Link>
         </li>

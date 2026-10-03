@@ -112,8 +112,8 @@ function Widget({ title, empty, items }: { title: string; empty: string; items: 
           {items.map((i) => (
             <li key={i.href}>
               <Link href={i.href} className="flex min-h-12 flex-col justify-center rounded-lg px-2 py-2 hover:bg-muted active:bg-muted">
-                <span className="text-[14.5px] font-semibold">{i.title}</span>
-                <span className="flex items-center gap-1.5 text-[12.5px] text-text-2">
+                <span className="text-sm font-semibold">{i.title}</span>
+                <span className="flex items-center gap-1.5 text-xs text-text-2">
                   {i.color && <span className="inline-block size-2 rounded-full" style={{ backgroundColor: i.color }} aria-hidden />}
                   {i.meta}
                 </span>

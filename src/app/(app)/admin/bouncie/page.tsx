@@ -40,7 +40,7 @@ export default async function BounciePage(props: PageProps<"/admin/bouncie">) {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("Bouncie")}</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">{t("The Bouncie trackers in the vans put each vehicle on the Schedule › Map, live, next to the day's jobs. Only people who may open the Fleet list see the vehicles.")}</p>
+      <p className="mb-4 text-xs text-muted-foreground">{t("The Bouncie trackers in the vans put each vehicle on the Schedule › Map, live, next to the day's jobs. Only people who may open the Fleet list see the vehicles.")}</p>
 
       {sp.connected && <p className="mb-3 rounded-[10px] bg-ok-bg px-3 py-2 text-sm text-ok-fg">{t("Bouncie connected. The map shows the vehicles from now on.")}</p>}
       {sp.error && <p className="mb-3 rounded-[10px] bg-bad-bg px-3 py-2 text-sm text-bad-fg">{sp.error === "setup" ? t("The Bouncie app keys aren't set yet (see the steps below).") : sp.error}</p>}

@@ -122,7 +122,7 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
                 setDrag(null);
               }}
             >
-              <h2 className="mb-2.5 flex items-center justify-between px-0.5 text-[12.5px] font-semibold">
+              <h2 className="mb-2.5 flex items-center justify-between px-0.5 text-xs font-semibold">
                 {t(col.label)}
                 <small className="rounded-full border bg-card px-2 font-semibold">{list.length}</small>
               </h2>
@@ -154,8 +154,8 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
                           {c.private && <Lock className="mr-1 inline size-3.5 align-[-2px] text-muted-foreground" aria-label={t("Private")} />}
                           {c.details || t("(no details)")}
                         </span>
-                        {c.project && <span className="mt-0.5 block truncate text-[12px] text-text-2">{c.project}</span>}
-                        <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
+                        {c.project && <span className="mt-0.5 block truncate text-xs text-text-2">{c.project}</span>}
+                        <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
                           {c.priority && <span className={cn("rounded-md px-1.5 py-0.5 font-semibold", PRIORITY[c.priority] ?? "bg-muted")}>{t(c.priority)}</span>}
                           {c.due && <span className={cn("rounded-md px-1.5 py-0.5", late ? "bg-bad-bg font-semibold text-bad-fg" : c.due === today ? "bg-warn-bg text-warn-fg" : "bg-muted text-text-2")}>{c.due === today ? t("Today") : formatDate(c.due)}</span>}
                           {c.checklist.total > 0 && <span className={cn("rounded-md px-1.5 py-0.5", c.checklist.done === c.checklist.total ? "bg-ok-bg text-ok-fg" : "bg-muted text-text-2")}>✓ {c.checklist.done}/{c.checklist.total}</span>}

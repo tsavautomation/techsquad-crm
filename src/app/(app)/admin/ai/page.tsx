@@ -17,7 +17,7 @@ export default async function AiPage() {
 
   const step = (n: number, text: string) => (
     <li className="flex gap-3 text-sm">
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[12px] font-semibold">{n}</span>
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">{n}</span>
       <span>{text}</span>
     </li>
   );
@@ -25,7 +25,7 @@ export default async function AiPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("AI")}</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">{t("The CRM asks Claude (Anthropic) to read and write for us. The key stays on the server; nothing is sent to the AI unless a feature below asks for it.")}</p>
+      <p className="mb-4 text-xs text-muted-foreground">{t("The CRM asks Claude (Anthropic) to read and write for us. The key stays on the server; nothing is sent to the AI unless a feature below asks for it.")}</p>
 
       <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
         <h2 className="mb-2 text-[15px] font-semibold tracking-tight">{t("Status")}</h2>
@@ -66,7 +66,7 @@ export default async function AiPage() {
           {step(4, t("In Vercel, open the techsquad-crm project › Settings › Environment Variables. Add ANTHROPIC_API_KEY with the key, for Production and Preview, then Save."))}
           {step(5, t("Open Deployments and redeploy the latest one. Come back here and press Test connection."))}
         </ol>
-        <p className="mt-3 text-[12.5px] text-muted-foreground">{t("For the computer you develop on, the same key goes in .env.local as ANTHROPIC_API_KEY.")}</p>
+        <p className="mt-3 text-xs text-muted-foreground">{t("For the computer you develop on, the same key goes in .env.local as ANTHROPIC_API_KEY.")}</p>
       </section>
     </div>
   );

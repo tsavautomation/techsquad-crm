@@ -79,7 +79,7 @@ export default async function PipelinePage(props: PageProps<"/pipeline">) {
   return (
     <div className="mx-auto max-w-[1400px]">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Pipeline")}</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">
+      <p className="mb-4 text-xs text-muted-foreground">
         {tr("Projects by stage. Drag a card (or use Move to…) to the next stage; only the moves the workflow allows are offered.")}{" "}
         {hidden > 0 && (
           <Link href={`/pipeline?${new URLSearchParams({ ...(who ? { who } : {}), all: "1" })}`} className="underline underline-offset-4">

@@ -11,7 +11,7 @@ import { useT } from "@/i18n/client";
 // "On my way" / Check in / Check out (F2). Check-out opens the visit's Job Report, filled in.
 // P2: the phone's position goes with each step (time clock), asked only when the button is pressed.
 
-const BTN = "inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[10px] px-4 text-[14px] font-semibold disabled:opacity-60 sm:flex-none";
+const BTN = "inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[10px] px-4 text-sm font-semibold disabled:opacity-60 sm:flex-none";
 
 export function StepButtons({ id, status }: { id: number; status: string }) {
   const t = useT();

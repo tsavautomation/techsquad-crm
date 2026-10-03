@@ -189,7 +189,7 @@ export function UserForm({ userId, email, initial, can, isMe }: UserProps) {
           </button>
         )}
       </div>
-      {can.delete && !isMe && <p className="text-[12.5px] text-muted-foreground">{t("This person never signed in, so the login can be deleted for good. Logins that were used are deactivated instead, so their name stays on what they did.")}</p>}
+      {can.delete && !isMe && <p className="text-xs text-muted-foreground">{t("This person never signed in, so the login can be deleted for good. Logins that were used are deactivated instead, so their name stays on what they did.")}</p>}
       {link && <LinkBox {...link} />}
     </form>
   );

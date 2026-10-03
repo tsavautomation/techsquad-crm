@@ -47,15 +47,15 @@ export function PayRateForm({ employeeId, today, rates }: { employeeId: number; 
         }}
       >
         <label className="block">
-          <span className="mb-1 block text-[12.5px] text-text-2">{t("Rate per hour")}</span>
+          <span className="mb-1 block text-xs text-text-2">{t("Rate per hour")}</span>
           <input className={INPUT} type="number" inputMode="decimal" step="0.01" min="0" required placeholder="0.00" value={rate} onChange={(e) => setRate(e.target.value)} />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[12.5px] text-text-2">{t("From")}</span>
+          <span className="mb-1 block text-xs text-text-2">{t("From")}</span>
           <input className={INPUT} type="date" required value={from} onChange={(e) => setFrom(e.target.value)} />
         </label>
         <label className="col-span-2 block sm:col-span-1">
-          <span className="mb-1 block text-[12.5px] text-text-2">{t("Note (optional)")}</span>
+          <span className="mb-1 block text-xs text-text-2">{t("Note (optional)")}</span>
           <input className={INPUT} maxLength={200} placeholder={t("e.g. raise after review")} value={note} onChange={(e) => setNote(e.target.value)} />
         </label>
         <button type="submit" disabled={pending || !rate} className="col-span-2 inline-flex h-11 items-center justify-center rounded-[10px] bg-primary px-4 text-sm font-semibold text-primary-foreground hover:brightness-95 disabled:opacity-50 sm:col-span-1 sm:self-end">
@@ -64,7 +64,7 @@ export function PayRateForm({ employeeId, today, rates }: { employeeId: number; 
       </form>
       {rates.length > 0 && (
         <details className="group rounded-xl border">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-[13.5px] font-medium [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-[13px] font-medium [&::-webkit-details-marker]:hidden">
             {t("History ({n})", { n: rates.length })}
             <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
           </summary>
@@ -73,7 +73,7 @@ export function PayRateForm({ employeeId, today, rates }: { employeeId: number; 
               <li key={r.id} className="flex items-center justify-between gap-2 px-3 py-2 text-[13px]">
                 <span className="min-w-0">
                   <b className="tabular-nums">{money.format(r.rate)}</b> <span className="text-text-2">{t("from {date}", { date: formatDate(r.from) })}</span>
-                  {r.note && <span className="block truncate text-[12px] text-muted-foreground">{r.note}</span>}
+                  {r.note && <span className="block truncate text-xs text-muted-foreground">{r.note}</span>}
                 </span>
                 <button
                   type="button"

@@ -42,22 +42,22 @@ export async function VisitFieldPanel({ visitId }: { visitId: number }) {
       )}
       {tools.length > 0 && (
         <div className={CARD}>
-          <h2 className="mb-1 text-[14px] font-semibold">{tr("Bring")}</h2>
-          <p className="text-[14px]">{tools.join(", ")}</p>
+          <h2 className="mb-1 text-sm font-semibold">{tr("Bring")}</h2>
+          <p className="text-sm">{tools.join(", ")}</p>
         </div>
       )}
       {briefing && (
         <section className={CARD}>
-          <h2 className="mb-2 flex items-center gap-1.5 text-[14px] font-semibold">
+          <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
             <ClipboardList className="size-4" aria-hidden /> {tr("Briefing from the last visit")}
-            <Link href={recordHref(getTable("job_reports"), briefing.reportId)} className="ml-auto text-[12.5px] font-normal text-text-2 underline underline-offset-2">
+            <Link href={recordHref(getTable("job_reports"), briefing.reportId)} className="ml-auto text-xs font-normal text-text-2 underline underline-offset-2">
               {briefing.date ? formatDate(briefing.date) : tr("Report")}
             </Link>
           </h2>
-          <dl className="flex flex-col gap-2 text-[14px]">
+          <dl className="flex flex-col gap-2 text-sm">
             {briefing.result && (
               <div>
-                <dt className="text-[12.5px] text-muted-foreground">{tr("Result")}</dt>
+                <dt className="text-xs text-muted-foreground">{tr("Result")}</dt>
                 <dd>
                   {tr(briefing.result)}
                   {briefing.reason ? ` · ${tr(briefing.reason)}` : ""}
@@ -67,13 +67,13 @@ export async function VisitFieldPanel({ visitId }: { visitId: number }) {
             )}
             {briefing.done && (
               <div>
-                <dt className="text-[12.5px] text-muted-foreground">{tr("What was done")}</dt>
+                <dt className="text-xs text-muted-foreground">{tr("What was done")}</dt>
                 <dd className="line-clamp-6 whitespace-pre-line">{briefing.done}</dd>
               </div>
             )}
             {missing.length > 0 && (
               <div>
-                <dt className="text-[12.5px] text-muted-foreground">{tr("What's missing")}</dt>
+                <dt className="text-xs text-muted-foreground">{tr("What's missing")}</dt>
                 <dd>
                   <ul className="list-disc pl-5">
                     {missing.map((m) => (
@@ -85,13 +85,13 @@ export async function VisitFieldPanel({ visitId }: { visitId: number }) {
             )}
             {briefing.bring && (
               <div>
-                <dt className="text-[12.5px] text-muted-foreground">{tr("What to bring next time")}</dt>
+                <dt className="text-xs text-muted-foreground">{tr("What to bring next time")}</dt>
                 <dd className="whitespace-pre-line">{briefing.bring}</dd>
               </div>
             )}
             {briefing.access && (
               <div>
-                <dt className="text-[12.5px] text-muted-foreground">{tr("Access info")}</dt>
+                <dt className="text-xs text-muted-foreground">{tr("Access info")}</dt>
                 <dd className="whitespace-pre-line">{briefing.access}</dd>
               </div>
             )}
@@ -126,7 +126,7 @@ export async function ReturnCardPanel({ taskId }: { taskId: number }) {
   if (task.visit_id) {
     return (
       <div className={CARD}>
-        <p className="text-[14px]">
+        <p className="text-sm">
           {tr(isReturn ? "Return visit scheduled." : "On the calendar.")}{" "}
           <Link href={recordHref(visitsT, task.visit_id)} className="font-semibold underline underline-offset-2">
             {tr("Open the visit")}
@@ -151,7 +151,7 @@ export async function ReturnCardPanel({ taskId }: { taskId: number }) {
 
   return (
     <div className={CARD}>
-      <Link href={`${tableHref(visitsT)}/new?${q}`} className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-primary px-4 text-[14px] font-semibold text-primary-foreground hover:brightness-95">
+      <Link href={`${tableHref(visitsT)}/new?${q}`} className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-primary px-4 text-sm font-semibold text-primary-foreground hover:brightness-95">
         <CalendarPlus className="size-4" aria-hidden /> {tr(isReturn ? "Schedule return" : "Put on the calendar")}
       </Link>
     </div>

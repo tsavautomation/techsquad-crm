@@ -26,14 +26,14 @@ export function MergeGroup({ table, label, items, canMerge }: { table: "contacts
 
   return (
     <li className="rounded-xl border bg-muted px-3 py-2">
-      <span className="block text-[12px] text-muted-foreground">{label}</span>
+      <span className="block text-xs text-muted-foreground">{label}</span>
       <ul className="mt-1 flex flex-col gap-1">
         {items.map((i) => {
           const isKeep = i.id === keep;
           return (
             <li key={i.id} className="flex items-center gap-2">
               {canMerge && (
-                <label className="flex min-h-11 shrink-0 items-center gap-1.5 text-[12px] text-text-2">
+                <label className="flex min-h-11 shrink-0 items-center gap-1.5 text-xs text-text-2">
                   <input type="radio" name={`keep-${table}-${items[0].id}`} className="size-4" checked={isKeep} onChange={() => setKeep(i.id)} aria-label={t("Keep {title}", { title: i.title })} />
                   {t("Keep")}
                 </label>
@@ -48,10 +48,10 @@ export function MergeGroup({ table, label, items, canMerge }: { table: "contacts
                 />
               )}
               <span className="min-w-0 flex-1">
-                <Link href={i.href} className={cn("block truncate text-[14px] text-primary hover:underline", isKeep && canMerge && "font-semibold")}>
+                <Link href={i.href} className={cn("block truncate text-sm text-primary hover:underline", isKeep && canMerge && "font-semibold")}>
                   {i.title}
                 </Link>
-                {i.detail && <span className="block truncate text-[12px] text-muted-foreground">{i.detail}</span>}
+                {i.detail && <span className="block truncate text-xs text-muted-foreground">{i.detail}</span>}
               </span>
             </li>
           );

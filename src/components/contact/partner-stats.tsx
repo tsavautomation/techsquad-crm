@@ -47,7 +47,7 @@ export async function PartnerStats({ orgId, user }: { orgId: number; user: Curre
 
   const stat = (label: string, value: string) => (
     <div className="rounded-xl bg-muted/50 px-3 py-2">
-      <p className="text-[11.5px] text-text-2">{label}</p>
+      <p className="text-xs text-text-2">{label}</p>
       <p className="text-lg font-semibold tracking-tight">{value}</p>
     </div>
   );
@@ -60,20 +60,20 @@ export async function PartnerStats({ orgId, user }: { orgId: number; user: Curre
         {showMoney && stat(tr("Approved value"), money.format(total))}
         {stat(tr("Latest project"), formatDate(toDateTimeLocalET(rows[0].created_at).slice(0, 10)))}
       </div>
-      <p className="mt-2 text-[12.5px] text-text-2">{byRole.map((r) => `${tr(r.label)}: ${r.n}`).join(" · ")}</p>
+      <p className="mt-2 text-xs text-text-2">{byRole.map((r) => `${tr(r.label)}: ${r.n}`).join(" · ")}</p>
       <ul className="-mx-1 mt-2 divide-y">
         {rows.slice(0, 8).map((r) => (
           <li key={r.id} className="flex items-center justify-between gap-2 px-1 py-1.5 text-sm">
             <Link href={recordHref(pt, r.id)} className="min-w-0 truncate hover:underline">
               {r.title ?? tr("Project #{id}", { id: r.id })}
             </Link>
-            <span className="shrink-0 text-[12.5px] text-text-2">
+            <span className="shrink-0 text-xs text-text-2">
               {[r.job_status ? tr(r.job_status) : null, showMoney && approved.get(r.id) ? money.format(approved.get(r.id)!) : null].filter(Boolean).join(" · ")}
             </span>
           </li>
         ))}
       </ul>
-      {rows.length > 8 && <p className="mt-1 text-[12.5px] text-muted-foreground">{tr("+ {n} more", { n: rows.length - 8 })}</p>}
+      {rows.length > 8 && <p className="mt-1 text-xs text-muted-foreground">{tr("+ {n} more", { n: rows.length - 8 })}</p>}
     </section>
   );
 }

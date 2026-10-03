@@ -82,7 +82,7 @@ export function FileField({ table, recordId, field: f, value, onChange, disabled
                 <div className="flex aspect-square flex-col items-center justify-center gap-1 p-2 text-center">
                   <FileText className="size-6 text-muted-foreground" aria-hidden />
                   <span className="line-clamp-2 text-xs break-all">{x.name}</span>
-                  <span className="text-[10px] text-muted-foreground">{formatSize(x.size)}</span>
+                  <span className="text-[11px] text-muted-foreground">{formatSize(x.size)}</span>
                 </div>
               )}
               {!disabled && (

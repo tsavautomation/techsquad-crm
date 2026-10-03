@@ -25,7 +25,7 @@ export function SkillsGrid({ employeeId, initial, canEdit }: { employeeId: numbe
         <span className={cn("inline-flex size-10 items-center justify-center rounded-xl text-[18px] font-bold", LETTER_TONE[g.letter])}>{g.letter}</span>
         <span className="text-[13px]">
           <b>{g.score}%</b> <span className="text-text-2">· {t("{points} of {max} points", { points: g.points, max: g.max })}</span>
-          {g.steps.length > 0 && <span className="block text-[12px] text-text-2">{t("Next: {steps}", { steps: g.steps.slice(0, 3).map((s) => (s.from ? `${t(s.skill)} → ${t(s.to)}` : `${t("start")} ${t(s.skill)}`)).join(", ") })}</span>}
+          {g.steps.length > 0 && <span className="block text-xs text-text-2">{t("Next: {steps}", { steps: g.steps.slice(0, 3).map((s) => (s.from ? `${t(s.skill)} → ${t(s.to)}` : `${t("start")} ${t(s.skill)}`)).join(", ") })}</span>}
         </span>
       </div>
       <ul className="grid gap-x-4 sm:grid-cols-2">
@@ -33,7 +33,7 @@ export function SkillsGrid({ employeeId, initial, canEdit }: { employeeId: numbe
           const level = skills[skill] ?? null;
           const idx = level ? LEVELS.indexOf(level as (typeof LEVELS)[number]) : -1;
           return (
-            <li key={skill} className="flex min-h-11 items-center justify-between gap-2 text-[13.5px]">
+            <li key={skill} className="flex min-h-11 items-center justify-between gap-2 text-[13px]">
               <span className={idx < 0 ? "text-text-2" : ""}>{t(skill)}</span>
               <span className="flex items-center gap-1" role="group" aria-label={t(skill)}>
                 {LEVELS.map((l, i) => (
@@ -48,7 +48,7 @@ export function SkillsGrid({ employeeId, initial, canEdit }: { employeeId: numbe
                     className={cn("size-7 rounded-full border transition-colors", i <= idx ? "border-primary bg-primary" : "bg-muted", canEdit && "hover:border-primary")}
                   />
                 ))}
-                <span className="ml-1 w-14 text-[11.5px] text-text-2">{level ? t(level) : ""}</span>
+                <span className="ml-1 w-14 text-xs text-text-2">{level ? t(level) : ""}</span>
               </span>
             </li>
           );

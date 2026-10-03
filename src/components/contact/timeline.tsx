@@ -57,9 +57,9 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
                   title
                 )}
               </p>
-              {i.project && <p className="text-[12.5px] text-text-2">{i.project}</p>}
+              {i.project && <p className="text-xs text-text-2">{i.project}</p>}
               {i.detail && <p className="mt-0.5 line-clamp-4 text-sm whitespace-pre-line text-foreground/90">{i.detail}</p>}
-              {i.followUp && <p className="mt-0.5 text-[12.5px] text-warn-fg">{t("Follow up {date}", { date: formatDate(i.followUp) })}</p>}
+              {i.followUp && <p className="mt-0.5 text-xs text-warn-fg">{t("Follow up {date}", { date: formatDate(i.followUp) })}</p>}
               <p className="mt-0.5 text-xs text-muted-foreground">{[formatDateTime(i.at), i.who].filter(Boolean).join(" · ")}</p>
             </li>
           );

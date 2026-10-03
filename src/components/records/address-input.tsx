@@ -85,7 +85,7 @@ export function AddressInput({ value: a, onChange, disabled, box }: Props) {
                 </button>
               </li>
             ))}
-            <li className="px-3 py-1 text-right text-[10px] text-muted-foreground">{t("Powered by Google")}</li>
+            <li className="px-3 py-1 text-right text-[11px] text-muted-foreground">{t("Powered by Google")}</li>
           </ul>
         )}
       </div>

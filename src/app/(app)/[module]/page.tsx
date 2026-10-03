@@ -58,7 +58,7 @@ function Page({ title, subtitle, children }: { title: string; subtitle?: string;
   return (
     <div className="mx-auto max-w-[1200px]">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{title}</h1>
-      {subtitle ? <p className="mb-4 text-[12.5px] text-muted-foreground">{subtitle}</p> : <div className="mb-4" />}
+      {subtitle ? <p className="mb-4 text-xs text-muted-foreground">{subtitle}</p> : <div className="mb-4" />}
       {children}
     </div>
   );

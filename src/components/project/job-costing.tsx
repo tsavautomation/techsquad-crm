@@ -26,9 +26,9 @@ export async function JobCosting({ projectId, user }: { projectId: number; user:
 
   const stat = (label: string, value: string, sub?: string, tone?: string) => (
     <div className="rounded-xl bg-muted/50 px-3 py-2">
-      <p className="text-[11.5px] text-text-2">{label}</p>
+      <p className="text-xs text-text-2">{label}</p>
       <p className={cn("text-lg font-semibold tracking-tight tabular-nums", tone)}>{value}</p>
-      {sub && <p className="text-[11.5px] text-muted-foreground">{sub}</p>}
+      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
   const marginTone = c.margin === null ? undefined : c.margin < 0 ? "text-bad-fg" : c.marginPct !== null && c.marginPct < 20 ? "text-warn-fg" : "text-ok-fg";
@@ -42,7 +42,7 @@ export async function JobCosting({ projectId, user }: { projectId: number; user:
         {stat(tr("Materials"), money.format(c.materialsCost), tr(c.materialsCount === 1 ? "{n} sale" : "{n} sales", { n: c.materialsCount }))}
         {stat(tr("Margin"), c.margin === null ? "—" : money.format(c.margin), c.marginPct === null ? tr("needs an approved amount") : tr("{pct}% of approved", { pct: c.marginPct }), marginTone)}
       </div>
-      <p className="mt-2 text-[12.5px] text-text-2">{tr("Total cost {t}: labour plus materials.", { t: money.format(c.totalCost) })}</p>
+      <p className="mt-2 text-xs text-text-2">{tr("Total cost {t}: labour plus materials.", { t: money.format(c.totalCost) })}</p>
 
       {c.labour.length > 0 && (
         <>
@@ -73,10 +73,10 @@ export async function JobCosting({ projectId, user }: { projectId: number; user:
               </li>
             ))}
           </ul>
-          {c.unratedMin > 0 && <p className="mt-1 text-[12.5px] text-warn-fg">{tr("{t} not costed: set the pay rate on the employee's page (Pay rate).", { t: formatMinutes(c.unratedMin) })}</p>}
+          {c.unratedMin > 0 && <p className="mt-1 text-xs text-warn-fg">{tr("{t} not costed: set the pay rate on the employee's page (Pay rate).", { t: formatMinutes(c.unratedMin) })}</p>}
         </>
       )}
-      <p className="mt-2 text-[11.5px] text-muted-foreground">{tr("Labour is each person's time on site × their hourly rate on that day. Materials are the Cost of Sale records sent to this project. Only people with the Job costing permission see this.")}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{tr("Labour is each person's time on site × their hourly rate on that day. Materials are the Cost of Sale records sent to this project. Only people with the Job costing permission see this.")}</p>
     </section>
   );
 }

@@ -62,13 +62,13 @@ export function PermissionChecklist({ userId, initialAdmin, initialKeys, section
   return (
     <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
       <h2 className="text-[15px] font-semibold tracking-tight">{t("What this person may do")}</h2>
-      {!canEdit && <p className="mt-1 text-[12.5px] text-muted-foreground">{t("Only an administrator can change this.")}</p>}
+      {!canEdit && <p className="mt-1 text-xs text-muted-foreground">{t("Only an administrator can change this.")}</p>}
 
       <label className={cn("mt-3 flex min-h-11 items-center gap-3 rounded-xl border px-3 py-2", isAdmin && "border-primary bg-primary/5")}>
         <input type="checkbox" className="size-5" checked={isAdmin} disabled={!canEdit || isMe} onChange={(e) => setAdmin(e.target.checked)} />
         <span>
-          <span className="block text-[14px] font-medium">{t("Administrator")}</span>
-          <span className="block text-[12.5px] text-text-2">{t("Can do everything, including changing what others may do.")}</span>
+          <span className="block text-sm font-medium">{t("Administrator")}</span>
+          <span className="block text-xs text-text-2">{t("Can do everything, including changing what others may do.")}</span>
         </span>
       </label>
 
@@ -98,7 +98,7 @@ export function PermissionChecklist({ userId, initialAdmin, initialKeys, section
                     <tr>
                       <th className="sticky left-0 z-10 w-32 bg-card text-left font-normal text-text-2" />
                       {RECORD_COLUMNS.map(([a, label]) => (
-                        <th key={a} className="px-1 pb-1 text-center text-[11.5px] font-medium text-text-2">
+                        <th key={a} className="px-1 pb-1 text-center text-xs font-medium text-text-2">
                           {t(label)}
                         </th>
                       ))}

@@ -44,7 +44,7 @@ export async function MyDay({ user, now }: { user: CurrentUser; now: number }) {
       </div>
 
       {day.reportsDue.length >= 2 && (
-        <div className="mb-3 rounded-xl bg-warn-bg px-3 py-2 text-[13.5px] text-warn-fg">
+        <div className="mb-3 rounded-xl bg-warn-bg px-3 py-2 text-[13px] text-warn-fg">
           <p className="flex items-center gap-1.5 font-semibold">
             <TriangleAlert className="size-4" aria-hidden /> {tr("{n} visits still need a report", { n: day.reportsDue.length })}
           </p>
@@ -68,7 +68,7 @@ export async function MyDay({ user, now }: { user: CurrentUser; now: number }) {
 
       {sum.started && (
         <details className="group mt-3 rounded-xl border">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-[14px] font-semibold [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
             {left.length ? tr("My day so far") : tr("End my day")}
             <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
           </summary>
@@ -79,12 +79,12 @@ export async function MyDay({ user, now }: { user: CurrentUser; now: number }) {
               [tr("Whole day"), formatMinutes(sum.spanMin)],
             ].map(([k, val]) => (
               <div key={k} className="rounded-lg bg-muted/50 px-2 py-2">
-                <dt className="text-[12px] text-muted-foreground">{k}</dt>
+                <dt className="text-xs text-muted-foreground">{k}</dt>
                 <dd className="text-[15px] font-semibold">{val}</dd>
               </div>
             ))}
           </dl>
-          <p className="px-3 pb-3 text-[12.5px] text-muted-foreground">
+          <p className="px-3 pb-3 text-xs text-muted-foreground">
             {sum.ended ? tr("Started {start}, finished {end}.", { start: time(sum.started), end: time(sum.ended) }) : tr("Started {start}.", { start: time(sum.started) })}
           </p>
         </details>
@@ -100,7 +100,7 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
     <li className={next ? "rounded-xl border-2 border-primary p-3" : "rounded-xl border p-3"}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          {next && <p className="text-[11.5px] font-semibold tracking-wide text-primary uppercase">{tr("Next")}</p>}
+          {next && <p className="text-xs font-semibold tracking-wide text-primary uppercase">{tr("Next")}</p>}
           <p className="text-[13px] text-text-2">
             {time(v.starts_at)}
             {v.arrival_window > 0 && ` – ${time(plus(v.starts_at, v.arrival_window))} ${tr("arrival")}`} · {formatMinutes(v.duration)}
@@ -111,12 +111,12 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
             {v.project}
           </Link>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[12px] font-medium ${STATUS_TONE[v.status] ?? STATUS_TONE.Scheduled}`}>{tr(v.status)}</span>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[v.status] ?? STATUS_TONE.Scheduled}`}>{tr(v.status)}</span>
       </div>
 
       {v.address ? (
         <div className="mt-2">
-          <p className="text-[13.5px]">{v.address}</p>
+          <p className="text-[13px]">{v.address}</p>
           <div className="mt-1.5 flex flex-wrap gap-2">
             <a href={mapsUrl(v.address)} target="_blank" rel="noopener noreferrer" className={LINK}>
               Google Maps
@@ -134,7 +134,7 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
       )}
 
       {(v.instructions || v.access || v.tools.length > 0) && (
-        <dl className="mt-2 flex flex-col gap-1 text-[13.5px]">
+        <dl className="mt-2 flex flex-col gap-1 text-[13px]">
           {v.instructions && (
             <div>
               <dt className="inline font-semibold">{tr("Instructions")}: </dt>
@@ -164,7 +164,7 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
               <FileText className="mr-1 size-4" aria-hidden /> {tr("Report")}
             </Link>
           ) : (
-            <Link href={`${tableHref(reportsT)}/new?visit_id=${v.id}${v.projectId ? `&project_id=${v.projectId}` : ""}&back=/`} className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-warn-bg px-4 text-[14px] font-semibold text-warn-fg">
+            <Link href={`${tableHref(reportsT)}/new?visit_id=${v.id}${v.projectId ? `&project_id=${v.projectId}` : ""}&back=/`} className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-warn-bg px-4 text-sm font-semibold text-warn-fg">
               <FileText className="size-4" aria-hidden /> {tr("Write the report")}
             </Link>
           ))}

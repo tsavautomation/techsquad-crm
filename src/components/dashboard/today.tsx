@@ -30,8 +30,8 @@ function SectionCard({ s, tr }: { s: Section; tr: T }) {
         {s.rows.slice(0, LIMIT).map((r) => (
           <li key={r.href + r.meta} className="flex items-center gap-2 px-2 py-2">
             <Link href={r.href} className="min-w-0 flex-1 rounded-lg hover:underline">
-              <span className="block truncate text-[14.5px] font-semibold">{r.title}</span>
-              <span className={r.tone === "bad" ? "text-[12.5px] text-bad-fg" : r.tone === "warn" ? "text-[12.5px] text-warn-fg" : "text-[12.5px] text-text-2"}>{r.meta}</span>
+              <span className="block truncate text-sm font-semibold">{r.title}</span>
+              <span className={r.tone === "bad" ? "text-xs text-bad-fg" : r.tone === "warn" ? "text-xs text-warn-fg" : "text-xs text-text-2"}>{r.meta}</span>
             </Link>
             {r.action && (
               <Link href={r.action.href} className="inline-flex h-9 shrink-0 items-center rounded-[10px] bg-ok-bg px-3 text-[13px] font-semibold text-ok-fg hover:brightness-95">
@@ -41,7 +41,7 @@ function SectionCard({ s, tr }: { s: Section; tr: T }) {
           </li>
         ))}
       </ul>
-      {s.rows.length > LIMIT && <p className="mt-1 text-[12.5px] text-muted-foreground">{tr("+ {n} more", { n: s.rows.length - LIMIT })}</p>}
+      {s.rows.length > LIMIT && <p className="mt-1 text-xs text-muted-foreground">{tr("+ {n} more", { n: s.rows.length - LIMIT })}</p>}
     </section>
   );
 }

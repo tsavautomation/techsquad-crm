@@ -98,8 +98,8 @@ export async function PerformancePanel({ employeeId, user }: { employeeId: numbe
           </svg>
           <div>
             <p className={cn("text-[15px] font-semibold", BAND_TONE[b])}>{tr(BAND_LABEL[b])}</p>
-            <p className="text-[12.5px] text-text-2">{rated.length ? tr("{p} positive, {n} negative reports", { p: reports.filter((r) => r.type === "Positive").length, n: reports.filter((r) => r.type === "Negative").length }) : tr("No reports yet: every aspect starts at 70.")}</p>
-            <p className="text-[11.5px] text-muted-foreground">{tr("Good things add points, bad things remove them, and old reports fade.")}</p>
+            <p className="text-xs text-text-2">{rated.length ? tr("{p} positive, {n} negative reports", { p: reports.filter((r) => r.type === "Positive").length, n: reports.filter((r) => r.type === "Negative").length }) : tr("No reports yet: every aspect starts at 70.")}</p>
+            <p className="text-xs text-muted-foreground">{tr("Good things add points, bad things remove them, and old reports fade.")}</p>
           </div>
         </div>
         <div>
@@ -130,7 +130,7 @@ export async function PerformancePanel({ employeeId, user }: { employeeId: numbe
                   <span className="w-full rounded-t bg-ok-fg/80" style={{ height: `${(m.positive / maxMonth) * 100}%` }} />
                   <span className="w-full bg-bad-fg/80" style={{ height: `${(m.negative / maxMonth) * 100}%` }} />
                 </div>
-                <span className="text-[10.5px] text-muted-foreground">{m.month.slice(5)}</span>
+                <span className="text-[11px] text-muted-foreground">{m.month.slice(5)}</span>
               </div>
             ))}
           </div>
@@ -159,15 +159,15 @@ export async function PerformancePanel({ employeeId, user }: { employeeId: numbe
           <p className="mb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{tr("Latest reports")}</p>
           <ul className="divide-y">
             {reports.slice(0, 8).map((r) => (
-              <li key={r.id} className="py-2 text-[13.5px]">
+              <li key={r.id} className="py-2 text-[13px]">
                 <Link href={recordHref(perfT, r.id)} className="flex items-center gap-2 hover:underline">
-                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-medium", r.type === "Positive" ? "bg-ok-bg text-ok-fg" : "bg-bad-bg text-bad-fg")}>{tr(r.type ?? "Report")}</span>
+                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", r.type === "Positive" ? "bg-ok-bg text-ok-fg" : "bg-bad-bg text-bad-fg")}>{tr(r.type ?? "Report")}</span>
                   <span className="min-w-0 flex-1 truncate">
                     {r.aspect ? tr(r.aspect) : tr("General")}
                     {r.weight && r.weight !== "Normal" && <span className="text-text-2"> · {tr(r.weight)}</span>}
                     {r.description && <span className="text-text-2"> — {r.description.length > 80 ? `${r.description.slice(0, 80)}…` : r.description}</span>}
                   </span>
-                  <span className="shrink-0 text-[12px] text-muted-foreground">{r.date ? formatDate(r.date) : ""}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{r.date ? formatDate(r.date) : ""}</span>
                 </Link>
               </li>
             ))}

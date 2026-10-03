@@ -65,9 +65,9 @@ function Results({ s, active, onPick, onHover }: { s: ReturnType<typeof useSearc
         <section key={g.table} aria-label={g.label}>
           <div className="flex items-center gap-2 px-3 pt-2 pb-1">
             <TileIcon name={g.icon} size="sm" />
-            <span className="flex-1 text-[11.5px] font-semibold tracking-wider text-muted-foreground uppercase">{g.label}</span>
+            <span className="flex-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">{g.label}</span>
             {g.href && g.hits.length >= 5 && (
-              <Link href={g.href} onClick={onPick} className="rounded-md px-2 py-1 text-[12.5px] font-medium text-primary hover:bg-muted">
+              <Link href={g.href} onClick={onPick} className="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-muted">
                 {t("See all")}
               </Link>
             )}
@@ -85,10 +85,10 @@ function Results({ s, active, onPick, onHover }: { s: ReturnType<typeof useSearc
                     className={cn("mx-1 flex min-h-11 flex-col justify-center rounded-lg px-3 py-1.5 pl-[52px]", i === active ? "bg-secondary" : "hover:bg-muted")}
                   >
                     <span className="flex items-center gap-2">
-                      <span className="truncate text-[14.5px] font-medium">{h.title}</span>
+                      <span className="truncate text-sm font-medium">{h.title}</span>
                       {h.archived && <span className="shrink-0 rounded-full bg-muted px-1.5 text-[11px] text-text-2">{t("Archived")}</span>}
                     </span>
-                    {h.line && <span className="truncate text-[12.5px] text-text-2">{h.line}</span>}
+                    {h.line && <span className="truncate text-xs text-text-2">{h.line}</span>}
                   </Link>
                 </li>
               );

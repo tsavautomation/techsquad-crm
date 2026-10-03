@@ -63,9 +63,9 @@ export async function ProjectHours({ projectId, user }: { projectId: number; use
 
   const stat = (label: string, value: string, sub?: string) => (
     <div className="rounded-xl bg-muted/50 px-3 py-2">
-      <p className="text-[11.5px] text-text-2">{label}</p>
+      <p className="text-xs text-text-2">{label}</p>
       <p className="text-lg font-semibold tracking-tight tabular-nums">{value}</p>
-      {sub && <p className="text-[11.5px] text-muted-foreground">{sub}</p>}
+      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
 
@@ -73,7 +73,7 @@ export async function ProjectHours({ projectId, user }: { projectId: number; use
     <section id="hours" className="mb-4 scroll-mt-20 rounded-2xl border bg-card px-4 py-3 shadow-card">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[15px] font-semibold tracking-tight">{tr("Visits and hours on this job")}</h2>
-        {h.open && <span className="rounded-full bg-warn-bg px-2 py-0.5 text-[12px] font-medium text-warn-fg">{tr("On site now")}</span>}
+        {h.open && <span className="rounded-full bg-warn-bg px-2 py-0.5 text-xs font-medium text-warn-fg">{tr("On site now")}</span>}
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stat(tr("Times visited"), String(visitDays), lastVisit ? tr("last on {date}", { date: formatDate(lastVisit) }) : tr("days with a report or check-in"))}
@@ -81,7 +81,7 @@ export async function ProjectHours({ projectId, user }: { projectId: number; use
         {h.visits.length > 0 && stat(tr("Planned"), formatMinutes(h.plannedMin), h.timed > 0 && plannedTimed > 0 ? (diff === 0 ? tr("on plan so far") : diff > 0 ? tr("{t} over plan so far", { t: formatMinutes(diff) }) : tr("{t} under plan so far", { t: formatMinutes(-diff) })) : undefined)}
         {h.visits.length > 0 && stat(tr("Scheduled visits"), String(h.visits.length), tr("{n} timed", { n: h.timed }))}
       </div>
-      {h.visits.length > 0 && <p className="mt-2 text-[12.5px] text-text-2">{tr("Clock time {t} (check-in to check-out, people not multiplied).", { t: formatMinutes(h.clockMin) })}</p>}
+      {h.visits.length > 0 && <p className="mt-2 text-xs text-text-2">{tr("Clock time {t} (check-in to check-out, people not multiplied).", { t: formatMinutes(h.clockMin) })}</p>}
 
       {h.byTech.length > 0 && (
         <>
@@ -111,9 +111,9 @@ export async function ProjectHours({ projectId, user }: { projectId: number; use
                   {formatDate(local.slice(0, 10))} {clock(local.slice(11, 16))}
                   {service.get(v.id) ? <span className="font-normal text-text-2"> · {tr(service.get(v.id)!)}</span> : null}
                 </Link>
-                {v.status && <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11.5px]", STATUS_TONE[v.status] ?? "bg-muted text-text-2")}>{tr(v.status)}</span>}
+                {v.status && <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs", STATUS_TONE[v.status] ?? "bg-muted text-text-2")}>{tr(v.status)}</span>}
               </div>
-              <div className="mt-0.5 flex items-center justify-between gap-2 text-[12.5px] text-text-2">
+              <div className="mt-0.5 flex items-center justify-between gap-2 text-xs text-text-2">
                 <span className="min-w-0 truncate">{who(v.people)}</span>
                 <span className={cn("shrink-0 tabular-nums", v.realMin !== null && tone(v.plannedMin, v.realMin))}>
                   {v.realMin !== null
@@ -126,8 +126,8 @@ export async function ProjectHours({ projectId, user }: { projectId: number; use
           );
         })}
       </ul>
-      {h.visits.length > SHOW && <p className="mt-1 text-[12.5px] text-muted-foreground">{tr("+ {n} more", { n: h.visits.length - SHOW })}</p>}
-      <p className="mt-2 text-[11.5px] text-muted-foreground">
+      {h.visits.length > SHOW && <p className="mt-1 text-xs text-muted-foreground">{tr("+ {n} more", { n: h.visits.length - SHOW })}</p>}
+      <p className="mt-2 text-xs text-muted-foreground">
         {h.visits.length > 0
           ? tr("Everyone on a visit (technician and also going) earns the time between check-in and check-out.")
           : tr("Times visited counts the days with a Job Report. Hours start once visits are checked in and out from Today.")}

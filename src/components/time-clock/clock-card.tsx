@@ -56,7 +56,7 @@ export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSi
             {openSince ? t("Clocked in since {time} · {clocked} today", { time: openSinceTime ?? "", clocked: clockedText }) : entries.length ? t("Clocked out · {clocked} today", { clocked: clockedText }) : t("Not clocked in yet")}
             {onSiteText && ` · ${t("on site {time}", { time: onSiteText })}`}
           </p>
-          {reminderPassed && openSince && <p className="mt-0.5 text-[12.5px] font-medium text-warn-fg">{t("Still clocked in — don't forget to clock out.")}</p>}
+          {reminderPassed && openSince && <p className="mt-0.5 text-xs font-medium text-warn-fg">{t("Still clocked in — don't forget to clock out.")}</p>}
         </div>
         <button
           type="button"
@@ -74,7 +74,7 @@ export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSi
             <li key={e.id} className="flex items-center gap-2">
               <span className="w-[72px] shrink-0 tabular-nums text-text-2">{e.time}</span>
               <span className="min-w-0 flex-1 truncate">{e.label}</span>
-              <span className={cn("flex shrink-0 items-center gap-1 text-[12px]", PLACE_TONE[e.place])}>
+              <span className={cn("flex shrink-0 items-center gap-1 text-xs", PLACE_TONE[e.place])}>
                 <MapPin className="size-3.5" aria-hidden />
                 {e.hasGeo ? `${t(e.place)}${e.place !== "Office" && e.place !== "On site" && e.distance_m !== null ? ` · ${formatDistance(e.distance_m)}` : ""}` : t("no location")}
               </span>

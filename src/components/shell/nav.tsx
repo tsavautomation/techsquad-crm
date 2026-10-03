@@ -94,7 +94,7 @@ function SheetTiles({ items, onPick }: { items: { href: string; label: string; i
             className={cn("flex h-full min-h-[92px] flex-col items-center justify-center gap-2 rounded-2xl border bg-card p-2 text-center shadow-card active:bg-muted", c.active && "border-primary bg-secondary")}
           >
             <TileIcon name={c.icon} />
-            <span className="text-[12.5px] leading-tight font-medium">{c.label}</span>
+            <span className="text-xs leading-tight font-medium">{c.label}</span>
           </Link>
         </li>
       ))}
@@ -239,14 +239,14 @@ export function Sidebar({ items, create, me, showAdmin, extras }: { items: NavIt
         if (!list.length) return null;
         return (
           <div key={g.title}>
-            <p className="mx-2.5 mt-[18px] mb-1.5 text-[10.5px] tracking-[0.08em] text-[#7c8da6] uppercase">{t(g.title)}</p>
+            <p className="mx-2.5 mt-[18px] mb-1.5 text-[11px] tracking-[0.08em] text-[#7c8da6] uppercase">{t(g.title)}</p>
             <ul className="flex flex-col gap-0.5">{list.map((i) => link(i.href, i.title, <ModuleIcon name={i.icon} className="size-[18px]" />, i.tabs))}</ul>
           </div>
         );
       })}
       {(extras.insights || extras.data || extras.timeClock) && (
         <>
-          <p className="mx-2.5 mt-[18px] mb-1.5 text-[10.5px] tracking-[0.08em] text-[#7c8da6] uppercase">{t("Management")}</p>
+          <p className="mx-2.5 mt-[18px] mb-1.5 text-[11px] tracking-[0.08em] text-[#7c8da6] uppercase">{t("Management")}</p>
           <ul className="flex flex-col gap-0.5">
             {extras.timeClock && link("/time-clock", t("Time clock"), <Clock className="size-[18px]" aria-hidden />)}
             {extras.insights && link("/insights", t("Insights"), <ChartColumn className="size-[18px]" aria-hidden />)}
@@ -254,7 +254,7 @@ export function Sidebar({ items, create, me, showAdmin, extras }: { items: NavIt
           </ul>
         </>
       )}
-      <p className="mx-2.5 mt-[18px] mb-1.5 text-[10.5px] tracking-[0.08em] text-[#7c8da6] uppercase">{t("More")}</p>
+      <p className="mx-2.5 mt-[18px] mb-1.5 text-[11px] tracking-[0.08em] text-[#7c8da6] uppercase">{t("More")}</p>
       <ul className="flex flex-col gap-0.5">
         {link("/lists", t("Lists"), <List className="size-[18px]" aria-hidden />)}
         {showAdmin && link("/admin", t("Admin"), <Settings className="size-[18px]" aria-hidden />)}
@@ -342,7 +342,7 @@ export function BottomNav({ items, create, showAdmin, extras }: { items: NavItem
   const pinned = ["schedule", "projects"].map((s) => items.find((i) => i.slug === s)).filter((x): x is NavItem => Boolean(x));
   const rest = items.filter((i) => !pinned.includes(i));
   const tab = (href: string, label: string, icon: React.ReactNode, active: boolean) => (
-    <Link href={href} className={cn("flex flex-1 flex-col items-center gap-[3px] pt-2.5 pb-2 text-[10.5px] text-muted-foreground", active && "font-semibold text-primary")}>
+    <Link href={href} className={cn("flex flex-1 flex-col items-center gap-[3px] pt-2.5 pb-2 text-[11px] text-muted-foreground", active && "font-semibold text-primary")}>
       {icon}
       {label}
     </Link>
@@ -371,7 +371,7 @@ export function BottomNav({ items, create, showAdmin, extras }: { items: NavItem
           </button>
         )}
         {pinned[1] && tab(pinned[1].href, pinned[1].shortTitle, <ModuleIcon name={pinned[1].icon} className="size-[22px]" />, isActive(pathname, pinned[1].href))}
-        <button type="button" onClick={() => setSheet("more")} className={cn("flex flex-1 flex-col items-center gap-[3px] pt-2.5 pb-2 text-[10.5px] text-muted-foreground", moreActive && "font-semibold text-primary")}>
+        <button type="button" onClick={() => setSheet("more")} className={cn("flex flex-1 flex-col items-center gap-[3px] pt-2.5 pb-2 text-[11px] text-muted-foreground", moreActive && "font-semibold text-primary")}>
           <Menu className="size-[22px]" aria-hidden />
           {t("More")}
         </button>

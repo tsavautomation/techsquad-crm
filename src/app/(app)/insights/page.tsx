@@ -223,7 +223,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Insights")}</h1>
-          <p className="text-[12.5px] text-muted-foreground">{tr("Pipeline, money, partners, field work and maintenance plans.")}</p>
+          <p className="text-xs text-muted-foreground">{tr("Pipeline, money, partners, field work and maintenance plans.")}</p>
         </div>
         {ops && (
           <div className="flex rounded-[10px] border bg-muted p-0.5 text-[13px]" role="tablist" aria-label={tr("Period for field work")}>
@@ -241,7 +241,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
           {stages.map((s) => (
             <Bar key={s.k} label={tr(s.k)} value={s.n} max={maxStage} text={`${s.n}${showMoney && s.v ? ` · ${money.format(s.v)}` : ""}`} />
           ))}
-          <p className="mt-2 text-[12.5px] text-text-2">
+          <p className="mt-2 text-xs text-text-2">
             {tr("{won} approved or further, {lost} lost.", { won, lost })}
             {showMoney && ` ${tr("Values come from {n} projects with an approved proposal.", { n: withValue })}`}
           </p>
@@ -307,7 +307,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
                     </div>
                   </div>
                 ))}
-                <p className="mt-1 text-[12px] text-muted-foreground">{tr("Average per visit: light bar planned, dark bar real (check-in to check-out). {timed} of {total} visits were timed.", { timed: ops.timed, total: ops.total })}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{tr("Average per visit: light bar planned, dark bar real (check-in to check-out). {timed} of {total} visits were timed.", { timed: ops.timed, total: ops.total })}</p>
               </>
             )}
             {ops.byTech.length > 0 && (
@@ -316,7 +316,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
                 {ops.byTech.map((e) => (
                   <Bar key={e.name} label={e.name} value={e.visits} max={ops!.byTech[0].visits} text={`${e.visits}${e.min ? ` · ${formatMinutes(e.min)}` : ""}`} />
                 ))}
-                <p className="mt-1 text-[12px] text-muted-foreground">{tr("People also going earn the same time on site as the technician.")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{tr("People also going earn the same time on site as the technician.")}</p>
               </>
             )}
             {ops.byProject.length > 0 && (
@@ -331,7 +331,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
                     text={`${p.visits} · ${formatMinutes(p.min)}`}
                   />
                 ))}
-                <p className="mt-1 text-[12px] text-muted-foreground">{tr("Visits and technician-hours on site in the period (one person 3 h with a helper = 6 h). The whole job is on each project's page.")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{tr("Visits and technician-hours on site in the period (one person 3 h with a helper = 6 h). The whole job is on each project's page.")}</p>
               </>
             )}
           </Card>
@@ -349,7 +349,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
                   text={`${showMoney ? money.format(s.value) : tr(s.n === 1 ? "{n} project" : "{n} projects", { n: s.n })}${s.winRate !== null ? ` · ${s.winRate}%` : ""}`}
                 />
               ))}
-              <p className="mt-2 text-[12.5px] text-text-2">{tr("The percentage is the win rate: approved or further out of approved + lost. Open projects don't count yet.")}</p>
+              <p className="mt-2 text-xs text-text-2">{tr("The percentage is the win rate: approved or further out of approved + lost. Open projects don't count yet.")}</p>
             </>
           ) : (
             <p className="text-[13px] text-text-2">{tr("No projects yet.")}</p>
@@ -366,13 +366,13 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
           {[...tiers.entries()].map(([t, v]) => (
             <Bar key={t} label={tr(t)} value={v.n} max={Math.max(1, active.length)} text={`${v.n}${showMoney ? ` · ${money.format(v.v)}` : ""}`} />
           ))}
-          <p className="mt-2 rounded-[10px] bg-ok-bg px-3 py-2 text-[12.5px] text-ok-fg">{tr("Opportunity: {n} completed projects without a maintenance plan.", { n: completeNoPlan })}</p>
+          <p className="mt-2 rounded-[10px] bg-ok-bg px-3 py-2 text-xs text-ok-fg">{tr("Opportunity: {n} completed projects without a maintenance plan.", { n: completeNoPlan })}</p>
         </Card>
 
         {quality !== null && (
           <Card title={tr("Data quality")}>
             <Bar label={tr("Contacts complete")} value={quality} max={100} text={`${quality}%`} />
-            <p className="mt-2 text-[12.5px] text-text-2">
+            <p className="mt-2 text-xs text-text-2">
               {tr("Phone and email filled in. Fix the gaps in")}{" "}
               <Link href="/data" className="text-primary underline underline-offset-2">
                 {tr("Data")}

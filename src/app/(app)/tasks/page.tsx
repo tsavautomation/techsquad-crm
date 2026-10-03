@@ -74,7 +74,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   return (
     <div className="mx-auto max-w-[1200px]">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Tasks")}</h1>
-      <p className="mb-4 text-[12.5px] text-muted-foreground">{tr("Team board by status. Drag a card (or use Move to…) to change its status; open it for details, checklist and notes.")}</p>
+      <p className="mb-4 text-xs text-muted-foreground">{tr("Team board by status. Drag a card (or use Move to…) to change its status; open it for details, checklist and notes.")}</p>
       <TaskBoard
         columns={columns}
         cards={cards}

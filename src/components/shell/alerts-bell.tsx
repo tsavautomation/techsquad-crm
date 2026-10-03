@@ -37,11 +37,11 @@ function List({ alerts, onPick, onTagsRead }: { alerts: Alerts | null; onPick: (
               <span className="grid size-7 place-items-center rounded-lg" style={{ backgroundColor: `color-mix(in srgb, ${tint} 14%, transparent)`, color: tint }} aria-hidden>
                 <Icon className="size-4" />
               </span>
-              <span className="flex-1 text-[11.5px] font-semibold tracking-wider text-muted-foreground uppercase">
+              <span className="flex-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                 {s.title} · {s.items.length}
               </span>
               {s.key === "tags" && (
-                <button type="button" onClick={onTagsRead} className="rounded-md px-2 py-1 text-[12.5px] font-medium text-primary hover:bg-muted">
+                <button type="button" onClick={onTagsRead} className="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-muted">
                   {t("Mark read")}
                 </button>
               )}
@@ -50,8 +50,8 @@ function List({ alerts, onPick, onTagsRead }: { alerts: Alerts | null; onPick: (
               {s.items.map((i) => (
                 <li key={i.key}>
                   <Link href={i.href} onClick={onPick} className="mx-1 flex min-h-11 flex-col justify-center rounded-lg px-3 py-1.5 pl-[46px] hover:bg-muted active:bg-muted">
-                    <span className="truncate text-[14.5px] font-medium">{i.title}</span>
-                    <span className={cn("line-clamp-2 text-[12.5px]", i.urgent && s.key !== "tags" ? "text-bad-fg" : "text-text-2")}>{i.meta}</span>
+                    <span className="truncate text-sm font-medium">{i.title}</span>
+                    <span className={cn("line-clamp-2 text-xs", i.urgent && s.key !== "tags" ? "text-bad-fg" : "text-text-2")}>{i.meta}</span>
                   </Link>
                 </li>
               ))}
@@ -140,7 +140,7 @@ export function AlertsBell() {
         {count > 0 && (
           <span
             className={cn(
-              "absolute top-1 right-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10.5px] leading-none font-bold text-white tabular-nums ring-2 ring-card",
+              "absolute top-1 right-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[11px] leading-none font-bold text-white tabular-nums ring-2 ring-card",
               alerts?.urgent ? "bg-[#ef4444]" : "bg-primary",
             )}
             aria-hidden

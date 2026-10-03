@@ -50,7 +50,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Time clock")}</h1>
-          <p className="text-[12.5px] text-muted-foreground">{tr("Clock-ins, clock-outs and job arrivals with where the phone was. Corrections are signed and keep the original time.")}</p>
+          <p className="text-xs text-muted-foreground">{tr("Clock-ins, clock-outs and job arrivals with where the phone was. Corrections are signed and keep the original time.")}</p>
         </div>
         <nav className="flex items-center gap-1 rounded-[10px] border bg-card p-0.5 text-[13px]" aria-label={tr("Day")}>
           <Link href={`/time-clock?day=${addDays(day, -1)}`} className="inline-flex size-10 items-center justify-center rounded-lg hover:bg-muted" aria-label={tr("Previous day")}>
@@ -80,12 +80,12 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                   <Link href={recordHref(employeesT, employeeId)} className="text-[15px] font-semibold tracking-tight hover:underline">
                     {entries[0].employees?.title ?? `#${employeeId}`}
                   </Link>
-                  <span className="text-[12.5px] text-text-2">
+                  <span className="text-xs text-text-2">
                     {sum.openSince ? tr("Still clocked in · {clocked}", { clocked: formatMinutes(sum.clockedMin) }) : tr("Clocked {clocked}", { clocked: formatMinutes(sum.clockedMin) })}
                     {sum.onSiteMin > 0 && ` · ${tr("on site {time}", { time: formatMinutes(sum.onSiteMin) })}`}
                   </span>
                 </div>
-                <ol className="divide-y text-[13.5px]">
+                <ol className="divide-y text-[13px]">
                   {entries.map((e) => (
                     <li key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                       <span className="w-[76px] shrink-0 font-medium tabular-nums">{time(e.at)}</span>
@@ -94,7 +94,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                         {e.visits?.projects?.title && <span className="text-text-2"> · {e.visits.projects.title}</span>}
                         {e.corrected_at && e.original_at && <span className="ml-1 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">{tr("corrected from {time}", { time: time(e.original_at) })}</span>}
                       </span>
-                      <span className={cn("flex shrink-0 items-center gap-1 text-[12.5px]", PLACE_TONE[e.place])}>
+                      <span className={cn("flex shrink-0 items-center gap-1 text-xs", PLACE_TONE[e.place])}>
                         <MapPin className="size-3.5" aria-hidden />
                         {e.lat !== null && e.lng !== null ? (
                           <a href={`https://www.google.com/maps/search/?api=1&query=${e.lat},${e.lng}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
