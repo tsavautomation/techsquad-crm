@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { ReportArchivePanel } from "@/components/admin/report-archive-panel";
 import { aiConfigured } from "@/lib/ai/claude";
-import { busy, defaultCutoff, loadState, ROOT, summary } from "@/lib/archive/sync";
+import { busy, defaultCutoff, folderNames, loadDecisions, loadState, ROOT, summary } from "@/lib/archive/sync";
 import { requireUser } from "@/lib/auth/session";
 import { oneDriveReady } from "@/lib/files/onedrive";
+import { adminDb } from "@/lib/supabase/admin";
 import { getT } from "@/i18n/server";
 
 export const maxDuration = 300;
@@ -18,7 +19,21 @@ export default async function ReportArchivePage() {
   const me = await requireUser();
   if (!me.isSysadmin) notFound();
   const ready = await oneDriveReady();
-  const [state, sum, cutoff] = ready ? await Promise.all([loadState(), summary(), defaultCutoff()]) : [null, null, null];
+  const [state, sum, cutoff, decisions, folders, projects] = ready
+    ? await Promise.all([
+        loadState(),
+        summary(),
+        defaultCutoff(),
+        loadDecisions(),
+        folderNames(),
+        adminDb()
+          .from("projects")
+          .select("id, title")
+          .is("deleted_at", null)
+          .order("title")
+          .then((r) => ((r.data ?? []) as { id: number; title: string | null }[]).filter((p) => p.title).map((p) => ({ id: p.id, title: p.title! }))),
+      ])
+    : [null, null, null, [], [], []];
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -31,7 +46,7 @@ export default async function ReportArchivePage() {
           <p className="text-sm text-text-2">{t("Connect OneDrive first (Admin › OneDrive).")}</p>
         </section>
       ) : (
-        <ReportArchivePanel initial={{ state, busy: busy(state), summary: sum!, defaultCutoff: cutoff! }} aiAvailable={aiConfigured()} />
+        <ReportArchivePanel initial={{ state, busy: busy(state), summary: sum!, defaultCutoff: cutoff!, decisions }} folders={folders} projects={projects} aiAvailable={aiConfigured()} />
       )}
     </div>
   );

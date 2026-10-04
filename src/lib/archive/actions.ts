@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { oneDriveReady } from "@/lib/files/onedrive";
-import { busy, defaultCutoff, loadState, runArchive, startImport, startScan, summary, type ArchiveState, type ArchiveSummary } from "./sync";
+import { adminDb } from "@/lib/supabase/admin";
+import { folderKey } from "./match";
+import { busy, defaultCutoff, loadDecisions, loadState, runArchive, saveDecisions, startImport, startScan, summary, type ArchiveState, type ArchiveSummary, type FolderDecision } from "./sync";
 
 // Server actions for Admin › Report archive (F16). Administrators only.
 
@@ -40,7 +42,31 @@ export async function importArchiveAction(dryRun: boolean): Promise<Result> {
   return { ok: true };
 }
 
-export type ArchiveStatus = { state: ArchiveState | null; busy: boolean; summary: ArchiveSummary; defaultCutoff: string };
+/** A folder decided by hand: this project (checked to exist), or none. Replaces an earlier decision on the same folder. */
+export async function decideFolderAction(folder: string, projectId: number | null): Promise<Result> {
+  const a = await admin();
+  if (!a.ok) return a;
+  const f = folder.trim().replace(/\s+/g, " ");
+  if (!f) return { ok: false, message: "Pick a folder from the list." };
+  if (projectId !== null) {
+    const { data } = await adminDb().from("projects").select("id").eq("id", projectId).is("deleted_at", null).maybeSingle();
+    if (!data) return { ok: false, message: "Pick a project from the list." };
+  }
+  const rest = (await loadDecisions()).filter((d) => folderKey(d.folder) !== folderKey(f));
+  await saveDecisions([...rest, { folder: f, projectId }].sort((x, y) => x.folder.localeCompare(y.folder)));
+  revalidatePath("/admin/report-archive");
+  return { ok: true };
+}
+
+export async function undecideFolderAction(folder: string): Promise<Result> {
+  const a = await admin();
+  if (!a.ok) return a;
+  await saveDecisions((await loadDecisions()).filter((d) => folderKey(d.folder) !== folderKey(folder)));
+  revalidatePath("/admin/report-archive");
+  return { ok: true };
+}
+
+export type ArchiveStatus = { state: ArchiveState | null; busy: boolean; summary: ArchiveSummary; defaultCutoff: string; decisions: FolderDecision[] };
 
 /** Progress for the page (polled while a step runs); restarts a run whose heartbeat went stale. */
 export async function archiveStatusAction(): Promise<Result<{ status: ArchiveStatus }>> {
@@ -49,5 +75,6 @@ export async function archiveStatusAction(): Promise<Result<{ status: ArchiveSta
   const state = await loadState();
   const b = busy(state);
   if (state && (state.phase === "scanning" || state.phase === "importing") && !b) after(runArchive);
-  return { ok: true, status: { state, busy: b, summary: await summary(), defaultCutoff: await defaultCutoff() } };
+  const [sum, cutoff, decisions] = await Promise.all([summary(), defaultCutoff(), loadDecisions()]);
+  return { ok: true, status: { state, busy: b, summary: sum, defaultCutoff: cutoff, decisions } };
 }

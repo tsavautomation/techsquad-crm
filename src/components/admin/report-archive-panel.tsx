@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { archiveStatusAction, importArchiveAction, scanArchiveAction, type ArchiveStatus } from "@/lib/archive/actions";
+import { archiveStatusAction, decideFolderAction, importArchiveAction, scanArchiveAction, undecideFolderAction, type ArchiveStatus } from "@/lib/archive/actions";
 import { formatDateTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
@@ -11,6 +11,7 @@ import { useT } from "@/i18n/client";
 const BTN = "inline-flex h-11 items-center justify-center rounded-[10px] px-4 text-sm font-semibold disabled:opacity-50";
 const PRIMARY = cn(BTN, "bg-primary text-primary-foreground hover:brightness-95");
 const PLAIN = cn(BTN, "border font-medium hover:bg-muted");
+const INPUT = "mt-1 h-11 w-full rounded-[10px] border bg-card px-3 text-base md:text-sm disabled:opacity-50";
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -22,12 +23,17 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 /** Admin › Report archive: scan, dry run, import, and what needs a human. */
-export function ReportArchivePanel({ initial, aiAvailable }: { initial: ArchiveStatus; aiAvailable: boolean }) {
+export function ReportArchivePanel({ initial, folders, projects, aiAvailable }: { initial: ArchiveStatus; folders: string[]; projects: { id: number; title: string }[]; aiAvailable: boolean }) {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [status, setStatus] = useState<ArchiveStatus>(initial);
   const [cutoff, setCutoff] = useState(initial.state?.cutoff ?? initial.defaultCutoff);
+  // Folders decided by hand: the form's three fields.
+  const [folder, setFolder] = useState("");
+  const [projectText, setProjectText] = useState("");
+  const [noProject, setNoProject] = useState(false);
+  const projectTitle = new Map(projects.map((p) => [p.id, p.title]));
   const st = status.state;
   const running = st?.phase === "scanning" || st?.phase === "importing";
 
@@ -154,6 +160,68 @@ export function ReportArchivePanel({ initial, aiAvailable }: { initial: ArchiveS
           </ul>
         </Card>
       )}
+
+      <Card title={t("Folders decided by hand")}>
+        <p className="mb-2 text-xs text-muted-foreground">{t("When a folder belongs to a certain project, or to none, say so here. The import follows this list before any scoring; run the dry run again after a change.")}</p>
+        {status.decisions.length > 0 && (
+          <ul className="mb-3 divide-y text-sm">
+            {status.decisions.map((d) => (
+              <li key={d.folder} className="flex items-center justify-between gap-2 py-1">
+                <span>
+                  <span className="font-medium">{d.folder}</span> <span className="text-text-2">→ {d.projectId === null ? t("No project") : (projectTitle.get(d.projectId) ?? `#${d.projectId}`)}</span>
+                </span>
+                <button type="button" className="h-11 shrink-0 px-2 text-sm font-medium text-text-2 hover:text-foreground disabled:opacity-50" aria-label={t("Remove {folder}", { folder: d.folder })} disabled={pending} onClick={() => run(() => undecideFolderAction(d.folder))}>
+                  {t("Remove")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="grid gap-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+          <label className="text-xs text-text-2">
+            {t("Folder")}
+            <input list="archive-folders" className={INPUT} value={folder} onChange={(e) => setFolder(e.target.value)} disabled={pending} />
+            <datalist id="archive-folders">
+              {folders.map((f) => (
+                <option key={f} value={f} />
+              ))}
+            </datalist>
+          </label>
+          <label className="text-xs text-text-2">
+            {t("Project")}
+            <input list="archive-projects" className={INPUT} value={projectText} onChange={(e) => setProjectText(e.target.value)} disabled={pending || noProject} />
+            <datalist id="archive-projects">
+              {projects.map((p) => (
+                <option key={p.id} value={p.title} />
+              ))}
+            </datalist>
+          </label>
+          <label className="flex h-11 items-center gap-2 text-sm">
+            <input type="checkbox" className="size-5" checked={noProject} onChange={(e) => setNoProject(e.target.checked)} disabled={pending} />
+            {t("No project")}
+          </label>
+          <button
+            type="button"
+            className={PRIMARY}
+            disabled={pending || !folder.trim() || (!noProject && !projectText.trim())}
+            onClick={() =>
+              run(async () => {
+                const p = noProject ? null : projects.find((x) => x.title === projectText.trim())?.id;
+                if (p === undefined) return { ok: false, message: "Pick a project from the list." };
+                const r = await decideFolderAction(folder, p);
+                if (r.ok) {
+                  setFolder("");
+                  setProjectText("");
+                  setNoProject(false);
+                }
+                return r;
+              })
+            }
+          >
+            {t("Add")}
+          </button>
+        </div>
+      </Card>
 
       {status.summary.errors.length > 0 && (
         <Card title={t("Files that could not be read")}>

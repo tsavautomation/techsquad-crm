@@ -5,7 +5,7 @@ import { formatDate, formatDateTime, fromDateTimeLocalET } from "@/lib/dates";
 import { downloadItem, listChildren, oneDriveReady } from "@/lib/files/onedrive";
 import { loadSettings as googleSettings } from "@/lib/google/client";
 import { findPeople, norm, snapDuration, type CatEmployee, type CatProject } from "@/lib/google/match";
-import { pickProject, scoreArchiveFile } from "./match";
+import { folderKey, pickProject, scoreArchiveFile } from "./match";
 import { adminDb } from "@/lib/supabase/admin";
 import { aiReadReport, type AiReport } from "./ai";
 import { anyDate, minutesBetween, NOT_NAMES, parse123Form, parseClientFolder, parseFileName, parseJotform, splitCredentials, type ParsedFolder, type ParsedName, type ParsedReport } from "./parse";
@@ -62,6 +62,33 @@ export async function loadState(): Promise<ArchiveState | null> {
 export async function saveState(s: ArchiveState) {
   const { error } = await adminDb().from("app_integrations").upsert({ key: KEY, data: s, updated_at: now() });
   if (error) throw new Error(`Could not save the archive state: ${error.message}`);
+}
+
+// Folders decided by hand (SPEC §9.1 F16-d): this project, or none. Kept apart from the run's state,
+// so listing the files again never loses them.
+const FOLDERS_KEY = "report_archive_folders";
+export type FolderDecision = { folder: string; projectId: number | null };
+
+export async function loadDecisions(): Promise<FolderDecision[]> {
+  const { data } = await adminDb().from("app_integrations").select("data").eq("key", FOLDERS_KEY).maybeSingle();
+  return (data as { data: { folders?: FolderDecision[] } } | null)?.data?.folders ?? [];
+}
+
+export async function saveDecisions(folders: FolderDecision[]) {
+  const { error } = await adminDb().from("app_integrations").upsert({ key: FOLDERS_KEY, data: { folders }, updated_at: now() });
+  if (error) throw new Error(`Could not save the folder decisions: ${error.message}`);
+}
+
+/** Every client folder listed, for the page's pick list. */
+export async function folderNames(): Promise<string[]> {
+  const db = adminDb();
+  const out = new Set<string>();
+  for (let from = 0; ; from += 1000) {
+    const { data } = await db.from("report_files").select("client_folder").range(from, from + 999);
+    for (const r of (data ?? []) as { client_folder: string }[]) out.add(r.client_folder);
+    if ((data ?? []).length < 1000) break;
+  }
+  return [...out].sort((a, b) => a.localeCompare(b));
 }
 
 async function patchState(patch: Partial<ArchiveState>) {
@@ -132,13 +159,14 @@ async function scanChunk(db: SupabaseClient, deadline: number): Promise<boolean>
 
 // ---------------------------------------------------------------- people and projects
 
-type Catalog = { projects: CatProject[]; employees: CatEmployee[]; nameMap: Record<string, number>; projectTitle: Map<number, string> };
+type Catalog = { projects: CatProject[]; employees: CatEmployee[]; nameMap: Record<string, number>; projectTitle: Map<number, string>; decisions: Map<string, number | null> };
 
 async function loadCatalog(db: SupabaseClient): Promise<Catalog> {
-  const [{ data: pr }, { data: emp }, g] = await Promise.all([
+  const [{ data: pr }, { data: emp }, g, decided] = await Promise.all([
     db.from("projects").select("id, title, job_address, apartment_or_unit, created_at, job_owner_id").is("deleted_at", null),
     db.from("employees").select("id, title").is("deleted_at", null),
     googleSettings().catch(() => null),
+    loadDecisions(),
   ]);
   type Addr = { street?: string; city?: string; zip?: string } | null;
   const projects = ((pr ?? []) as { id: number; title: string | null; job_address: Addr; apartment_or_unit: string | null; created_at: string | null; job_owner_id: number | null }[]).filter((p) => p.title);
@@ -152,6 +180,7 @@ async function loadCatalog(db: SupabaseClient): Promise<Catalog> {
     employees: ((emp ?? []) as { id: number; title: string | null }[]).filter((e) => e.title).map((e) => ({ id: e.id, name: e.title! })),
     nameMap,
     projectTitle: new Map(projects.map((p) => [p.id, p.title!])),
+    decisions: new Map(decided.map((d) => [folderKey(d.folder), d.projectId])),
   };
 }
 
@@ -187,8 +216,13 @@ async function ensureStaff(db: SupabaseClient) {
 
 /** The project a file belongs to, from the client folder, the place and the job in the file name (src/lib/archive/match.ts). */
 function matchProject(file: FileRow, cat: Catalog) {
+  const key = folderKey(file.client_folder);
+  if (cat.decisions.has(key)) {
+    const id = cat.decisions.get(key) ?? null;
+    return { projectId: id, decided: true, candidates: id ? [{ id, title: cat.projectTitle.get(id), score: 100 }] : [] };
+  }
   const scores = scoreArchiveFile(file.parsed.folder, file.parsed.name, cat.projects);
-  return { projectId: pickProject(scores), candidates: scores.slice(0, 5).map((s) => ({ id: s.id, title: cat.projectTitle.get(s.id), score: s.score })) };
+  return { projectId: pickProject(scores), decided: false, candidates: scores.slice(0, 5).map((s) => ({ id: s.id, title: cat.projectTitle.get(s.id), score: s.score })) };
 }
 
 // ---------------------------------------------------------------- 2. read one file
@@ -377,9 +411,9 @@ async function processFile(db: SupabaseClient, file: FileRow, s: ArchiveState, c
   }
   const names = n.technicians.length ? n.technicians : read.technicians;
   const team = technicianIds(names, cat);
-  const { projectId, candidates } = matchProject(file, cat);
+  const { projectId, candidates, decided } = matchProject(file, cat);
   if (!projectId) {
-    await set({ status: "unmatched", reason: "no project found for this folder", layout: read.layout, extracted: read, candidates });
+    await set({ status: "unmatched", reason: decided ? "no project: decided by hand" : "no project found for this folder", layout: read.layout, extracted: read, candidates });
     return "unmatched";
   }
   if (s.dryRun) {

@@ -47,3 +47,6 @@ export function pickProject(scores: ArchiveCandidate[]): number | null {
   const matched = best && (best.score >= 85 || (best.score >= 60 && best.score - (second?.score ?? 0) >= 20));
   return matched ? best.id : null;
 }
+
+/** How a folder name is compared with the hand-made decisions: case and spacing do not count. */
+export const folderKey = (s: string) => s.trim().toUpperCase().replace(/\s+/g, " ");

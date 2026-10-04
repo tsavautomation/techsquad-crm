@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickProject, scoreArchiveFile } from "@/lib/archive/match";
+import { folderKey, pickProject, scoreArchiveFile } from "@/lib/archive/match";
 import { anyDate, leadingDate, minutesBetween, parse123Form, parseClientFolder, parseFileName, parseJotform, splitCredentials, type ParsedName } from "@/lib/archive/parse";
 
 // F16 Report archive: names, folders, the two form layouts and the credentials split (SPEC §9.1 F16).
@@ -137,5 +137,12 @@ describe("project matching, numbers and place names", () => {
       ...["Gonzalez", "Perez", "Silva", "Costa", "Lima", "Souza", "Rocha"].map((n, i) => ({ id: 10 + i, title: `${n} Residence - Miami`, street: null, city: "Miami", zip: null, unit: null, owner: n, createdAt: null })),
     ];
     expect(pickProject(scoreArchiveFile(parseClientFolder("WATERBOX NYC"), name, projects))).toBe(2);
+  });
+});
+
+describe("folders decided by hand", () => {
+  it("compares folder names without case or spacing", () => {
+    expect(folderKey("  Roca, Cezar -  One Park Grove # 15A ")).toBe(folderKey("ROCA, CEZAR - ONE PARK GROVE # 15A"));
+    expect(folderKey("120 W RIVO ALTO")).not.toBe(folderKey("120 W RIVO ALTO - 00195"));
   });
 });
