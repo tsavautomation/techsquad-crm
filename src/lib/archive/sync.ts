@@ -326,7 +326,11 @@ const mimeOf = (ext: string) => ({ pdf: "application/pdf", jpg: "image/jpeg", jp
 
 async function processFile(db: SupabaseClient, file: FileRow, s: ArchiveState, cat: Catalog): Promise<"imported" | "skipped" | "unmatched" | "error" | "read"> {
   const set = async (patch: Record<string, unknown>) => {
-    await db.from("report_files").update({ ...patch, updated_at: now() }).eq("id", file.id);
+    // Postgres JSON refuses NUL characters, which some PDFs carry in their text.
+    const clean = JSON.parse(JSON.stringify(patch).replace(/\\u0000/g, "")) as Record<string, unknown>;
+    const { error } = await db.from("report_files").update({ ...clean, updated_at: now() }).eq("id", file.id);
+    // A row that cannot be saved must still leave "new", or the run would come back to it for ever.
+    if (error) await db.from("report_files").update({ status: "error", reason: `could not save what was read: ${error.message}`.slice(0, 500), updated_at: now() }).eq("id", file.id);
   };
   const n = file.parsed.name;
   if (UNSUPPORTED.has(file.ext ?? "")) {
