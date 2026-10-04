@@ -83,6 +83,7 @@ export const TILE_ICONS: Record<string, { icon: LucideIcon; tint: string }> = {
   "form-settings": { icon: SlidersHorizontal, tint: "#f59e0b" },
   onedrive: { icon: Cloud, tint: "#0ea5e9" },
   bouncie: { icon: Truck, tint: "#f97316" },
+  "google-calendar": { icon: CalendarDays, tint: "#16a34a" },
   ai: { icon: Sparkles, tint: "#8b5cf6" },
   automations: { icon: Zap, tint: "#8b5cf6" },
   catalogue: { icon: BookOpen, tint: "#64748b" },

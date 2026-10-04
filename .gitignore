@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Personal account notes (emails, IDs): kept off GitHub
 docs/TechSquad-CRM-accounts-and-services.pdf
+
+# Google OAuth client download (holds the client secret)
+client_secret_*.json

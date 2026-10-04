@@ -12,14 +12,16 @@ import type { CalPerson, CalVisit } from "@/lib/schedule/week";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
-type View = "week" | "team" | "list";
-type Props = { weekStart: string; today: string; view: View; tech: number | null; visits: CalVisit[]; people: CalPerson[]; canEdit: boolean; canCreate: boolean };
+type View = "day" | "week" | "team" | "list";
+type Props = { weekStart: string; today: string; view: View; day: string; tech: number | null; visits: CalVisit[]; people: CalPerson[]; canEdit: boolean; canCreate: boolean; orphans?: number };
 
 const HS = 6; // first hour shown
 const HE = 21; // last hour shown (exclusive)
 const PX = 48; // pixels per hour
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const VIEW_LABEL: Record<View, string> = { week: "Week", team: "Team", list: "List" };
+const VIEW_LABEL: Record<View, string> = { day: "Day", week: "Week", team: "Team", list: "List" };
+/** A visit block: the technician's colour on the left edge and as a light tint behind the text. */
+const blockStyle = (color: string) => ({ borderLeftColor: color, backgroundColor: `color-mix(in srgb, ${color} 16%, var(--card))` });
 const BASE = "/schedule/calendar";
 
 const dayLabel = (d: string) => {
@@ -30,7 +32,7 @@ const endOf = (v: CalVisit) => fromMinutes(Math.min(24 * 60 - 1, toMinutes(v.sta
 const windowText = (v: CalVisit) => (v.window > 0 ? `${clock(v.start.slice(11))}–${clock(fromMinutes(toMinutes(v.start.slice(11)) + v.window))}` : clock(v.start.slice(11)));
 const visitHref = (v: CalVisit) => `/schedule/visits/${v.id}`;
 
-export function Calendar({ weekStart, today, view, tech, visits, people, canEdit, canCreate }: Props) {
+export function Calendar({ weekStart, today, view, day, tech, visits, people, canEdit, canCreate, orphans = 0 }: Props) {
   const tr = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -38,17 +40,25 @@ export function Calendar({ weekStart, today, view, tech, visits, people, canEdit
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const name = new Map(people.map((p) => [p.id, p.name]));
   const shown = tech ? visits.filter((v) => v.techId === tech || v.team.includes(tech)) : visits;
-  const q = (o: Partial<{ view: View; week: string; tech: number | null }>) => {
+  const q = (o: Partial<{ view: View; week: string; day: string; tech: number | null }>) => {
     const p = new URLSearchParams();
-    const w = o.week ?? weekStart;
     const vw = o.view ?? view;
     const t = o.tech === undefined ? tech : o.tech;
     if (vw !== "week") p.set("view", vw);
-    if (w !== weekStart || o.week) p.set("week", w);
+    if (vw === "day") p.set("day", o.day ?? (o.week ? o.week : day));
+    else {
+      const w = o.week ?? weekStart;
+      if (w !== weekStart || o.week) p.set("week", w);
+    }
     if (t) p.set("tech", String(t));
     const s = p.toString();
     return s ? `${BASE}?${s}` : BASE;
   };
+  // Previous / Today / Next step one day in the Day view, one week otherwise.
+  const step = (n: number) => (view === "day" ? q({ day: addDays(day, n) }) : q({ week: addDays(weekStart, 7 * n) }));
+  const todayHref = view === "day" ? q({ day: today }) : q({ week: today });
+  const prevLabel = view === "day" ? "Previous day" : "Previous week";
+  const nextLabel = view === "day" ? "Next day" : "Next week";
   const newHref = (date: string, time = "09:00", techId?: number) => {
     const p = new URLSearchParams({ starts_at: fromDateTimeLocalET(`${date}T${time}`), back: q({}) });
     if (techId ?? tech) p.set("technician_id", String(techId ?? tech));
@@ -68,28 +78,31 @@ export function Calendar({ weekStart, today, view, tech, visits, people, canEdit
 
   const [y, m, d] = weekStart.split("-").map(Number);
   const last = dayLabel(days[6]);
-  const title = `${m}/${d} – ${last.md}/${days[6].slice(0, 4)}`;
+  const title = view === "day" ? `${tr(dayLabel(day).dow)} ${dayLabel(day).md}/${day.slice(0, 4)}` : `${m}/${d} – ${last.md}/${days[6].slice(0, 4)}`;
   void y;
+  const dayVisits = shown.filter((v) => v.start.slice(0, 10) === day);
+  // The colour legend: the people with visits on screen.
+  const present = people.filter((p) => (view === "day" ? dayVisits : shown).some((v) => v.techId === p.id));
 
   return (
     <div className={cn(pending && "opacity-70")}>
       {/* toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1">
-          <Link href={q({ week: addDays(weekStart, -7) })} aria-label={tr("Previous week")} className="inline-flex size-10 items-center justify-center rounded-lg border hover:bg-muted">
+          <Link href={step(-1)} aria-label={tr(prevLabel)} className="inline-flex size-10 items-center justify-center rounded-lg border hover:bg-muted">
             <ChevronLeft className="size-4" aria-hidden />
           </Link>
-          <Link href={q({ week: today })} className="inline-flex h-10 items-center rounded-lg border px-3 text-sm hover:bg-muted">
+          <Link href={todayHref} className="inline-flex h-10 items-center rounded-lg border px-3 text-sm hover:bg-muted">
             {tr("Today")}
           </Link>
-          <Link href={q({ week: addDays(weekStart, 7) })} aria-label={tr("Next week")} className="inline-flex size-10 items-center justify-center rounded-lg border hover:bg-muted">
+          <Link href={step(1)} aria-label={tr(nextLabel)} className="inline-flex size-10 items-center justify-center rounded-lg border hover:bg-muted">
             <ChevronRight className="size-4" aria-hidden />
           </Link>
         </div>
         <span className="text-base font-medium">{title}</span>
         <span className="grow" />
         <div className="flex rounded-lg border p-0.5 text-sm" role="tablist" aria-label={tr("View")}>
-          {(["week", "team", "list"] as View[]).map((v) => (
+          {(["day", "week", "team", "list"] as View[]).map((v) => (
             <Link key={v} href={q({ view: v })} role="tab" aria-selected={view === v} className={cn("rounded-md px-3 py-1.5 capitalize", view === v ? "bg-foreground text-background" : "hover:bg-muted")}>
               {tr(VIEW_LABEL[v])}
             </Link>
@@ -115,19 +128,38 @@ export function Calendar({ weekStart, today, view, tech, visits, people, canEdit
         )}
       </div>
 
+      {orphans > 0 && (
+        <p className="mb-3 rounded-[10px] bg-warn-bg px-3 py-2 text-sm text-warn-fg">
+          {tr("{n} visits from Google Calendar have no project yet.", { n: orphans })}{" "}
+          <Link href="/schedule/needs-project" className="font-medium underline underline-offset-4">
+            {tr("Go through them")}
+          </Link>
+        </p>
+      )}
+      {(view === "day" || view === "week") && present.length > 0 && (
+        <ul className="mb-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-2" aria-label={tr("Colours")}>
+          {present.map((p) => (
+            <li key={p.id} className="flex items-center gap-1">
+              <span className="size-2.5 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
+              {p.name.split(" ")[0]}
+            </li>
+          ))}
+        </ul>
+      )}
+      {view === "day" && <DayGrid day={day} today={today} visits={dayVisits} people={people} canEdit={canEdit} canCreate={canCreate} drag={drag} setDrag={setDrag} move={move} newHref={newHref} />}
       {view === "week" && (
         <>
           <div className="hidden md:block">
-            <WeekGrid days={days} today={today} visits={shown} name={name} canEdit={canEdit} canCreate={canCreate} drag={drag} setDrag={setDrag} move={move} newHref={newHref} />
+            <WeekGrid days={days} today={today} visits={shown} name={name} dayHref={(d) => q({ view: "day", day: d })} canEdit={canEdit} canCreate={canCreate} drag={drag} setDrag={setDrag} move={move} newHref={newHref} />
           </div>
           <div className="md:hidden">
             <DayList days={days} today={today} visits={shown} name={name} />
           </div>
         </>
       )}
-      {view === "team" && <TeamGrid days={days} today={today} visits={shown} people={tech ? people.filter((p) => p.id === tech) : people} canEdit={canEdit} canCreate={canCreate} drag={drag} setDrag={setDrag} move={move} newHref={newHref} />}
+      {view === "team" && <TeamGrid days={days} today={today} visits={shown} people={tech ? people.filter((p) => p.id === tech) : shown.some((v) => v.techId === null) ? [...people, { id: 0, name: tr("Unassigned"), color: "#9ca3af" }] : people} canEdit={canEdit} canCreate={canCreate} drag={drag} setDrag={setDrag} move={move} newHref={newHref} />}
       {view === "list" && <DayList days={days} today={today} visits={shown} name={name} />}
-      {!shown.length && <p className="mt-4 text-center text-sm text-muted-foreground">{tr(tech ? "No visits this week for this person." : "No visits this week.")}</p>}
+      {view === "day" ? !dayVisits.length && <p className="mt-4 text-center text-sm text-muted-foreground">{tr("No visits this day.")}</p> : !shown.length && <p className="mt-4 text-center text-sm text-muted-foreground">{tr(tech ? "No visits this week for this person." : "No visits this week.")}</p>}
     </div>
   );
 }
@@ -158,7 +190,7 @@ function VisitBlock({ v, name, compact }: { v: CalVisit; name?: Map<number, stri
   );
 }
 
-function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag, move, newHref }: GridProps & { name: Map<number, string> }) {
+function WeekGrid({ days, today, visits, name, dayHref, canEdit, canCreate, drag, setDrag, move, newHref }: GridProps & { name: Map<number, string>; dayHref: (d: string) => string }) {
   const tr = useT();
   const router = useRouter();
   const hours = Array.from({ length: HE - HS }, (_, i) => HS + i);
@@ -167,9 +199,9 @@ function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag
       <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-b bg-muted/40 text-sm">
         <div />
         {days.map((d) => (
-          <div key={d} className={cn("border-l px-2 py-2 text-center", d === today && "font-semibold text-primary")}>
+          <Link key={d} href={dayHref(d)} title={tr("Open this day")} className={cn("border-l px-2 py-2 text-center hover:bg-muted", d === today && "font-semibold text-primary")}>
             {tr(dayLabel(d).dow)} {dayLabel(d).md}
-          </div>
+          </Link>
         ))}
       </div>
       <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]" style={{ height: (HE - HS) * PX }}>
@@ -228,7 +260,7 @@ function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag
                     height: Math.max(22, ((Math.min(end, HE * 60) - Math.max(start, HS * 60)) / 60) * PX - 2),
                     left: `calc(${(lane / n) * 100}% + 2px)`,
                     width: `calc(${100 / n}% - 4px)`,
-                    borderLeftColor: v.color,
+                    ...blockStyle(v.color),
                   }}
                 >
                   <VisitBlock v={v} name={name} compact={end - start < 60} />
@@ -237,6 +269,107 @@ function WeekGrid({ days, today, visits, name, canEdit, canCreate, drag, setDrag
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Day view (F15-e): one day, a column per technician who has visits (plus "Unassigned"), the hours
+ * down the side, so every visit gets the full column width. Dropping a visit on another column
+ * hands it to that technician.
+ */
+function DayGrid({ day, today, visits, people, canEdit, canCreate, drag, setDrag, move, newHref }: Omit<GridProps, "days"> & { day: string; people: CalPerson[] }) {
+  const tr = useT();
+  const router = useRouter();
+  const hours = Array.from({ length: HE - HS }, (_, i) => HS + i);
+  const columns: CalPerson[] = people.filter((p) => visits.some((v) => v.techId === p.id || v.team.includes(p.id)));
+  if (visits.some((v) => v.techId === null)) columns.push({ id: 0, name: tr("Unassigned"), color: "#9ca3af" });
+  if (!columns.length) return null;
+  return (
+    <div className="overflow-x-auto rounded-2xl border bg-card shadow-card">
+      <div className="min-w-fit">
+        <div className="grid border-b bg-muted/40 text-sm" style={{ gridTemplateColumns: `3.5rem repeat(${columns.length}, minmax(11rem, 1fr))` }}>
+          <div />
+          {columns.map((p) => (
+            <div key={p.id} className="flex items-center gap-1.5 border-l px-2 py-2 font-medium">
+              <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
+              <span className="truncate">{p.name}</span>
+            </div>
+          ))}
+        </div>
+        <div className="grid" style={{ gridTemplateColumns: `3.5rem repeat(${columns.length}, minmax(11rem, 1fr))`, height: (HE - HS) * PX }}>
+          <div className="relative">
+            {hours.map((h) => (
+              <div key={h} className="absolute right-1 -translate-y-1/2 text-[11px] text-muted-foreground" style={{ top: (h - HS) * PX }}>
+                {h > HS ? clock(fromMinutes(h * 60)).replace(":00", "") : ""}
+              </div>
+            ))}
+          </div>
+          {columns.map((p) => {
+            const items = lanes(
+              visits
+                .filter((v) => (p.id === 0 ? v.techId === null : v.techId === p.id || v.team.includes(p.id)))
+                .map((v) => {
+                  const s = toMinutes(v.start.slice(11));
+                  return { v, start: s, end: s + v.duration };
+                }),
+            );
+            return (
+              <div
+                key={p.id}
+                className={cn("relative border-l", day === today && "bg-primary/5")}
+                style={{ backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${PX - 1}px, var(--border) ${PX - 1}px, var(--border) ${PX}px)` }}
+                onDragOver={(e) => canEdit && drag && e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (!drag) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const y = e.clientY - rect.top - drag.offset;
+                  const min = Math.max(0, Math.min(24 * 60 - 15, Math.round((HS * 60 + (y / PX) * 60) / 15) * 15));
+                  move(drag.id, day, fromMinutes(min), p.id || undefined);
+                  setDrag(null);
+                }}
+                onDoubleClick={(e) => {
+                  if (!canCreate || e.target !== e.currentTarget) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const min = Math.round((HS * 60 + ((e.clientY - rect.top) / PX) * 60) / 30) * 30;
+                  router.push(newHref(day, fromMinutes(min), p.id || undefined));
+                }}
+                title={canCreate ? tr("Double-click to schedule a visit here") : undefined}
+              >
+                {items.map(({ v, start, end, lane, lanes: n }) => (
+                  <Link
+                    key={v.id}
+                    href={visitHref(v)}
+                    draggable={canEdit}
+                    onDragStart={(e) => {
+                      setDrag({ id: v.id, offset: e.clientY - e.currentTarget.getBoundingClientRect().top });
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragEnd={() => setDrag(null)}
+                    className={cn("absolute overflow-hidden rounded-md border-l-4 bg-card px-2 py-1 text-xs shadow-sm ring-1 ring-border hover:z-10 hover:shadow-md", v.techId !== p.id && p.id !== 0 && "border-dashed opacity-80", v.status === "Cancelled" && "line-through opacity-60")}
+                    style={{
+                      top: Math.max(0, ((start - HS * 60) / 60) * PX),
+                      height: Math.max(22, ((Math.min(end, HE * 60) - Math.max(start, HS * 60)) / 60) * PX - 2),
+                      left: `calc(${(lane / n) * 100}% + 2px)`,
+                      width: `calc(${100 / n}% - 4px)`,
+                      ...blockStyle(v.color),
+                    }}
+                  >
+                    <span className="block truncate font-medium">{v.project}</span>
+                    <span className="block truncate opacity-80">
+                      {windowText(v)}–{clock(endOf(v))}
+                      {v.address ? ` · ${v.address}` : ""}
+                    </span>
+                    {end - start >= 60 && v.service && <span className="block truncate opacity-80">{v.service}</span>}
+                    {end - start >= 90 && v.instructions && <span className="block truncate opacity-70">{v.instructions.split("\n")[0]}</span>}
+                  </Link>
+                ))}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -264,7 +397,7 @@ function TeamGrid({ days, today, visits, people, canEdit, canCreate, drag, setDr
                 {p.name}
               </th>
               {days.map((d) => {
-                const cell = visits.filter((v) => v.start.slice(0, 10) === d && (v.techId === p.id || v.team.includes(p.id)));
+                const cell = visits.filter((v) => v.start.slice(0, 10) === d && (p.id === 0 ? v.techId === null : v.techId === p.id || v.team.includes(p.id)));
                 return (
                   <td
                     key={d}
@@ -290,7 +423,7 @@ function TeamGrid({ days, today, visits, people, canEdit, canCreate, drag, setDr
                           }}
                           onDragEnd={() => setDrag(null)}
                           className={cn("block rounded-md border-l-4 bg-card px-1.5 py-1 text-xs ring-1 ring-border hover:shadow-md", v.techId !== p.id && "border-dashed opacity-80", v.status === "Cancelled" && "line-through opacity-60")}
-                          style={{ borderLeftColor: v.color }}
+                          style={blockStyle(v.color)}
                           title={v.techId !== p.id ? tr("Going along (not the lead technician)") : undefined}
                         >
                           <VisitBlock v={v} compact />

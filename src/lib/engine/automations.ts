@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureFieldSettings } from "@/lib/admin/field-settings";
 import { todayET } from "@/lib/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
+import { googleHourly } from "@/lib/google/sync";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
@@ -281,6 +282,12 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
     }
   }
   await deliverQueued(db);
+  // F15: finish a Google Calendar import under way, otherwise sync both ways (never throws).
+  if (await claimRun(db, keys.hourly.replace("hourly:", "google:"))) {
+    const g = await googleHourly();
+    await finishRun(db, keys.hourly.replace("hourly:", "google:"), g);
+    out.google = g;
+  }
   return out;
 }
 

@@ -405,6 +405,83 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          all_day: boolean
+          calendar_id: string
+          color_id: string | null
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          etag: string | null
+          google_updated: string | null
+          id: string
+          location: string | null
+          match_detail: Json | null
+          match_status: string
+          matched_at: string | null
+          raw: Json
+          recurring_event_id: string | null
+          starts_at: string | null
+          status: string | null
+          summary: string | null
+          updated_at: string
+          visit_id: number | null
+        }
+        Insert: {
+          all_day?: boolean
+          calendar_id: string
+          color_id?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          etag?: string | null
+          google_updated?: string | null
+          id: string
+          location?: string | null
+          match_detail?: Json | null
+          match_status?: string
+          matched_at?: string | null
+          raw?: Json
+          recurring_event_id?: string | null
+          starts_at?: string | null
+          status?: string | null
+          summary?: string | null
+          updated_at?: string
+          visit_id?: number | null
+        }
+        Update: {
+          all_day?: boolean
+          calendar_id?: string
+          color_id?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          etag?: string | null
+          google_updated?: string | null
+          id?: string
+          location?: string | null
+          match_detail?: Json | null
+          match_status?: string
+          matched_at?: string | null
+          raw?: Json
+          recurring_event_id?: string | null
+          starts_at?: string | null
+          status?: string | null
+          summary?: string | null
+          updated_at?: string
+          visit_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_interactions: {
         Row: {
           archived_at: string | null
@@ -3618,6 +3695,9 @@ export type Database = {
           created_by: string | null
           deleted_at: string | null
           duration: string | null
+          google_etag: string | null
+          google_event_id: string | null
+          google_synced_at: string | null
           id: number
           instructions: string | null
           locked: boolean
@@ -3647,6 +3727,9 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           duration?: string | null
+          google_etag?: string | null
+          google_event_id?: string | null
+          google_synced_at?: string | null
           id?: number
           instructions?: string | null
           locked?: boolean
@@ -3676,6 +3759,9 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           duration?: string | null
+          google_etag?: string | null
+          google_event_id?: string | null
+          google_synced_at?: string | null
           id?: number
           instructions?: string | null
           locked?: boolean
@@ -3950,6 +4036,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      google_dirty_visits: { Args: { p_limit?: number }; Returns: number[] }
+      google_mark_synced: {
+        Args: { p_etags?: string[]; p_event_ids?: string[]; p_ids: number[] }
+        Returns: undefined
+      }
       merge_records: {
         Args: { p_keep: number; p_merge: number[]; p_table: string }
         Returns: number
@@ -4008,6 +4099,9 @@ export type Database = {
           created_by: string | null
           deleted_at: string | null
           duration: string | null
+          google_etag: string | null
+          google_event_id: string | null
+          google_synced_at: string | null
           id: number
           instructions: string | null
           locked: boolean

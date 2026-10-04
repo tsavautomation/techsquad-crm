@@ -7,6 +7,7 @@ export const ADMIN_SCREENS: AdminScreen[] = [
   { href: "/admin/forms", title: "Form settings", description: "Labels, dropdown options, required fields, order and help text", anyOf: ["projects.module.design_design"] },
   { href: "/admin/onedrive", title: "OneDrive", description: "Where photos, videos and files are stored", anyOf: "sysadmin" },
   { href: "/admin/bouncie", title: "Bouncie", description: "Live vehicle positions on the Schedule map", anyOf: "sysadmin" },
+  { href: "/admin/google-calendar", title: "Google Calendar", description: "The shared calendar: years of visits in, new visits out, hourly sync", anyOf: "sysadmin" },
   { href: "/admin/ai", title: "AI", description: "The Claude connection: reads licence photos today, proof-reads reports later", anyOf: "sysadmin" },
   { href: "/admin/field-day", title: "Field day", description: "Who gets return cards, when they're due, checklists and tools per service type", anyOf: ["projects.module.design_design"] },
   { href: "/admin/messages", title: "Messages", description: "Texts sent to clients (follow-ups, visit confirmations…) in English, Português and Español", anyOf: ["projects.module.design_design"] },
