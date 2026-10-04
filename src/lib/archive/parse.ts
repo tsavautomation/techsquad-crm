@@ -44,6 +44,10 @@ const VISIT_TYPES = ["service call", "survey report", "survey", "pre wiring", "p
 
 const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
 
+/** Words that sit where a technician's name would, but aren't one. */
+export const NOT_NAMES = new Set(["report", "reports", "call", "calls", "service", "photos", "photo", "pictures", "video", "videos", "pdf", "copy", "scan", "doc", "img", "image", "screenshot", "invoice", "proposal", "final", "draft", "new", "old", "file", "files", "notes", "note", "and", "with", "team", "crew", "office", "visit", "job"]);
+const looksLikeName = (n: string) => /^[A-Za-zÀ-ÿ]{2,20}$/.test(n) && !NOT_NAMES.has(n.toLowerCase());
+
 export type ParsedName = {
   date: string | null;
   /** The job as written in the name ("Continuum 3707"). */
@@ -86,7 +90,7 @@ export function parseFileName(fileName: string): ParsedName {
     job = segs[0] ?? null;
     names = segs.slice(1);
   }
-  const technicians = [...new Set(names.filter((n) => /^[A-Za-zÀ-ÿ]{2,20}$/.test(n)).map((n) => titleCase(n.toLowerCase())))];
+  const technicians = [...new Set(names.filter(looksLikeName).map((n) => titleCase(n.toLowerCase())))];
   return { date, job, visitType, technicians, variant, ext };
 }
 
@@ -191,7 +195,7 @@ export function parseJotform(text: string): ParsedReport | null {
   if (!/job performed/i.test(text) || !/client\s*\/\s*job name/i.test(text)) return null;
   const labels = ["CLIENT / JOB NAME", "HOUSE NUMBER / UNIT / BUILDING", "DATE", "CHECK-IN", "CHECK-OUT", "TEAM", "JOB PERFORMED", "DID YOU RECEIVE ANY PAYMENTS ?", "DID YOU RECEIVE ANY PAYMENTS", "PICTURES AND VIDEOS", "PICTURES"];
   const s = sections(text, labels);
-  const team = (s.get("team") ?? "").split(/[\s,]+/).filter((w) => /^[A-Za-zÀ-ÿ]{2,20}$/.test(w)).map((w) => titleCase(w.toLowerCase()));
+  const team = (s.get("team") ?? "").split(/[\s,]+/).filter(looksLikeName).map((w) => titleCase(w.toLowerCase()));
   const report = (s.get("job performed") ?? "").replace(/\n\s*\d+\s*$/g, "").trim();
   return {
     layout: "jotform",

@@ -7,7 +7,7 @@ import { loadSettings as googleSettings } from "@/lib/google/client";
 import { findPeople, norm, scoreProjects, snapDuration, type CatEmployee, type CatProject, type GEvent } from "@/lib/google/match";
 import { adminDb } from "@/lib/supabase/admin";
 import { aiReadReport, type AiReport } from "./ai";
-import { anyDate, minutesBetween, parse123Form, parseClientFolder, parseFileName, parseJotform, splitCredentials, type ParsedFolder, type ParsedName, type ParsedReport } from "./parse";
+import { anyDate, minutesBetween, NOT_NAMES, parse123Form, parseClientFolder, parseFileName, parseJotform, splitCredentials, type ParsedFolder, type ParsedName, type ParsedReport } from "./parse";
 import { extractFileText } from "./read";
 
 // F16 Report archive (SPEC §9.1 F16): the old field reports in OneDrive become Job Reports and Visits.
@@ -113,7 +113,9 @@ async function scanChunk(db: SupabaseClient, deadline: number): Promise<boolean>
         const { error } = await db.from("report_files").upsert(rows.map((r) => ({ ...r, updated_at: now() })), { onConflict: "id" });
         if (error) throw new Error(`report_files: ${error.message}`);
       }
+      // Saved per client folder: the page shows progress, and the heartbeat stays fresh in big folders.
       s = { ...s, scan: { gcIndex: g, clientIndex: c + 1, files: s.scan.files + rows.length }, heartbeat: now() };
+      await saveState(s);
     }
     s = { ...s, scan: { ...s.scan, gcIndex: g + 1, clientIndex: 0 } };
     await saveState(s);
@@ -171,19 +173,23 @@ async function ensureStaff(db: SupabaseClient) {
   }
   const added: string[] = [];
   for (const [name, n] of count) {
-    if (n < 5 || technicianIds([name], cat).length) continue;
+    if (n < 5 || NOT_NAMES.has(name.toLowerCase()) || technicianIds([name], cat).length) continue;
     const { error } = await db.from("employees").insert({ first_name: name, last_name: null, title: name, status: "Inactive" });
     if (!error) added.push(name);
   }
   if (added.length) await patchState({ addedStaff: [...((await loadState())?.addedStaff ?? []), ...added] });
 }
 
+/** "Acta I" and "ACTA 1" are the same job: roman numerals become digits before scoring. */
+const ROMAN: Record<string, string> = { i: "1", ii: "2", iii: "3", iv: "4", v: "5", vi: "6" };
+const arabic = (s: string) => s.replace(/\b(i{1,3}|iv|vi?)\b/gi, (m) => ROMAN[m.toLowerCase()] ?? m);
+
 /** The project a file belongs to, from the client folder, the place and the job in the file name. */
 function matchProject(file: FileRow, cat: Catalog) {
   const f = file.parsed.folder;
   const n = file.parsed.name;
-  const e: GEvent = { id: file.id, summary: `${f.client} – ${f.place ?? ""} – ${n.job ?? ""}`.replace(/\s+–\s+–/g, " –"), location: [f.place, f.unit ? `#${f.unit}` : null].filter(Boolean).join(" ") };
-  const scores = scoreProjects(e, cat.projects, n.technicians);
+  const e: GEvent = { id: file.id, summary: arabic(`${f.client} – ${f.place ?? ""} – ${n.job ?? ""}`.replace(/\s+–\s+–/g, " –")), location: [f.place, f.unit ? `#${f.unit}` : null].filter(Boolean).join(" ") };
+  const scores = scoreProjects(e, cat.projects.map((p) => ({ ...p, title: arabic(p.title) })), n.technicians);
   const best = scores[0];
   const second = scores[1];
   const matched = best && (best.score >= 85 || (best.score >= 60 && best.score - (second?.score ?? 0) >= 20));
