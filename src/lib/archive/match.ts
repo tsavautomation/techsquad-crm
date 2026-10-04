@@ -1,4 +1,4 @@
-import { scoreProjects, type CatProject, type ProjectScore } from "@/lib/google/match";
+import { norm, scoreProjects, type CatProject, type ProjectScore } from "@/lib/google/match";
 import type { ParsedFolder, ParsedName } from "./parse";
 
 // F16 Report archive: which project a file belongs to, from its client folder and its name.
@@ -11,7 +11,12 @@ const ROMAN: Record<string, string> = { i: "1", ii: "2", iii: "3", iv: "4", v: "
 const arabic = (s: string) => s.replace(/\b(i{1,3}|iv|vi?)\b/gi, (m) => ROMAN[m.toLowerCase()] ?? m);
 /** A single digit after a word ("Acta 1") would be dropped as a one-letter token: "n1" keeps it, so Acta I and Acta II stay apart. */
 const digits = (s: string) => s.replace(/\b([a-z]{2,}) (\d)\b/gi, "$1 n$2");
-export const comparable = (s: string) => digits(arabic(s));
+/** Place names written two ways. */
+const ALIASES: [RegExp, string][] = [[/\bNYC\b/gi, "New York"]];
+const aliases = (s: string) => ALIASES.reduce((t, [re, to]) => t.replace(re, to), s);
+export const comparable = (s: string) => digits(arabic(aliases(s)));
+
+const firstNumber = (s: string | null | undefined) => norm(s).match(/(^| )(\d{1,6})( |$)/)?.[2] ?? null;
 
 export type ArchiveCandidate = { id: number; score: number };
 
@@ -21,7 +26,18 @@ export function scoreArchiveFile(folder: ParsedFolder, name: ParsedName, project
   const asWritten = folder.raw.replace(/\s[-–]\s*\d{4,6}$/, "");
   const summary = comparable(["Archive", folder.client, asWritten, folder.place, name.job].filter(Boolean).join(" – "));
   const location = comparable([folder.place, folder.unit ? `#${folder.unit}` : null].filter(Boolean).join(" "));
-  return scoreProjects({ id: folder.raw, summary, location }, projects.map((p) => ({ ...p, title: comparable(p.title) })), name.technicians);
+  const scores = scoreProjects({ id: folder.raw, summary, location }, projects.map((p) => ({ ...p, title: comparable(p.title) })), name.technicians);
+  // "MARINA PALMS #310" is not at 310 Tacoma Ln: a unit number never counts as a street number.
+  const unitDigits = folder.unit?.replace(/\D/g, "") ?? null;
+  const onlyUnit = unitDigits !== null && firstNumber(asWritten.replace(/#\s*[0-9]{1,5}\s?[A-Za-z]?\b/g, " ")) === null;
+  const byId = new Map(projects.map((p) => [p.id, p]));
+  return scores
+    .map((s) => {
+      if (!onlyUnit || !s.why.includes("street number") || firstNumber(byId.get(s.id)?.street) !== unitDigits) return s;
+      return { ...s, score: s.score - 45 - (s.why.includes("street name") ? 20 : 0), why: s.why.filter((w) => w !== "street number" && w !== "street name") };
+    })
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score);
 }
 
 /** The project to use, or null when the best score is weak or two projects are too close. */

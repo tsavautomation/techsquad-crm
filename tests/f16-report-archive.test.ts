@@ -122,3 +122,20 @@ describe("project matching, names as written", () => {
     expect(pickProject(scores)).toBe(1);
   });
 });
+
+describe("project matching, numbers and place names", () => {
+  const name: ParsedName = { date: "2019-05-02", job: null, visitType: "Service Call", technicians: ["Carlos"], variant: null, ext: "pdf" };
+  it("never takes a unit number for a street number", () => {
+    const projects = [{ id: 1, title: "310 Tacoma Ln", street: "310 Tacoma Ln", city: "Key Biscayne", zip: null, unit: null, owner: null, createdAt: null }];
+    expect(pickProject(scoreArchiveFile(parseClientFolder("MARINA PALMS #310"), name, projects))).toBeNull();
+    expect(pickProject(scoreArchiveFile(parseClientFolder("310 TACOMA LN"), name, projects))).toBe(1);
+  });
+  it("reads NYC as New York", () => {
+    const projects = [
+      { id: 1, title: "Waterbox Miami", street: null, city: "Miami", zip: null, unit: null, owner: null, createdAt: null },
+      { id: 2, title: "Waterbox New York", street: null, city: "New York", zip: null, unit: null, owner: null, createdAt: null },
+      ...["Gonzalez", "Perez", "Silva", "Costa", "Lima", "Souza", "Rocha"].map((n, i) => ({ id: 10 + i, title: `${n} Residence - Miami`, street: null, city: "Miami", zip: null, unit: null, owner: n, createdAt: null })),
+    ];
+    expect(pickProject(scoreArchiveFile(parseClientFolder("WATERBOX NYC"), name, projects))).toBe(2);
+  });
+});
