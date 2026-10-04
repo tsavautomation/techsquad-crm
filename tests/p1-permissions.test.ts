@@ -46,7 +46,10 @@ describe("checklist", () => {
     const kept = new Set([...migration.matchAll(/^'([a-z_.-]+)',?$/gm)].map((m) => m[1]));
     // Workflow keys are inserted by the same migration; Insights got its own key later (20261002020000).
     const LATER = new Set(["insights.page.view", "job_costing.view"]); // added by later migrations (20261002020000, 20261002080000)
-    const expected = new Set([...keys].filter((k) => !k.startsWith("workflow.") && !LATER.has(k)));
+    // Migration 20261004000000 moved Inventory Checkout under Inventory and removed Sale (SPEC §9.1 INV-a).
+    const asOfP1 = (k: string) => k.replace("inventory.inventory-checkout.", "administrative.inventory-checkout.");
+    const SALE = ["archive", "create", "delete", "modify", "view_all", "view_page"].map((a) => `inventory.sales.${a}`);
+    const expected = new Set([...[...keys].filter((k) => !k.startsWith("workflow.") && !LATER.has(k)).map(asOfP1), ...SALE]);
     expect([...kept].sort()).toEqual([...expected].sort());
     expect(migration).toContain(`'workflow.' || w.id || '.act'`);
     for (const w of WORKFLOW_ITEMS) expect(w.key).toMatch(/^workflow\.[a-z_]+\.act$/);
@@ -66,7 +69,7 @@ describe("seed (scripts/data/user-permissions.ts)", () => {
   it("keeps what the old groups gave: Fred administrator, Jessica the office, the technician the field", () => {
     expect(USER_PERMISSIONS["fred@tsav.net"].admin).toBe(true);
     const menu = (email: string) => visibleModules(new Set(seedKeys(USER_PERMISSIONS[email]))).flatMap((m) => m.tabs.map((t) => `${m.slug}/${t.slug}`));
-    expect(menu("info@tsav.net")).toEqual(["schedule/calendar", "schedule/map", "schedule/visits", "projects/projects", "projects/buildings", "projects/permits", "projects/punch-list", "administrative/rma", "administrative/tasks", "administrative/inventory-checkout", "forms/job-reports", "forms/notes", "forms/survey-and-proposals", "forms/tv-installations"]);
+    expect(menu("info@tsav.net")).toEqual(["schedule/calendar", "schedule/map", "schedule/visits", "projects/projects", "projects/buildings", "projects/permits", "projects/punch-list", "administrative/rma", "administrative/tasks", "inventory/inventory-checkout", "forms/job-reports", "forms/notes", "forms/survey-and-proposals", "forms/tv-installations"]);
     expect(menu("jessica@tsav.net")).toContain("administrative/transactions");
     expect(menu("lucas@tsav.net")).not.toContain("administrative/transactions");
     const jessica = new Set(seedKeys(USER_PERMISSIONS["jessica@tsav.net"]));

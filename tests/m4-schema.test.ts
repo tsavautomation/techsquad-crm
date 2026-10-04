@@ -8,6 +8,8 @@ const keys = new Set(buildPermissions(JSON.parse(readFileSync("techsquad_crm_spe
 // SPEC §9.1 M12-b: each FLEX form got its own record permissions (migration 20260926080000).
 for (const tab of ["job-reports", "notes", "staff-performance", "survey-and-proposals", "tv-installations"])
   for (const action of ["view_page", "view_all", "create", "modify", "delete", "archive"]) keys.add(`forms.${tab}.${action}`);
+// SPEC §9.1 INV-a: Inventory Checkout moved under Inventory (migration 20261004000000).
+for (const action of ["view_page", "view_all", "create", "modify", "delete", "archive"]) keys.add(`inventory.inventory-checkout.${action}`);
 const migration = readFileSync("supabase/migrations/20260925230100_m4_record_tables.sql", "utf8");
 
 describe("record tables ↔ permission catalogue", () => {

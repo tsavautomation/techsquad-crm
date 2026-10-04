@@ -52,7 +52,6 @@ export const MODULES: ModuleDef[] = [
       tab("administrative", "vehicles", "Vehicle"),
       tab("administrative", "rma", "RMA"),
       tab("administrative", "tasks", "Tasks"),
-      tab("administrative", "inventory-checkout", "Inventory Checkout"),
     ],
   },
   {
@@ -60,10 +59,11 @@ export const MODULES: ModuleDef[] = [
     title: "Inventory",
     shortTitle: "Inventory",
     icon: "boxes",
+    // Inventory Checkout moved here from Administrative and replaces Sale (Fred 2026-10-04, SPEC §9.1 INV-a).
     tabs: [
       tab("inventory", "products", "Product"),
       tab("inventory", "stock", "Stock"),
-      tab("inventory", "sales", "Sale"),
+      tab("inventory", "inventory-checkout", "Inventory Checkout"),
     ],
   },
   {

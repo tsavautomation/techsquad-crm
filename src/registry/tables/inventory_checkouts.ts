@@ -5,7 +5,7 @@ import type { TableDef } from "../types";
 export const inventoryCheckouts: TableDef = {
   "name": "inventory_checkouts",
   "label": "Inventory Checkout",
-  "module": "administrative",
+  "module": "inventory",
   "tab": "inventory-checkout",
   "itemLabel": "Checkout",
   "newRecordLabel": "New Checkout",

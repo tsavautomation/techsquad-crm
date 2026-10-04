@@ -49,7 +49,7 @@ export const TABLES: Record<string, TableMeta> = {
     name: "transactions", label: "Transactions", module: "administrative", tab: "transactions", titleFormula: "{payment_type} – {description}",
   },
   fx_techsquad_employee_xminventory_checkout: {
-    name: "inventory_checkouts", label: "Inventory Checkout", module: "administrative", tab: "inventory-checkout",
+    name: "inventory_checkouts", label: "Inventory Checkout", module: "inventory", tab: "inventory-checkout",
     titleFormula: "{technician_id} – {date}",
   },
   fx_techsquad_employee_xmpayouts: {

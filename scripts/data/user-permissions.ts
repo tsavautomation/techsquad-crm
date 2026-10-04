@@ -1,7 +1,7 @@
-// What each person may do (SPEC §9.1 P1), applied by scripts/sync-users.ts. First generated 2026-10-02 from
+// What each person may do (SPEC Â§9.1 P1), applied by scripts/sync-users.ts. First generated 2026-10-02 from
 // the rights their old WebAuthor groups gave them; Luana, Jessica, Saulo and Lucas set by Fred the same day
-// (SPEC §9.1 P1-d). From here on this file and Admin › Users are the source.
-// Keys: "<module>.<list>" → actions (view_page = View, view_all = View all, modify = Edit, …), see
+// (SPEC Â§9.1 P1-d). From here on this file and Admin â€º Users are the source.
+// Keys: "<module>.<list>" â†’ actions (view_page = View, view_all = View all, modify = Edit, â€¦), see
 // src/lib/permissions/checklist.ts. An administrator holds everything regardless of the list.
 
 export type SeedPermissions = { admin: boolean; permissions: Record<string, string[]> };
@@ -12,7 +12,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     permissions: {
       "job_costing": ["view"],
       "administrative.employees": ["create", "delete", "modify", "view_all", "view_page"],
-      "administrative.inventory-checkout": ["create", "delete", "modify", "view_page"],
+      "inventory.inventory-checkout": ["create", "delete", "modify", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "administrative.payroll": ["create", "modify", "view_all", "view_page"],
       "administrative.records": ["delete_locked", "lock_unlock", "modify_locked"],
@@ -29,7 +29,6 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "forms.tv-installations": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.module": ["activity_history_add", "activity_history_view", "files_add_new"],
       "inventory.products": ["create", "modify", "view_all", "view_page"],
-      "inventory.sales": ["create", "modify", "view_all", "view_page"],
       "inventory.stock": ["create", "modify", "view_all", "view_page"],
       "projects.buildings": ["create", "delete", "modify", "view_all", "view_page"],
       "projects.contacts": ["create", "delete", "modify", "view_all", "view_page"],
@@ -50,7 +49,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     permissions: {
       "job_costing": ["view"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
-      "administrative.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
+      "inventory.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "administrative.records": ["delete_locked", "lock_unlock", "modify_locked"],
       "administrative.rma": ["archive", "create", "delete", "modify", "view_all", "view_page"],
@@ -67,7 +66,6 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "insights.page": ["view"],
       "inventory.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "inventory.products": ["archive", "create", "delete", "delete_locked", "lock_unlock", "modify", "modify_locked", "view_all", "view_page"],
-      "inventory.sales": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.stock": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "projects.buildings": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "projects.contacts": ["archive", "create", "delete", "modify", "view_all", "view_page"],
@@ -88,7 +86,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     permissions: {
       "job_costing": ["view"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
-      "administrative.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
+      "inventory.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "administrative.records": ["delete_locked", "lock_unlock", "modify_locked"],
       "administrative.rma": ["archive", "create", "delete", "modify", "view_all", "view_page"],
@@ -103,7 +101,6 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "forms.tv-installations": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "inventory.products": ["archive", "create", "delete", "delete_locked", "lock_unlock", "modify", "modify_locked", "view_all", "view_page"],
-      "inventory.sales": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.stock": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "projects.buildings": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "projects.contacts": ["archive", "create", "delete", "modify", "view_all", "view_page"],
@@ -123,7 +120,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     admin: false,
     permissions: {
       "administrative.employees": ["create", "delete", "modify", "view_all", "view_page"],
-      "administrative.inventory-checkout": ["create", "delete", "modify", "view_all", "view_page"],
+      "inventory.inventory-checkout": ["create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes"],
       "administrative.records": ["delete_locked", "modify_locked"],
       "administrative.rma": ["create", "delete", "modify", "view_all", "view_page"],
@@ -139,7 +136,6 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "forms.tv-installations": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.module": ["activity_history_add", "activity_history_view", "files_add_new"],
       "inventory.products": ["create", "modify", "view_all", "view_page"],
-      "inventory.sales": ["create", "modify", "view_all", "view_page"],
       "inventory.stock": ["create", "modify", "view_all", "view_page"],
       "projects.buildings": ["create", "delete", "modify", "view_all", "view_page"],
       "projects.contacts": ["create", "delete", "modify", "view_all", "view_page"],
@@ -158,7 +154,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     permissions: {
       "job_costing": ["view"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
-      "administrative.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
+      "inventory.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "administrative.records": ["delete_locked", "lock_unlock", "modify_locked"],
       "administrative.rma": ["archive", "create", "delete", "modify", "view_all", "view_page"],
@@ -175,7 +171,6 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "insights.page": ["view"],
       "inventory.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "inventory.products": ["archive", "create", "delete", "delete_locked", "lock_unlock", "modify", "modify_locked", "view_all", "view_page"],
-      "inventory.sales": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.stock": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "projects.buildings": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "projects.contacts": ["archive", "create", "delete", "modify", "view_all", "view_page"],
@@ -194,7 +189,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     admin: false,
     permissions: {
       "administrative.employees": ["create", "delete", "modify", "view_all", "view_page"],
-      "administrative.inventory-checkout": ["create", "delete", "modify", "view_all", "view_page"],
+      "inventory.inventory-checkout": ["create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes"],
       "administrative.rma": ["create", "delete", "modify", "view_all", "view_page"],
       "administrative.tasks": ["create", "delete", "modify", "view_all", "view_page"],
@@ -209,7 +204,6 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "forms.tv-installations": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.module": ["activity_history_add", "activity_history_view", "files_add_new"],
       "inventory.products": ["create", "modify", "view_all", "view_page"],
-      "inventory.sales": ["create", "modify", "view_all", "view_page"],
       "inventory.stock": ["create", "modify", "view_all", "view_page"],
       "projects.buildings": ["create", "delete", "modify", "view_all", "view_page"],
       "projects.contacts": ["create", "delete", "modify", "view_all", "view_page"],
@@ -229,7 +223,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     permissions: {
       "job_costing": ["view"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
-      "administrative.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
+      "inventory.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "administrative.records": ["delete_locked", "lock_unlock", "modify_locked"],
       "administrative.rma": ["archive", "create", "delete", "modify", "view_all", "view_page"],
@@ -243,7 +237,6 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "forms.tv-installations": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "inventory.products": ["archive", "create", "delete", "delete_locked", "lock_unlock", "modify", "modify_locked", "view_all", "view_page"],
-      "inventory.sales": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.stock": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "projects.buildings": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "projects.contacts": ["archive", "create", "delete", "modify", "view_all", "view_page"],
@@ -262,7 +255,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     admin: false,
     permissions: {
       "administrative.employees": ["create", "delete", "modify", "view_all", "view_page"],
-      "administrative.inventory-checkout": ["create", "delete", "modify", "view_page"],
+      "inventory.inventory-checkout": ["create", "delete", "modify", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes"],
       "administrative.payroll": ["create", "modify", "view_all", "view_page"],
       "administrative.records": ["delete_locked", "lock_unlock", "modify_locked"],
@@ -291,7 +284,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
   "info@tsav.net": {
     admin: false,
     permissions: {
-      "administrative.inventory-checkout": ["create", "view_all", "view_page"],
+      "inventory.inventory-checkout": ["create", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "files_add_new", "files_view_files_pod"],
       "administrative.rma": ["view_all", "view_page"],
       "administrative.tasks": ["create", "modify", "view_all", "view_page"],
@@ -314,3 +307,4 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
 export function seedKeys(s: SeedPermissions): string[] {
   return Object.entries(s.permissions).flatMap(([res, actions]) => actions.map((a) => `${res}.${a}`));
 }
+
