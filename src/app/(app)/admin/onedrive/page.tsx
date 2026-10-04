@@ -3,7 +3,7 @@ import { OneDrivePanel } from "@/components/admin/onedrive-panel";
 import { requireUser } from "@/lib/auth/session";
 import { formatDateTime } from "@/lib/dates";
 import { loadSettings, oneDriveConfigured } from "@/lib/files/onedrive";
-import { filesToMove } from "@/lib/files/onedrive-admin";
+import { filesToMove, pdfsToWrite } from "@/lib/files/onedrive-admin";
 import { getT } from "@/i18n/server";
 
 export async function generateMetadata() {
@@ -19,12 +19,14 @@ export default async function OneDrivePage(props: PageProps<"/admin/onedrive">) 
   const configured = oneDriveConfigured();
   const settings = configured ? await loadSettings().catch(() => null) : null;
   const pending = settings ? await filesToMove() : null;
+  const pdfs = settings ? await pdfsToWrite() : 0;
 
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("OneDrive")}</h1>
       <p className="mb-4 text-xs text-muted-foreground">
-        {t("Every photo, video and file attached in the CRM is stored in this OneDrive, in TechSquad CRM / Projects / <project> / <form> / <date>. Signatures stay in the CRM.")}
+        {t("Every photo, video and file attached in the CRM is stored in this OneDrive, in TechSquad CRM / Projects / <project> / <form> / <date>. Signatures stay in the CRM.")}{" "}
+        {t("Each report also gets a PDF of its text in the same folder (form – job – technician – date), rewritten whenever the record changes.")}
       </p>
 
       {sp.connected && <p className="mb-3 rounded-[10px] bg-ok-bg px-3 py-2 text-sm text-ok-fg">{t("OneDrive connected. New uploads go there from now on.")}</p>}
@@ -40,7 +42,7 @@ export default async function OneDrivePage(props: PageProps<"/admin/onedrive">) 
               <span className="mr-2 inline-block size-2.5 rounded-full bg-ok-fg align-middle" aria-hidden />
               {t("Connected to")} <b>{settings.name}</b> {settings.account && <span className="text-text-2">({settings.account})</span>} {t("since {date}", { date: formatDateTime(settings.connected_at) })}.
             </p>
-            <OneDrivePanel connected toMove={pending?.count ?? 0} />
+            <OneDrivePanel connected toMove={pending?.count ?? 0} pdfsToWrite={pdfs} />
           </div>
         ) : (
           <div className="flex flex-col gap-3">

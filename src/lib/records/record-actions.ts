@@ -14,6 +14,8 @@ import { mentionedIn } from "./mentions";
 import { saveRecord } from "./save";
 import { undoPatch, type AuditChanges } from "./undo-patch";
 import { isPendingOneDrive } from "@/lib/files/paths";
+import { wantsPdf } from "@/lib/files/pdf-name";
+import { dumpRecordPdfSafely } from "@/lib/files/record-pdf";
 import { attachOneDriveUploads } from "@/lib/files/store";
 import type { FileItem } from "./values";
 
@@ -24,6 +26,8 @@ const DENIED: ActionResult = { ok: false, message: "You don't have permission to
 /** Where to refresh after a change: the record page (or its parent's, for sub-list rows) and the list. Automations run after the response. */
 function refresh(t: TableDef, id: number, parentId?: number) {
   after(runAutomationsSafely);
+  // SPEC §9.1 OD-c: the record's PDF copy in OneDrive follows every change (built after the response).
+  if (wantsPdf(t)) after(() => dumpRecordPdfSafely(t.name, id));
   if (t.parent && parentId) {
     const p = getTable(t.parent.table);
     revalidatePath(recordHref(p, parentId));

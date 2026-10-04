@@ -2527,6 +2527,36 @@ export type Database = {
           },
         ]
       }
+      record_pdfs: {
+        Row: {
+          folder: string
+          item_id: string
+          name: string
+          record_id: number
+          record_updated_at: string
+          table_name: string
+          written_at: string
+        }
+        Insert: {
+          folder: string
+          item_id: string
+          name: string
+          record_id: number
+          record_updated_at: string
+          table_name: string
+          written_at?: string
+        }
+        Update: {
+          folder?: string
+          item_id?: string
+          name?: string
+          record_id?: number
+          record_updated_at?: string
+          table_name?: string
+          written_at?: string
+        }
+        Relationships: []
+      }
       record_workflow_state: {
         Row: {
           entered_at: string

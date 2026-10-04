@@ -4,6 +4,7 @@ import { ensureFieldSettings } from "@/lib/admin/field-settings";
 import { todayET } from "@/lib/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { googleHourly } from "@/lib/google/sync";
+import { backfillRecordPdfs } from "@/lib/files/record-pdf";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
@@ -287,6 +288,12 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
     const g = await googleHourly();
     await finishRun(db, keys.hourly.replace("hourly:", "google:"), g);
     out.google = g;
+  }
+  // SPEC §9.1 OD-c: PDF copies for records that still lack one (two minutes per tick; never breaks the tick).
+  try {
+    out.pdfs = await backfillRecordPdfs(120_000);
+  } catch (e) {
+    out.pdfs = { error: e instanceof Error ? e.message : String(e) };
   }
   return out;
 }

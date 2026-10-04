@@ -231,3 +231,12 @@ export async function uploadBytes(folderPath: string, name: string, bytes: Buffe
   throw new Error("OneDrive upload did not finish");
 }
 
+/** Overwrite a file's content in place (small files; the PDF copies). Throws with status 404 when it is gone. */
+export async function replaceContent(itemId: string, bytes: Buffer): Promise<DriveItem> {
+  return graph<DriveItem>(`/me/drive/items/${encodeURIComponent(itemId)}/content`, { method: "PUT", body: new Uint8Array(bytes), headers: { "Content-Type": "application/octet-stream" } });
+}
+
+export async function renameItem(itemId: string, name: string): Promise<DriveItem> {
+  return graph<DriveItem>(`/me/drive/items/${encodeURIComponent(itemId)}`, { method: "PATCH", body: JSON.stringify({ name: safeName(name), "@microsoft.graph.conflictBehavior": "rename" }) });
+}
+

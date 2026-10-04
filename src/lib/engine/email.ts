@@ -93,13 +93,14 @@ type OutboxRow = {
   test_mode: boolean;
 };
 
-async function buildRecordPdf(db: SupabaseClient, tableName: string, recordId: number) {
+/** The record as a PDF (fields and up to six photos): e-mail attachments and the OneDrive copies (SPEC §9.1 OD-c). */
+export async function buildRecordPdf(db: SupabaseClient, tableName: string, recordId: number, o: { withImages?: boolean } = {}) {
   const t = getTable(tableName);
   const rec = await loadEngineRecord(db, t, recordId);
   if (!rec) return null;
   const display = await displayStrings(db, t, rec);
   const images: PdfImage[] = [];
-  for (const f of t.fields.filter((x) => x.type === "image" || x.type === "signature" || x.type === "file")) {
+  for (const f of o.withImages === false ? [] : t.fields.filter((x) => x.type === "image" || x.type === "signature" || x.type === "file")) {
     for (const file of (rec.files[f.name] ?? []).filter((x) => (x.mime ?? "").match(/^image\/(jpeg|png)$/)).slice(0, 6)) {
       const got = await downloadFile(db, file.path);
       if (got) images.push({ label: f.label, data: got.bytes, signature: f.type === "signature" });

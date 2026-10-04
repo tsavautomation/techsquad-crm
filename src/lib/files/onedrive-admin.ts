@@ -6,6 +6,7 @@ import type { ActionResult } from "@/lib/records/record-actions";
 import { adminDb } from "@/lib/supabase/admin";
 import { getTable } from "@/registry";
 import { deleteItem, disconnect, folderFor, oneDriveReady, uploadBytes } from "./onedrive";
+import { backfillRecordPdfs, pdfsPending } from "./record-pdf";
 import { BUCKET } from "./store";
 
 // Admin › OneDrive: disconnect, and move files already in CRM storage into OneDrive (Fred chose to move
@@ -35,6 +36,23 @@ function isSignature(table: string, field: string | null) {
   } catch {
     return true; // table no longer exists: leave it alone
   }
+}
+
+/** Records whose PDF copy is missing or stale (SPEC §9.1 OD-c). */
+export async function pdfsToWrite(): Promise<number> {
+  const me = await requireUser();
+  if (!me.isSysadmin || !(await oneDriveReady())) return 0;
+  return (await pdfsPending()).reduce((n, p) => n + p.ids.length, 0);
+}
+
+/** Write up to ~45 seconds' worth of PDF copies; the screen calls again until nothing is left. */
+export async function writePdfsBatchAction(): Promise<ActionResult & { written?: number; left?: number; failed?: string[] }> {
+  const me = await requireUser();
+  if (!me.isSysadmin) return { ok: false, message: "Only System Administrators can do that." };
+  if (!(await oneDriveReady())) return { ok: false, message: "Connect OneDrive first." };
+  const r = await backfillRecordPdfs(45_000);
+  revalidatePath("/admin/onedrive");
+  return { ok: true, written: r.written, left: r.left, failed: r.failed.slice(0, 5) };
 }
 
 /** Move up to ~45 seconds' worth of files; the screen calls again until nothing is left. */
