@@ -30,6 +30,8 @@ const BUDGET_MS = 200_000;
 const STALE_MS = 90_000;
 /** Folder-days read at the same time in an import chunk. */
 const PARALLEL = 4;
+/** Files above this are skipped unread (25 MB). */
+const MAX_FILE_BYTES = 25 * 1048576;
 const STALE = new Date(0).toISOString();
 const UNSUPPORTED = new Set(["xlsx", "xls", "mp4", "mov", "zip", "msg", "lnk", "mjs", "exe", ""]);
 const now = () => new Date().toISOString();
@@ -331,6 +333,11 @@ async function processFile(db: SupabaseClient, file: FileRow, s: ArchiveState, c
     await set({ status: "skipped", reason: `.${file.ext} files are not reports` });
     return "skipped";
   }
+  // A whole notebook export can weigh hundreds of MB: it would kill the run every time it came round.
+  if ((file.size ?? 0) > MAX_FILE_BYTES) {
+    await set({ status: "skipped", reason: `${Math.round((file.size ?? 0) / 1048576)} MB: too big to read` });
+    return "skipped";
+  }
   if (n.date && n.date >= s.cutoff) {
     await set({ status: "skipped", reason: `dated ${n.date}, on or after the WebAuthor cutoff` });
     return "skipped";
@@ -422,6 +429,8 @@ async function importChunk(db: SupabaseClient, deadline: number): Promise<boolea
             outcomes.push("error");
             await db.from("report_files").update({ status: "error", reason: e instanceof Error ? e.message.slice(0, 500) : String(e), updated_at: now() }).eq("id", file.id);
           }
+          // A slow batch must not look dead, or the page would start a second run over the same files.
+          await patchState({ heartbeat: now() });
         }
       }
     };
