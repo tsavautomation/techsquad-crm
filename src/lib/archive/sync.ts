@@ -28,6 +28,8 @@ export const ROOT = "PROJECTS TS";
 const KEY = "report_archive";
 const BUDGET_MS = 200_000;
 const STALE_MS = 90_000;
+/** Folder-days read at the same time in an import chunk. */
+const PARALLEL = 4;
 const STALE = new Date(0).toISOString();
 const UNSUPPORTED = new Set(["xlsx", "xls", "mp4", "mov", "zip", "msg", "lnk", "mjs", "exe", ""]);
 const now = () => new Date().toISOString();
@@ -394,29 +396,45 @@ async function importChunk(db: SupabaseClient, deadline: number): Promise<boolea
       .in("status", s.dryRun ? ["new"] : ["new", "read"])
       .order("client_folder")
       .order("name")
-      .limit(10);
+      .limit(20);
     if (error) throw new Error(error.message);
     const rows = (data ?? []) as FileRow[];
     if (!rows.length) {
       await patchState({ phase: "done", finishedAt: now(), heartbeat: now() });
       return true;
     }
+    // Files of the same folder and day go one after the other (a "(1)" copy joins the report just
+    // made); different days run a few at a time, since each one waits on OneDrive, the PDF and Claude.
+    const groups = new Map<string, FileRow[]>();
     for (const file of rows) {
-      let outcome: Awaited<ReturnType<typeof processFile>>;
-      try {
-        outcome = await processFile(db, file, s, cat);
-      } catch (e) {
-        outcome = "error";
-        await db.from("report_files").update({ status: "error", reason: e instanceof Error ? e.message.slice(0, 500) : String(e), updated_at: now() }).eq("id", file.id);
+      const key = `${file.client_folder}|${file.parsed.name.date ?? file.id}`;
+      groups.set(key, [...(groups.get(key) ?? []), file]);
+    }
+    const queue = [...groups.values()];
+    const outcomes: Awaited<ReturnType<typeof processFile>>[] = [];
+    const state = s;
+    const worker = async () => {
+      for (let g = queue.shift(); g; g = queue.shift()) {
+        for (const file of g) {
+          try {
+            outcomes.push(await processFile(db, file, state, cat));
+          } catch (e) {
+            outcomes.push("error");
+            await db.from("report_files").update({ status: "error", reason: e instanceof Error ? e.message.slice(0, 500) : String(e), updated_at: now() }).eq("id", file.id);
+          }
+        }
       }
-      const c = { ...s.counts };
+    };
+    await Promise.all(Array.from({ length: Math.min(PARALLEL, queue.length) }, worker));
+    const c = { ...s.counts };
+    for (const outcome of outcomes) {
       if (outcome === "imported") c.imported++;
       else if (outcome === "skipped") c.skipped++;
       else if (outcome === "unmatched") c.unmatched++;
       else if (outcome === "error") c.errors++;
       else c.read++;
-      s = { ...s, counts: c, heartbeat: now() };
     }
+    s = { ...s, counts: c, heartbeat: now() };
     await saveState(s);
   }
   return false;
@@ -431,6 +449,8 @@ export async function runArchive(budgetMs = BUDGET_MS): Promise<"busy" | "nothin
   await patchState({ heartbeat: now(), error: undefined });
   try {
     const done = s.phase === "scanning" ? await scanChunk(db, Date.now() + budgetMs) : await importChunk(db, Date.now() + budgetMs);
+    // More to do: a stale heartbeat lets the page's next poll start the next chunk at once.
+    if (!done) await patchState({ heartbeat: STALE });
     return done ? "done" : "paused";
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
