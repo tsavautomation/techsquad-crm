@@ -1,6 +1,6 @@
 import { Logo } from "@/components/shell/nav";
 
-export const metadata = { title: "Privacy · Managing System" };
+export const metadata = { title: "Privacy" };
 
 /**
  * Public privacy notice (F15): Google requires a privacy policy link on the OAuth consent screen

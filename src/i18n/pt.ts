@@ -1204,6 +1204,7 @@ export const PT: Record<string, string> = {
   "{a} with a project, {b} without": "{a} com projeto, {b} sem",
   "{n} left out (no project)": "{n} deixados de fora (sem projeto)",
   "No visits this day.": "Nenhuma visita neste dia.",
+  "Search names, projects, people, text…": "Buscar nomes, projetos, pessoas, texto…",
   "Open this day": "Abrir este dia",
   "{n} skipped": "{n} pulados",
   "{n} waiting": "{n} esperando",

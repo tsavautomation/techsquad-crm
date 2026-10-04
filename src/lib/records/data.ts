@@ -67,7 +67,7 @@ export async function listRecords(t: TableDef, p: ListParams) {
     .order(sort, { ascending: (p.dir ?? (sort === "title" ? "asc" : "desc")) === "asc", nullsFirst: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   query = p.archived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
-  if (p.q?.trim()) query = query.ilike("title", `%${p.q.trim().replace(/[%_]/g, "\\$&")}%`);
+  if (p.q?.trim()) query = query.or(await searchClause(db, t, p.q.trim()));
   // Quick filters (dropdowns) and "records linked to X" filters from the Related panel.
   const filterable = new Set(t.fields.filter((f) => ["select", "radio"].includes(f.type) || (f.type === "lookup" && !f.multiple)).map((f) => f.name));
   for (const [k, v] of Object.entries(p.filter ?? {})) if (v && filterable.has(k)) query = query.eq(k, v);
@@ -76,6 +76,27 @@ export async function listRecords(t: TableDef, p: ListParams) {
   if (error) throw new Error(`${t.label}: ${error.message}`);
   const rows = (data ?? []) as unknown as Row[];
   return { rows, count: count ?? 0, page, sort, pages: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)) };
+}
+
+const TEXT_TYPES = new Set(["text", "textarea", "richtext", "email", "phone", "url"]);
+
+/**
+ * The list search (Fred 2026-10-04, Inventory Checkout "search bar is only for name"): the name,
+ * every plain text field of the record (e.g. Equipment), and the names of the records it points at
+ * (Project, Technician, Product…). Sensitive fields are never searched.
+ */
+async function searchClause(db: SupabaseClient, t: TableDef, q: string): Promise<string> {
+  const safe = q.replace(/[%_]/g, "\\$&").replace(/["\\,()]/g, " ").trim();
+  const like = `ilike."%${safe}%"`;
+  const parts = [`title.${like}`];
+  for (const f of t.fields) if (isRowField(f) && TEXT_TYPES.has(f.type) && !f.sensitive) parts.push(`${f.name}.${like}`);
+  const lookups = t.fields.filter((f) => f.type === "lookup" && !f.multiple && f.lookup && isRowField(f));
+  const hits = await Promise.all(lookups.map((f) => db.from(f.lookup!.table).select("id").ilike("title", `%${safe}%`).is("deleted_at", null).limit(300)));
+  lookups.forEach((f, i) => {
+    const ids = ((hits[i].data ?? []) as { id: number }[]).map((r) => r.id);
+    if (ids.length) parts.push(`${f.name}.in.(${ids.join(",")})`);
+  });
+  return parts.join(",");
 }
 
 /** Deleted records of a table, newest first (Deleted Items page). */

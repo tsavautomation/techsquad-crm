@@ -41,7 +41,7 @@ export function ListControls({ filters }: { filters: Filter[] }) {
       <label className="relative md:w-72">
         <span className="sr-only">{tr("Search")}</span>
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <input type="search" placeholder={tr("Search by name…")} value={q} onChange={(e) => setQ(e.target.value)} className={cn(box, "w-full pl-9")} />
+        <input type="search" placeholder={tr("Search names, projects, people, text…")} value={q} onChange={(e) => setQ(e.target.value)} className={cn(box, "w-full pl-9")} />
       </label>
       <div className="flex flex-wrap gap-2">
         {filters.map((f) => (
