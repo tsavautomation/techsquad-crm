@@ -106,3 +106,19 @@ describe("project matching", () => {
     expect(pickProject(scores)).toBeNull();
   });
 });
+
+describe("project matching, names as written", () => {
+  const projects = [
+    { id: 1, title: "Capote, Juan - Miami Springs", street: null, city: "Miami Springs", zip: null, unit: null, owner: "Juan Capote", createdAt: null },
+    { id: 2, title: "Capote, Richard - Miami Springs", street: null, city: "Miami Springs", zip: null, unit: null, owner: "Richard Capote", createdAt: null },
+    ...["Gonzalez", "Perez", "Silva", "Costa", "Lima", "Souza", "Rocha"].map((n, i) => ({ id: 10 + i, title: `${n} Residence - Miami`, street: null, city: "Miami", zip: null, unit: null, owner: n, createdAt: null })),
+  ];
+  const name: ParsedName = { date: "2019-05-02", job: "Capote", visitType: "Service Call", technicians: ["Carlos"], variant: null, ext: "pdf" };
+
+  it("matches a LAST, FIRST folder to the Last, First project and not the namesake", () => {
+    const scores = scoreArchiveFile(parseClientFolder("CAPOTE, JUAN - MIAMI SPRINGS - 00077"), name, projects);
+    expect(scores[0]).toMatchObject({ id: 1 });
+    expect(scores[0].score).toBeGreaterThanOrEqual(85);
+    expect(pickProject(scores)).toBe(1);
+  });
+});

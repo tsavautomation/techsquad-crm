@@ -17,7 +17,9 @@ export type ArchiveCandidate = { id: number; score: number };
 
 /** All projects that score, best first. */
 export function scoreArchiveFile(folder: ParsedFolder, name: ParsedName, projects: CatProject[]): ProjectScore[] {
-  const summary = comparable(["Archive", folder.client, folder.place, name.job].filter(Boolean).join(" – "));
+  // The folder as written ("CAPOTE, JUAN - MIAMI SPRINGS") too, since projects keep the "Last, First" order.
+  const asWritten = folder.raw.replace(/\s[-–]\s*\d{4,6}$/, "");
+  const summary = comparable(["Archive", folder.client, asWritten, folder.place, name.job].filter(Boolean).join(" – "));
   const location = comparable([folder.place, folder.unit ? `#${folder.unit}` : null].filter(Boolean).join(" "));
   return scoreProjects({ id: folder.raw, summary, location }, projects.map((p) => ({ ...p, title: comparable(p.title) })), name.technicians);
 }
