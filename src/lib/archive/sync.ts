@@ -390,7 +390,8 @@ async function processFile(db: SupabaseClient, file: FileRow, s: ArchiveState, c
       return "skipped";
     }
   }
-  const x = file.status === "read" && (await readBack(db, file.id));
+  // The real run never reads (or pays for) a file again: a dry run re-reads everything but the matched ones.
+  const x = (file.status === "read" || !s.dryRun) && (await readBack(db, file.id));
   const read = x || (await readFile(file));
   if ("error" in read) {
     await set({ status: "error", reason: read.error });
