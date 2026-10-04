@@ -231,6 +231,26 @@ export async function uploadBytes(folderPath: string, name: string, bytes: Buffe
   throw new Error("OneDrive upload did not finish");
 }
 
+export type DriveChild = { id: string; name: string; size?: number; lastModifiedDateTime?: string; folder?: { childCount: number }; file?: { mimeType?: string } };
+
+/** Every child of a folder path (F16 Report archive reads PROJECTS TS this way). Empty when the folder is missing. */
+export async function listChildren(path: string): Promise<DriveChild[]> {
+  const out: DriveChild[] = [];
+  let next: string | undefined = `/me/drive/root:/${enc(path)}:/children?$top=999&$select=id,name,size,lastModifiedDateTime,folder,file`;
+  while (next) {
+    let page: { value?: DriveChild[]; "@odata.nextLink"?: string };
+    try {
+      page = await graph<{ value?: DriveChild[]; "@odata.nextLink"?: string }>(next.startsWith("http") ? next.slice(GRAPH.length) : next);
+    } catch (e) {
+      if ((e as { status?: number }).status === 404) return [];
+      throw e;
+    }
+    out.push(...(page.value ?? []));
+    next = page["@odata.nextLink"];
+  }
+  return out;
+}
+
 /** Overwrite a file's content in place (small files; the PDF copies). Throws with status 404 when it is gone. */
 export async function replaceContent(itemId: string, bytes: Buffer): Promise<DriveItem> {
   return graph<DriveItem>(`/me/drive/items/${encodeURIComponent(itemId)}/content`, { method: "PUT", body: new Uint8Array(bytes), headers: { "Content-Type": "application/octet-stream" } });

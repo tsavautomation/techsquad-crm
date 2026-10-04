@@ -2606,6 +2606,94 @@ export type Database = {
           },
         ]
       }
+      report_files: {
+        Row: {
+          candidates: Json | null
+          client_folder: string
+          created_at: string
+          ext: string | null
+          extracted: Json | null
+          folder: string
+          gc_folder: string
+          id: string
+          job_report_id: number | null
+          layout: string | null
+          modified: string | null
+          name: string
+          parsed: Json
+          project_id: number | null
+          reason: string | null
+          size: number | null
+          status: string
+          updated_at: string
+          visit_id: number | null
+        }
+        Insert: {
+          candidates?: Json | null
+          client_folder: string
+          created_at?: string
+          ext?: string | null
+          extracted?: Json | null
+          folder: string
+          gc_folder: string
+          id: string
+          job_report_id?: number | null
+          layout?: string | null
+          modified?: string | null
+          name: string
+          parsed?: Json
+          project_id?: number | null
+          reason?: string | null
+          size?: number | null
+          status?: string
+          updated_at?: string
+          visit_id?: number | null
+        }
+        Update: {
+          candidates?: Json | null
+          client_folder?: string
+          created_at?: string
+          ext?: string | null
+          extracted?: Json | null
+          folder?: string
+          gc_folder?: string
+          id?: string
+          job_report_id?: number | null
+          layout?: string | null
+          modified?: string | null
+          name?: string
+          parsed?: Json
+          project_id?: number | null
+          reason?: string | null
+          size?: number | null
+          status?: string
+          updated_at?: string
+          visit_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_files_job_report_id_fkey"
+            columns: ["job_report_id"]
+            isOneToOne: false
+            referencedRelation: "job_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_files_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rmas: {
         Row: {
           archived_at: string | null
