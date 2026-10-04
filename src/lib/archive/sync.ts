@@ -490,11 +490,20 @@ async function importChunk(db: SupabaseClient, deadline: number): Promise<boolea
 
 /** Run the current step for up to budgetMs (background). A stale heartbeat lets a new run take over. */
 export async function runArchive(budgetMs = BUDGET_MS): Promise<"busy" | "nothing" | "paused" | "done" | "error"> {
-  const s = await loadState();
+  const db = adminDb();
+  const { data: row } = await db.from("app_integrations").select("data, updated_at").eq("key", KEY).maybeSingle();
+  const s = (row as { data: ArchiveState; updated_at: string } | null)?.data;
   if (!s || (s.phase !== "scanning" && s.phase !== "importing")) return "nothing";
   if (busy(s) || !(await oneDriveReady())) return "busy";
-  const db = adminDb();
-  await patchState({ heartbeat: now(), error: undefined });
+  // One conditional write takes the run: two polls at the same moment cannot both start a chunk
+  // (on 2026-10-04 that imported hundreds of files twice).
+  const { data: claimed } = await db
+    .from("app_integrations")
+    .update({ data: { ...s, heartbeat: now(), error: undefined }, updated_at: now() })
+    .eq("key", KEY)
+    .eq("updated_at", (row as { updated_at: string }).updated_at)
+    .select("key");
+  if ((claimed ?? []).length !== 1) return "busy";
   try {
     const done = s.phase === "scanning" ? await scanChunk(db, Date.now() + budgetMs) : await importChunk(db, Date.now() + budgetMs);
     // More to do: a stale heartbeat lets the page's next poll start the next chunk at once.
