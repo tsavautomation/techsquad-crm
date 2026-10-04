@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { anyDate, leadingDate, minutesBetween, parse123Form, parseClientFolder, parseFileName, parseJotform, splitCredentials } from "@/lib/archive/parse";
+import { pickProject, scoreArchiveFile } from "@/lib/archive/match";
+import { anyDate, leadingDate, minutesBetween, parse123Form, parseClientFolder, parseFileName, parseJotform, splitCredentials, type ParsedName } from "@/lib/archive/parse";
 
 // F16 Report archive: names, folders, the two form layouts and the credentials split (SPEC §9.1 F16).
 
@@ -72,5 +73,36 @@ describe("credentials", () => {
     expect(minutesBetween("09:30", "16:00")).toBe(390);
     expect(minutesBetween("09:30", null)).toBeNull();
     expect(minutesBetween("16:00", "09:30")).toBeNull();
+  });
+});
+
+describe("project matching", () => {
+  const projects = [
+    { id: 1, title: "845 Chaparral - Aspen", street: "845 Chaparral Dr", city: "Aspen", zip: null, unit: null, owner: null, createdAt: null },
+    { id: 2, title: "Acta I - Miami", street: null, city: "Miami", zip: null, unit: null, owner: "Acta Development", createdAt: null },
+    { id: 3, title: "Acta II - Miami", street: null, city: "Miami", zip: null, unit: null, owner: "Acta Development", createdAt: null },
+    { id: 4, title: "John Rutherford - Apogee #1402", street: "800 S Pointe Dr", city: "Miami Beach", zip: null, unit: "1402", owner: "John Rutherford", createdAt: null },
+    // "Miami" is in many titles, so it weighs little, as in the real catalogue.
+    ...["Gonzalez", "Perez", "Silva", "Costa", "Lima", "Souza", "Rocha"].map((n, i) => ({ id: 10 + i, title: `${n} Residence - Miami`, street: null, city: "Miami", zip: null, unit: null, owner: n, createdAt: null })),
+  ];
+  const name = (job: string | null): ParsedName => ({ date: "2020-03-20", job, visitType: "Service Call", technicians: ["Roberto"], variant: null, ext: "pdf" });
+
+  it("keeps the client folder in the score, so a folder named like the project matches", () => {
+    const scores = scoreArchiveFile(parseClientFolder("845 CHAPARRAL - ASPEN"), name("Chaparral"), projects);
+    expect(scores[0]).toMatchObject({ id: 1 });
+    expect(scores[0].score).toBeGreaterThanOrEqual(85);
+    expect(pickProject(scores)).toBe(1);
+  });
+
+  it("tells Acta I from Acta II by the number", () => {
+    const one = scoreArchiveFile(parseClientFolder("#ACTA 1"), name("Acta 1"), projects);
+    expect(pickProject(one)).toBe(2);
+    const two = scoreArchiveFile(parseClientFolder("ACTA II"), name("Acta II"), projects);
+    expect(pickProject(two)).toBe(3);
+  });
+
+  it("does not pick a project on a shared unit number alone", () => {
+    const scores = scoreArchiveFile(parseClientFolder("ABRAHAO, MARCO - ST REGIS #1402"), name("St Regis 1402"), projects);
+    expect(pickProject(scores)).toBeNull();
   });
 });

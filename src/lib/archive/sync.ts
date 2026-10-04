@@ -4,7 +4,8 @@ import { encrypt } from "@/lib/crypto";
 import { formatDate, formatDateTime, fromDateTimeLocalET } from "@/lib/dates";
 import { downloadItem, listChildren, oneDriveReady } from "@/lib/files/onedrive";
 import { loadSettings as googleSettings } from "@/lib/google/client";
-import { findPeople, norm, scoreProjects, snapDuration, type CatEmployee, type CatProject, type GEvent } from "@/lib/google/match";
+import { findPeople, norm, snapDuration, type CatEmployee, type CatProject } from "@/lib/google/match";
+import { pickProject, scoreArchiveFile } from "./match";
 import { adminDb } from "@/lib/supabase/admin";
 import { aiReadReport, type AiReport } from "./ai";
 import { anyDate, minutesBetween, NOT_NAMES, parse123Form, parseClientFolder, parseFileName, parseJotform, splitCredentials, type ParsedFolder, type ParsedName, type ParsedReport } from "./parse";
@@ -180,20 +181,10 @@ async function ensureStaff(db: SupabaseClient) {
   if (added.length) await patchState({ addedStaff: [...((await loadState())?.addedStaff ?? []), ...added] });
 }
 
-/** "Acta I" and "ACTA 1" are the same job: roman numerals become digits before scoring. */
-const ROMAN: Record<string, string> = { i: "1", ii: "2", iii: "3", iv: "4", v: "5", vi: "6" };
-const arabic = (s: string) => s.replace(/\b(i{1,3}|iv|vi?)\b/gi, (m) => ROMAN[m.toLowerCase()] ?? m);
-
-/** The project a file belongs to, from the client folder, the place and the job in the file name. */
+/** The project a file belongs to, from the client folder, the place and the job in the file name (src/lib/archive/match.ts). */
 function matchProject(file: FileRow, cat: Catalog) {
-  const f = file.parsed.folder;
-  const n = file.parsed.name;
-  const e: GEvent = { id: file.id, summary: arabic(`${f.client} – ${f.place ?? ""} – ${n.job ?? ""}`.replace(/\s+–\s+–/g, " –")), location: [f.place, f.unit ? `#${f.unit}` : null].filter(Boolean).join(" ") };
-  const scores = scoreProjects(e, cat.projects.map((p) => ({ ...p, title: arabic(p.title) })), n.technicians);
-  const best = scores[0];
-  const second = scores[1];
-  const matched = best && (best.score >= 85 || (best.score >= 60 && best.score - (second?.score ?? 0) >= 20));
-  return { projectId: matched ? best.id : null, candidates: scores.slice(0, 5).map((s) => ({ id: s.id, title: cat.projectTitle.get(s.id), score: s.score })) };
+  const scores = scoreArchiveFile(file.parsed.folder, file.parsed.name, cat.projects);
+  return { projectId: pickProject(scores), candidates: scores.slice(0, 5).map((s) => ({ id: s.id, title: cat.projectTitle.get(s.id), score: s.score })) };
 }
 
 // ---------------------------------------------------------------- 2. read one file
