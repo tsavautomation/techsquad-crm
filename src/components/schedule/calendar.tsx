@@ -40,12 +40,15 @@ export function Calendar({ weekStart, today, view, day, tech, visits, people, ca
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const name = new Map(people.map((p) => [p.id, p.name]));
   const shown = tech ? visits.filter((v) => v.techId === tech || v.team.includes(tech)) : visits;
+  // Switching to the Day view stays in the week on screen (Fred 2026-10-04: the week of 10/05 showed a
+  // full Monday, "Day" showed today's one visit): today when it is in that week, else its first day with visits.
+  const dayOfWeekShown = view === "day" ? day : days.includes(today) ? today : (days.find((d) => shown.some((v) => v.start.slice(0, 10) === d)) ?? days[0]);
   const q = (o: Partial<{ view: View; week: string; day: string; tech: number | null }>) => {
     const p = new URLSearchParams();
     const vw = o.view ?? view;
     const t = o.tech === undefined ? tech : o.tech;
     if (vw !== "week") p.set("view", vw);
-    if (vw === "day") p.set("day", o.day ?? (o.week ? o.week : day));
+    if (vw === "day") p.set("day", o.day ?? (o.week ? o.week : dayOfWeekShown));
     else {
       const w = o.week ?? weekStart;
       if (w !== weekStart || o.week) p.set("week", w);
