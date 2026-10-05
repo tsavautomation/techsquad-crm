@@ -60,7 +60,8 @@ export async function decideFolderAction(folder: string, projectId: number | nul
   return { ok: true };
 }
 
-const titleCase = (s: string) => s.toLowerCase().replace(/(^|[\s,/(-])([a-z])/g, (m, a: string, b: string) => a + b.toUpperCase());
+/** "BELKIN, EDWARD - OCEANA #2302N" → "Belkin, Edward - Oceana #2302N" (a letter after a digit stays a capital: unit letters). */
+const titleCase = (s: string) => s.toLowerCase().replace(/(^|[\s,/(#-]|\d)([a-z])/g, (m, a: string, b: string) => a + b.toUpperCase());
 
 /**
  * "New project from this folder" (SPEC §9.1 F16-d): a project named after the folder, owned by a contact

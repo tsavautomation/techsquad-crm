@@ -32,6 +32,8 @@ const STALE_MS = 90_000;
 const PARALLEL = 4;
 /** Files above this are skipped unread (25 MB). */
 const MAX_FILE_BYTES = 25 * 1048576;
+/** A visit with no times, or a check-in with no check-out, lasts this long. */
+const DEFAULT_MINUTES = 120;
 const STALE = new Date(0).toISOString();
 const UNSUPPORTED = new Set(["xlsx", "xls", "mp4", "mov", "zip", "msg", "lnk", "mjs", "exe", ""]);
 const now = () => new Date().toISOString();
@@ -302,7 +304,8 @@ async function createRecords(db: SupabaseClient, file: FileRow, x: Extracted, da
       service_type: visitType,
       status: "Done",
       checked_in_at: x.checkIn ? startsAt : null,
-      checked_out_at: x.checkIn && x.checkOut && minutes ? fromDateTimeLocalET(`${date}T${x.checkOut}`) : null,
+      // A check-in with no usable check-out ends two hours later: an old visit must never stay "on site".
+      checked_out_at: x.checkIn ? (x.checkOut && minutes ? fromDateTimeLocalET(`${date}T${x.checkOut}`) : new Date(Date.parse(startsAt) + DEFAULT_MINUTES * 60_000).toISOString()) : null,
     })
     .select("id")
     .single();
@@ -524,6 +527,21 @@ export async function startScan(cutoff: string) {
   await saveState(resume ? { ...s, phase: "scanning", cutoff, error: undefined, heartbeat: STALE } : { ...blankState(cutoff), phase: "scanning" });
 }
 
+/** Visits made from the archive with a check-in and no check-out (forms with one time) end two hours after the check-in. Repairs the first import of 2026-10-04 too. */
+async function closeOpenArchiveVisits(db: SupabaseClient) {
+  for (let from = 0; ; from += 1000) {
+    const { data } = await db.from("report_files").select("visit_id").not("visit_id", "is", null).order("id").range(from, from + 999);
+    const ids = ((data ?? []) as { visit_id: number }[]).map((r) => r.visit_id);
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: open } = await db.from("visits").select("id, checked_in_at").in("id", ids.slice(i, i + 200)).not("checked_in_at", "is", null).is("checked_out_at", null);
+      for (const v of (open ?? []) as { id: number; checked_in_at: string }[]) {
+        await db.from("visits").update({ checked_out_at: new Date(Date.parse(v.checked_in_at) + DEFAULT_MINUTES * 60_000).toISOString() }).eq("id", v.id);
+      }
+    }
+    if ((data ?? []).length < 1000) break;
+  }
+}
+
 /** Admin: dry run or the real import over everything not yet decided. */
 export async function startImport(dryRun: boolean) {
   const s = await loadState();
@@ -531,7 +549,10 @@ export async function startImport(dryRun: boolean) {
   const db = adminDb();
   // A real run after a dry run picks up the files the dry run read; a new dry run starts from scratch.
   if (dryRun) await db.from("report_files").update({ status: "new", updated_at: now() }).in("status", ["read", "unmatched", "error"]);
-  else await db.from("report_files").update({ status: "new", updated_at: now() }).in("status", ["unmatched", "error"]);
+  else {
+    await db.from("report_files").update({ status: "new", updated_at: now() }).in("status", ["unmatched", "error"]);
+    await closeOpenArchiveVisits(db);
+  }
   await saveState({ ...s, phase: "importing", dryRun, error: undefined, heartbeat: STALE, counts: { imported: 0, skipped: 0, unmatched: 0, errors: 0, read: 0 }, startedAt: now(), finishedAt: undefined });
 }
 

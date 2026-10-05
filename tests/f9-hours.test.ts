@@ -93,3 +93,10 @@ describe("the same rule elsewhere", () => {
     expect(sum.onSiteMin).toBe(180);
   });
 });
+
+describe("forgotten check-outs", () => {
+  it("does not count a visit left open for days as still on site", () => {
+    expect(windowMinutes({ checked_in_at: "2021-05-21T20:20:00Z", checked_out_at: null }, Date.parse("2026-10-04T20:00:00Z"))).toBeNull();
+    expect(windowMinutes({ checked_in_at: "2026-10-04T18:00:00Z", checked_out_at: null }, Date.parse("2026-10-04T20:00:00Z"))).toBe(120);
+  });
+});

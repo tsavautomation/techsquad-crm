@@ -63,10 +63,14 @@ export function crew(v: Pick<HoursVisit, "technician_id" | "team_ids">): number[
   return out;
 }
 
-/** Minutes on site: check-in → check-out, or → now while still on site. Null when not checked in. */
+/** A visit still "on site" after this long was never checked out: its window is unknown, not years long. */
+const FORGOTTEN_MS = 24 * 60 * 60_000;
+
+/** Minutes on site: check-in → check-out, or → now while still on site. Null when not checked in, or when a check-out was forgotten long ago. */
 export function windowMinutes(v: Pick<HoursVisit, "checked_in_at" | "checked_out_at">, now: number = Date.now()): number | null {
   const a = ms(v.checked_in_at);
   if (!Number.isFinite(a)) return null;
+  if (!v.checked_out_at && now - a > FORGOTTEN_MS) return null;
   const b = v.checked_out_at ? ms(v.checked_out_at) : now;
   return Number.isFinite(b) && b > a ? Math.round((b - a) / 60_000) : 0;
 }
