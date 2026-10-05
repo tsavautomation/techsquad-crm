@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChartColumn, ChevronRight, Clock, Columns3, Database, List, LogOut, Menu, Monitor, Moon, Plus, Settings, SquareKanban, Sun, X } from "lucide-react";
+import { ChartColumn, ChevronRight, Clock, Columns3, Database, KeyRound, List, LogOut, Menu, Monitor, Moon, Plus, Settings, SquareKanban, Sun, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { ModuleDef } from "@/config/modules";
 import { cn } from "@/lib/utils";
@@ -164,6 +164,15 @@ function LanguageChoice() {
   );
 }
 
+function ChangePassword() {
+  const t = useT();
+  return (
+    <Link href="/auth/update-password" className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left hover:bg-muted">
+      <KeyRound className="size-5 text-muted-foreground" aria-hidden /> {t("Change password")}
+    </Link>
+  );
+}
+
 function SignOut() {
   const t = useT();
   return (
@@ -273,6 +282,7 @@ export function Sidebar({ items, create, me, showAdmin, extras }: { items: NavIt
       <Sheet open={menu} onClose={() => setMenu(false)} title={me.name}>
         <ThemeChoice />
         <LanguageChoice />
+        <ChangePassword />
         <SignOut />
       </Sheet>
     </nav>
@@ -299,6 +309,7 @@ export function TopBar({ me }: { me: Me }) {
         <p className="px-3 pb-1 text-sm text-muted-foreground">{me.email}</p>
         <ThemeChoice />
         <LanguageChoice />
+        <ChangePassword />
         <SignOut />
       </Sheet>
     </header>
