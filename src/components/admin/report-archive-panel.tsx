@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { archiveStatusAction, decideFolderAction, importArchiveAction, scanArchiveAction, undecideFolderAction, type ArchiveStatus } from "@/lib/archive/actions";
+import { archiveStatusAction, decideFolderAction, importArchiveAction, newProjectFromFolderAction, scanArchiveAction, undecideFolderAction, type ArchiveStatus } from "@/lib/archive/actions";
 import { formatDateTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
@@ -32,7 +32,7 @@ export function ReportArchivePanel({ initial, folders, projects, aiAvailable }: 
   // Folders decided by hand: the form's three fields.
   const [folder, setFolder] = useState("");
   const [projectText, setProjectText] = useState("");
-  const [noProject, setNoProject] = useState(false);
+  const [mode, setMode] = useState<"existing" | "new" | "none">("existing");
   const projectTitle = new Map(projects.map((p) => [p.id, p.title]));
   const st = status.state;
   const running = st?.phase === "scanning" || st?.phase === "importing";
@@ -189,30 +189,39 @@ export function ReportArchivePanel({ initial, folders, projects, aiAvailable }: 
           </label>
           <label className="text-xs text-text-2">
             {t("Project")}
-            <input list="archive-projects" className={INPUT} value={projectText} onChange={(e) => setProjectText(e.target.value)} disabled={pending || noProject} />
+            <input list="archive-projects" className={INPUT} value={projectText} onChange={(e) => setProjectText(e.target.value)} disabled={pending || mode !== "existing"} />
             <datalist id="archive-projects">
               {projects.map((p) => (
                 <option key={p.id} value={p.title} />
               ))}
             </datalist>
           </label>
-          <label className="flex h-11 items-center gap-2 text-sm">
-            <input type="checkbox" className="size-5" checked={noProject} onChange={(e) => setNoProject(e.target.checked)} disabled={pending} />
-            {t("No project")}
+          <label className="text-xs text-text-2">
+            {t("Decision")}
+            <select className={INPUT} value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} disabled={pending} aria-label={t("Decision")}>
+              <option value="existing">{t("This project")}</option>
+              <option value="new">{t("New project from this folder")}</option>
+              <option value="none">{t("No project")}</option>
+            </select>
           </label>
           <button
             type="button"
             className={PRIMARY}
-            disabled={pending || !folder.trim() || (!noProject && !projectText.trim())}
+            disabled={pending || !folder.trim() || (mode === "existing" && !projectText.trim())}
             onClick={() =>
               run(async () => {
-                const p = noProject ? null : projects.find((x) => x.title === projectText.trim())?.id;
-                if (p === undefined) return { ok: false, message: "Pick a project from the list." };
-                const r = await decideFolderAction(folder, p);
+                let r: { ok: true } | { ok: false; message: string };
+                if (mode === "new") r = await newProjectFromFolderAction(folder);
+                else {
+                  const p = mode === "none" ? null : projects.find((x) => x.title === projectText.trim())?.id;
+                  if (p === undefined) return { ok: false, message: "Pick a project from the list." };
+                  r = await decideFolderAction(folder, p);
+                }
                 if (r.ok) {
                   setFolder("");
                   setProjectText("");
-                  setNoProject(false);
+                  setMode("existing");
+                  if (mode === "new") router.refresh();
                 }
                 return r;
               })
