@@ -16,6 +16,7 @@ import { canModule } from "./extras";
 import { POD_FIELD } from "./values";
 import { BUCKET, displayNames } from "./relations";
 
+import { isSelfOnly, myEmployeeIds, readableTable } from "@/lib/auth/office";
 export type Choice = { id: string; label: string; hint?: string };
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // CRM storage (Supabase Free plan limit); OneDrive takes the big files
@@ -38,7 +39,7 @@ function fieldOf(tableName: string, fieldName: string): { t: TableDef; f: FieldD
  * Row-level security still decides which records the user may see at all.
  */
 export async function searchChoicesAction(tableName: string, fieldName: string, query: string, form: Values): Promise<Choice[]> {
-  await requireUser();
+  const user = await requireUser();
   const { f } = fieldOf(tableName, fieldName);
   const db = await recordsDb();
   const q = query.trim().replace(/[%_,()]/g, " ").trim();
@@ -62,8 +63,14 @@ export async function searchChoicesAction(tableName: string, fieldName: string, 
   }
 
   if (f.type !== "lookup" || !f.lookup) return [];
-  let req = db.from(f.lookup.table).select("id,title").is("deleted_at", null).is("archived_at", null).order("title").limit(20);
+  // Employees and vehicles come from the name views, so technicians get the lists too (SPEC §9.1 UI-h).
+  let req = db.from(readableTable(f.lookup.table)).select("id,title").is("deleted_at", null).is("archived_at", null).order("title").limit(20);
   if (q) req = req.ilike("title", `%${q}%`);
+  if (isSelfOnly(tableName, fieldName, user)) {
+    const mine = await myEmployeeIds(db, user);
+    if (!mine.length) return [];
+    req = req.in("id", mine);
+  }
   for (const [col, v] of Object.entries(f.lookup.filter ?? {})) {
     if (typeof v === "string") req = req.eq(col, v);
     else if (Array.isArray(v)) req = req.in(col, v);

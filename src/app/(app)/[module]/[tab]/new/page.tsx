@@ -13,6 +13,7 @@ import { RecordForm } from "@/components/records/record-form";
 import { getLang, getT } from "@/i18n/server";
 import { localized } from "@/i18n/registry";
 
+import { isSelfOnly, myEmployeeIds } from "@/lib/auth/office";
 export async function generateMetadata(props: PageProps<"/[module]/[tab]/new">) {
   const { module, tab } = await props.params;
   return { title: (await getT())(tableFromRoute(module, tab)?.newRecordLabel ?? "Not found") };
@@ -41,6 +42,15 @@ export default async function NewRecordPage(props: PageProps<"/[module]/[tab]/ne
     else if ((f.type === "select" || f.type === "radio") && f.options?.some((o) => o.value === raw)) initial[f.name] = raw;
     else continue;
     prefilled.push(f);
+  }
+  // A technician's report is filed under their own name: Team starts as themselves (SPEC §9.1 UI-h).
+  for (const f of t.fields) {
+    if (!isSelfOnly(t.name, f.name, user) || prefilled.includes(f)) continue;
+    const mine = await myEmployeeIds(await recordsDb(), user);
+    if (mine.length) {
+      initial[f.name] = f.multiple ? mine : mine[0];
+      prefilled.push(f);
+    }
   }
   const titles = await lookupTitles(t, [initial], prefilled.filter((f) => f.type === "lookup"));
   const labels = Object.fromEntries(Object.entries(titles).map(([k, m]) => [k, Object.fromEntries([...m].map(([id, title]) => [String(id), title]))]));

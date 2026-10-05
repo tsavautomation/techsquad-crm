@@ -1369,6 +1369,13 @@ export type Database = {
             foreignKeyName: "job_reports_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
+            referencedRelation: "vehicle_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_reports_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
             referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
@@ -4144,6 +4151,13 @@ export type Database = {
             foreignKeyName: "visits_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
+            referencedRelation: "vehicle_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
             referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
@@ -4365,6 +4379,7 @@ export type Database = {
     Views: {
       employee_names: {
         Row: {
+          archived_at: string | null
           clock_group: string | null
           deleted_at: string | null
           departments: string[] | null
@@ -4376,6 +4391,7 @@ export type Database = {
           title: string | null
         }
         Insert: {
+          archived_at?: string | null
           clock_group?: string | null
           deleted_at?: string | null
           departments?: string[] | null
@@ -4387,6 +4403,7 @@ export type Database = {
           title?: string | null
         }
         Update: {
+          archived_at?: string | null
           clock_group?: string | null
           deleted_at?: string | null
           departments?: string[] | null
@@ -4416,6 +4433,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vehicle_names: {
+        Row: {
+          archived_at: string | null
+          deleted_at: string | null
+          id: number | null
+          populate_on_reports: string | null
+          title: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          deleted_at?: string | null
+          id?: number | null
+          populate_on_reports?: string | null
+          title?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          deleted_at?: string | null
+          id?: number | null
+          populate_on_reports?: string | null
+          title?: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {

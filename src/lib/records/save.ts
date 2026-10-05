@@ -13,6 +13,7 @@ import { sanitizeRichText } from "./sanitize";
 import { buildTitle } from "./title";
 import { isEditable, isMultiLookup, isRowField, isUpload, newRecordValues, normalize, validate, type FileItem } from "./values";
 
+import { isSelfOnly, myEmployeeIds, readableTable } from "@/lib/auth/office";
 export type SaveResult = { ok: true; id: number } | { ok: false; errors: Record<string, string>; message?: string };
 
 /**
@@ -51,7 +52,15 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
   const normalized = normalize(t, merged);
   const rules = evaluateRules(t, normalized);
   const values = rules.values;
-  const errors = { ...validate(t, values, rules), ...(await checkLookupFilters(db, t, values, rules.visible)) };
+  const errors: Record<string, string> = { ...validate(t, values, rules), ...(await checkLookupFilters(db, t, values, rules.visible)) };
+  // Technicians file reports under their own name only (SPEC §9.1 UI-h).
+  for (const f of t.fields) {
+    if (!isSelfOnly(t.name, f.name, user)) continue;
+    const picked = (Array.isArray(values[f.name]) ? (values[f.name] as unknown[]) : [values[f.name]]).filter((x): x is number => typeof x === "number");
+    if (!picked.length) continue;
+    const mine = await myEmployeeIds(db, user);
+    if (picked.some((id) => !mine.includes(id))) errors[f.name] = "You can only file this under your own name";
+  }
   if (Object.keys(errors).length) return { ok: false, errors };
 
   const row: Record<string, unknown> = {};
@@ -140,7 +149,7 @@ async function checkLookupFilters(db: SupabaseClient, t: TableDef, values: Value
     const ids = (Array.isArray(values[f.name]) ? (values[f.name] as unknown[]) : [values[f.name]]).filter((x): x is number => typeof x === "number");
     if (!ids.length) continue;
     const cols = Object.keys(filter);
-    const { data } = await db.from(f.lookup!.table).select(["id", ...cols].join(",")).in("id", ids);
+    const { data } = await db.from(readableTable(f.lookup!.table)).select(["id", ...cols].join(",")).in("id", ids);
     const rows = (data ?? []) as unknown as Record<string, unknown>[];
     const ok = (row: Record<string, unknown>) =>
       cols.every((col) => {

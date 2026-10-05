@@ -8,6 +8,7 @@ import { addDays, clock } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
 import { cn } from "@/lib/utils";
+import { isOfficeUser } from "@/lib/auth/office";
 import { recordHref } from "@/registry/routes";
 import { QuickTask } from "./quick-task";
 import { getT } from "@/i18n/server";
@@ -20,7 +21,7 @@ type Row = { href: string; title: string; meta: string; action?: { href: string;
 type Section = { id: string; title: string; rows: Row[] };
 /** Office lists (Fred 2026-10-05: "it pollutes the UI… leave it just for clerical staff on the web version"): never on phones, and only for people who run projects. */
 const OFFICE_SECTIONS = new Set(["follow-ups", "renewals", "contact"]);
-export const isOfficeUser = (user: CurrentUser) => canDo(user.permissions, getTable("projects"), "create", getTable);
+export { isOfficeUser };
 
 const LIMIT = 8;
 
