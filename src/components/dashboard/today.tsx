@@ -7,6 +7,7 @@ import { pastTime } from "@/lib/time-clock/clock";
 import { addDays, clock } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
+import { cn } from "@/lib/utils";
 import { recordHref } from "@/registry/routes";
 import { QuickTask } from "./quick-task";
 import { getT } from "@/i18n/server";
@@ -17,12 +18,15 @@ import type { T } from "@/i18n/core";
 
 type Row = { href: string; title: string; meta: string; action?: { href: string; label: string }; tone?: "bad" | "warn" };
 type Section = { id: string; title: string; rows: Row[] };
+/** Office lists (Fred 2026-10-05: "it pollutes the UI… leave it just for clerical staff on the web version"): never on phones, and only for people who run projects. */
+const OFFICE_SECTIONS = new Set(["follow-ups", "renewals", "contact"]);
+export const isOfficeUser = (user: CurrentUser) => canDo(user.permissions, getTable("projects"), "create", getTable);
 
 const LIMIT = 8;
 
 function SectionCard({ s, tr }: { s: Section; tr: T }) {
   return (
-    <section id={s.id} className="scroll-mt-20 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+    <section id={s.id} className={cn("scroll-mt-20 rounded-2xl border bg-card px-[18px] py-4 shadow-card", OFFICE_SECTIONS.has(s.id) && "hidden md:block")}>
       <h2 className="mb-2 text-[15px] font-semibold tracking-tight">
         {s.title} <span className="font-normal text-muted-foreground">({s.rows.length})</span>
       </h2>
@@ -325,7 +329,8 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
     })(),
   );
 
-  const sections = (await Promise.all(jobs)).filter((s): s is Section => Boolean(s && s.rows.length));
+  const office = isOfficeUser(user);
+  const sections = (await Promise.all(jobs)).filter((s): s is Section => Boolean(s && s.rows.length) && (office || !OFFICE_SECTIONS.has(s!.id)));
   const tasksTable = getTable("tasks");
   const showTaskBox = can("tasks") && canDo(user.permissions, tasksTable, "create", getTable);
   const { data: me } = showTaskBox ? await db.from("employee_names").select("id").ilike("email", user.email).is("deleted_at", null).limit(1) : { data: null };

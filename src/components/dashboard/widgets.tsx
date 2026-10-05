@@ -8,6 +8,7 @@ import { recordHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
 import { getT } from "@/i18n/server";
 import type { T } from "@/i18n/core";
+import { isOfficeUser } from "./today";
 
 // Dashboard widgets (PLAN M12): My Assigned (workflow stages I may act on), My Tasks (tasks whose
 // Member is the employee with my email) and Recently Modified. Row-level security decides what
@@ -129,12 +130,18 @@ function Widget({ title, empty, items }: { title: string; empty: string; items: 
 export async function DashboardWidgets({ user, module }: { user: CurrentUser; module?: string }) {
   const tr = await getT();
   const showTasks = !module || module === getTable("tasks").module;
-  const [assigned, tasks, recent] = await Promise.all([myAssigned(user, tr, module), showTasks ? myTasks(user, tr) : Promise.resolve(null), recentlyModified(user, tr, module)]);
+  // Recently Modified is an office list (Fred 2026-10-05): computers only, and only for people who run projects.
+  const office = isOfficeUser(user);
+  const [assigned, tasks, recent] = await Promise.all([myAssigned(user, tr, module), showTasks ? myTasks(user, tr) : Promise.resolve(null), office ? recentlyModified(user, tr, module) : Promise.resolve(null)]);
   return (
     <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-1">
       <Widget title={tr("My Assigned")} empty={tr("Nothing waiting for you.")} items={assigned} />
       {tasks && <Widget title={tr("My Tasks")} empty={tr("No open tasks assigned to you.")} items={tasks} />}
-      <Widget title={tr("Recently Modified")} empty={tr("No recent changes.")} items={recent} />
+      {recent && (
+        <div className="hidden md:block">
+          <Widget title={tr("Recently Modified")} empty={tr("No recent changes.")} items={recent} />
+        </div>
+      )}
     </div>
   );
 }
