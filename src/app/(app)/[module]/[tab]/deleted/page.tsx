@@ -1,6 +1,5 @@
-import Link from "next/link";
+import { BackLink } from "@/components/shell/back-link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { formatDateTime } from "@/lib/dates";
 import { listDeleted, userNames } from "@/lib/records/data";
@@ -33,9 +32,7 @@ export default async function DeletedItemsPage(props: PageProps<"/[module]/[tab]
 
   return (
     <div className="mx-auto max-w-[1600px]">
-      <Link href={tableHref(t)} className="mb-2 inline-flex h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ChevronLeft className="size-4" aria-hidden /> {t.label}
-      </Link>
+      <BackLink fallback={tableHref(t)} label={t.label} />
       <h1 className="mb-4 text-2xl font-semibold">{tr("Deleted")} {t.label}</h1>
       {rows.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">{tr("Nothing has been deleted.")}</p>

@@ -1129,6 +1129,7 @@ export const PT: Record<string, string> = {
   "Hours on this job": "Horas neste trabalho",
   "Visits and hours on this job": "Visitas e horas neste trabalho",
   "Stock by location": "Estoque por local",
+  "Back": "Voltar",
   "You can only file this under your own name": "Você só pode registrar isto em seu próprio nome",
   "Locations": "Locais",
   "No location": "Sem local",

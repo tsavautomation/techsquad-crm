@@ -1,6 +1,5 @@
-import Link from "next/link";
+import { BackLink } from "@/components/shell/back-link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { loadRecord } from "@/lib/records/load";
 import { getTable } from "@/registry";
@@ -28,9 +27,7 @@ export default async function EditRecordPage(props: PageProps<"/[module]/[tab]/[
 
   return (
     <div className="mx-auto max-w-5xl">
-      <Link href={href} className="mb-2 inline-flex h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ChevronLeft className="size-4" aria-hidden /> {rec.row.title ?? `#${recordId}`}
-      </Link>
+      <BackLink fallback={href} label={rec.row.title ?? `#${recordId}`} />
       <h1 className="mb-6 text-2xl font-semibold">{tr("Edit")} {t.itemLabel.toLowerCase()}</h1>
       <RecordForm
         table={fieldsFor(t, user.permissions, user.isSysadmin)}

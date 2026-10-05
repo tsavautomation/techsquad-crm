@@ -1,7 +1,8 @@
 import { Fragment } from "react";
+import { BackLink } from "@/components/shell/back-link";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, FileText, Lock, Pencil } from "lucide-react";
+import { FileText, Lock, Pencil } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { MASK } from "@/lib/crypto";
 import { formatDateTime } from "@/lib/dates";
@@ -113,9 +114,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
   // The column wrappers are `contents` on phones, so every block is ordered by the outer flex column.
   return (
     <div className="mx-auto max-w-[1600px]">
-      <Link href={tableHref(t)} className="mb-2 inline-flex h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ChevronLeft className="size-4" aria-hidden /> {t.label}
-      </Link>
+      <BackLink fallback={tableHref(t)} label={t.label} />
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold break-words">{row.title ?? `${t.itemLabel} #${row.id}`}</h1>

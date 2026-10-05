@@ -7,6 +7,7 @@ import { canDo, canOpen } from "@/registry/permissions";
 import { tableHref } from "@/registry/routes";
 import { getT } from "@/i18n/server";
 
+import { NavHistory } from "@/components/shell/nav-history";
 // What the Create button offers, most used first (only tables the person may add to).
 // Names are our own: WebAuthor's item labels are vague here ("Record", "Item").
 const CREATE: [table: string, label: string][] = [
@@ -48,6 +49,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <Sidebar items={navItems} create={create} me={me} showAdmin={showAdmin} extras={extras} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar me={me} />
+        <NavHistory />
         <ModuleTabsBar items={navItems} />
         {/* pb-28 keeps content clear of the mobile bottom bar and its + button */}
         <main className="min-w-0 flex-1 px-3.5 pt-4 pb-28 md:px-7 md:pt-6 md:pb-10">{children}</main>
