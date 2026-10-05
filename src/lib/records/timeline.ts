@@ -9,6 +9,14 @@ import { recordHref } from "@/registry/routes";
 // happened with a client or project — calls / texts / emails logged, notes, stage changes, visits,
 // job reports and tasks. Each source is read with the user's own permissions (RLS).
 
+/** Names for the people on visits and reports, from the view every signed-in person may read. */
+async function employeeNames(db: SupabaseClient, ids: (number | null)[]): Promise<Map<number, string>> {
+  const wanted = [...new Set(ids.filter((x): x is number => x !== null))];
+  if (!wanted.length) return new Map();
+  const { data } = await db.from("employee_names").select("id, title").in("id", wanted);
+  return new Map(((data ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
+}
+
 export type TimelineKind = "contact" | "note" | "stage" | "visit" | "report" | "task";
 /** `title` parts are joined on screen, each through the screen language (stored values translate as options). */
 export type TimelineItem = { key: string; at: string; kind: TimelineKind; title: string[]; detail?: string; followUp?: string; who?: string; href?: string; project?: string; color?: string };
@@ -111,14 +119,21 @@ export async function loadTimeline(db: SupabaseClient, perms: ReadonlySet<string
       jobs.push(
         db
           .from("visits")
-          .select("id, project_id, starts_at, status, service_type, employees:technician_id(title)")
+          .select("id, project_id, starts_at, status, service_type, technician_id, visits_team(target_id)")
           .in("project_id", projectIds)
           .is("deleted_at", null)
           .order("starts_at", { ascending: false })
           .limit(LIMIT)
-          .then(({ data }) => {
-            for (const v of (data ?? []) as unknown as { id: number; project_id: number; starts_at: string; status: string | null; service_type: string | null; employees: { title: string | null } | null }[])
-              push({ key: `v${v.id}`, at: v.starts_at, kind: "visit", title: ["Visit", v.service_type, v.status].filter((x): x is string => Boolean(x)), detail: v.employees?.title ?? undefined, href: recordHref(vt, v.id), project: onProject(v.project_id) });
+          .then(async ({ data }) => {
+            // Titled with the people who went and the date (Fred 2026-10-05: "Technician and Date as title, not Visit done").
+            const rows = (data ?? []) as unknown as { id: number; project_id: number; starts_at: string; status: string | null; service_type: string | null; technician_id: number | null; visits_team: { target_id: number }[] }[];
+            const names = await employeeNames(db, rows.flatMap((v) => [v.technician_id, ...v.visits_team.map((t) => t.target_id)]));
+            for (const v of rows) {
+              const people = [v.technician_id, ...v.visits_team.map((t) => t.target_id)].filter((x): x is number => x !== null).map((id) => names.get(id)).filter((x): x is string => Boolean(x));
+              const title = people.length ? [people.join(", ")] : ["Visit"];
+              if (v.status && v.status !== "Done") title.push(v.status);
+              push({ key: `v${v.id}`, at: v.starts_at, kind: "visit", title, detail: v.service_type ?? undefined, href: recordHref(vt, v.id), project: onProject(v.project_id) });
+            }
           }),
       );
     }
@@ -127,14 +142,21 @@ export async function loadTimeline(db: SupabaseClient, perms: ReadonlySet<string
       jobs.push(
         db
           .from("job_reports")
-          .select("id, project_id, date, result, created_at, created_by")
+          .select("id, project_id, date, result, created_at, created_by, job_reports_team(target_id)")
           .in("project_id", projectIds)
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
           .limit(LIMIT)
-          .then(({ data }) => {
-            for (const r of (data ?? []) as { id: number; project_id: number; date: string | null; result: string | null; created_at: string; created_by: string | null }[])
-              push({ key: `r${r.id}`, at: when(r.date, r.created_at), kind: "report", title: ["Job Report", r.result].filter((x): x is string => Boolean(x)), href: recordHref(rt, r.id), project: onProject(r.project_id) }, r.created_by);
+          .then(async ({ data }) => {
+            // Titled with the team and the date; the result follows when the report has one.
+            const rows = (data ?? []) as unknown as { id: number; project_id: number; date: string | null; result: string | null; created_at: string; created_by: string | null; job_reports_team: { target_id: number }[] }[];
+            const names = await employeeNames(db, rows.flatMap((r) => r.job_reports_team.map((t) => t.target_id)));
+            for (const r of rows) {
+              const people = r.job_reports_team.map((t) => names.get(t.target_id)).filter((x): x is string => Boolean(x));
+              const title = people.length ? [people.join(", ")] : ["Job Report"];
+              if (r.result) title.push(r.result);
+              push({ key: `r${r.id}`, at: when(r.date, r.created_at), kind: "report", title, href: recordHref(rt, r.id), project: onProject(r.project_id) }, people.length ? null : r.created_by);
+            }
           }),
       );
     }
