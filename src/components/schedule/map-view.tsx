@@ -142,7 +142,8 @@ export function MapView({ date, today, tech, stops, people, office, vehiclesMode
       </div>
 
       {/* the map */}
-      <div className="h-[52vh] min-h-[320px] overflow-hidden rounded-2xl border bg-muted shadow-card md:h-[60vh]">
+      {/* isolate: Leaflet stacks its panes and controls at z-index 400–1000, which would otherwise sit above the phone sheets (z-50). */}
+      <div className="relative isolate z-0 h-[52vh] min-h-[320px] overflow-hidden rounded-2xl border bg-muted shadow-card md:h-[60vh]">
         <LeafletMap stops={shown} vehicles={vehiclesMode === "on" ? vehicles : []} office={office} selected={selected} onSelect={setSelected} />
       </div>
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-label={tr("Blue: not there yet · Green: checked in · Red: checked out")}>
