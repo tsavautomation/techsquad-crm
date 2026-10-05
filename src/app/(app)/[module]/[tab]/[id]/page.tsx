@@ -30,6 +30,7 @@ import { PartnerStats } from "@/components/contact/partner-stats";
 import { PerformancePanel } from "@/components/performance/performance-panel";
 import { ProjectHours } from "@/components/project/project-hours";
 import { JobCosting } from "@/components/project/job-costing";
+import { StockLevels } from "@/components/product/stock-levels";
 import { PayRatePanel } from "@/components/employee/pay-rate-panel";
 import { Timeline } from "@/components/contact/timeline";
 import { loadMessagePanel } from "@/lib/messages/load";
@@ -145,6 +146,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "project" && <ProjectHours projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <JobCosting projectId={recordId} user={user} />}
       {t.detailAddon === "employee" && <PayRatePanel employeeId={recordId} user={user} />}
+      {t.detailAddon === "product" && <StockLevels productId={recordId} user={user} />}
       <div className="order-3 mt-6 flex flex-col gap-3 xl:mt-0">
         {messages && (messages.templates.length > 0 || messages.canLog) && (
           <Section id="message" title={client === "projects" ? tr("Contact the client") : tr("Contact")} open>

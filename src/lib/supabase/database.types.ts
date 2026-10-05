@@ -1131,6 +1131,7 @@ export type Database = {
           id: number
           locked: boolean
           project_id: number | null
+          source_ref: string | null
           submitted_at: string | null
           technician_id: number | null
           title: string | null
@@ -1148,6 +1149,7 @@ export type Database = {
           id?: number
           locked?: boolean
           project_id?: number | null
+          source_ref?: string | null
           submitted_at?: string | null
           technician_id?: number | null
           title?: string | null
@@ -1165,6 +1167,7 @@ export type Database = {
           id?: number
           locked?: boolean
           project_id?: number | null
+          source_ref?: string | null
           submitted_at?: string | null
           technician_id?: number | null
           title?: string | null
@@ -1841,6 +1844,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           deleted_at: string | null
+          description: string | null
           id: number
           location: string | null
           locked: boolean
@@ -1848,6 +1852,7 @@ export type Database = {
           product_type: string | null
           sell_price: number | null
           sku: string | null
+          source_ref: string | null
           submitted_at: string | null
           supplier_id: number | null
           title: string | null
@@ -1861,6 +1866,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          description?: string | null
           id?: number
           location?: string | null
           locked?: boolean
@@ -1868,6 +1874,7 @@ export type Database = {
           product_type?: string | null
           sell_price?: number | null
           sku?: string | null
+          source_ref?: string | null
           submitted_at?: string | null
           supplier_id?: number | null
           title?: string | null
@@ -1881,6 +1888,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          description?: string | null
           id?: number
           location?: string | null
           locked?: boolean
@@ -1888,6 +1896,7 @@ export type Database = {
           product_type?: string | null
           sell_price?: number | null
           sku?: string | null
+          source_ref?: string | null
           submitted_at?: string | null
           supplier_id?: number | null
           title?: string | null
@@ -3036,6 +3045,7 @@ export type Database = {
           product_type: string | null
           sell_price: number | null
           serial: string | null
+          source_ref: string | null
           staff_id: number | null
           status: string | null
           submitted_at: string | null
@@ -3060,6 +3070,7 @@ export type Database = {
           product_type?: string | null
           sell_price?: number | null
           serial?: string | null
+          source_ref?: string | null
           staff_id?: number | null
           status?: string | null
           submitted_at?: string | null
@@ -3084,6 +3095,7 @@ export type Database = {
           product_type?: string | null
           sell_price?: number | null
           serial?: string | null
+          source_ref?: string | null
           staff_id?: number | null
           status?: string | null
           submitted_at?: string | null
@@ -3132,6 +3144,66 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          kind: string
+          location: string
+          moved_at: string
+          notes: string | null
+          product_id: number
+          quantity: number
+          reference: string | null
+          serial: string | null
+          source_ref: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          kind: string
+          location?: string
+          moved_at?: string
+          notes?: string | null
+          product_id: number
+          quantity: number
+          reference?: string | null
+          serial?: string | null
+          source_ref?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          kind?: string
+          location?: string
+          moved_at?: string
+          notes?: string | null
+          product_id?: number
+          quantity?: number
+          reference?: string | null
+          serial?: string | null
+          source_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -4151,7 +4223,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      stock_levels: {
+        Row: {
+          last_moved_at: string | null
+          location: string | null
+          on_hand: number | null
+          product_id: number | null
+          serials: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       google_dirty_visits: { Args: { p_limit?: number }; Returns: number[] }

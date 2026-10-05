@@ -51,3 +51,8 @@ docs/TechSquad-CRM-accounts-and-services.pdf
 
 # Google OAuth client download (holds the client secret)
 client_secret_*.json
+
+# Exports and decision sheets with client data
+docs/*.xlsx
+docs/TechSquad-CRM-bible.*
+docs/render-bible.js

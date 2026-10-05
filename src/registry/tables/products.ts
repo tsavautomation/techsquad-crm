@@ -9,6 +9,7 @@ export const products: TableDef = {
   "tab": "products",
   "itemLabel": "Product",
   "newRecordLabel": "New Product",
+  "detailAddon": "product",
   "titleFormula": "{brand_id} {model} ({sku})",
   "fields": [
     {
@@ -95,7 +96,14 @@ export const products: TableDef = {
         "column": "model",
         "fieldId": 88226
       },
-      "maxLength": 30
+      "maxLength": 80
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "text",
+      "legacy": { "column": "", "fieldId": 0 },
+      "maxLength": 120
     },
     {
       "name": "sell_price",
