@@ -19,7 +19,7 @@ const onlyArg = process.argv[process.argv.indexOf("--only") + 1];
 const only = process.argv.includes("--only") && onlyArg ? new Set(onlyArg.toLowerCase().split(",")) : null;
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const secret = process.env.SUPABASE_SECRET_KEY;
-const site = process.env.INVITE_SITE_URL ?? "https://techsquad-crm.vercel.app";
+const site = process.env.INVITE_SITE_URL ?? "https://crm.tsav.net";
 if (!url || !secret) throw new Error("Run with --env-file=.env.local (needs NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY)");
 
 const db = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -81,6 +81,19 @@ async function main() {
       }
     } else {
       console.log(`= existing       ${label}`);
+    }
+
+    // The Employee record's email must equal the login, or "My visits today", tasks and alerts cannot find the person.
+    if (u.employeeId) {
+      const { data: emp } = await db.from("employees").select("id, email").eq("id", u.employeeId).maybeSingle();
+      if (!emp) throw new Error(`${u.email}: employee #${u.employeeId} not found`);
+      if ((emp.email ?? "").toLowerCase() !== u.email.toLowerCase()) {
+        console.log(`    employee #${u.employeeId} email ${emp.email ?? "(none)"} → ${u.email}`);
+        if (apply) {
+          const { error } = await db.from("employees").update({ email: u.email }).eq("id", u.employeeId);
+          if (error) throw error;
+        }
+      }
     }
 
     // Names + permissions (for a user created in a dry run there is nothing to sync yet).

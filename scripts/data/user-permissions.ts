@@ -6,6 +6,24 @@
 
 export type SeedPermissions = { admin: boolean; permissions: Record<string, string[]> };
 
+/** The technician profile: the four field reports, projects and visits to look at, their own tasks. */
+export const TECHNICIAN: SeedPermissions = {
+  admin: false,
+  permissions: {
+    "administrative.tasks": ["modify", "view_page"],
+    "forms.job-reports": ["create", "modify", "view_page"],
+    "forms.notes": ["create", "modify", "view_page"],
+    "forms.survey-and-proposals": ["create", "modify", "view_page"],
+    "forms.tv-installations": ["create", "modify", "view_page"],
+    "projects.buildings": ["view_all", "view_page"],
+    "projects.module": ["files_add_new", "files_view_files_pod"],
+    "projects.permits": ["view_all", "view_page"],
+    "projects.projects": ["view_all", "view_page"],
+    "projects.punch-list": ["view_all", "view_page"],
+    "schedule.visits": ["view_all", "view_page"],
+  },
+};
+
 export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
   "fred@tsav.net": {
     admin: true,
@@ -116,7 +134,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "workflow.stock_status": ["act"],
     },
   },
-  "roberto@techsquadfl.com": {
+  "roberto@tsav.net": {
     admin: false,
     permissions: {
       "administrative.employees": ["create", "delete", "modify", "view_all", "view_page"],
@@ -252,7 +270,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     },
   },
   "karina@tsav.net": {
-    admin: false,
+    admin: true,
     permissions: {
       "administrative.employees": ["create", "delete", "modify", "view_all", "view_page"],
       "inventory.inventory-checkout": ["create", "delete", "modify", "view_page"],
@@ -301,10 +319,13 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "workflow.punch_list": ["act"],
     },
   },
+  // Technicians (Fred 2026-10-04, SPEC §9.1 P1-e): make reports (not Staff Performance), see projects and
+  // visits read-only, their own tasks and alerts; nothing financial, no Administrative, no Inventory, no editing.
+  ...Object.fromEntries(["rodolfo@tsav.net", "carlos@tsav.net", "daniel@tsav.net", "fabio@tsav.net", "hugo@tsav.net", "jeferson@tsav.net", "joao@tsav.net", "kleider@tsav.net", "marcelo@tsav.net", "quintana@tsav.net"].map((email) => [email, TECHNICIAN])),
 };
 
 /** Flat permission keys for one person. */
 export function seedKeys(s: SeedPermissions): string[] {
   return Object.entries(s.permissions).flatMap(([res, actions]) => actions.map((a) => `${res}.${a}`));
-}
 
+}
