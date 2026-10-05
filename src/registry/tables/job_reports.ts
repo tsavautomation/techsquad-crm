@@ -224,7 +224,6 @@ export const jobReports: TableDef = {
         "fieldId": 68815
       }
     },
-    { name: "signature", label: "Customer signature", type: "signature", heading: "Sign-off", legacy: NEW },
   ],
   "rules": [
     // F2 (SPEC §9.1 F2-b): a partial / not-done visit asks why and what's missing; Completed clears them.

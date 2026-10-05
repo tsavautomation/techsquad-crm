@@ -27,6 +27,27 @@ const recognizer = (): (new () => Recognition) | null => {
 
 const noSubscribe = () => () => {};
 
+/** The dictation language is chosen apart from the screen language (Fred 2026-10-05: "most of the crew is Brazilian"), and remembered on the device. */
+const DICTATE_LANG_KEY = "crm:dictate-lang";
+const PT_BR = "pt-BR";
+const EN_US = "en-US";
+type DictateLang = typeof PT_BR | typeof EN_US;
+const langListeners = new Set<() => void>();
+const subscribeLang = (cb: () => void) => {
+  langListeners.add(cb);
+  return () => {
+    langListeners.delete(cb);
+  };
+};
+const readDictateLang = (fallback: DictateLang): DictateLang => {
+  try {
+    const v = localStorage.getItem(DICTATE_LANG_KEY);
+    return v === PT_BR || v === EN_US ? v : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 export function DictationButton({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   const t = useT();
   const lang = useLang();
@@ -34,6 +55,17 @@ export function DictationButton({ value, onChange, disabled }: { value: string; 
   const supported = useSyncExternalStore(noSubscribe, () => Boolean(recognizer()), () => false);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fallbackLang: DictateLang = lang === "pt" ? PT_BR : EN_US;
+  const dictateLang = useSyncExternalStore(subscribeLang, () => readDictateLang(fallbackLang), () => fallbackLang);
+  const switchLang = () => {
+    const next: DictateLang = dictateLang === PT_BR ? EN_US : PT_BR;
+    try {
+      localStorage.setItem(DICTATE_LANG_KEY, next);
+    } catch {
+      // private mode: nothing to remember, the switch has no effect
+    }
+    langListeners.forEach((cb) => cb());
+  };
   const rec = useRef<Recognition | null>(null);
   const latest = useRef(value);
   useEffect(() => {
@@ -50,7 +82,7 @@ export function DictationButton({ value, onChange, disabled }: { value: string; 
     const R = recognizer();
     if (!R) return;
     const r = new R();
-    r.lang = lang === "pt" ? "pt-BR" : "en-US";
+    r.lang = dictateLang;
     r.continuous = true;
     r.interimResults = false;
     r.onresult = (e) => {
@@ -83,6 +115,15 @@ export function DictationButton({ value, onChange, disabled }: { value: string; 
       >
         {listening ? <MicOff className="size-4" aria-hidden /> : <Mic className="size-4" aria-hidden />}
         {listening ? t("Stop dictating") : t("Dictate")}
+      </button>
+      <button
+        type="button"
+        onClick={switchLang}
+        disabled={disabled || listening}
+        aria-label={t("Dictation language: {lang}. Tap to switch.", { lang: dictateLang === PT_BR ? "Português" : "English" })}
+        className="inline-flex h-11 items-center rounded-lg border px-2.5 text-xs font-semibold tracking-wide text-muted-foreground hover:bg-muted"
+      >
+        {dictateLang === PT_BR ? "PT" : "EN"}
       </button>
       {error && <span className="text-sm text-destructive">{error}</span>}
     </div>
