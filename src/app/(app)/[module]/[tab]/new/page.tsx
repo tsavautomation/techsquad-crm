@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { lookupTitles } from "@/lib/records/data";
+import { lookupTitles, recordsDb } from "@/lib/records/data";
+import { buildTitle } from "@/lib/records/title";
 import { isEditable, newRecordValues } from "@/lib/records/values";
 import { getTable } from "@/registry";
 import { canDo, fieldsFor } from "@/registry/permissions";
@@ -43,13 +44,16 @@ export default async function NewRecordPage(props: PageProps<"/[module]/[tab]/ne
   }
   const titles = await lookupTitles(t, [initial], prefilled.filter((f) => f.type === "lookup"));
   const labels = Object.fromEntries(Object.entries(titles).map(([k, m]) => [k, Object.fromEntries([...m].map(([id, title]) => [String(id), title]))]));
+  // A record whose title rule can already be worked out from what it opens with (the Job Report after a
+  // check-out: project – technicians – date) is headed with that title, not "New Record" (Fred 2026-10-04).
+  const heading = (t.titleFormula && prefilled.length ? (await buildTitle(t, initial, null, await recordsDb()))?.replace(/^[\s–-]+|[\s–-]+$/g, "").trim() : "") || t.newRecordLabel;
 
   return (
     <div className="mx-auto max-w-5xl">
       <Link href={base} className="mb-2 inline-flex h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden /> {t.label}
       </Link>
-      <h1 className="mb-6 text-2xl font-semibold">{t.newRecordLabel}</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{heading}</h1>
       <RecordForm table={fieldsFor(t, user.permissions, user.isSysadmin)} recordId={null} initialValues={initial} labels={labels} baseHref={base} cancelHref={params.back?.startsWith("/") ? params.back : base} />
     </div>
   );
