@@ -15,7 +15,7 @@ export const jobReports: TableDef = {
   "module": "forms",
   "tab": "job-reports",
   "itemLabel": "Record",
-  "newRecordLabel": "New Record",
+  "newRecordLabel": "New Report",
   "titleFormula": "{project_id} – {team_ids} – {date}",
   "fields": [
     {
