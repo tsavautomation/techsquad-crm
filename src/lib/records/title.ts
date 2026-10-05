@@ -5,6 +5,7 @@ import type { Values } from "@/lib/rules/evaluate";
 import type { TableDef } from "@/registry/types";
 import { joinTitleParts } from "./title-format";
 
+import { readableTable } from "@/lib/auth/office";
 /**
  * Build a record's display title from its table's formula, e.g. "{first_name} {last_name}"
  * or "{project_id} – {type} – {status}" (SPEC §9.1 Q1). Lookups show the linked record's
@@ -26,7 +27,7 @@ export async function buildTitle(t: TableDef, values: Values, id: number | null,
       if (f?.type === "lookup" && f.lookup) {
         const ids = (Array.isArray(v) ? v : [v]).filter((x) => typeof x === "number");
         if (!ids.length) return { text: "", token: true };
-        const { data } = await db.from(f.lookup.table).select("id,title").in("id", ids);
+        const { data } = await db.from(readableTable(f.lookup.table)).select("id,title").in("id", ids);
         return { text: ((data ?? []) as { title: string | null }[]).map((r) => r.title).filter(Boolean).join(", "), token: true };
       }
       if (f?.options) return { text: f.options.find((o) => o.value === v)?.label ?? String(v), token: true };

@@ -92,7 +92,7 @@ async function searchClause(db: SupabaseClient, t: TableDef, q: string): Promise
   const parts = [`title.${like}`];
   for (const f of t.fields) if (isRowField(f) && TEXT_TYPES.has(f.type) && !f.sensitive) parts.push(`${f.name}.${like}`);
   const lookups = t.fields.filter((f) => f.type === "lookup" && !f.multiple && f.lookup && isRowField(f));
-  const hits = await Promise.all(lookups.map((f) => db.from(f.lookup!.table).select("id").ilike("title", `%${safe}%`).is("deleted_at", null).limit(300)));
+  const hits = await Promise.all(lookups.map((f) => db.from(readableTable(f.lookup!.table)).select("id").ilike("title", `%${safe}%`).is("deleted_at", null).limit(300)));
   lookups.forEach((f, i) => {
     const ids = ((hits[i].data ?? []) as { id: number }[]).map((r) => r.id);
     if (ids.length) parts.push(`${f.name}.in.(${ids.join(",")})`);
