@@ -34,7 +34,7 @@ function stopIcon(s: MapStop, active: boolean) {
   const size = active ? 34 : 28;
   return L.divIcon({
     className: "",
-    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${esc(s.color)};color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgb(0 0 0/.35);display:flex;align-items:center;justify-content:center;font:600 ${active ? 15 : 13}px/1 Inter,system-ui,sans-serif">${s.order}</div>`,
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${esc(s.color)};color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgb(0 0 0/.35);display:flex;align-items:center;justify-content:center;font:600 ${active ? 13 : 11}px/1 Inter,system-ui,sans-serif;letter-spacing:.02em">${esc(s.initials ?? String(s.order))}</div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     popupAnchor: [0, -size / 2],
