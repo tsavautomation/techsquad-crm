@@ -17,7 +17,7 @@ import { getT } from "@/i18n/server";
 // once done (approved, task completed, checklist ticked, visit done…). Row-level security applies throughout.
 
 export type AlertItem = { key: string; href: string; title: string; meta: string; urgent?: boolean };
-export type AlertSection = { key: "clock" | "tags" | "approvals" | "visits" | "tasks" | "checklist" | "followups"; title: string; items: AlertItem[] };
+export type AlertSection = { key: "clock" | "phones" | "tags" | "approvals" | "visits" | "tasks" | "checklist" | "followups"; title: string; items: AlertItem[] };
 export type Alerts = { count: number; urgent: boolean; sections: AlertSection[] };
 
 const MAX = 20;
@@ -200,9 +200,21 @@ export async function alertsAction(): Promise<Alerts> {
     return [{ key: "clock:open", href: "/#clock", title: tr("Still clocked in"), meta: tr("Since {time} — clock out when you're done.", { time: clockTime(toDateTimeLocalET(mine.day.openSince).slice(11)) }), urgent: true }];
   })();
 
-  const [a, b, c, d, e, f, g] = await Promise.all([tags, approvals, visits, tasks, checklist, followups, clock]);
+  // F18-c: administrators hear about technicians the 9 PM reminder could not reach (no usable phone).
+  const phones = (async (): Promise<AlertItem[]> => {
+    if (!user.isSysadmin) return [];
+    const { data } = await db.from("automation_runs").select("detail").eq("automation_id", 900601).eq("event", "reminders").order("at", { ascending: false }).limit(1);
+    const skipped = ((data?.[0] as { detail?: { skipped?: { employee_id: number; name: string; reason: string }[] } } | undefined)?.detail?.skipped ?? []).filter((s) => s.reason === "no_phone" || s.reason === "bad_phone");
+    const seen = new Set<number>();
+    return skipped
+      .filter((s) => !seen.has(s.employee_id) && seen.add(s.employee_id))
+      .map((s) => ({ key: `phone:${s.employee_id}`, href: `${recordHref(getTable("employees"), s.employee_id)}/edit`, title: s.name, meta: tr("No usable phone number for the report reminders. Fix it on the Employee card."), urgent: false }));
+  })();
+
+  const [a, b, c, d, e, f, g, h] = await Promise.all([tags, approvals, visits, tasks, checklist, followups, clock, phones]);
   const sections: AlertSection[] = [
     { key: "clock" as const, title: tr("Time clock"), items: g },
+    { key: "phones" as const, title: tr("Report reminders"), items: h },
     { key: "tags" as const, title: tr("Tagged you"), items: a },
     { key: "approvals" as const, title: tr("Waiting for your approval"), items: b },
     { key: "visits" as const, title: tr("Your visits today"), items: c },

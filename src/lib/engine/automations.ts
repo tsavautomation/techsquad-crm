@@ -12,6 +12,9 @@ import type { TableDef } from "@/registry/types";
 import { missingLines } from "@/lib/field-day/day";
 import { createReturnCard } from "@/lib/field-day/return-card";
 import { queueReportReview } from "@/lib/ai/review-queue";
+import { lateCheckForReport, runReportDayClose, runReportReminders } from "@/lib/reports/rule-run";
+import { deliverQueuedSms } from "@/lib/sms/twilio";
+import { addDays } from "@/lib/schedule/dates";
 import { createAutoTask } from "./task-action";
 import { cleanupOrphanUploads } from "./cleanup";
 import { conditionsMatch, eventsForChange, renderTokens, type Conditions } from "./conditions";
@@ -34,7 +37,9 @@ export type Action =
   | { type: "task"; text: string; due_days: number; assign?: string; labels?: string[] }
   | { type: "email"; from: string; to: string[]; cc?: string[]; bcc?: string[]; subject: string; card?: boolean; link?: boolean; pdf?: boolean; files?: string[] }
   // F17: queue the Job Report for Claude's review (runs after the save, see src/lib/ai/review.ts).
-  | { type: "ai_review" };
+  | { type: "ai_review" }
+  // F18: a Job Report filed after its visit's day → Late deficiencies (src/lib/reports/rule-run.ts).
+  | { type: "report_rule" };
 
 export type Automation = { id: number; table_name: string; title: string; events: string[]; conditions: Conditions; actions: Action[] };
 
@@ -150,6 +155,11 @@ async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: E
         if (t.name !== "job_reports") break;
         const r = await queueReportReview(db, rec.id, event);
         if (r) did.push(r);
+        break;
+      }
+      case "report_rule": {
+        if (t.name !== "job_reports") break;
+        did.push(...(await lateCheckForReport(db, rec.id)));
         break;
       }
     }
@@ -337,6 +347,22 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
     out.ai = await reviewQueuedReports(60_000);
   } catch (e) {
     out.ai = { error: e instanceof Error ? e.message : String(e) };
+  }
+  // F18 Visit = Report rule: 9 PM reminders (first tick at or after 21:00 Eastern) and the midnight close of the day before.
+  try {
+    const slot = etSlot(now);
+    if (Number(slot.hour) >= 21 && (await claimRun(db, `reports_sms:${slot.date}`))) {
+      out.reports_sms = await runReportReminders(slot.date);
+      await finishRun(db, `reports_sms:${slot.date}`, out.reports_sms as Record<string, unknown>);
+    }
+    const yesterday = addDays(slot.date, -1);
+    if (await claimRun(db, `reports_close:${yesterday}`)) {
+      out.reports_close = await runReportDayClose(yesterday);
+      await finishRun(db, `reports_close:${yesterday}`, out.reports_close as Record<string, unknown>);
+    }
+    await deliverQueuedSms(db);
+  } catch (e) {
+    out.reports = { error: e instanceof Error ? e.message : String(e) };
   }
   return out;
 }

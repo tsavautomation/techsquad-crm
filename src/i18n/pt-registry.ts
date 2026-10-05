@@ -490,4 +490,16 @@ export const PT_REGISTRY: Record<string, string> = {
   "Reviewed by AI": "Revisado pela IA",
   "What the AI changed": "O que a IA alterou",
   "AI REVIEW": "REVISÃO PELA IA",
+  // F18 Report Deficiencies
+  "Report Deficiencies": "Deficiências de relatório",
+  "Report Deficiency": "Deficiência de relatório",
+  "New Report Deficiency": "Nova deficiência de relatório",
+  "Deficiency": "Deficiência",
+  "Visit date": "Data da visita",
+  "Late": "Atrasado",
+  "Missing": "Faltando",
+  "Excused": "Justificada",
+  "Excuse reason": "Motivo da justificativa",
+  "Excused by": "Justificada por",
+  "Excused at": "Justificada em",
 };

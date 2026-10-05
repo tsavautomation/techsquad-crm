@@ -18,6 +18,13 @@ export const FieldDaySchema = z.object({
   service_lists: z.record(z.string(), ServiceList).default({}),
   /** P2: office position, radius, start time and clock-out reminders (src/lib/time-clock/clock.ts). */
   time_clock: TimeClockSchema.prefault({}),
+  /** F18 Visit = Report rule: Off / Dry run (log only) / Live, and the first visit date it applies to. */
+  report_rule: z
+    .object({
+      mode: z.enum(["off", "dry_run", "live"]).default("off"),
+      since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+    })
+    .prefault({}),
 });
 export type FieldDaySettings = z.infer<typeof FieldDaySchema>;
 

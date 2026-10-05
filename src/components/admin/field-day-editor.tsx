@@ -148,6 +148,28 @@ export function FieldDayEditor({ initial, people, reasons, services }: { initial
         )}
       </section>
 
+      <section className="rounded-2xl border bg-card p-4 shadow-card">
+        <h2 className="mb-1 font-semibold">{t("Report rule")}</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          {t("Every visit someone checked in or out of needs a Job Report from each person who went. At 9 PM the people still missing one get an SMS; after midnight the missing ones become deficiencies, and a report filed later counts as Late. Dry run only writes the log: nothing is sent and nothing is recorded.")}
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-medium">
+            {t("Mode")}
+            <select className={`${BOX} mt-1 h-11`} value={s.report_rule.mode} onChange={(e) => setS({ ...s, report_rule: { ...s.report_rule, mode: e.target.value as FieldDaySettings["report_rule"]["mode"] } })}>
+              <option value="off">{t("Off")}</option>
+              <option value="dry_run">{t("Dry run (log only)")}</option>
+              <option value="live">{t("Live (SMS and deficiencies)")}</option>
+            </select>
+          </label>
+          <label className="block text-sm font-medium">
+            {t("First visit date it applies to")}
+            <input type="date" className={`${BOX} mt-1 h-11`} value={s.report_rule.since ?? ""} onChange={(e) => setS({ ...s, report_rule: { ...s.report_rule, since: e.target.value || null } })} />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{t("Without a start date every past visit counts, including the thousands imported from Google Calendar. Set the day you switch the rule on.")}</p>
+      </section>
+
       <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t bg-card p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:static md:border-0 md:p-0">
         <Button type="button" className="h-11 flex-1 md:flex-none md:px-8" onClick={save} disabled={pending}>
           {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} {t("Save")}

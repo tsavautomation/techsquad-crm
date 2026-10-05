@@ -2708,6 +2708,142 @@ export type Database = {
           },
         ]
       }
+      report_deficiencies: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          deleted_at: string | null
+          employee_id: number
+          excuse_reason: string | null
+          excused_at: string | null
+          excused_by: string | null
+          id: number
+          locked: boolean
+          performance_id: number | null
+          project_id: number | null
+          report_id: number | null
+          status: string
+          submitted_at: string | null
+          title: string | null
+          type: string
+          updated_at: string
+          updated_by: string | null
+          visit_id: number | null
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          deleted_at?: string | null
+          employee_id: number
+          excuse_reason?: string | null
+          excused_at?: string | null
+          excused_by?: string | null
+          id?: number
+          locked?: boolean
+          performance_id?: number | null
+          project_id?: number | null
+          report_id?: number | null
+          status?: string
+          submitted_at?: string | null
+          title?: string | null
+          type: string
+          updated_at?: string
+          updated_by?: string | null
+          visit_id?: number | null
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          deleted_at?: string | null
+          employee_id?: number
+          excuse_reason?: string | null
+          excused_at?: string | null
+          excused_by?: string | null
+          id?: number
+          locked?: boolean
+          performance_id?: number | null
+          project_id?: number | null
+          report_id?: number | null
+          status?: string
+          submitted_at?: string | null
+          title?: string | null
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+          visit_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_deficiencies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_deficiencies_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_deficiencies_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_deficiencies_excused_by_fkey"
+            columns: ["excused_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_deficiencies_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: false
+            referencedRelation: "staff_performance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_deficiencies_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_deficiencies_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "job_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_deficiencies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_deficiencies_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_files: {
         Row: {
           candidates: Json | null
@@ -3027,6 +3163,73 @@ export type Database = {
           started_at?: string
         }
         Relationships: []
+      }
+      sms_outbox: {
+        Row: {
+          body: string
+          created_at: string
+          employee_id: number | null
+          error: string | null
+          id: string
+          kind: string
+          provider_id: string | null
+          sent_at: string | null
+          status: string
+          test_mode: boolean
+          to_number: string
+          visit_id: number | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          employee_id?: number | null
+          error?: string | null
+          id?: string
+          kind?: string
+          provider_id?: string | null
+          sent_at?: string | null
+          status?: string
+          test_mode?: boolean
+          to_number: string
+          visit_id?: number | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          employee_id?: number | null
+          error?: string | null
+          id?: string
+          kind?: string
+          provider_id?: string | null
+          sent_at?: string | null
+          status?: string
+          test_mode?: boolean
+          to_number?: string
+          visit_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_outbox_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_outbox_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_outbox_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff_performance: {
         Row: {

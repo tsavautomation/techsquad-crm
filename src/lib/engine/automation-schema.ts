@@ -23,6 +23,8 @@ export const ActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("return_card") }),
   // F17: Claude reviews the Job Report after the save (Admin › AI switch).
   z.object({ type: z.literal("ai_review") }),
+  // F18: a late Job Report creates Late deficiencies (Admin › Field day › Report rule).
+  z.object({ type: z.literal("report_rule") }),
   // F4: a task (e.g. "follow up on the proposal"), for the person in `assign` or whoever made the change.
   z.object({
     type: z.literal("task"),
@@ -101,6 +103,9 @@ export function check(t: TableDef, a: AutomationInput): string[] {
         break;
       case "ai_review":
         if (t.name !== "job_reports") errors.push("The AI review only reads Job Reports.");
+        break;
+      case "report_rule":
+        if (t.name !== "job_reports") errors.push("The report rule only checks Job Reports.");
         break;
       case "task":
         if (act.assign && field(act.assign)?.lookup?.table !== "employees") errors.push(`${label(act.assign)} is not a link to an Employee.`);

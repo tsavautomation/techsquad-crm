@@ -52,6 +52,7 @@ export const MODULES: ModuleDef[] = [
       tab("administrative", "vehicles", "Vehicle"),
       tab("administrative", "rma", "RMA"),
       tab("administrative", "tasks", "Tasks"),
+      tab("administrative", "report-deficiencies", "Report Deficiencies"),
     ],
   },
   {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FieldDayEditor } from "@/components/admin/field-day-editor";
+import { ReportRuleStatus } from "@/components/admin/report-rule-status";
 import { requireUser } from "@/lib/auth/session";
 import { loadFieldDay } from "@/lib/field-day/return-card";
 import { recordsDb } from "@/lib/records/data";
@@ -31,6 +32,9 @@ export default async function FieldDayPage() {
       <h1 className="mb-1 text-2xl font-semibold">{tr("Field day")}</h1>
       <p className="mb-4 text-sm text-muted-foreground">{tr("Return cards for visits that weren't finished, and what each service type needs.")}</p>
       <FieldDayEditor initial={settings} people={people} reasons={live("partial_reason", "job_reports")} services={live("service_type", "visits")} />
+      <div className="mt-6">
+        <ReportRuleStatus db={db} />
+      </div>
     </div>
   );
 }
