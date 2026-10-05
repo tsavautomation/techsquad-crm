@@ -195,7 +195,7 @@
 .shadow-card.py-3 { --cp-y: 12px; }
 .shadow-card.py-3\.5 { --cp-y: 14px; }
 .shadow-card.p-3 { --cp-x: 12px; --cp-y: 12px; }
-.shadow-card > h2:first-child,
+.shadow-card:not(dl) > h2:first-child,
 .shadow-card > div:first-child:has(> h2) {
   background: var(--card-head);
   margin: calc(-1 * var(--cp-y)) calc(-1 * var(--cp-x)) 0.875rem;
@@ -210,11 +210,12 @@ details.shadow-card > summary {
 details[open].shadow-card > summary {
   border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
 }
+/* A field list is a card with no padding: its headings are plain bands, never pulled out by the card padding (Fred 2026-10-04: "title is cropping"). */
 dl.shadow-card > h2 {
   background: var(--card-head);
 }
 /* One title style for every band: 15 px semibold in the card's text colour (UI-c). */
-.shadow-card > h2:first-child,
+.shadow-card:not(dl) > h2:first-child,
 .shadow-card > div:first-child:has(> h2) > h2,
 details.shadow-card > summary {
   font-size: 15px;
