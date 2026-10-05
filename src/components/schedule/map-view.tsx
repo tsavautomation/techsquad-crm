@@ -10,6 +10,7 @@ import { freshness, type MapVehicle, type VehiclesResponse } from "@/lib/bouncie
 import { formatDate } from "@/lib/dates";
 import { addDays, clock } from "@/lib/schedule/dates";
 import type { MapOffice, MapPerson, MapStop } from "@/lib/schedule/map";
+import { PIN_DONE, PIN_ON_SITE, PIN_PLANNED } from "@/lib/schedule/pins";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
@@ -144,6 +145,18 @@ export function MapView({ date, today, tech, stops, people, office, vehiclesMode
       <div className="h-[52vh] min-h-[320px] overflow-hidden rounded-2xl border bg-muted shadow-card md:h-[60vh]">
         <LeafletMap stops={shown} vehicles={vehiclesMode === "on" ? vehicles : []} office={office} selected={selected} onSelect={setSelected} />
       </div>
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-label={tr("Blue: not there yet · Green: checked in · Red: checked out")}>
+        {[
+          [PIN_PLANNED, tr("not there yet")],
+          [PIN_ON_SITE, tr("checked in")],
+          [PIN_DONE, tr("checked out")],
+        ].map(([color, label]) => (
+          <span key={color} className="inline-flex items-center gap-1.5">
+            <span className="size-3 rounded-full border border-white" style={{ backgroundColor: color }} aria-hidden />
+            {label}
+          </span>
+        ))}
+      </p>
       {live.error && vehiclesMode === "on" && <p className="rounded-[10px] bg-bad-bg px-3 py-2 text-sm text-bad-fg">{live.error}</p>}
       {vehiclesMode === "off" && isAdmin && (
         <p className="text-xs text-muted-foreground">

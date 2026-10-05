@@ -1,4 +1,5 @@
 import { initialsOf } from "./initials";
+import { PIN_DONE, PIN_ON_SITE, PIN_PLANNED } from "./pins";
 import "server-only";
 import { fromDateTimeLocalET, todayET, toDateTimeLocalET } from "@/lib/dates";
 import { mapAddress } from "@/lib/field-day/load";
@@ -45,6 +46,8 @@ type Row = {
   starts_at: string;
   duration: string | null;
   status: string | null;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
   service_type: string | null;
   technician_id: number | null;
   project_id: number | null;
@@ -61,7 +64,7 @@ export async function loadMapDay(date: string | undefined): Promise<{ date: stri
   const [{ data }, { data: emp }, settings] = await Promise.all([
     db
       .from("visits")
-      .select("id, starts_at, duration, status, service_type, technician_id, project_id, visits_team(target_id), vehicles(title), projects(title, job_address)")
+      .select("id, starts_at, duration, status, service_type, technician_id, project_id, checked_in_at, checked_out_at, visits_team(target_id), vehicles(title), projects(title, job_address)")
       .gte("starts_at", from)
       .lt("starts_at", to)
       .is("deleted_at", null)
@@ -100,7 +103,8 @@ export async function loadMapDay(date: string | undefined): Promise<{ date: stri
       team: r.visits_team.map((t) => ({ id: t.target_id, name: names.get(t.target_id) ?? `#${t.target_id}` })),
       vehicle: r.vehicles?.title ?? null,
       status: r.status ?? "Scheduled",
-      color: statusField.options?.find((o) => o.value === r.status)?.color ?? "#2563eb",
+      // Pin colour by the day's progress (Fred 2026-10-04): blue until the check-in, green on site, red after the check-out; a cancelled visit keeps its status colour.
+      color: r.status === "Cancelled" ? (statusField.options?.find((o) => o.value === r.status)?.color ?? "#9ca3af") : r.checked_out_at ? PIN_DONE : r.checked_in_at ? PIN_ON_SITE : PIN_PLANNED,
       service: r.service_type,
       order,
       initials: r.technician_id ? initialsOf(names.get(r.technician_id) ?? null) : null,
