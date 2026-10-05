@@ -136,3 +136,36 @@ export async function fetchVehicles(): Promise<LiveVehicle[]> {
   cache = { at: Date.now(), vehicles };
   return vehicles;
 }
+
+// ---------------------------------------------------------------- trips (F19-b Report vs. reality)
+
+export type BouncieTrip = { start: string; end: string; endLat: number | null; endLng: number | null; distance: number | null };
+
+/**
+ * The trips of one device between two moments (Bouncie `GET /v1/trips?imei=…&gps-format=geojson&starts-after=…&ends-before=…`).
+ * The last GeoJSON point of a trip is where the van stopped. Throws when Bouncie refuses; callers decide what to do.
+ */
+export async function fetchTrips(imei: string, from: string, to: string): Promise<BouncieTrip[]> {
+  const q = new URLSearchParams({ imei, "gps-format": "geojson", "starts-after": from, "ends-before": to });
+  const get = async (token: string) => fetch(`${API}/trips?${q}`, { headers: { Authorization: token, "Content-Type": "application/json" }, cache: "no-store" });
+  let res = await get(await accessToken());
+  if (res.status === 401) res = await get(await accessToken(true));
+  if (!res.ok) throw new Error(`Bouncie trips answered ${res.status}`);
+  const raw = (await res.json()) as unknown;
+  const list = Array.isArray(raw) ? raw : [];
+  return list.flatMap((t) => {
+    const x = t as { startTime?: string; endTime?: string; distance?: number; gps?: { coordinates?: unknown } };
+    if (!x.startTime || !x.endTime) return [];
+    let endLat: number | null = null;
+    let endLng: number | null = null;
+    const coords = x.gps?.coordinates;
+    if (Array.isArray(coords) && coords.length) {
+      const last = coords[coords.length - 1] as unknown;
+      if (Array.isArray(last) && typeof last[0] === "number" && typeof last[1] === "number") {
+        endLng = last[0];
+        endLat = last[1];
+      }
+    }
+    return [{ start: x.startTime, end: x.endTime, endLat, endLng, distance: typeof x.distance === "number" ? x.distance : null }];
+  });
+}

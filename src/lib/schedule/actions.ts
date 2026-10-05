@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
-import { recordsDb } from "@/lib/records/data";
+import { getRecord, recordsDb } from "@/lib/records/data";
 import type { ActionResult } from "@/lib/records/record-actions";
+import { getTable } from "@/registry";
+import { canDo } from "@/registry/permissions";
 import { saveRecord } from "@/lib/records/save";
 import { runAutomationsSafely } from "@/lib/engine/automations";
 import { after } from "next/server";
@@ -74,6 +76,26 @@ export async function visitConflictsAction(people: number[], startsAt: string, m
         out.push({ visitId: v.id, who: name.get(p) ?? `#${p}`, title: v.title ?? `Visit #${v.id}`, start: v.starts_at, end: new Date(new Date(v.starts_at).getTime() + Number(v.duration ?? 60) * 60_000).toISOString() });
   }
   return out;
+}
+
+/** F19-a: a PM approves (→ Scheduled, pushed to Google like any visit) or discards (→ Cancelled) a visit Claude proposed. */
+export async function decideProposedVisitAction(id: number, what: "approve" | "discard"): Promise<ActionResult> {
+  const user = await requireUser();
+  const t = getTable("visits");
+  if (!canDo(user.permissions, t, "modify", getTable)) return { ok: false, message: "You don't have permission to change visits." };
+  const row = await getRecord(t, id);
+  if (!row) return { ok: false, message: "This visit no longer exists or you can't see it." };
+  if (row.status !== "Proposed") return { ok: false, message: "This visit is no longer proposed." };
+  // A direct status change (RLS and the audit trigger still apply): the proposal may lack the vehicle or the
+  // arrival window the form requires; the PM adds them afterwards, the visit page says so.
+  const db = await recordsDb();
+  const { data, error } = await db.from("visits").update({ status: what === "approve" ? "Scheduled" : "Cancelled" }).eq("id", id).select("id");
+  if (error) return { ok: false, message: error.message };
+  if (!data?.length) return { ok: false, message: "You don't have permission to do that." };
+  after(runAutomationsSafely);
+  revalidatePath("/schedule", "layout");
+  revalidatePath(`/schedule/visits/${id}`);
+  return { ok: true };
 }
 
 /** Drag & drop on the calendar: new start and/or technician. */

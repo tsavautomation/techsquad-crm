@@ -515,6 +515,11 @@ export async function push(limit = 300): Promise<PushResult | { skipped: string 
         continue;
       }
       if (!v.starts_at) continue;
+      // F19-a: a visit Claude proposed is not on the calendar until a PM approves it.
+      if (v.status === "Proposed") {
+        await markSynced(db, [v.id]);
+        continue;
+      }
       const body = visitToEvent(
         {
           id: v.id,

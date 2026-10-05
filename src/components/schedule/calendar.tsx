@@ -185,6 +185,8 @@ function VisitBlock({ v, name, compact }: { v: CalVisit; name?: Map<number, stri
     <>
       <span className="block truncate font-medium">
         {v.pending > 0 && <span title={`${v.pending} open pending item${v.pending === 1 ? "" : "s"}`}>⚠ </span>}
+                      {v.mismatches > 0 && <span className="text-bad-fg" title={`${v.mismatches} report vs. reality mismatch${v.mismatches === 1 ? "" : "es"}`}>! </span>}
+        {v.status === "Proposed" && <span className="mr-1 rounded bg-warn-bg px-1 text-[10px] font-semibold text-warn-fg uppercase">?</span>}
         {v.project}
       </span>
       <span className="block truncate opacity-80">
@@ -260,7 +262,7 @@ function WeekGrid({ days, today, visits, name, dayHref, canEdit, canCreate, drag
                     e.dataTransfer.effectAllowed = "move";
                   }}
                   onDragEnd={() => setDrag(null)}
-                  className={cn("absolute overflow-hidden rounded-md border-l-4 bg-card px-1.5 py-1 text-xs shadow-sm ring-1 ring-border hover:z-10 hover:shadow-md", v.status === "Cancelled" && "line-through opacity-60")}
+                  className={cn("absolute overflow-hidden rounded-md border-l-4 bg-card px-1.5 py-1 text-xs shadow-sm ring-1 ring-border hover:z-10 hover:shadow-md", v.status === "Cancelled" && "line-through opacity-60", v.status === "Proposed" && "border-dashed opacity-70 ring-warn-fg/50")}
                   style={{
                     top: Math.max(0, ((start - HS * 60) / 60) * PX),
                     height: Math.max(22, ((Math.min(end, HE * 60) - Math.max(start, HS * 60)) / 60) * PX - 2),
@@ -354,7 +356,7 @@ function DayGrid({ day, today, visits, people, canEdit, canCreate, drag, setDrag
                       e.dataTransfer.effectAllowed = "move";
                     }}
                     onDragEnd={() => setDrag(null)}
-                    className={cn("absolute overflow-hidden rounded-md border-l-4 bg-card px-2 py-1 text-xs shadow-sm ring-1 ring-border hover:z-10 hover:shadow-md", v.techId !== p.id && p.id !== 0 && "border-dashed opacity-80", v.status === "Cancelled" && "line-through opacity-60")}
+                    className={cn("absolute overflow-hidden rounded-md border-l-4 bg-card px-2 py-1 text-xs shadow-sm ring-1 ring-border hover:z-10 hover:shadow-md", v.techId !== p.id && p.id !== 0 && "border-dashed opacity-80", v.status === "Cancelled" && "line-through opacity-60", v.status === "Proposed" && "border-dashed opacity-70 ring-warn-fg/50")}
                     style={{
                       top: Math.max(0, ((start - HS * 60) / 60) * PX),
                       height: Math.max(22, ((Math.min(end, HE * 60) - Math.max(start, HS * 60)) / 60) * PX - 2),
@@ -365,6 +367,7 @@ function DayGrid({ day, today, visits, people, canEdit, canCreate, drag, setDrag
                   >
                     <span className="block truncate font-medium">
                       {v.pending > 0 && <span title={`${v.pending} open pending item${v.pending === 1 ? "" : "s"}`}>⚠ </span>}
+                      {v.mismatches > 0 && <span className="text-bad-fg" title={`${v.mismatches} report vs. reality mismatch${v.mismatches === 1 ? "" : "es"}`}>! </span>}
                       {v.project}
                     </span>
                     <span className="block truncate opacity-80">
@@ -431,7 +434,7 @@ function TeamGrid({ days, today, visits, people, canEdit, canCreate, drag, setDr
                             e.dataTransfer.effectAllowed = "move";
                           }}
                           onDragEnd={() => setDrag(null)}
-                          className={cn("block rounded-md border-l-4 bg-card px-1.5 py-1 text-xs ring-1 ring-border hover:shadow-md", v.techId !== p.id && "border-dashed opacity-80", v.status === "Cancelled" && "line-through opacity-60")}
+                          className={cn("block rounded-md border-l-4 bg-card px-1.5 py-1 text-xs ring-1 ring-border hover:shadow-md", v.techId !== p.id && "border-dashed opacity-80", v.status === "Cancelled" && "line-through opacity-60", v.status === "Proposed" && "border-dashed opacity-70 ring-warn-fg/50")}
                           style={blockStyle(v.color)}
                           title={v.techId !== p.id ? tr("Going along (not the lead technician)") : undefined}
                         >
@@ -476,12 +479,16 @@ function DayList({ days, today, visits, name }: { days: string[]; today: string;
                     <Link href={visitHref(v)} className="flex min-h-14 gap-3 px-3 py-2 hover:bg-muted/50 active:bg-muted">
                       <span className="mt-1 size-2.5 shrink-0 rounded-full" style={{ backgroundColor: v.color }} aria-hidden />
                       <span className="min-w-0 flex-1">
-                        <span className={cn("block truncate text-base font-medium", v.status === "Cancelled" && "line-through")}>{v.project}</span>
+                        <span className={cn("block truncate text-base font-medium", v.status === "Cancelled" && "line-through")}>
+                          {v.status === "Proposed" && <span className="mr-1.5 rounded bg-warn-bg px-1.5 py-0.5 text-[11px] font-semibold text-warn-fg">{tr("Proposed")}</span>}
+                          {v.project}
+                        </span>
                         <span className="block text-sm text-muted-foreground">
                           {windowText(v)} · {tr("until {time}", { time: clock(endOf(v)) })} · {[v.techId, ...v.team].filter((x): x is number => x !== null).map((id) => name.get(id) ?? "").join(", ") || tr("No technician")}
                         </span>
                         {v.address && <span className="block truncate text-xs text-muted-foreground">{v.address}</span>}
                         {v.pending > 0 && <span className="mt-0.5 inline-block rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn-fg">{tr(v.pending === 1 ? "1 open pending item" : "{n} open pending items", { n: v.pending })}</span>}
+                        {v.mismatches > 0 && <span className="mt-0.5 ml-1 inline-block rounded-full bg-bad-bg px-2 py-0.5 text-xs text-bad-fg">{tr(v.mismatches === 1 ? "1 report vs. reality mismatch" : "{n} report vs. reality mismatches", { n: v.mismatches })}</span>}
                       </span>
                       <span className="shrink-0 text-xs text-muted-foreground">{tr(v.status)}</span>
                     </Link>

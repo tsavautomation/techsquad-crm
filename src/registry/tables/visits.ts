@@ -69,6 +69,8 @@ export const visits: TableDef = {
       required: true,
       default: "Scheduled",
       options: [
+        // F19-a: proposed by the AI review of a Job Report; a PM approves (→ Scheduled) or discards it.
+        { label: "Proposed", value: "Proposed", color: "#a16207" },
         { label: "Scheduled", value: "Scheduled", color: "#2563eb" },
         { label: "On the way", value: "On the way", color: "#7c3aed" },
         { label: "On site", value: "On site", color: "#d97706" },
@@ -83,6 +85,8 @@ export const visits: TableDef = {
     { name: "checked_out_at", label: "Checked out", type: "datetime", readOnly: true, formHidden: true, legacy: NEW },
     // "Schedule return" on a return card fills this; the card then points at this visit.
     { name: "return_task_id", label: "Return card", type: "lookup", formHidden: true, lookup: { table: "tasks" }, legacy: NEW },
+    // F19-a: the Job Report whose AI review proposed this return visit.
+    { name: "proposed_from_report_id", label: "Proposed from report", type: "lookup", readOnly: true, formHidden: true, lookup: { table: "job_reports" }, legacy: NEW },
     {
       name: "repeat",
       label: "Repeat",

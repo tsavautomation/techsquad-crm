@@ -23,6 +23,10 @@ export const FieldDaySchema = z.object({
     .object({
       mode: z.enum(["off", "dry_run", "live"]).default("off"),
       since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+      /** F19-b Report vs. reality: minutes of difference before a mismatch is flagged (Fred: default 30). */
+      threshold_min: z.number().int().min(5).max(240).default(30),
+      /** F19-b: grace for parking and walking in, added to the estimated drive. */
+      grace_min: z.number().int().min(0).max(120).default(15),
     })
     .prefault({}),
 });

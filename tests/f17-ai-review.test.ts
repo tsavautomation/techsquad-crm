@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { applyReview, MOVED_MARKER, parseAnswer, userPrompt, type ReviewInput } from "@/lib/ai/review-apply";
+import { AnswerSchema, applyReview as apply, MOVED_MARKER, parseAnswer, userPrompt, type ReviewAnswer, type ReviewInput } from "@/lib/ai/review-apply";
+
+/** Answers in these tests name only the fields they care about; the schema fills the rest (F19 added four). */
+const applyReview = (i: ReviewInput, a: Partial<ReviewAnswer>) => apply(i, AnswerSchema.parse(a));
 
 // F17 AI review of Job Reports (SPEC §9.1 F17-a/b): the pure part, from Claude's answer to the patch.
 
@@ -58,6 +61,17 @@ describe("applyReview: pending work", () => {
     const r = applyReview({ ...base, result: "Completed" }, { report: base.report, grammar_changed: false, pending: ["Program the remote"], reason: "Other", credentials: [] });
     expect(r.patch).toEqual({});
     expect(r.notes[0]).toMatch(/says Completed: nothing was changed/);
+  });
+});
+
+describe("applyReview: F19 return visit, parts, site facts, issue keys", () => {
+  it("passes them through, cleaned, and never a return visit for a Completed report", () => {
+    const r = applyReview(base, { report: base.report, return_visit: { needed: true, why: "GC must finish the drywall", days: 5 }, parts: ["- HDMI 2.1 cable 25 ft"], site_facts: ["Rack is in the garage closet.", "Wi-Fi password is Casa1234"], issue_keys: ["WiFi Dropouts", "x"] });
+    expect(r.returnVisit).toEqual({ why: "GC must finish the drywall", days: 5 });
+    expect(r.parts).toEqual(["HDMI 2.1 cable 25 ft"]);
+    expect(r.siteFacts).toEqual(["Rack is in the garage closet."]);
+    expect(r.issueKeys).toEqual(["wifi-dropouts"]);
+    expect(applyReview({ ...base, result: "Completed" }, { report: base.report, return_visit: { needed: true, why: null, days: null } }).returnVisit).toBeNull();
   });
 });
 

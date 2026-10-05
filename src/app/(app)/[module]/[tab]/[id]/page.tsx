@@ -32,6 +32,10 @@ import { PerformancePanel } from "@/components/performance/performance-panel";
 import { DeficiencyPanel } from "@/components/reports/deficiency-panel";
 import { EmployeeDeficiencies } from "@/components/reports/employee-deficiencies";
 import { PendingItems } from "@/components/project/pending-items";
+import { SiteHistory } from "@/components/project/site-history";
+import { ProposedVisitPanel } from "@/components/schedule/proposed-visit-panel";
+import { RealityPanel } from "@/components/reports/reality-panel";
+import { ScorecardPanel } from "@/components/reports/scorecard-panel";
 import { ProjectHours } from "@/components/project/project-hours";
 import { JobCosting } from "@/components/project/job-costing";
 import { StockLevels } from "@/components/product/stock-levels";
@@ -141,13 +145,25 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       <div className="flex flex-col xl:grid xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:items-start xl:gap-6">
       <div className="contents xl:col-start-2 xl:row-start-1 xl:block">
       {workflow && <WorkflowPanel table={t.name} id={recordId} data={workflow as WorkflowPanelData} />}
+      {t.detailAddon === "visit" && row.status === "Proposed" && (
+        <ProposedVisitPanel
+          visitId={recordId}
+          canDecide={canModify}
+          reportId={typeof row.proposed_from_report_id === "number" ? row.proposed_from_report_id : null}
+          missing={t.fields.filter((f) => f.required && f.name !== "status" && (row[f.name] === null || row[f.name] === undefined || row[f.name] === "")).map((f) => f.label)}
+        />
+      )}
       {t.detailAddon === "visit" && <VisitFieldPanel visitId={recordId} />}
+      {t.detailAddon === "visit" && <RealityPanel table="visits" id={recordId} />}
       {t.detailAddon === "task" && <ReturnCardPanel taskId={recordId} />}
       {t.detailAddon === "organization" && <PartnerStats orgId={recordId} user={user} />}
       {t.detailAddon === "employee" && <PerformancePanel employeeId={recordId} user={user} />}
+      {t.detailAddon === "employee" && <ScorecardPanel employeeId={recordId} user={user} />}
       {t.detailAddon === "employee" && <EmployeeDeficiencies employeeId={recordId} user={user} />}
       {t.detailAddon === "deficiency" && <DeficiencyPanel id={recordId} status={String(row.status ?? "")} canExcuse={canModify} />}
+      {t.detailAddon === "project" && <SiteHistory projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <PendingItems projectId={recordId} user={user} />}
+      {t.name === "job_reports" && <RealityPanel table="job_reports" id={recordId} />}
       {t.detailAddon === "project" && <ProjectHours projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <JobCosting projectId={recordId} user={user} />}
       {t.detailAddon === "employee" && <PayRatePanel employeeId={recordId} user={user} />}

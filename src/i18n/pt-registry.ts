@@ -502,4 +502,8 @@ export const PT_REGISTRY: Record<string, string> = {
   "Excuse reason": "Motivo da justificativa",
   "Excused by": "Justificada por",
   "Excused at": "Justificada em",
+  // F19
+  "Root cause": "Causa raiz",
+  "Proposed": "Proposta",
+  "Proposed from report": "Proposta a partir do relatório",
 };

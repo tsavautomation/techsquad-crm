@@ -168,6 +168,17 @@ export function FieldDayEditor({ initial, people, reasons, services }: { initial
           </label>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">{t("Without a start date every past visit counts, including the thousands imported from Google Calendar. Set the day you switch the rule on.")}</p>
+        <h3 className="mt-4 mb-2 text-sm font-medium">{t("Report vs. reality")}</h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-medium">
+            {t("Minutes of difference before a mismatch is flagged")}
+            <input type="number" inputMode="numeric" min={5} max={240} className={`${BOX} mt-1 h-11`} value={s.report_rule.threshold_min} onChange={(e) => setS({ ...s, report_rule: { ...s.report_rule, threshold_min: Number(e.target.value) || 30 } })} />
+          </label>
+          <label className="block text-sm font-medium">
+            {t("Grace for parking, added to the estimated drive (minutes)")}
+            <input type="number" inputMode="numeric" min={0} max={120} className={`${BOX} mt-1 h-11`} value={s.report_rule.grace_min} onChange={(e) => setS({ ...s, report_rule: { ...s.report_rule, grace_min: Number(e.target.value) || 0 } })} />
+          </label>
+        </div>
       </section>
 
       <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t bg-card p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:static md:border-0 md:p-0">

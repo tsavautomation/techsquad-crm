@@ -6,6 +6,7 @@ import { formatMinutes } from "@/lib/field-day/day";
 import { hoursByProject } from "@/lib/hours/engine";
 import { onSiteByTech, realVsPlanned, reportResults, salespeople, type VisitTimes } from "@/lib/insights/stats";
 import { recordsDb } from "@/lib/records/data";
+import { loadTeamScorecards } from "@/lib/reports/scorecard-load";
 import { addDays } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
 import { canOpen } from "@/registry/permissions";
@@ -141,6 +142,11 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
   const sales = salespeople(projects, (i) => approvedOf(projects[i].id)).map((s) => ({ ...s, name: s.id === null ? tr("No salesperson") : (salesName.get(s.id) ?? `#${s.id}`) }));
   const maxSales = Math.max(1, ...sales.map((s) => (showMoney ? s.value : s.n)));
 
+  // F19-e: tech scorecards for the same period (Visit = Report rule + reviewed reports).
+  const scorecards = can("visits") ? await loadTeamScorecards(db, { from: addDays(todayET(), -days + 1), to: todayET() }) : [];
+  const { data: scEmp } = scorecards.length ? await db.from("employee_names").select("id, title").in("id", scorecards.map((s) => s.employeeId)) : { data: [] };
+  const scName = new Map(((scEmp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
+
   // Field work (F5): visits in the period, planned vs real time (check-in / check-out) and the
   // Job Report results of the same days.
   type ByProject = { id: number | null; name: string; visits: number; min: number; plannedMin: number }[];
@@ -268,6 +274,41 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
             <p className="text-[13px] text-text-2">{tr("No GC, designer or builder linked to projects yet.")}</p>
           )}
         </Card>
+
+        {scorecards.length > 0 && (
+          <Card title={tr("Scorecards (last {n} days)", { n: days })}>
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="text-left text-[11px] text-muted-foreground uppercase">
+                  <th className="py-1 font-semibold">{tr("Technician")}</th>
+                  <th className="py-1 text-right font-semibold">{tr("Owed")}</th>
+                  <th className="py-1 text-right font-semibold">{tr("On time")}</th>
+                  <th className="py-1 text-right font-semibold">{tr("Late")}</th>
+                  <th className="py-1 text-right font-semibold">{tr("Missing")}</th>
+                  <th className="py-1 text-right font-semibold">{tr("Complete")}</th>
+                  <th className="py-1 text-right font-semibold">{tr("Callbacks (Partial / Not done)")}</th>
+                  <th className="py-1 text-right font-semibold">{tr("Reports with mismatches")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scorecards
+                  .sort((a, b) => (a.card.onTimePct ?? 0) - (b.card.onTimePct ?? 0))
+                  .map(({ employeeId, card }) => (
+                    <tr key={employeeId} className="border-t">
+                      <td className="py-1 pr-2">{scName.get(employeeId) ?? `#${employeeId}`}</td>
+                      <td className="py-1 text-right tabular-nums">{card.visits}</td>
+                      <td className={cn("py-1 text-right tabular-nums", card.onTimePct !== null && card.onTimePct < 70 && "text-bad-fg")}>{card.onTimePct === null ? "—" : `${card.onTimePct} %`}</td>
+                      <td className="py-1 text-right tabular-nums">{card.late}</td>
+                      <td className={cn("py-1 text-right tabular-nums", card.missing > 0 && "text-bad-fg")}>{card.missing}</td>
+                      <td className="py-1 text-right tabular-nums">{card.completeness === null ? "—" : `${card.completeness} %`}</td>
+                      <td className="py-1 text-right tabular-nums">{card.callbacks}</td>
+                      <td className={cn("py-1 text-right tabular-nums", card.mismatches > 0 && "text-warn-fg")}>{card.mismatches}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </Card>
+        )}
 
         {ops && (
           <Card title={tr("Field work (last {n} days)", { n: days })}>

@@ -116,6 +116,8 @@ export const tasks: TableDef = {
         { label: "Financial", value: "Financial", color: "#16a34a" },
         { label: "Technical", value: "Technical", color: "#7c3aed" },
         { label: "Return", value: "Return", color: "#0891b2" },
+        // F19-c: the 3rd report with the same problem on a site raises one of these.
+        { label: "Root cause", value: "Root cause", color: "#be123c" },
       ],
       legacy: NEW,
     },

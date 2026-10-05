@@ -29,6 +29,8 @@ export type CalVisit = {
   instructions: string | null;
   /** F17-d: return cards still open on the project (a yellow warning on the chip). */
   pending: number;
+  /** F19-b: report-vs-reality mismatches stored on the visit (a red mark on the chip). */
+  mismatches: number;
 };
 export type CalPerson = { id: number; name: string; color: string };
 
@@ -45,6 +47,7 @@ type Row = {
   project_id: number | null;
   visits_team: { target_id: number }[];
   projects: { title: string | null; job_address: Address | null } | null;
+  reality_flags: { level: string }[] | null;
 };
 
 const line = (a: Address | null) => (a ? [a.street, a.city].filter(Boolean).join(", ") : "") || null;
@@ -57,7 +60,7 @@ export async function loadWeek(week: string | undefined): Promise<{ weekStart: s
   const [{ data }, { data: emp }] = await Promise.all([
     db
       .from("visits")
-      .select("id, title, starts_at, duration, arrival_window, status, service_type, instructions, technician_id, project_id, visits_team(target_id), projects(title, job_address)")
+      .select("id, title, starts_at, duration, arrival_window, status, service_type, instructions, technician_id, project_id, reality_flags, visits_team(target_id), projects(title, job_address)")
       .gte("starts_at", from)
       .lt("starts_at", to)
       .is("deleted_at", null)
@@ -89,6 +92,7 @@ export async function loadWeek(week: string | undefined): Promise<{ weekStart: s
     service: v.service_type,
     instructions: v.instructions,
     pending: v.project_id && v.status !== "Cancelled" && v.status !== "Done" ? (pending.get(v.project_id)?.length ?? 0) : 0,
+    mismatches: (v.reality_flags ?? []).filter((f) => f.level === "warn").length,
   }));
   // Lanes: people who do field work (active or freelance, with a department) plus anyone booked this week.
   const booked = new Set(visits.flatMap((v) => [v.techId, ...v.team]));

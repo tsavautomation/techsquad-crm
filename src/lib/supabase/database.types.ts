@@ -1247,6 +1247,7 @@ export type Database = {
           date: string | null
           deleted_at: string | null
           id: number
+          issue_keys: string[]
           locked: boolean
           logins_and_passwords: string | null
           maintenance_plan_service_call: boolean
@@ -1263,6 +1264,7 @@ export type Database = {
           people_needed: number | null
           problems: string | null
           project_id: number | null
+          reality_flags: Json | null
           report: string | null
           result: string | null
           submitted_at: string | null
@@ -1286,6 +1288,7 @@ export type Database = {
           date?: string | null
           deleted_at?: string | null
           id?: number
+          issue_keys?: string[]
           locked?: boolean
           logins_and_passwords?: string | null
           maintenance_plan_service_call?: boolean
@@ -1302,6 +1305,7 @@ export type Database = {
           people_needed?: number | null
           problems?: string | null
           project_id?: number | null
+          reality_flags?: Json | null
           report?: string | null
           result?: string | null
           submitted_at?: string | null
@@ -1325,6 +1329,7 @@ export type Database = {
           date?: string | null
           deleted_at?: string | null
           id?: number
+          issue_keys?: string[]
           locked?: boolean
           logins_and_passwords?: string | null
           maintenance_plan_service_call?: boolean
@@ -1341,6 +1346,7 @@ export type Database = {
           people_needed?: number | null
           problems?: string | null
           project_id?: number | null
+          reality_flags?: Json | null
           report?: string | null
           result?: string | null
           submitted_at?: string | null
@@ -2089,6 +2095,8 @@ export type Database = {
           referral_organization_id: number | null
           referral_type: string | null
           salesperson_id: number | null
+          site_summary: string | null
+          site_summary_at: string | null
           special_orders: boolean
           start_date: string | null
           submitted_at: string | null
@@ -2147,6 +2155,8 @@ export type Database = {
           referral_organization_id?: number | null
           referral_type?: string | null
           salesperson_id?: number | null
+          site_summary?: string | null
+          site_summary_at?: string | null
           special_orders?: boolean
           start_date?: string | null
           submitted_at?: string | null
@@ -2205,6 +2215,8 @@ export type Database = {
           referral_organization_id?: number | null
           referral_type?: string | null
           salesperson_id?: number | null
+          site_summary?: string | null
+          site_summary_at?: string | null
           special_orders?: boolean
           start_date?: string | null
           submitted_at?: string | null
@@ -4238,6 +4250,8 @@ export type Database = {
           locked: boolean
           on_way_at: string | null
           project_id: number | null
+          proposed_from_report_id: number | null
+          reality_flags: Json | null
           repeat: string | null
           repeat_count: number | null
           return_task_id: number | null
@@ -4270,6 +4284,8 @@ export type Database = {
           locked?: boolean
           on_way_at?: string | null
           project_id?: number | null
+          proposed_from_report_id?: number | null
+          reality_flags?: Json | null
           repeat?: string | null
           repeat_count?: number | null
           return_task_id?: number | null
@@ -4302,6 +4318,8 @@ export type Database = {
           locked?: boolean
           on_way_at?: string | null
           project_id?: number | null
+          proposed_from_report_id?: number | null
+          reality_flags?: Json | null
           repeat?: string | null
           repeat_count?: number | null
           return_task_id?: number | null
@@ -4329,6 +4347,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_proposed_from_report_id_fkey"
+            columns: ["proposed_from_report_id"]
+            isOneToOne: false
+            referencedRelation: "job_reports"
             referencedColumns: ["id"]
           },
           {
@@ -4743,6 +4768,8 @@ export type Database = {
           locked: boolean
           on_way_at: string | null
           project_id: number | null
+          proposed_from_report_id: number | null
+          reality_flags: Json | null
           repeat: string | null
           repeat_count: number | null
           return_task_id: number | null
