@@ -70,6 +70,6 @@ export async function myClockToday(db: SupabaseClient, user: CurrentUser, now = 
   const [employeeId] = await myEmployeeIds(db, user);
   if (!employeeId) return null;
   const today = todayET(new Date(now));
-  const [entries, { data: emp }] = await Promise.all([loadDayEntries(db, employeeId, today), db.from("employees").select("clock_group").eq("id", employeeId).maybeSingle()]);
+  const [entries, { data: emp }] = await Promise.all([loadDayEntries(db, employeeId, today), db.from("employee_names").select("clock_group").eq("id", employeeId).maybeSingle()]);
   return { employeeId, group: ((emp as { clock_group: string | null } | null)?.clock_group ?? "Field") as "Field" | "Office", day: clockDay(entries, now) };
 }

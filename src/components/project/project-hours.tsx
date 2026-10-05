@@ -49,7 +49,7 @@ export async function ProjectHours({ projectId, user }: { projectId: number; use
   const h = projectHours(visits, nowMs());
 
   const ids = [...new Set(h.visits.flatMap((v) => v.people))];
-  const { data: emp } = ids.length ? await db.from("employees").select("id, title").in("id", ids) : { data: [] };
+  const { data: emp } = ids.length ? await db.from("employee_names").select("id, title").in("id", ids) : { data: [] };
   const name = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
   const who = (people: number[]) => (people.length ? people.map((id) => name.get(id) ?? `#${id}`).join(", ") : tr("No technician"));
   const service = new Map(rows.map((r) => [r.id, r.service_type]));

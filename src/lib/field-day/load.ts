@@ -55,7 +55,7 @@ const COLS = "id, starts_at, duration, arrival_window, status, project_id, servi
 
 /** The signed-in person's employee records (matched by email, as for "my tasks"). */
 export async function myEmployeeIds(db: SupabaseClient, user: CurrentUser): Promise<number[]> {
-  const { data } = await db.from("employees").select("id").ilike("email", user.email).is("deleted_at", null);
+  const { data } = await db.from("employee_names").select("id").ilike("email", user.email).is("deleted_at", null);
   return ((data ?? []) as { id: number }[]).map((e) => e.id);
 }
 

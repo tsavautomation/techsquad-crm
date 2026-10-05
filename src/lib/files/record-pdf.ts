@@ -36,7 +36,7 @@ async function describe(db: ReturnType<typeof adminDb>, t: TableDef, row: Row) {
       ids = ((data ?? []) as { target_id: number }[]).map((r) => r.target_id);
     } else if (typeof row[techField.name] === "number") ids = [row[techField.name] as number];
     if (ids.length) {
-      const { data } = await db.from("employees").select("id, title").in("id", ids);
+      const { data } = await db.from("employee_names").select("id, title").in("id", ids);
       technician = ((data ?? []) as { title: string | null }[]).map((e) => e.title).filter(Boolean).join(", ") || null;
     }
   }

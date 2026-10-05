@@ -60,7 +60,7 @@ export async function loadWeek(week: string | undefined): Promise<{ weekStart: s
       .is("deleted_at", null)
       .is("archived_at", null)
       .order("starts_at"),
-    db.from("employees").select("id, title, status, departments").is("deleted_at", null).order("title"),
+    db.from("employee_names").select("id, title, status, departments").is("deleted_at", null).order("title"),
   ]);
   const statusField = getTable("visits").fields.find((f) => f.name === "status")!;
   const rows = (data ?? []) as unknown as Row[];

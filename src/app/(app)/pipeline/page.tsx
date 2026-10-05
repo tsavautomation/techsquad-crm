@@ -38,7 +38,7 @@ export default async function PipelinePage(props: PageProps<"/pipeline">) {
 
   const [{ data: board }, { data: meRow }, { data: pData }, { data: sData }] = await Promise.all([
     db.rpc("workflow_board", { p_table: "projects" }),
-    db.from("employees").select("id").ilike("email", user.email).is("deleted_at", null).limit(1),
+    db.from("employee_names").select("id").ilike("email", user.email).is("deleted_at", null).limit(1),
     db.from("projects").select("id, title, type, salesperson_id, created_at, contacts:job_owner_id(title), employees:salesperson_id(title)").is("deleted_at", null).is("archived_at", null).order("title").limit(2000),
     db.from("record_workflow_state").select("record_id, level_id, entered_at").eq("table_name", "projects"),
   ]);

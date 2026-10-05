@@ -51,7 +51,7 @@ export async function visitConflictsAction(people: number[], startsAt: string, m
     (v) => v.id !== excludeId && new Date(v.starts_at).getTime() + Number(v.duration ?? 60) * 60_000 > start,
   );
   if (!rows.length) return [];
-  const { data: emp } = await db.from("employees").select("id, title").in("id", ids);
+  const { data: emp } = await db.from("employee_names").select("id, title").in("id", ids);
   const name = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
   const out: Conflict[] = [];
   for (const v of rows) {

@@ -39,7 +39,7 @@ export async function GET() {
     const todayDrivers = new Map<number, number>();
     for (const v of (todays ?? []) as { vehicle_id: number; technician_id: number }[]) if (!todayDrivers.has(v.vehicle_id)) todayDrivers.set(v.vehicle_id, v.technician_id);
     const driverIds = [...new Set([...rows.map((r) => r.driver_id), ...todayDrivers.values()].filter((id): id is number => id !== null))];
-    const { data: emp } = driverIds.length ? await db.from("employees").select("id, title").in("id", driverIds) : { data: [] };
+    const { data: emp } = driverIds.length ? await db.from("employee_names").select("id, title").in("id", driverIds) : { data: [] };
     const names = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
     return NextResponse.json({ connected: true, vehicles: matchVehicles(live, rows, names, todayDrivers), fetchedAt } satisfies VehiclesResponse, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {

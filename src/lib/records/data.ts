@@ -125,7 +125,8 @@ export async function lookupTitles(t: TableDef, rows: Record<string, unknown>[],
         const ids = [...new Set(rows.flatMap((r) => r[f.name]).filter((v): v is number => typeof v === "number"))];
         out[f.name] = new Map();
         if (!ids.length) return;
-        const { data } = await db.from(f.lookup!.table).select("id,title").in("id", ids);
+        // Employee names are visible to everyone (employee_names view); the table itself needs the Employees permission.
+        const { data } = await db.from(f.lookup!.table === "employees" ? "employee_names" : f.lookup!.table).select("id,title").in("id", ids);
         for (const r of (data ?? []) as { id: number; title: string | null }[]) out[f.name].set(r.id, r.title ?? `#${r.id}`);
       }),
   );

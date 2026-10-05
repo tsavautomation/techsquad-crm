@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Document renderers kept beside the PDFs (plain Node scripts, git-ignored).
+    "docs/**/*.js",
   ]),
 ]);
 

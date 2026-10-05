@@ -43,7 +43,7 @@ export async function loadProjectCosting(db: SupabaseClient, projectId: number):
   if (!visits.length && !materials.length && !approved) return null;
 
   const people = [...new Set(visits.flatMap((v) => [v.technician_id, ...(v.team_ids ?? [])]).filter((x): x is number => x !== null))];
-  const [rates, { data: emp }] = await Promise.all([loadPayRates(db, people), people.length ? db.from("employees").select("id, title").in("id", people) : Promise.resolve({ data: [] })]);
+  const [rates, { data: emp }] = await Promise.all([loadPayRates(db, people), people.length ? db.from("employee_names").select("id, title").in("id", people) : Promise.resolve({ data: [] })]);
   const names = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
   const costing = jobCosting(visits, rates as RateRow[], materials, approved, nowMs());
   return { costing, names, rates };

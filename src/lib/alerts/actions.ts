@@ -55,7 +55,7 @@ export async function alertsAction(): Promise<Alerts> {
   };
 
   const myEmployees = (async () => {
-    const { data } = await db.from("employees").select("id").ilike("email", user.email).is("deleted_at", null);
+    const { data } = await db.from("employee_names").select("id").ilike("email", user.email).is("deleted_at", null);
     return ((data ?? []) as { id: number }[]).map((e) => e.id);
   })();
 

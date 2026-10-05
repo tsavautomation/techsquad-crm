@@ -22,7 +22,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   const { who = "", label = "" } = (await props.searchParams) as { who?: string; label?: string };
   const db = await recordsDb();
 
-  const { data: meRow } = await db.from("employees").select("id").ilike("email", user.email).is("deleted_at", null).limit(1);
+  const { data: meRow } = await db.from("employee_names").select("id").ilike("email", user.email).is("deleted_at", null).limit(1);
   const me = ((meRow ?? []) as { id: number }[])[0]?.id ?? null;
   const filterId = who === "me" ? me : /^\d+$/.test(who) ? Number(who) : null;
 
@@ -30,7 +30,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   if (filterId) q = q.eq("member_id", filterId);
   const labelOptions = (t.fields.find((f) => f.name === "labels")?.options ?? []).filter((o) => !o.retired);
   if (labelOptions.some((o) => o.value === label)) q = q.contains("labels", [label]);
-  const [{ data }, { data: emp }] = await Promise.all([q, db.from("employees").select("id, title").is("deleted_at", null).order("title")]);
+  const [{ data }, { data: emp }] = await Promise.all([q, db.from("employee_names").select("id, title").is("deleted_at", null).order("title")]);
   const rows = (data ?? []) as unknown as Row[];
   const names = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
 

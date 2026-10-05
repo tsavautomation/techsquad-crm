@@ -136,7 +136,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
 
   // Salespeople (F5): projects per salesperson, win rate over decided ones, approved value.
   const salesIds = [...new Set(projects.map((p) => p.salesperson_id).filter((x): x is number => x !== null))];
-  const { data: salesEmp } = salesIds.length ? await db.from("employees").select("id, title").in("id", salesIds) : { data: [] };
+  const { data: salesEmp } = salesIds.length ? await db.from("employee_names").select("id, title").in("id", salesIds) : { data: [] };
   const salesName = new Map(((salesEmp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
   const sales = salespeople(projects, (i) => approvedOf(projects[i].id)).map((s) => ({ ...s, name: s.id === null ? tr("No salesperson") : (salesName.get(s.id) ?? `#${s.id}`) }));
   const maxSales = Math.max(1, ...sales.map((s) => (showMoney ? s.value : s.n)));
@@ -171,7 +171,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
     for (const x of (team ?? []) as { record_id: number; target_id: number }[]) teamOf.set(x.record_id, [...(teamOf.get(x.record_id) ?? []), x.target_id]);
     const v = raw.map((x) => ({ ...x, team_ids: teamOf.get(x.id) ?? [] }));
     const techIds = [...new Set(v.flatMap((x) => [x.technician_id, ...x.team_ids]).filter((x): x is number => x !== null))];
-    const { data: emp } = techIds.length ? await db.from("employees").select("id, title").in("id", techIds) : { data: [] };
+    const { data: emp } = techIds.length ? await db.from("employee_names").select("id, title").in("id", techIds) : { data: [] };
     const tn = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
     const live = v.filter((x) => x.status !== "Cancelled");
     // F9: technician-hours per project in the period, for people who may open Projects.

@@ -44,7 +44,7 @@ export async function DashboardKpis({ user, now }: { user: CurrentUser; now: num
   if (can("tasks")) {
     tiles.push(
       (async () => {
-        const { data: emp } = await db.from("employees").select("id").ilike("email", user.email).is("deleted_at", null);
+        const { data: emp } = await db.from("employee_names").select("id").ilike("email", user.email).is("deleted_at", null);
         const ids = ((emp ?? []) as { id: number }[]).map((e) => e.id);
         if (!ids.length) return null;
         const { count } = await db.from("tasks").select("id", { count: "exact", head: true }).in("member_id", ids).neq("status", "Completed").is("deleted_at", null).is("archived_at", null);

@@ -328,7 +328,7 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
   const sections = (await Promise.all(jobs)).filter((s): s is Section => Boolean(s && s.rows.length));
   const tasksTable = getTable("tasks");
   const showTaskBox = can("tasks") && canDo(user.permissions, tasksTable, "create", getTable);
-  const { data: me } = showTaskBox ? await db.from("employees").select("id").ilike("email", user.email).is("deleted_at", null).limit(1) : { data: null };
+  const { data: me } = showTaskBox ? await db.from("employee_names").select("id").ilike("email", user.email).is("deleted_at", null).limit(1) : { data: null };
 
   return (
     <>

@@ -71,7 +71,7 @@ export async function loadMapDay(date: string | undefined): Promise<{ date: stri
       .is("archived_at", null)
       .neq("status", "Cancelled")
       .order("starts_at"),
-    db.from("employees").select("id, title").is("deleted_at", null),
+    db.from("employee_names").select("id, title").is("deleted_at", null),
     loadFieldDay(db),
   ]);
   const names = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
