@@ -7,6 +7,7 @@ import { getTable } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { cn } from "@/lib/utils";
 import { getT } from "@/i18n/server";
+import { isOfficeUser } from "./today";
 
 // The number tiles at the top of the dashboard (Portal design, docs/portal-features-merge.md §I).
 // Each tile shows only when the person can open what it counts; a red tile needs attention.
@@ -21,22 +22,30 @@ export async function DashboardKpis({ user, now }: { user: CurrentUser; now: num
   const from = fromDateTimeLocalET(`${today}T00:00`);
   const to = fromDateTimeLocalET(`${addDays(today, 1)}T00:00`);
   const tiles: Promise<Tile | null>[] = [];
+  // Office people see the whole team's day; everyone else (technicians) sees only their own visits, and no plan renewals (Fred 2026-10-05).
+  const office = isOfficeUser(user);
+  const { data: meRows } = office ? { data: null } : await db.from("employee_names").select("id").ilike("email", user.email).is("deleted_at", null);
+  const mine = office ? null : new Set(((meRows ?? []) as { id: number }[]).map((e) => e.id));
+  type VisitRow = { id: number; starts_at: string; status: string | null; technician_id: number | null; visits_team: { target_id: number }[] };
+  const isMine = (v: VisitRow) => !mine || (v.technician_id !== null && mine.has(v.technician_id)) || v.visits_team.some((t) => mine.has(t.target_id));
+  const VISIT_COLS = "id, starts_at, status, technician_id, visits_team(target_id)";
 
   if (can("visits")) {
     tiles.push(
       (async () => {
-        const { data } = await db.from("visits").select("id, starts_at, status").gte("starts_at", from).lt("starts_at", to).is("deleted_at", null).neq("status", "Cancelled");
-        const rows = (data ?? []) as { starts_at: string; status: string | null }[];
-        return { href: "/schedule/calendar?view=list", value: rows.length, label: "Visits today" };
+        const { data } = await db.from("visits").select(VISIT_COLS).gte("starts_at", from).lt("starts_at", to).is("deleted_at", null).neq("status", "Cancelled");
+        const rows = ((data ?? []) as unknown as VisitRow[]).filter(isMine);
+        return { href: office ? "/schedule/calendar?view=list" : "/", value: rows.length, label: office ? "Visits today" : "My visits today" };
       })(),
       (async () => {
-        const { count } = await db.from("visits").select("id", { count: "exact", head: true }).eq("status", "On site").is("deleted_at", null);
-        return { href: "/schedule/calendar?view=list", value: count ?? 0, label: "On site now" };
+        const { data } = await db.from("visits").select(VISIT_COLS).eq("status", "On site").is("deleted_at", null);
+        const n = ((data ?? []) as unknown as VisitRow[]).filter(isMine).length;
+        return { href: "/schedule/calendar?view=list", value: n, label: "On site now" };
       })(),
       (async () => {
         // Still "Scheduled" 15 minutes after the start time.
-        const { data } = await db.from("visits").select("starts_at").gte("starts_at", from).lt("starts_at", new Date(now - 15 * 60_000).toISOString()).eq("status", "Scheduled").is("deleted_at", null);
-        const n = (data ?? []).length;
+        const { data } = await db.from("visits").select(VISIT_COLS).gte("starts_at", from).lt("starts_at", new Date(now - 15 * 60_000).toISOString()).eq("status", "Scheduled").is("deleted_at", null);
+        const n = ((data ?? []) as unknown as VisitRow[]).filter(isMine).length;
         return { href: "/schedule/calendar?view=list", value: n, label: "Late (not started)", alert: n > 0 };
       })(),
     );
@@ -58,7 +67,7 @@ export async function DashboardKpis({ user, now }: { user: CurrentUser; now: num
       return { href: "/#assigned", value: ((data ?? []) as unknown[]).length, label: "Waiting for me" };
     })(),
   );
-  if (can("projects")) {
+  if (office && can("projects")) {
     tiles.push(
       (async () => {
         const { count } = await db.from("projects").select("id", { count: "exact", head: true }).in("maintenance_status", ["Renewal Alert", "Expired"]).is("deleted_at", null).is("archived_at", null);
