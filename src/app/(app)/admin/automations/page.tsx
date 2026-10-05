@@ -30,6 +30,8 @@ function describeAction(a: Action, label: (f: string) => string): string {
       return `Add checklist item${a.lines ? "s (one per line of)" : ""} ${a.item}${a.target ? ` to the ${label(a.target)}` : ""}`;
     case "return_card":
       return "Create a return card (task) for the scheduler";
+    case "ai_review":
+      return "Have Claude review the report (Admin › AI)";
     case "task":
       return `Create a task “${a.text}” due in ${a.due_days} day${a.due_days === 1 ? "" : "s"} for ${a.assign ? `the ${label(a.assign)}` : "whoever made the change"}`;
     case "email": {

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { reviewQueuedSafely } from "@/lib/ai/review";
 import { runAutomationsNow, sendQueuedSafely } from "@/lib/engine/automations";
 import type { Values } from "@/lib/rules/evaluate";
 import { getTable } from "@/registry";
@@ -20,6 +21,8 @@ export async function saveRecordAction(tableName: string, id: number | null, val
   if (result.ok) {
     await runAutomationsNow();
     after(sendQueuedSafely);
+    // F17: a new Job Report is read by Claude after the reply (the hourly tick catches any left over).
+    if (tableName === "job_reports") after(reviewQueuedSafely);
   }
   if (result.ok && (t.tab || t.module === "utility")) revalidatePath(tableHref(t), "layout");
   if (result.ok && id) return { ...result, undoId: await lastChangeId(tableName, id) };

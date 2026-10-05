@@ -95,6 +95,8 @@ export type FieldDef = {
   computed?: ComputedDef;
   /** Encrypted at rest, masked in the UI, never emailed. */
   sensitive?: boolean;
+  /** With `sensitive`: still encrypted and kept out of emails and PDFs, but shown in clear to anyone who can open the record (SPEC §9.1 F17-c: system credentials, report logins). */
+  shownInClear?: boolean;
   /** WebAuthor origin, for the data import and traceability. */
   legacy: { column: string; fieldId: number };
 };

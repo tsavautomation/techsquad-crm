@@ -40,7 +40,7 @@ export function describeNotes(f: FieldDef, table: TableDef, tables: Map<string, 
   if (f.hidden) notes.push("not on the form");
   if (f.startsHidden) notes.push("starts hidden");
   if (f.readOnly) notes.push("read-only");
-  if (f.sensitive) notes.push("sensitive: encrypted & masked");
+  if (f.sensitive) notes.push(f.shownInClear ? "sensitive: encrypted, shown in clear, never emailed" : "sensitive: encrypted & masked");
   if (f.default !== undefined) notes.push(`default: ${f.default === true ? "Yes" : f.default === false ? "No" : f.default}`);
   if (f.maxLength) notes.push(`max ${f.maxLength} chars`);
   if (f.pattern) notes.push("digits, spaces and + - ( ) only");

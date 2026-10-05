@@ -774,7 +774,9 @@ export const projects: TableDef = {
       },
       "heading": "SYSTEMS AND PASSWORDS",
       "maxLength": 1000,
-      "sensitive": true
+      "sensitive": true,
+      // F17-c (Fred 2026-10-05): technicians look these up in the field, so no mask on screen.
+      shownInClear: true
     },
     {
       "name": "systems",

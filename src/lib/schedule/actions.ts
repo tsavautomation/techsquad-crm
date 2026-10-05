@@ -8,11 +8,18 @@ import { saveRecord } from "@/lib/records/save";
 import { runAutomationsSafely } from "@/lib/engine/automations";
 import { after } from "next/server";
 import type { Address } from "@/lib/records/values";
+import { openPendingFor } from "@/lib/field-day/pending";
 
 // Schedule (F1) helpers for the visit form and the calendar. Everything reads through the
 // signed-in user's session (row-level security) and writes through saveRecord.
 
-export type VisitContext = { address: string | null; delinquent: boolean; lastAccessNotes: string | null };
+export type VisitContext = {
+  address: string | null;
+  delinquent: boolean;
+  lastAccessNotes: string | null;
+  /** F17-d: return cards still open on this project (a yellow warning, never a block). */
+  pending: { taskId: number; title: string; due: string | null; reportDate: string | null }[];
+};
 
 const oneLine = (a: Address | null) => (a ? [a.street, a.address_2, a.city, [a.state, a.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ") : "") || null;
 
@@ -20,13 +27,19 @@ const oneLine = (a: Address | null) => (a ? [a.street, a.address_2, a.city, [a.s
 export async function visitContextAction(projectId: number): Promise<VisitContext | null> {
   await requireUser();
   const db = await recordsDb();
-  const [{ data: p }, { data: last }] = await Promise.all([
+  const [{ data: p }, { data: last }, pending] = await Promise.all([
     db.from("projects").select("job_address, financial_status").eq("id", projectId).maybeSingle(),
     db.from("visits").select("access_notes").eq("project_id", projectId).not("access_notes", "is", null).is("deleted_at", null).order("starts_at", { ascending: false }).limit(1),
+    openPendingFor(db, projectId),
   ]);
   if (!p) return null;
   const row = p as { job_address: Address | null; financial_status: string | null };
-  return { address: oneLine(row.job_address), delinquent: row.financial_status === "Delinquent", lastAccessNotes: (last?.[0] as { access_notes: string } | undefined)?.access_notes ?? null };
+  return {
+    address: oneLine(row.job_address),
+    delinquent: row.financial_status === "Delinquent",
+    lastAccessNotes: (last?.[0] as { access_notes: string } | undefined)?.access_notes ?? null,
+    pending: pending.map((i) => ({ taskId: i.taskId, title: i.title, due: i.due, reportDate: i.reportDate })),
+  };
 }
 
 export type Conflict = { visitId: number; who: string; title: string; start: string; end: string };

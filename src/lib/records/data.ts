@@ -149,7 +149,8 @@ export async function userNames(rows: Record<string, unknown>[], fields: string[
 
 /**
  * Row → form/display values. Sensitive fields are decrypted only for people who
- * may modify the record; everyone else sees a mask.
+ * may modify the record; everyone else sees a mask. Fields marked `shownInClear` (project
+ * credentials, report logins, SPEC §9.1 F17-c) are decrypted for anyone who can open the record.
  */
 export function rowValues(t: TableDef, row: Row, perms: ReadonlySet<string>): Values {
   const canSeeSensitive = canDo(perms, t, "modify", getTable);
@@ -157,7 +158,7 @@ export function rowValues(t: TableDef, row: Row, perms: ReadonlySet<string>): Va
   for (const f of t.fields) {
     if (!isRowField(f)) continue;
     let value = row[f.name] ?? null;
-    if (f.sensitive && typeof value === "string" && value) value = canSeeSensitive ? decrypt(value) : MASK;
+    if (f.sensitive && typeof value === "string" && value) value = canSeeSensitive || f.shownInClear ? decrypt(value) : MASK;
     if (f.type === "money" && typeof value === "string") value = Number(value);
     v[f.name] = value;
   }

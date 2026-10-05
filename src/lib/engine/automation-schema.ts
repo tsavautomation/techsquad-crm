@@ -21,6 +21,8 @@ export const ActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("checklist"), target: z.string().optional(), item: z.string().trim().min(1), lines: z.boolean().optional() }),
   // F2: a Partial / Not done Job Report creates a return card (task) for the scheduler.
   z.object({ type: z.literal("return_card") }),
+  // F17: Claude reviews the Job Report after the save (Admin › AI switch).
+  z.object({ type: z.literal("ai_review") }),
   // F4: a task (e.g. "follow up on the proposal"), for the person in `assign` or whoever made the change.
   z.object({
     type: z.literal("task"),
@@ -96,6 +98,9 @@ export function check(t: TableDef, a: AutomationInput): string[] {
         break;
       case "return_card":
         if (t.name !== "job_reports") errors.push("A return card can only come from a Job Report.");
+        break;
+      case "ai_review":
+        if (t.name !== "job_reports") errors.push("The AI review only reads Job Reports.");
         break;
       case "task":
         if (act.assign && field(act.assign)?.lookup?.table !== "employees") errors.push(`${label(act.assign)} is not a link to an Employee.`);

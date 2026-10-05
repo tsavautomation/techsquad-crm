@@ -183,7 +183,10 @@ function VisitBlock({ v, name, compact }: { v: CalVisit; name?: Map<number, stri
   const people = [v.techId, ...v.team].filter((x): x is number => x !== null).map((id) => name?.get(id)?.split(" ")[0] ?? "");
   return (
     <>
-      <span className="block truncate font-medium">{v.project}</span>
+      <span className="block truncate font-medium">
+        {v.pending > 0 && <span title={`${v.pending} open pending item${v.pending === 1 ? "" : "s"}`}>⚠ </span>}
+        {v.project}
+      </span>
       <span className="block truncate opacity-80">
         {windowText(v)}
         {!compact && people.length ? ` · ${people.join(", ")}` : ""}
@@ -360,7 +363,10 @@ function DayGrid({ day, today, visits, people, canEdit, canCreate, drag, setDrag
                       ...blockStyle(v.color),
                     }}
                   >
-                    <span className="block truncate font-medium">{v.project}</span>
+                    <span className="block truncate font-medium">
+                      {v.pending > 0 && <span title={`${v.pending} open pending item${v.pending === 1 ? "" : "s"}`}>⚠ </span>}
+                      {v.project}
+                    </span>
                     <span className="block truncate opacity-80">
                       {windowText(v)}–{clock(endOf(v))}
                       {v.address ? ` · ${v.address}` : ""}
@@ -475,6 +481,7 @@ function DayList({ days, today, visits, name }: { days: string[]; today: string;
                           {windowText(v)} · {tr("until {time}", { time: clock(endOf(v)) })} · {[v.techId, ...v.team].filter((x): x is number => x !== null).map((id) => name.get(id) ?? "").join(", ") || tr("No technician")}
                         </span>
                         {v.address && <span className="block truncate text-xs text-muted-foreground">{v.address}</span>}
+                        {v.pending > 0 && <span className="mt-0.5 inline-block rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn-fg">{tr(v.pending === 1 ? "1 open pending item" : "{n} open pending items", { n: v.pending })}</span>}
                       </span>
                       <span className="shrink-0 text-xs text-muted-foreground">{tr(v.status)}</span>
                     </Link>

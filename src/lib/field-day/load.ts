@@ -6,6 +6,7 @@ import { fileUrls } from "@/lib/files/store";
 import { recordsDb } from "@/lib/records/data";
 import type { Address } from "@/lib/records/values";
 import { addDays } from "@/lib/schedule/dates";
+import { openPendingByProject } from "./pending";
 import { loadFieldDay } from "./return-card";
 
 // F2 Field day: what the Today screen and the visit page show. Reads through the signed-in
@@ -33,6 +34,8 @@ export type MyVisit = {
   checked_in_at: string | null;
   checked_out_at: string | null;
   reportId: number | null;
+  /** F17-d: return cards still open on the project. */
+  pending: number;
 };
 
 type VisitRow = {
@@ -83,7 +86,10 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     loadFieldDay(db),
   ]);
   const ids = [...new Set([...rows, ...past].map((v) => v.id))];
-  const { data: reports } = ids.length ? await db.from("job_reports").select("id, visit_id").in("visit_id", ids).is("deleted_at", null) : { data: [] };
+  const [{ data: reports }, pending] = await Promise.all([
+    ids.length ? db.from("job_reports").select("id, visit_id").in("visit_id", ids).is("deleted_at", null) : Promise.resolve({ data: [] }),
+    openPendingByProject(db, rows.map((v) => v.project_id).filter((x): x is number => x !== null)),
+  ]);
   const reportOf = new Map(((reports ?? []) as { id: number; visit_id: number }[]).map((r) => [r.visit_id, r.id]));
 
   const visits = rows.map((v) => ({
@@ -104,6 +110,7 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     checked_in_at: v.checked_in_at,
     checked_out_at: v.checked_out_at,
     reportId: reportOf.get(v.id) ?? null,
+    pending: v.project_id ? (pending.get(v.project_id)?.length ?? 0) : 0,
   }));
   const reportsDue = past
     .filter((v) => v.checked_out_at && !reportOf.has(v.id))

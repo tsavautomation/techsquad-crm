@@ -5,11 +5,13 @@ import { todayET } from "@/lib/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { googleHourly } from "@/lib/google/sync";
 import { backfillRecordPdfs } from "@/lib/files/record-pdf";
+import { reviewQueuedReports } from "@/lib/ai/review";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
 import { missingLines } from "@/lib/field-day/day";
 import { createReturnCard } from "@/lib/field-day/return-card";
+import { queueReportReview } from "@/lib/ai/review-queue";
 import { createAutoTask } from "./task-action";
 import { cleanupOrphanUploads } from "./cleanup";
 import { conditionsMatch, eventsForChange, renderTokens, type Conditions } from "./conditions";
@@ -30,7 +32,9 @@ export type Action =
   | { type: "checklist"; target?: string; item: string; lines?: boolean }
   | { type: "return_card" }
   | { type: "task"; text: string; due_days: number; assign?: string; labels?: string[] }
-  | { type: "email"; from: string; to: string[]; cc?: string[]; bcc?: string[]; subject: string; card?: boolean; link?: boolean; pdf?: boolean; files?: string[] };
+  | { type: "email"; from: string; to: string[]; cc?: string[]; bcc?: string[]; subject: string; card?: boolean; link?: boolean; pdf?: boolean; files?: string[] }
+  // F17: queue the Job Report for Claude's review (runs after the save, see src/lib/ai/review.ts).
+  | { type: "ai_review" };
 
 export type Automation = { id: number; table_name: string; title: string; events: string[]; conditions: Conditions; actions: Action[] };
 
@@ -47,7 +51,7 @@ async function activeAutomations(db: SupabaseClient, table?: string): Promise<Au
 }
 
 /** Run one automation's actions on one record. Returns what it did (empty = nothing to do). */
-async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: EngineRecord, actor: string | null): Promise<string[]> {
+async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: EngineRecord, actor: string | null, event: string): Promise<string[]> {
   const did: string[] = [];
   let display: Record<string, string> | null = null;
   const show = async () => (display ??= await displayStrings(db, t, rec));
@@ -142,6 +146,12 @@ async function runActions(db: SupabaseClient, a: Automation, t: TableDef, rec: E
         did.push(`email to ${to.join(", ")}${redirected}`);
         break;
       }
+      case "ai_review": {
+        if (t.name !== "job_reports") break;
+        const r = await queueReportReview(db, rec.id, event);
+        if (r) did.push(r);
+        break;
+      }
     }
   }
   return did;
@@ -155,11 +165,38 @@ async function logRun(db: SupabaseClient, a: Automation, recordId: number, event
 async function apply(db: SupabaseClient, a: Automation, t: TableDef, rec: EngineRecord, event: string, today: string = todayET(), actor: string | null = null) {
   if (!conditionsMatch(a.conditions, rec.values, today)) return;
   try {
-    const did = await runActions(db, a, t, rec, actor);
+    const did = await runActions(db, a, t, rec, actor, event);
     if (did.length) await logRun(db, a, rec.id, event, "done", { actions: did });
   } catch (e) {
     await logRun(db, a, rec.id, event, "error", { error: e instanceof Error ? e.message : String(e) });
   }
+}
+
+/**
+ * Run the event automations for one record as if `changed` had just been edited by `actor`.
+ * For writes the engine itself makes (the AI review, F17): the audit trigger records them without
+ * an actor, so processPendingEvents() leaves them alone, and the follow-ups (missing items to the
+ * project checklist, the return card) would otherwise never run. Returns what was done.
+ */
+export async function runAutomationsForRecord(db: SupabaseClient, table: string, id: number, changed: string[], actor: string | null): Promise<string[]> {
+  const events = eventsForChange("update", Object.fromEntries(changed.map((c) => [c, true])));
+  const autos = (await activeAutomations(db, table)).filter((a) => !a.actions.some((x) => x.type === "ai_review") && a.events.some((e) => events.includes(e)));
+  if (!autos.length) return [];
+  const t = getTable(table);
+  const rec = await loadEngineRecord(db, t, id);
+  if (!rec || rec.deleted) return [];
+  const did: string[] = [];
+  for (const a of autos) {
+    if (!conditionsMatch(a.conditions, rec.values, todayET())) continue;
+    try {
+      const r = await runActions(db, a, t, rec, actor, a.events.find((e) => events.includes(e))!);
+      if (r.length) await logRun(db, a, rec.id, "ai_review", "done", { actions: r });
+      did.push(...r);
+    } catch (e) {
+      await logRun(db, a, rec.id, "ai_review", "error", { error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  return did;
 }
 
 /**
@@ -294,6 +331,12 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
     out.pdfs = await backfillRecordPdfs(120_000);
   } catch (e) {
     out.pdfs = { error: e instanceof Error ? e.message : String(e) };
+  }
+  // F17: Job Reports still waiting for their AI review (the after-save run may have been cut short).
+  try {
+    out.ai = await reviewQueuedReports(60_000);
+  } catch (e) {
+    out.ai = { error: e instanceof Error ? e.message : String(e) };
   }
   return out;
 }

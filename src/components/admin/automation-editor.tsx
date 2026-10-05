@@ -132,7 +132,7 @@ function RuleRow({ rule, fields, onChange, onRemove }: { rule: ConditionRule; fi
 
 function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; fields: FieldMeta[]; onChange: (a: Action) => void; onRemove: () => void }) {
   const t = useT();
-  const TITLES = { update: "Set fields", archive: "Archive the record", checklist: "Add a checklist item", email: "Send an email", return_card: "Create a return card", task: "Create a task" };
+  const TITLES = { update: "Set fields", archive: "Archive the record", checklist: "Add a checklist item", email: "Send an email", return_card: "Create a return card", task: "Create a task", ai_review: "AI review of the report" };
   return (
     <div className="space-y-2 rounded-lg bg-muted/40 p-2">
       <div className="flex items-center justify-between gap-2">
@@ -232,6 +232,7 @@ function ActionEditor({ action, fields, onChange, onRemove }: { action: Action; 
         </>
       )}
       {action.type === "return_card" && <p className="text-sm text-muted-foreground">{t("Creates a task for the scheduler (Admin › Field day) with the missing items as its checklist, due by the reason.")}</p>}
+      {action.type === "ai_review" && <p className="text-sm text-muted-foreground">{t("Claude tidies the text, moves pending work to What's missing and logins to Login and Passwords. New reports only; switched on and off in Admin › AI.")}</p>}
       {action.type === "email" && (
         <>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -410,6 +411,7 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
                 checklist: { type: "checklist", item: "" },
                 archive: { type: "archive" },
                 return_card: { type: "return_card" },
+                ai_review: { type: "ai_review" },
                 task: { type: "task", text: "", due_days: 1 },
               };
               if (blank[type]) setA({ ...a, actions: [...a.actions, blank[type]] });
@@ -422,6 +424,7 @@ export function AutomationEditor({ id, table, tableLabel, fields, initial, edita
             <option value="archive">{t("Archive the record")}</option>
             <option value="task">{t("Create a task")}</option>
             {table === "job_reports" && <option value="return_card">{t("Create a return card")}</option>}
+            {table === "job_reports" && <option value="ai_review">{t("AI review of the report")}</option>}
           </select>
         </Section>
 

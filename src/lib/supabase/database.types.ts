@@ -1237,6 +1237,9 @@ export type Database = {
       job_reports: {
         Row: {
           access_info: string | null
+          ai_review_notes: string | null
+          ai_review_status: string | null
+          ai_reviewed_at: string | null
           archived_at: string | null
           bring_next: string | null
           created_at: string
@@ -1273,6 +1276,9 @@ export type Database = {
         }
         Insert: {
           access_info?: string | null
+          ai_review_notes?: string | null
+          ai_review_status?: string | null
+          ai_reviewed_at?: string | null
           archived_at?: string | null
           bring_next?: string | null
           created_at?: string
@@ -1309,6 +1315,9 @@ export type Database = {
         }
         Update: {
           access_info?: string | null
+          ai_review_notes?: string | null
+          ai_review_status?: string | null
+          ai_reviewed_at?: string | null
           archived_at?: string | null
           bring_next?: string | null
           created_at?: string

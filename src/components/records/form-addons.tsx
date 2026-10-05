@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { formatDateTime } from "@/lib/dates";
+import { formatDate, formatDateTime } from "@/lib/dates";
 import type { Values } from "@/lib/rules/evaluate";
 import { visitConflictsAction, visitContextAction, type Conflict, type VisitContext } from "@/lib/schedule/actions";
+import { getTable } from "@/registry";
+import { recordHref } from "@/registry/routes";
 import { useT } from "@/i18n/client";
 
 const maps = (a: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
@@ -67,6 +69,24 @@ export function VisitAddon({ form, recordId, setMany }: { form: Values; recordId
         </p>
       ))}
       {info?.delinquent && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900 dark:bg-red-950 dark:text-red-200">{tr("This client is marked Delinquent. Check with accounting before sending a tech.")}</p>}
+      {info && info.pending.length > 0 && (
+        <div className="rounded-lg bg-warn-bg px-3 py-2 text-sm text-warn-fg">
+          <p className="font-medium">
+            {tr(info.pending.length === 1 ? "This project has 1 open pending item from an earlier visit. Plan for it on this visit." : "This project has {n} open pending items from earlier visits. Plan for them on this visit.", { n: info.pending.length })}
+          </p>
+          <ul className="mt-1 list-disc pl-5">
+            {info.pending.map((p) => (
+              <li key={p.taskId}>
+                <Link href={recordHref(getTable("tasks"), p.taskId)} className="underline underline-offset-2">
+                  {p.title}
+                </Link>
+                {p.reportDate ? ` · ${tr("report of {date}", { date: formatDate(p.reportDate) })}` : ""}
+                {p.due ? ` · ${tr("due {date}", { date: formatDate(p.due) })}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {info && !info.address && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{tr("This project has no job address, so maps won't work. Add it on the project.")}</p>}
       {info?.address && (
         <div className="flex flex-wrap gap-2 text-sm">

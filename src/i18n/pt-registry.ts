@@ -486,4 +486,8 @@ export const PT_REGISTRY: Record<string, string> = {
   "Only needed when Bouncie reports a different VIN. The 15-digit IMEI from the Bouncie app.": "Só é preciso quando o Bouncie informa um VIN diferente. O IMEI de 15 dígitos do app Bouncie.",
   "The day's jobs and the vans, live": "Os serviços do dia e as vans, ao vivo",
   "Live vehicle positions on the Schedule map": "Posição dos veículos ao vivo no mapa da Agenda",
+  // F17 AI review
+  "Reviewed by AI": "Revisado pela IA",
+  "What the AI changed": "O que a IA alterou",
+  "AI REVIEW": "REVISÃO PELA IA",
 };

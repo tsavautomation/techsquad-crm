@@ -1,5 +1,6 @@
 import "server-only";
 import { fromDateTimeLocalET, todayET, toDateTimeLocalET } from "@/lib/dates";
+import { openPendingByProject } from "@/lib/field-day/pending";
 import { recordsDb } from "@/lib/records/data";
 import type { Address } from "@/lib/records/values";
 import { getTable } from "@/registry";
@@ -26,6 +27,8 @@ export type CalVisit = {
   statusColor: string;
   service: string | null;
   instructions: string | null;
+  /** F17-d: return cards still open on the project (a yellow warning on the chip). */
+  pending: number;
 };
 export type CalPerson = { id: number; name: string; color: string };
 
@@ -65,7 +68,10 @@ export async function loadWeek(week: string | undefined): Promise<{ weekStart: s
   const statusField = getTable("visits").fields.find((f) => f.name === "status")!;
   const rows = (data ?? []) as unknown as Row[];
   const staff = (emp ?? []) as { id: number; title: string | null; status: string | null; departments: string[] | null }[];
-  const colors = await technicianColors([...staff.map((e) => e.id), ...rows.flatMap((v) => [v.technician_id, ...v.visits_team.map((t) => t.target_id)]).filter((x): x is number => x !== null)]);
+  const [colors, pending] = await Promise.all([
+    technicianColors([...staff.map((e) => e.id), ...rows.flatMap((v) => [v.technician_id, ...v.visits_team.map((t) => t.target_id)]).filter((x): x is number => x !== null)]),
+    openPendingByProject(db, rows.map((v) => v.project_id).filter((x): x is number => x !== null)),
+  ]);
   const visits: CalVisit[] = rows.map((v) => ({
     id: v.id,
     // F15: a visit from Google Calendar that found no project keeps Google's title and shows grey.
@@ -82,6 +88,7 @@ export async function loadWeek(week: string | undefined): Promise<{ weekStart: s
     statusColor: statusField.options?.find((o) => o.value === v.status)?.color ?? "#2563eb",
     service: v.service_type,
     instructions: v.instructions,
+    pending: v.project_id && v.status !== "Cancelled" && v.status !== "Done" ? (pending.get(v.project_id)?.length ?? 0) : 0,
   }));
   // Lanes: people who do field work (active or freelance, with a department) plus anyone booked this week.
   const booked = new Set(visits.flatMap((v) => [v.techId, ...v.team]));

@@ -87,7 +87,8 @@ export async function loadHistory(db: SupabaseClient, t: TableDef, id: number): 
   const { data } = await db.from("audit_log").select("id, action, at, actor, changes").eq("table_name", t.name).eq("record_id", id).order("at", { ascending: false }).limit(100);
   const rows = (data ?? []) as { id: number; action: string; at: string; actor: string | null; changes: Record<string, [unknown, unknown]> }[];
   const names = await userNames(rows, ["actor"]);
-  return rows.map((r) => ({ ...r, actor: r.actor ? (names.get(r.actor) ?? "Someone") : "System" }));
+  // F17: the AI review writes without a login; its entries carry the review stamp.
+  return rows.map((r) => ({ ...r, actor: r.actor ? (names.get(r.actor) ?? "Someone") : "ai_reviewed_at" in (r.changes ?? {}) ? "AI review" : "System" }));
 }
 
 // ---------------------------------------------------------------- related records (WebAuthor "Summary" counts)

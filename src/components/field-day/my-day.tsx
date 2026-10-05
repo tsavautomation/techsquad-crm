@@ -132,6 +132,12 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
       ) : (
         <p className="mt-2 text-[13px] text-warn-fg">{tr("No job address on the project.")}</p>
       )}
+      {v.pending > 0 && v.status !== "Done" && v.projectId && (
+        <Link href={`${recordHref(getTable("projects"), v.projectId)}#pending`} className="mt-2 flex items-start gap-1.5 rounded-lg bg-warn-bg px-3 py-2 text-[13px] text-warn-fg">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>{tr(v.pending === 1 ? "1 open pending item from an earlier visit. See it on the project." : "{n} open pending items from earlier visits. See them on the project.", { n: v.pending })}</span>
+        </Link>
+      )}
 
       {(v.instructions || v.access || v.tools.length > 0) && (
         <dl className="mt-2 flex flex-col gap-1 text-[13px]">

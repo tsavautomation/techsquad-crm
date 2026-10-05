@@ -203,7 +203,8 @@ export const jobReports: TableDef = {
         "fieldId": 68950
       },
       "maxLength": 1000,
-      "sensitive": true
+      "sensitive": true,
+      shownInClear: true
     },
     {
       "name": "maintenance_plan_service_call",
@@ -224,6 +225,9 @@ export const jobReports: TableDef = {
         "fieldId": 68815
       }
     },
+    // F17 AI review (SPEC §9.1 F17-a): filled by the review, never by a person; shown when present.
+    { name: "ai_reviewed_at", label: "Reviewed by AI", type: "datetime", readOnly: true, formHidden: true, heading: "AI REVIEW", legacy: NEW },
+    { name: "ai_review_notes", label: "What the AI changed", type: "textarea", readOnly: true, formHidden: true, maxLength: 2000, legacy: NEW },
   ],
   "rules": [
     // F2 (SPEC §9.1 F2-b): a partial / not-done visit asks why and what's missing; Completed clears them.

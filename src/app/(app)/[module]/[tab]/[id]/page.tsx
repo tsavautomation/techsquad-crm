@@ -29,6 +29,7 @@ import { localized } from "@/i18n/registry";
 import { MessagePanel } from "@/components/contact/message-panel";
 import { PartnerStats } from "@/components/contact/partner-stats";
 import { PerformancePanel } from "@/components/performance/performance-panel";
+import { PendingItems } from "@/components/project/pending-items";
 import { ProjectHours } from "@/components/project/project-hours";
 import { JobCosting } from "@/components/project/job-costing";
 import { StockLevels } from "@/components/product/stock-levels";
@@ -142,6 +143,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "task" && <ReturnCardPanel taskId={recordId} />}
       {t.detailAddon === "organization" && <PartnerStats orgId={recordId} user={user} />}
       {t.detailAddon === "employee" && <PerformancePanel employeeId={recordId} user={user} />}
+      {t.detailAddon === "project" && <PendingItems projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <ProjectHours projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <JobCosting projectId={recordId} user={user} />}
       {t.detailAddon === "employee" && <PayRatePanel employeeId={recordId} user={user} />}
@@ -340,6 +342,6 @@ function DetailValue({ field: f, value, labels }: { field: FieldDef; value: unkn
     return <>{formatted}</>;
   }
 
-  if (f.sensitive && typeof value === "string" && value && value !== MASK) return <SensitiveValue value={value} />;
+  if (f.sensitive && !f.shownInClear && typeof value === "string" && value && value !== MASK) return <SensitiveValue value={value} />;
   return <FieldValue field={f} value={value} />;
 }
