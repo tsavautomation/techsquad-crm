@@ -508,6 +508,7 @@ export const projects: TableDef = {
     },
     {
       "name": "approved_amount",
+      "requires": "administrative.transactions.view_page",
       "label": "Approved",
       "type": "computed",
       "legacy": {
@@ -527,6 +528,7 @@ export const projects: TableDef = {
     },
     {
       "name": "invoiced_amount",
+      "requires": "administrative.transactions.view_page",
       "label": "Invoiced",
       "type": "computed",
       "legacy": {
@@ -545,6 +547,7 @@ export const projects: TableDef = {
     },
     {
       "name": "paid_amount",
+      "requires": "administrative.transactions.view_page",
       "label": "Paid",
       "type": "computed",
       "legacy": {
@@ -563,6 +566,7 @@ export const projects: TableDef = {
     },
     {
       "name": "financial_status",
+      "requires": "administrative.transactions.view_page",
       "label": "Financial Status",
       "type": "select",
       "legacy": {

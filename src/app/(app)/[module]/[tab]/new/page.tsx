@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth/session";
 import { lookupTitles } from "@/lib/records/data";
 import { isEditable, newRecordValues } from "@/lib/records/values";
 import { getTable } from "@/registry";
-import { canDo } from "@/registry/permissions";
+import { canDo, fieldsFor } from "@/registry/permissions";
 import type { FieldDef } from "@/registry/types";
 import { tableFromRoute, tableHref } from "@/registry/routes";
 import { RecordForm } from "@/components/records/record-form";
@@ -50,7 +50,7 @@ export default async function NewRecordPage(props: PageProps<"/[module]/[tab]/ne
         <ChevronLeft className="size-4" aria-hidden /> {t.label}
       </Link>
       <h1 className="mb-6 text-2xl font-semibold">{t.newRecordLabel}</h1>
-      <RecordForm table={t} recordId={null} initialValues={initial} labels={labels} baseHref={base} cancelHref={params.back?.startsWith("/") ? params.back : base} />
+      <RecordForm table={fieldsFor(t, user.permissions, user.isSysadmin)} recordId={null} initialValues={initial} labels={labels} baseHref={base} cancelHref={params.back?.startsWith("/") ? params.back : base} />
     </div>
   );
 }

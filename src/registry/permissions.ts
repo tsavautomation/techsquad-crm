@@ -64,3 +64,9 @@ export function canLockAction(perms: ReadonlySet<string>, t: TableDef, action: L
 export function canOpen(perms: ReadonlySet<string>, t: TableDef, getTable: Lookup) {
   return canDo(perms, t, "view_page", getTable) || canDo(perms, t, "view_all", getTable);
 }
+
+/** The table without the fields the viewer may not see (`requires` on a FieldDef); administrators see everything. */
+export function fieldsFor(t: TableDef, perms: ReadonlySet<string>, isSysadmin: boolean): TableDef {
+  if (isSysadmin || !t.fields.some((f) => f.requires)) return t;
+  return { ...t, fields: t.fields.filter((f) => !f.requires || perms.has(f.requires)) };
+}

@@ -4,7 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { loadRecord } from "@/lib/records/load";
 import { getTable } from "@/registry";
-import { canDo, canLockAction } from "@/registry/permissions";
+import { canDo, canLockAction, fieldsFor } from "@/registry/permissions";
 import { recordHref, tableFromRoute, tableHref } from "@/registry/routes";
 import { RecordForm } from "@/components/records/record-form";
 import { getLang, getT } from "@/i18n/server";
@@ -33,7 +33,7 @@ export default async function EditRecordPage(props: PageProps<"/[module]/[tab]/[
       </Link>
       <h1 className="mb-6 text-2xl font-semibold">{tr("Edit")} {t.itemLabel.toLowerCase()}</h1>
       <RecordForm
-        table={t}
+        table={fieldsFor(t, user.permissions, user.isSysadmin)}
         recordId={recordId}
         initialValues={rec.values}
         labels={rec.labels}

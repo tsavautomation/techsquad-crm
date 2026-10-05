@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getRecord } from "@/lib/records/data";
 import { newRecordValues } from "@/lib/records/values";
 import { REGISTRY, getTable } from "@/registry";
-import { canDo } from "@/registry/permissions";
+import { canDo, fieldsFor } from "@/registry/permissions";
 import { recordHref, tableFromRoute } from "@/registry/routes";
 import { getLang } from "@/i18n/server";
 import { localized } from "@/i18n/registry";
@@ -32,7 +32,7 @@ export default async function NewSubRecordPage(props: PageProps<"/[module]/[tab]
       </Link>
       <h1 className="mb-6 text-2xl font-semibold">{t.newRecordLabel}</h1>
       <RecordForm
-        table={t}
+        table={fieldsFor(t, user.permissions, user.isSysadmin)}
         recordId={null}
         initialValues={{ ...newRecordValues(t), [t.parent!.field]: parentId }}
         baseHref={back}

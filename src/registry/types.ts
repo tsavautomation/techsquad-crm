@@ -58,6 +58,8 @@ export type ComputedDef =
 export type FieldDef = {
   name: string;
   label: string;
+  /** A permission key ("administrative.transactions.view_page") the viewer must hold to see this field at all (SPEC §9.1 P1-e: money stays off the technicians' screens). */
+  requires?: string;
   type: FieldType;
   required?: boolean;
   readOnly?: boolean;

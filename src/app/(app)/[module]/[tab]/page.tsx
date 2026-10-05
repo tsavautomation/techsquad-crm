@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Lock, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { filterFields, listFields, listRecords, lookupTitles, userNames } from "@/lib/records/data";
 import { getTable } from "@/registry";
-import { canDo, canOpen } from "@/registry/permissions";
+import { canDo, canOpen, fieldsFor } from "@/registry/permissions";
 import { recordHref, tableFromRoute, tableHref } from "@/registry/routes";
 import { FieldValue } from "@/components/records/field-value";
 import { ListControls } from "@/components/records/list-controls";
@@ -25,9 +25,10 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
   const tr = await getT();
   const { module, tab } = await props.params;
   const sp = await props.searchParams;
-  const t = localized(tableFromRoute(module, tab), await getLang());
-  if (!t) notFound();
+  const t0 = localized(tableFromRoute(module, tab), await getLang());
+  if (!t0) notFound();
   const user = await requireUser();
+  const t = fieldsFor(t0, user.permissions, user.isSysadmin);
   if (!canOpen(user.permissions, t, getTable)) notFound();
 
   const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);

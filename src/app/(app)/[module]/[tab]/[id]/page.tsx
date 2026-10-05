@@ -70,7 +70,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
   let carry: string | undefined;
   for (const f of t.fields) {
     if (!visible.has(f.name) || (t.parent && f.name === t.parent.field)) continue;
-    if (f.formHidden && isBlank(values[f.name])) {
+    if ((f.formHidden && isBlank(values[f.name])) || (f.requires && !user.isSysadmin && !perms.has(f.requires))) {
       carry ??= f.heading;
       continue;
     }
