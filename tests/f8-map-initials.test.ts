@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initialsOf } from "@/lib/schedule/map";
+import { initialsOf } from "@/lib/schedule/initials";
 
 describe("map pins show the technician's initials", () => {
   it("takes the first and last name", () => {
