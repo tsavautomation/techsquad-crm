@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarClock, FileText, Loader2, Paperclip, Plus, Trash2 } from "lucide-react";
+import { CalendarClock, Loader2, Paperclip, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import type { Progress } from "@/lib/files/resumable";
 import { uploadFile } from "@/lib/files/upload-file";
 import { UploadBar } from "./file-field";
+import { FileGallery } from "./file-gallery";
 import {
   addChecklistItemAction,
   addNoteAction,
@@ -325,28 +326,16 @@ export function FilesPod({ table, id, files, canAdd, canRemove }: Base & { files
       {files.length === 0 ? (
         <p className="text-sm text-muted-foreground">{tr("No files attached.")}</p>
       ) : (
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {files.map((x) => (
-            <li key={x.id} className="relative overflow-hidden rounded-lg border">
-              <a href={x.url} target="_blank" rel="noreferrer" className="block">
-                {(x.mime ?? "").startsWith("image/") && x.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- signed storage URL
-                  <img src={x.url} alt={x.name} className="aspect-square w-full object-cover" />
-                ) : (
-                  <span className="flex aspect-square flex-col items-center justify-center gap-1 p-2 text-center">
-                    <FileText className="size-6 text-muted-foreground" aria-hidden />
-                    <span className="line-clamp-2 text-xs break-all">{x.name}</span>
-                  </span>
-                )}
-              </a>
-              {canRemove && (
-                <button type="button" disabled={pending} onClick={() => confirm(tr("Remove {name}?", { name: x.name })) && run(() => removePodFileAction(table, id, x.id!))} aria-label={tr("Remove {name}", { name: x.name })} className="absolute top-1 right-1 inline-flex size-8 items-center justify-center rounded-full bg-card/90 shadow">
-                  <Trash2 className="size-4" aria-hidden />
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
+        <FileGallery
+          files={files}
+          extra={(x) =>
+            canRemove && (
+              <button type="button" disabled={pending} onClick={() => confirm(tr("Remove {name}?", { name: x.name })) && run(() => removePodFileAction(table, id, x.id!))} aria-label={tr("Remove {name}", { name: x.name })} className="absolute top-1 right-1 inline-flex size-8 items-center justify-center rounded-full bg-card/90 shadow">
+                <Trash2 className="size-4" aria-hidden />
+              </button>
+            )
+          }
+        />
       )}
       {Object.entries(progress).map(([name, p]) => (
         <UploadBar key={name} name={name} p={p} />

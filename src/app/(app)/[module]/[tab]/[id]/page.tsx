@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import { BackLink } from "@/components/shell/back-link";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileText, Lock, Pencil } from "lucide-react";
+import { Lock, Pencil } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { MASK } from "@/lib/crypto";
 import { formatDateTime } from "@/lib/dates";
@@ -15,6 +15,7 @@ import { canDo, canLockAction, canOpen } from "@/registry/permissions";
 import { recordHref, tableFromRoute, tableHref } from "@/registry/routes";
 import type { FieldDef, TableDef } from "@/registry/types";
 import { FieldValue } from "@/components/records/field-value";
+import { FileGallery } from "@/components/records/file-gallery";
 import { SensitiveValue } from "@/components/records/sensitive-value";
 import { RecordToolbar } from "@/components/records/record-toolbar";
 import { WorkflowPanel, type WorkflowPanelData } from "@/components/records/workflow-panel";
@@ -296,28 +297,7 @@ function DetailValue({ field: f, value, labels }: { field: FieldDef; value: unkn
   if (f.type === "file" || f.type === "image" || f.type === "signature") {
     const files = (value as FileItem[] | undefined) ?? [];
     if (!files.length) return none;
-    return (
-      <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {files.map((x) => {
-          const img = (x.mime ?? "").startsWith("image/");
-          return (
-            <li key={x.path}>
-              <a href={x.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border hover:opacity-90">
-                {img && x.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- signed storage URL
-                  <img src={x.url} alt={x.name} className={cn("aspect-square w-full", f.type === "signature" ? "bg-white object-contain p-1" : "object-cover")} />
-                ) : (
-                  <span className="flex aspect-square flex-col items-center justify-center gap-1 p-2 text-center">
-                    <FileText className="size-6 text-muted-foreground" aria-hidden />
-                    <span className="line-clamp-2 text-xs break-all">{x.name}</span>
-                  </span>
-                )}
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    );
+    return <FileGallery files={files} signature={f.type === "signature"} />;
   }
 
   if ((f.type === "lookup" || f.type === "group") && f.multiple) {

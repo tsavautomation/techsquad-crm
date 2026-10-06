@@ -1444,4 +1444,8 @@ export const PT: Record<string, string> = {
   "Owed": "Devidos",
   "Scorecards (last {n} days)": "Placares (últimos {n} dias)",
   "Still to fill in after approving: {fields}.": "Ainda falta preencher depois de aprovar: {fields}.",
+  // ---------------------------------------------------------------- file viewer (SPEC §9.1 UI-l)
+  "Open {name}": "Abrir {name}",
+  "{n} of {total}": "{n} de {total}",
+  "Download": "Baixar",
 };
