@@ -25,6 +25,8 @@ export async function clockAction(kind: "clock_in" | "clock_out", geo: Geo | nul
   if (kind === "clock_out" && !mine.day.openSince) return { ok: false, message: "You're not clocked in." };
   const r = await recordEntry(db, user, kind, cleanGeo(geo));
   if (!r.ok) return r;
+  // F20: the day is over, so no visit of mine stays "On site".
+  if (kind === "clock_out") await db.rpc("close_my_open_visits", { p_except: null, p_reason: "clock_out" });
   revalidatePath("/");
   revalidatePath("/time-clock");
   return { ok: true, place: r.entry.place };

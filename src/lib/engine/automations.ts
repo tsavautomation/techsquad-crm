@@ -22,6 +22,7 @@ import { cardHtml, deliverQueued, queueEmail, type OutboxAttachment } from "./em
 import { cardFields, displayStrings, loadConditionValues, loadEngineRecord, type EngineRecord } from "./record-view";
 import { etSlot, runKeys } from "./schedule";
 
+import { closeForgottenDay } from "@/lib/field-day/forgotten";
 // Automations engine (SPEC §5). Data-driven: every WebAuthor trigger is a row in public.automations.
 //
 // Event runs: after each request, pending change-history rows (audit_log.automation_status is null)
@@ -359,6 +360,11 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
     if (await claimRun(db, `reports_close:${yesterday}`)) {
       out.reports_close = await runReportDayClose(yesterday);
       await finishRun(db, `reports_close:${yesterday}`, out.reports_close as Record<string, unknown>);
+    }
+    // F20: whoever is still on site or clocked in is checked out at the cut-off, and warned the next morning.
+    if (await claimRun(db, `forgotten:${yesterday}`)) {
+      out.forgotten = await closeForgottenDay(yesterday);
+      await finishRun(db, `forgotten:${yesterday}`, out.forgotten as Record<string, unknown>);
     }
     await deliverQueuedSms(db);
   } catch (e) {

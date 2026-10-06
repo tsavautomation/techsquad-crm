@@ -95,6 +95,12 @@ async function dayInputs(db: SupabaseClient, date: string) {
   return { mode: settings.report_rule.mode as RuleMode, since: settings.report_rule.since, visits, reports, employees };
 }
 
+/** F20: the reports still missing for a day, as the rule sees them (none while the rule is Off). */
+export async function missingReportsFor(date: string): Promise<MissingDeficiency[]> {
+  const input = await dayInputs(adminDb(), date);
+  return input.mode === "off" ? [] : planMissing(input);
+}
+
 /** 9 PM: one SMS per missing report (Live), or a log of who would get one (Dry run). */
 export async function runReportReminders(date: string): Promise<Record<string, unknown>> {
   if (!hasAdminKey()) return { skipped: "no admin key" };

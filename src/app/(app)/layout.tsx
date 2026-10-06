@@ -8,6 +8,8 @@ import { tableHref } from "@/registry/routes";
 import { getT } from "@/i18n/server";
 
 import { NavHistory } from "@/components/shell/nav-history";
+import { ForgottenWarning } from "@/components/field-day/forgotten-warning";
+import { loadMyWarnings } from "@/lib/field-day/warnings";
 // What the Create button offers, most used first (only tables the person may add to).
 // Names are our own: WebAuthor's item labels are vague here ("Record", "Item").
 const CREATE: [table: string, label: string][] = [
@@ -37,6 +39,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const opens = (name: string) => canOpen(user.permissions, getTable(name), getTable);
   const extras: Extras = { tasks: opens("tasks"), pipeline: opens("projects"), insights: user.permissions.has("insights.page.view"), data: opens("contacts"), timeClock: user.permissions.has("administrative.employees.view_all") };
   const showAdmin = ADMIN_SCREENS.some((s) => canSeeScreen(s, user.permissions, user.isSysadmin));
+  const warnings = await loadMyWarnings();
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const me: Me = {
     name,
@@ -50,6 +53,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar me={me} />
         <NavHistory />
+        <ForgottenWarning items={warnings} />
         <ModuleTabsBar items={navItems} />
         {/* pb-28 keeps content clear of the mobile bottom bar and its + button */}
         <main className="min-w-0 flex-1 px-3.5 pt-4 pb-28 md:px-7 md:pt-6 md:pb-10">{children}</main>

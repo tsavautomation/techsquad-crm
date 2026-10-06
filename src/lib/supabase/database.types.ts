@@ -1050,6 +1050,74 @@ export type Database = {
           },
         ]
       }
+      field_warnings: {
+        Row: {
+          acknowledged_at: string | null
+          closed_at: string | null
+          created_at: string
+          day: string
+          employee_id: number
+          id: number
+          kind: string
+          project: string | null
+          user_id: string | null
+          visit_id: number | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          closed_at?: string | null
+          created_at?: string
+          day: string
+          employee_id: number
+          id?: number
+          kind: string
+          project?: string | null
+          user_id?: string | null
+          visit_id?: number | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          closed_at?: string | null
+          created_at?: string
+          day?: string
+          employee_id?: number
+          id?: number
+          kind?: string
+          project?: string | null
+          user_id?: string | null
+          visit_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_warnings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_warnings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_warnings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_warnings_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_notes: {
         Row: {
           archived_at: string | null
@@ -4236,6 +4304,8 @@ export type Database = {
           access_notes: string | null
           archived_at: string | null
           arrival_window: string | null
+          auto_closed_at: string | null
+          auto_closed_reason: string | null
           checked_in_at: string | null
           checked_out_at: string | null
           created_at: string
@@ -4270,6 +4340,8 @@ export type Database = {
           access_notes?: string | null
           archived_at?: string | null
           arrival_window?: string | null
+          auto_closed_at?: string | null
+          auto_closed_reason?: string | null
           checked_in_at?: string | null
           checked_out_at?: string | null
           created_at?: string
@@ -4304,6 +4376,8 @@ export type Database = {
           access_notes?: string | null
           archived_at?: string | null
           arrival_window?: string | null
+          auto_closed_at?: string | null
+          auto_closed_reason?: string | null
           checked_in_at?: string | null
           checked_out_at?: string | null
           created_at?: string
@@ -4697,6 +4771,10 @@ export type Database = {
       }
     }
     Functions: {
+      close_my_open_visits: {
+        Args: { p_except: number; p_reason: string }
+        Returns: number
+      }
       google_dirty_visits: { Args: { p_limit?: number }; Returns: number[] }
       google_mark_synced: {
         Args: { p_etags?: string[]; p_event_ids?: string[]; p_ids: number[] }
@@ -4754,6 +4832,8 @@ export type Database = {
           access_notes: string | null
           archived_at: string | null
           arrival_window: string | null
+          auto_closed_at: string | null
+          auto_closed_reason: string | null
           checked_in_at: string | null
           checked_out_at: string | null
           created_at: string

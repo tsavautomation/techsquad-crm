@@ -5,6 +5,7 @@ import { addDays } from "@/lib/schedule/dates";
 import { windowMinutes } from "@/lib/hours/engine";
 import { TimeClockSchema } from "@/lib/time-clock/clock";
 
+import { fromDateTimeLocalET } from "@/lib/dates";
 // ---------------------------------------------------------------- settings (app_settings 'field_day')
 
 const ServiceList = z.object({ checklist: z.array(z.string()).default([]), tools: z.array(z.string()).default([]) });
@@ -35,6 +36,15 @@ export type FieldDaySettings = z.infer<typeof FieldDaySchema>;
 export function parseFieldDay(value: unknown): FieldDaySettings {
   const r = FieldDaySchema.safeParse(value ?? {});
   return r.success ? r.data : FieldDaySchema.parse({});
+}
+
+// ---------------------------------------------------------------- forgotten check-outs (F20)
+
+/** The check-out the system writes for a forgotten visit or day: the day's cut-off (HH:MM Eastern), or a minute after the check-in when that came later. */
+export function autoCloseAt(checkedInIso: string, day: string, cutoff: string): string {
+  const cut = Date.parse(fromDateTimeLocalET(`${day}T${cutoff}`));
+  const after = Date.parse(checkedInIso) + 60_000;
+  return new Date(Math.max(cut, after)).toISOString();
 }
 
 // ---------------------------------------------------------------- return cards

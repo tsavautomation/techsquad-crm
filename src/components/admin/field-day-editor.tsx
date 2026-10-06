@@ -112,6 +112,34 @@ export function FieldDayEditor({ initial, people, reasons, services }: { initial
           </label>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">{t("Each employee's group (Field / Office) is on their Employee record.")}</p>
+        <h3 className="mt-4 text-sm font-semibold">{t("Forgotten check-outs")}</h3>
+        <p className="mb-2 text-xs text-muted-foreground">{t("After midnight, anyone still on site or clocked in is checked out at this time and sees a red warning the next morning.")}</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-medium">
+            {t("Automatic check-out time")}
+            <input type="time" className={`${BOX} mt-1 h-11`} value={tc.auto_checkout.time} onChange={(e) => setTc({ ...tc, auto_checkout: { ...tc.auto_checkout, time: e.target.value || "16:00" } })} />
+          </label>
+          <label className="block text-sm font-medium">
+            {t("Later time for the people below")}
+            <input type="time" className={`${BOX} mt-1 h-11`} value={tc.auto_checkout.late_time} onChange={(e) => setTc({ ...tc, auto_checkout: { ...tc.auto_checkout, late_time: e.target.value || "17:00" } })} />
+          </label>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {people.map((p) => {
+            const on = tc.auto_checkout.late_employee_ids.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setTc({ ...tc, auto_checkout: { ...tc.auto_checkout, late_employee_ids: on ? tc.auto_checkout.late_employee_ids.filter((id) => id !== p.id) : [...tc.auto_checkout.late_employee_ids, p.id] } })}
+                className={`h-9 rounded-full border px-3 text-[13px] ${on ? "border-primary bg-primary/10 font-semibold text-primary" : "text-muted-foreground"}`}
+              >
+                {p.name}
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <section className="rounded-2xl border bg-card p-4 shadow-card">
