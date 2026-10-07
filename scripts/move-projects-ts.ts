@@ -198,7 +198,7 @@ async function loadProjects(db: Db): Promise<ProjectInfo[]> {
       ownerLast: nameWords(owner?.last),
       addrTokens: [...new Set([...words(street), ...words(p.job_address?.city)])],
       numbers: [...new Set([...(norm(p.title).match(/\b\d{2,6}\b/g) ?? []), ...(norm(street).match(/^\d{2,6}\b/g) ?? [])])],
-      unit: unitOf(p.apartment_or_unit) ?? unitOf(p.title.match(/#\s*([0-9]{1,5}\s?[A-Za-z]?)\b/)?.[1]),
+      unit: unitOf(p.apartment_or_unit) ?? unitOf(p.title!.match(/#\s*([0-9]{1,5}\s?[A-Za-z]?)\b/)?.[1]),
     };
   });
 }

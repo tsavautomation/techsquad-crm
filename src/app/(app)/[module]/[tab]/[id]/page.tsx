@@ -33,6 +33,7 @@ import { PerformancePanel } from "@/components/performance/performance-panel";
 import { DeficiencyPanel } from "@/components/reports/deficiency-panel";
 import { EmployeeDeficiencies } from "@/components/reports/employee-deficiencies";
 import { PendingItems } from "@/components/project/pending-items";
+import { PunchListPanel } from "@/components/project/punch-list-panel";
 import { SiteHistory } from "@/components/project/site-history";
 import { ProposedVisitPanel } from "@/components/schedule/proposed-visit-panel";
 import { RealityPanel } from "@/components/reports/reality-panel";
@@ -164,6 +165,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "deficiency" && <DeficiencyPanel id={recordId} status={String(row.status ?? "")} canExcuse={canModify} />}
       {t.detailAddon === "project" && <SiteHistory projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <PendingItems projectId={recordId} user={user} />}
+      {t.detailAddon === "project" && <PunchListPanel projectId={recordId} user={user} />}
       {t.name === "job_reports" && <RealityPanel table="job_reports" id={recordId} />}
       {t.detailAddon === "project" && <ProjectHours projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <JobCosting projectId={recordId} user={user} />}

@@ -73,7 +73,8 @@ export function PipelineBoard({ levels, cards, canSubmit, people, me, who, all, 
         </select>
         <span className="text-sm text-muted-foreground">{t(shown.length === 1 ? "{n} project" : "{n} projects", { n: shown.length })}</span>
       </div>
-      <div className="-mx-3.5 flex snap-x gap-3.5 overflow-x-auto px-3.5 pb-3.5 md:mx-0 md:px-0">
+      {/* F21-c: the board scrolls inside the screen, so the side scrollbar is always in reach and each stage's heading stays put. */}
+      <div className="-mx-3.5 flex h-[calc(100dvh-11rem)] snap-x items-start gap-3.5 overflow-x-auto px-3.5 pb-3.5 md:mx-0 md:px-0">
         {columns.map((col) => {
           const list = shown.filter((c) => c.level === col.id);
           const total = list.reduce((n, c) => n + (c.value ?? 0), 0);
@@ -82,7 +83,7 @@ export function PipelineBoard({ levels, cards, canSubmit, people, me, who, all, 
             <section
               key={col.id}
               aria-label={t(col.title)}
-              className={cn("flex w-[260px] shrink-0 snap-start flex-col rounded-[14px] border border-t-[3px] bg-muted p-2.5 transition-opacity", over === col.id && "outline-2 -outline-offset-4 outline-primary outline-dashed", dim && "opacity-40")}
+              className={cn("flex max-h-full w-[260px] shrink-0 snap-start flex-col overflow-y-auto rounded-[14px] border border-t-[3px] bg-muted p-2.5 transition-opacity", over === col.id && "outline-2 -outline-offset-4 outline-primary outline-dashed", dim && "opacity-40")}
               style={{ borderTopColor: col.color }}
               onDragOver={(e) => {
                 if (!drag || !allowed?.has(col.id)) return;
@@ -97,7 +98,7 @@ export function PipelineBoard({ levels, cards, canSubmit, people, me, who, all, 
                 setDrag(null);
               }}
             >
-              <h2 className="mb-2.5 px-0.5 text-xs font-semibold">
+              <h2 className="sticky top-0 z-10 -mx-2.5 -mt-2.5 mb-2.5 rounded-t-[11px] border-t-[3px] bg-muted px-3 pt-2.5 pb-1.5 text-xs font-semibold" style={{ borderTopColor: col.color }}>
                 <span className="flex items-center justify-between gap-2">
                   {t(col.title)}
                   <small className="rounded-full border bg-card px-2 font-semibold">{list.length}</small>

@@ -2,7 +2,9 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CurrentUser } from "@/lib/auth/session";
 import { fromDateTimeLocalET, todayET } from "@/lib/dates";
+import { pathOf } from "@/lib/files/paths";
 import { fileUrls } from "@/lib/files/store";
+import { adminDb } from "@/lib/supabase/admin";
 import { recordsDb } from "@/lib/records/data";
 import type { Address } from "@/lib/records/values";
 import { addDays } from "@/lib/schedule/dates";
@@ -36,6 +38,8 @@ export type MyVisit = {
   reportId: number | null;
   /** F17-d: return cards still open on the project. */
   pending: number;
+  /** F21-i: client, phone, gate code, unit and COI for the technician. */
+  site: SiteCard | null;
 };
 
 type VisitRow = {
@@ -51,10 +55,57 @@ type VisitRow = {
   on_way_at: string | null;
   checked_in_at: string | null;
   checked_out_at: string | null;
+  address: Address | null;
   vehicles: { title: string | null } | null;
   projects: { title: string | null; job_address: Address | null } | null;
 };
-const COLS = "id, starts_at, duration, arrival_window, status, project_id, service_type, instructions, access_notes, on_way_at, checked_in_at, checked_out_at, vehicles(title), projects(title, job_address)";
+const COLS = "id, starts_at, duration, arrival_window, status, project_id, service_type, instructions, access_notes, on_way_at, checked_in_at, checked_out_at, address, vehicles(title), projects(title, job_address)";
+
+/** F21-i: what a technician needs about the site before ringing the bell (client, phone, gate code, unit, COI). */
+export type SiteCard = { client: string | null; phone: string | null; gate: string | null; unit: string | null; coi: { name: string; url: string }[] };
+
+/**
+ * The client's basics for the technician's visit card (Fred 2026-10-07). Read with the service role,
+ * scoped to one project the person is already visiting: technicians have no Contacts permission, but
+ * must know who they are meeting.
+ */
+export async function loadSiteCards(projectIds: number[]): Promise<Map<number, SiteCard>> {
+  const out = new Map<number, SiteCard>();
+  const ids = [...new Set(projectIds)];
+  if (!ids.length) return out;
+  const db = adminDb();
+  const { data } = await db.from("projects").select("id, job_owner_id, owner_contact, owner_contact_intl, door_gate_code, apartment_or_unit, building_id").in("id", ids);
+  const rows = (data ?? []) as { id: number; job_owner_id: number | null; owner_contact: string | null; owner_contact_intl: string | null; door_gate_code: string | null; apartment_or_unit: string | null; building_id: number | null }[];
+  const ownerIds = [...new Set(rows.map((r) => r.job_owner_id).filter((x): x is number => x !== null))];
+  const buildingIds = [...new Set(rows.map((r) => r.building_id).filter((x): x is number => x !== null))];
+  const [{ data: owners }, { data: files }] = await Promise.all([
+    ownerIds.length ? db.from("contacts").select("id, title, main_phone, alternate_phone").in("id", ownerIds) : Promise.resolve({ data: [] }),
+    db
+      .from("attachments")
+      .select("table_name, record_id, field, provider, provider_path, file_name, mime_type, size_bytes")
+      .is("deleted_at", null)
+      .or([`and(table_name.eq.projects,field.eq.job_coi,record_id.in.(${ids.join(",")}))`, buildingIds.length ? `and(table_name.eq.buildings,field.eq.upload_coi,record_id.in.(${buildingIds.join(",")}))` : null].filter(Boolean).join(",")),
+  ]);
+  const ownerOf = new Map(((owners ?? []) as { id: number; title: string | null; main_phone: string | null; alternate_phone: string | null }[]).map((c) => [c.id, c]));
+  type Att = { table_name: string; record_id: number; field: string; provider: string; provider_path: string; file_name: string };
+  const atts = (files ?? []) as Att[];
+  const urls = atts.length ? await fileUrls(db, atts.map((a) => pathOf(a))) : new Map<string, string>();
+  for (const r of rows) {
+    const owner = r.job_owner_id ? ownerOf.get(r.job_owner_id) : null;
+    const coi = atts
+      .filter((a) => (a.table_name === "projects" && a.record_id === r.id) || (a.table_name === "buildings" && a.record_id === r.building_id))
+      .map((a) => ({ name: a.file_name, url: urls.get(pathOf(a)) ?? "" }))
+      .filter((a) => a.url);
+    out.set(r.id, {
+      client: owner?.title ?? null,
+      phone: r.owner_contact || r.owner_contact_intl || owner?.main_phone || owner?.alternate_phone || null,
+      gate: r.door_gate_code || null,
+      unit: r.apartment_or_unit || null,
+      coi,
+    });
+  }
+  return out;
+}
 
 /** The signed-in person's employee records (matched by email, as for "my tasks"). */
 export async function myEmployeeIds(db: SupabaseClient, user: CurrentUser): Promise<number[]> {
@@ -86,9 +137,10 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     loadFieldDay(db),
   ]);
   const ids = [...new Set([...rows, ...past].map((v) => v.id))];
-  const [{ data: reports }, pending] = await Promise.all([
+  const [{ data: reports }, pending, sites] = await Promise.all([
     ids.length ? db.from("job_reports").select("id, visit_id").in("visit_id", ids).is("deleted_at", null) : Promise.resolve({ data: [] }),
     openPendingByProject(db, rows.map((v) => v.project_id).filter((x): x is number => x !== null)),
+    loadSiteCards(rows.map((v) => v.project_id).filter((x): x is number => x !== null)),
   ]);
   const reportOf = new Map(((reports ?? []) as { id: number; visit_id: number }[]).map((r) => [r.visit_id, r.id]));
 
@@ -100,7 +152,8 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     status: v.status ?? "Scheduled",
     project: v.projects?.title ?? (v.project_id ? `Project #${v.project_id}` : "No project"),
     projectId: v.project_id,
-    address: mapAddress(v.projects?.job_address ?? null),
+    // F21-b: the visit's own address when it has one (a survey at a new client), else the project's.
+    address: mapAddress(v.address?.street || v.address?.city ? v.address : (v.projects?.job_address ?? null)),
     service: v.service_type,
     vehicle: v.vehicles?.title ?? null,
     instructions: v.instructions,
@@ -111,6 +164,7 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     checked_out_at: v.checked_out_at,
     reportId: reportOf.get(v.id) ?? null,
     pending: v.project_id ? (pending.get(v.project_id)?.length ?? 0) : 0,
+    site: v.project_id ? (sites.get(v.project_id) ?? null) : null,
   }));
   const reportsDue = past
     .filter((v) => v.checked_out_at && !reportOf.has(v.id))

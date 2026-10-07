@@ -43,10 +43,11 @@ export async function MyDay({ user, now }: { user: CurrentUser; now: number }) {
         )}
       </div>
 
-      {day.reportsDue.length >= 2 && (
+      {/* F21-g: every report owed shows here, even a single one. */}
+      {day.reportsDue.length >= 1 && (
         <div className="mb-3 rounded-xl bg-warn-bg px-3 py-2 text-[13px] text-warn-fg">
           <p className="flex items-center gap-1.5 font-semibold">
-            <TriangleAlert className="size-4" aria-hidden /> {tr("{n} visits still need a report", { n: day.reportsDue.length })}
+            <TriangleAlert className="size-4" aria-hidden /> {day.reportsDue.length === 1 ? tr("1 visit still needs a report") : tr("{n} visits still need a report", { n: day.reportsDue.length })}
           </p>
           <ul className="mt-1 flex flex-col gap-1">
             {day.reportsDue.slice(0, 5).map((r) => (
@@ -131,6 +132,60 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
         </div>
       ) : (
         <p className="mt-2 text-[13px] text-warn-fg">{tr("No job address on the project.")}</p>
+      )}
+      {v.site && (v.site.client || v.site.phone || v.site.unit || v.site.gate || v.site.coi.length > 0) && (
+        <dl className="mt-2 flex flex-col gap-1 text-[13px]">
+          {v.site.client && (
+            <div>
+              <dt className="inline font-semibold">{tr("Client")}: </dt>
+              <dd className="inline">
+                {v.site.client}
+                {v.site.phone && (
+                  <>
+                    {" · "}
+                    <a href={`tel:${v.site.phone.replace(/[^\d+]/g, "")}`} className="underline underline-offset-2">
+                      {v.site.phone}
+                    </a>
+                  </>
+                )}
+              </dd>
+            </div>
+          )}
+          {!v.site.client && v.site.phone && (
+            <div>
+              <dt className="inline font-semibold">{tr("Phone")}: </dt>
+              <dd className="inline">
+                <a href={`tel:${v.site.phone.replace(/[^\d+]/g, "")}`} className="underline underline-offset-2">
+                  {v.site.phone}
+                </a>
+              </dd>
+            </div>
+          )}
+          {v.site.unit && (
+            <div>
+              <dt className="inline font-semibold">{tr("Unit")}: </dt>
+              <dd className="inline">{v.site.unit}</dd>
+            </div>
+          )}
+          {v.site.gate && (
+            <div>
+              <dt className="inline font-semibold">{tr("Door / gate code")}: </dt>
+              <dd className="inline">{v.site.gate}</dd>
+            </div>
+          )}
+          {v.site.coi.length > 0 && (
+            <div>
+              <dt className="inline font-semibold">{tr("COI")}: </dt>
+              <dd className="inline">
+                {v.site.coi.map((c, i) => (
+                  <a key={i} href={c.url} target="_blank" rel="noopener noreferrer" className="mr-2 underline underline-offset-2">
+                    {c.name}
+                  </a>
+                ))}
+              </dd>
+            </div>
+          )}
+        </dl>
       )}
       {v.pending > 0 && v.status !== "Done" && v.projectId && (
         <Link href={`${recordHref(getTable("projects"), v.projectId)}#pending`} className="mt-2 flex items-start gap-1.5 rounded-lg bg-warn-bg px-3 py-2 text-[13px] text-warn-fg">

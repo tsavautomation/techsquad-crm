@@ -3,7 +3,7 @@ import { CalendarPlus, ClipboardList } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { formatDate } from "@/lib/dates";
 import { missingLines } from "@/lib/field-day/day";
-import { loadBriefing, myEmployeeIds } from "@/lib/field-day/load";
+import { loadBriefing, loadSiteCards, myEmployeeIds, type SiteCard } from "@/lib/field-day/load";
 import { loadFieldDay } from "@/lib/field-day/return-card";
 import { recordsDb } from "@/lib/records/data";
 import { getTable } from "@/registry";
@@ -23,11 +23,13 @@ export async function VisitFieldPanel({ visitId }: { visitId: number }) {
   const v = data as { id: number; starts_at: string; status: string | null; project_id: number | null; technician_id: number | null; service_type: string | null; deleted_at: string | null; visits_team: { target_id: number }[] } | null;
   if (!v || v.deleted_at) return null;
 
-  const [mine, settings, briefing] = await Promise.all([
+  const [mine, settings, briefing, sites] = await Promise.all([
     myEmployeeIds(db, user),
     loadFieldDay(db),
     v.project_id ? loadBriefing(db, v.project_id, v.starts_at, v.id) : Promise.resolve(null),
+    v.project_id ? loadSiteCards([v.project_id]) : Promise.resolve(new Map<number, SiteCard>()),
   ]);
+  const site = v.project_id ? sites.get(v.project_id) : null;
   const going = [v.technician_id, ...v.visits_team.map((x) => x.target_id)].some((id) => id !== null && mine.includes(id));
   const canStep = going || canDo(user.permissions, getTable("visits"), "modify", getTable);
   const tools = (v.service_type && settings.service_lists[v.service_type]?.tools) || [];
@@ -38,6 +40,54 @@ export async function VisitFieldPanel({ visitId }: { visitId: number }) {
       {canStep && v.status !== "Done" && v.status !== "Cancelled" && (
         <div className={CARD}>
           <StepButtons id={v.id} status={v.status ?? "Scheduled"} />
+        </div>
+      )}
+      {/* F21-i (Fred 2026-10-07): the client's basics, the gate code and the COI, right where the technician looks before going in. */}
+      {site && (site.client || site.phone || site.unit || site.gate || site.coi.length > 0) && (
+        <div className={CARD}>
+          <h2 className="mb-1 text-sm font-semibold">{tr("Client and access")}</h2>
+          <dl className="flex flex-col gap-1 text-sm">
+            {site.client && (
+              <div>
+                <dt className="inline text-muted-foreground">{tr("Client")}: </dt>
+                <dd className="inline">{site.client}</dd>
+              </div>
+            )}
+            {site.phone && (
+              <div>
+                <dt className="inline text-muted-foreground">{tr("Phone")}: </dt>
+                <dd className="inline">
+                  <a href={`tel:${site.phone.replace(/[^\d+]/g, "")}`} className="underline underline-offset-2">
+                    {site.phone}
+                  </a>
+                </dd>
+              </div>
+            )}
+            {site.unit && (
+              <div>
+                <dt className="inline text-muted-foreground">{tr("Unit")}: </dt>
+                <dd className="inline">{site.unit}</dd>
+              </div>
+            )}
+            {site.gate && (
+              <div>
+                <dt className="inline text-muted-foreground">{tr("Door / gate code")}: </dt>
+                <dd className="inline">{site.gate}</dd>
+              </div>
+            )}
+            {site.coi.length > 0 && (
+              <div>
+                <dt className="inline text-muted-foreground">{tr("COI")}: </dt>
+                <dd className="inline">
+                  {site.coi.map((c, i) => (
+                    <a key={i} href={c.url} target="_blank" rel="noopener noreferrer" className="mr-2 underline underline-offset-2">
+                      {c.name}
+                    </a>
+                  ))}
+                </dd>
+              </div>
+            )}
+          </dl>
         </div>
       )}
       {tools.length > 0 && (

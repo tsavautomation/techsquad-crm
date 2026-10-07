@@ -15,7 +15,7 @@ export const PT_REGISTRY: Record<string, string> = {
   "45 min": "45 min",
   "5 - Pending": "5 - Pendente",
   "6 h": "6 h",
-  "8 h (full day)": "8 h (dia inteiro)",
+  "7 h (full day)": "7 h (dia inteiro)",
   "ARAKNIS": "ARAKNIS",
   "ASAP": "O quanto antes",
   "Account Credit": "Crédito em conta",
@@ -508,4 +508,6 @@ export const PT_REGISTRY: Record<string, string> = {
   "Root cause": "Causa raiz",
   "Proposed": "Proposta",
   "Proposed from report": "Proposta a partir do relatório",
+  "Visit address": "Endereço da visita",
+  "Only when it differs from the project's address: a survey at a new client, another site. Blank = the project's address.": "Só quando for diferente do endereço do projeto: um survey em cliente novo, outro local. Em branco = endereço do projeto.",
 };

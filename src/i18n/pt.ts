@@ -1448,4 +1448,12 @@ export const PT: Record<string, string> = {
   "Open {name}": "Abrir {name}",
   "{n} of {total}": "{n} de {total}",
   "Download": "Baixar",
+  // ---------------------------------------------------------------- F21 (2026-10-07): technician site card, punch list panel, reports owed
+  "Phone": "Telefone",
+  "Unit": "Unidade",
+  "Door / gate code": "Código da porta / portão",
+  "COI": "COI",
+  "Client and access": "Cliente e acesso",
+  "No open punch list items.": "Nenhum item aberto na punch list.",
+  "1 visit still needs a report": "1 visita ainda precisa de relatório",
 };

@@ -106,11 +106,20 @@ export async function buildRecordPdf(db: SupabaseClient, tableName: string, reco
       if (got) images.push({ label: f.label, data: got.bytes, signature: f.type === "signature" });
     }
   }
+  const fields = cardFields(t, rec, display).filter((f) => !/\d+ files?$/.test(f.value));
+  // F21-f (Fred 2026-10-07): a Job Report's PDF carries the visit's check-in and check-out times.
+  if (tableName === "job_reports" && typeof rec.values.visit_id === "number") {
+    const { data: v } = await db.from("visits").select("checked_in_at, checked_out_at").eq("id", rec.values.visit_id).maybeSingle();
+    const visit = v as { checked_in_at: string | null; checked_out_at: string | null } | null;
+    const times = [visit?.checked_in_at ? { label: "Check-in", value: formatDateTime(visit.checked_in_at) } : null, visit?.checked_out_at ? { label: "Check-out", value: formatDateTime(visit.checked_out_at) } : null].filter((x): x is { label: string; value: string } => x !== null);
+    const at = fields.findIndex((f) => f.label === "Visit");
+    fields.splice(at >= 0 ? at + 1 : fields.length, 0, ...times);
+  }
   const buffer = await recordPdf({
     tableLabel: t.label,
     title: rec.title ?? `${t.itemLabel} #${recordId}`,
     generatedAt: formatDateTime(new Date().toISOString()),
-    fields: cardFields(t, rec, display).filter((f) => !/\d+ files?$/.test(f.value)),
+    fields,
     images,
   });
   const safe = (rec.title ?? `${t.itemLabel}-${recordId}`).replace(/[^\w\- ]+/g, "").trim().slice(0, 80) || "record";

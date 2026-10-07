@@ -67,7 +67,7 @@ describe("event times", () => {
     expect(snapDuration(75)).toBe("60");
     expect(snapDuration(100)).toBe("90");
     expect(snapDuration(300)).toBe("240");
-    expect(snapDuration(900)).toBe("480");
+    expect(snapDuration(900)).toBe("420");
   });
 });
 

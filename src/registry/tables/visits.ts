@@ -13,7 +13,8 @@ export const DURATIONS = [
   { label: "3 h", value: "180" },
   { label: "4 h", value: "240" },
   { label: "6 h", value: "360" },
-  { label: "8 h (full day)", value: "480" },
+  // Fred 2026-10-07 (SPEC §9.1 F21-e): a full day is 7 hours, not 8.
+  { label: "7 h (full day)", value: "420" },
 ];
 
 export const visits: TableDef = {
@@ -62,6 +63,8 @@ export const visits: TableDef = {
     { name: "service_type", label: "Service type", type: "select", options: [], legacy: NEW },
     { name: "instructions", label: "Instructions for the technician", type: "textarea", heading: "Details", maxLength: 2000, placeholder: "E.g. talk to the super, bring the tall ladder…", legacy: NEW },
     { name: "access_notes", label: "Parking and access", type: "textarea", maxLength: 1000, placeholder: "E.g. visitor parking on P2, check in at the front desk…", legacy: NEW },
+    // F21-b (Fred 2026-10-07): a survey at a new client has no project address yet, so the visit can carry its own.
+    { name: "address", label: "Visit address", type: "address", help: "Only when it differs from the project's address: a survey at a new client, another site. Blank = the project's address.", legacy: NEW },
     {
       name: "status",
       label: "Status",

@@ -4305,6 +4305,7 @@ export type Database = {
       visits: {
         Row: {
           access_notes: string | null
+          address: Json | null
           archived_at: string | null
           arrival_window: string | null
           auto_closed_at: string | null
@@ -4341,6 +4342,7 @@ export type Database = {
         }
         Insert: {
           access_notes?: string | null
+          address?: Json | null
           archived_at?: string | null
           arrival_window?: string | null
           auto_closed_at?: string | null
@@ -4377,6 +4379,7 @@ export type Database = {
         }
         Update: {
           access_notes?: string | null
+          address?: Json | null
           archived_at?: string | null
           arrival_window?: string | null
           auto_closed_at?: string | null
@@ -4833,6 +4836,7 @@ export type Database = {
         Args: { p_id: number; p_step: string }
         Returns: {
           access_notes: string | null
+          address: Json | null
           archived_at: string | null
           arrival_window: string | null
           auto_closed_at: string | null
