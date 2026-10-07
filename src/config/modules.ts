@@ -53,6 +53,8 @@ export const MODULES: ModuleDef[] = [
       tab("administrative", "rma", "RMA"),
       tab("administrative", "tasks", "Tasks"),
       tab("administrative", "report-deficiencies", "Report Deficiencies"),
+      // F23 (Fred 2026-10-07): the company's documents board, the old CRM's "WIKI".
+      tab("administrative", "documents", "Documents"),
     ],
   },
   {

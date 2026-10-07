@@ -515,4 +515,18 @@ export const PT_REGISTRY: Record<string, string> = {
   "A service call is billed on its own: when it is Done, Accounting gets a task to invoice it.": "Um service call é cobrado à parte: quando fica Done, o financeiro recebe uma tarefa para faturar.",
   "Part of the project": "Parte do projeto",
   "Service call (billed separately)": "Service call (cobrado à parte)",
+  // ---------------------------------------------------------------- F23 Documents
+  "Documents": "Documentos",
+  "Document": "Documento",
+  "New Document": "Novo Documento",
+  "E.g. Liability insurance 2026, State licence": "Ex.: Seguro liability 2026, Licença estadual",
+  "The group the document sits in on the board. Add more categories in Admin › Form settings as you need them.": "O grupo em que o documento aparece no quadro. Crie outras categorias em Admin › Form settings conforme precisar.",
+  "Insurance": "Seguros",
+  "Licences": "Licenças",
+  "Contracts": "Contratos",
+  "File": "Arquivo",
+  "PDF, photo or scan of the document.": "PDF, foto ou digitalização do documento.",
+  "Expires on": "Vence em",
+  "Leave blank when the document does not expire.": "Deixe em branco quando o documento não vence.",
+  "Policy number, who issued it, where the original is…": "Número da apólice, quem emitiu, onde está o original…",
 };

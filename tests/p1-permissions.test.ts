@@ -46,7 +46,9 @@ describe("checklist", () => {
     const kept = new Set([...migration.matchAll(/^'([a-z_.-]+)',?$/gm)].map((m) => m[1]));
     // Workflow keys are inserted by the same migration; Insights got its own key later (20261002020000).
     // Added by later migrations: Insights (20261002020000), Job costing (20261002080000), Report Deficiencies (F18, 20261005030000).
-    const LATER = new Set(["insights.page.view", "job_costing.view", ...["view_page", "view_all", "create", "modify", "delete", "archive"].map((a) => `administrative.report-deficiencies.${a}`)]);
+    // Documents (F23, 20261007030000) too.
+    const ACTIONS = ["view_page", "view_all", "create", "modify", "delete", "archive"];
+    const LATER = new Set(["insights.page.view", "job_costing.view", ...ACTIONS.map((a) => `administrative.report-deficiencies.${a}`), ...ACTIONS.map((a) => `administrative.documents.${a}`)]);
     // Migration 20261004000000 moved Inventory Checkout under Inventory and removed Sale (SPEC §9.1 INV-a).
     const asOfP1 = (k: string) => k.replace("inventory.inventory-checkout.", "administrative.inventory-checkout.");
     const SALE = ["archive", "create", "delete", "modify", "view_all", "view_page"].map((a) => `inventory.sales.${a}`);

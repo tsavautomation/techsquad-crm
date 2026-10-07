@@ -1494,4 +1494,13 @@ export const PT: Record<string, string> = {
   "Missing": "Faltando",
   "Late": "Atrasado",
   "Reports not sent yesterday": "Relatórios não enviados ontem",
+  // ---------------------------------------------------------------- F23 Documents board
+  "The company's licences, insurance certificates and other papers, in one place.": "As licenças, certificados de seguro e outros papéis da empresa, num só lugar.",
+  "Current documents": "Documentos atuais",
+  "No archived documents.": "Nenhum documento arquivado.",
+  "No documents yet. Add the first one with New Document.": "Nenhum documento ainda. Adicione o primeiro em Novo Documento.",
+  "Document #{id}": "Documento #{id}",
+  "No file attached.": "Nenhum arquivo anexado.",
+  "Expired {date}": "Venceu em {date}",
+  "Expires {date}": "Vence em {date}",
 };
