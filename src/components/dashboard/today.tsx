@@ -9,6 +9,7 @@ import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
 import { cn } from "@/lib/utils";
 import { isOfficeUser } from "@/lib/auth/office";
+import { dayStatuses } from "@/lib/reports/rule-run";
 import { recordHref } from "@/registry/routes";
 import { QuickTask } from "./quick-task";
 import { getT } from "@/i18n/server";
@@ -20,7 +21,7 @@ import type { T } from "@/i18n/core";
 type Row = { href: string; title: string; meta: string; action?: { href: string; label: string }; tone?: "bad" | "warn" };
 type Section = { id: string; title: string; rows: Row[] };
 /** Office lists (Fred 2026-10-05: "it pollutes the UI… leave it just for clerical staff on the web version"): never on phones, and only for people who run projects. */
-const OFFICE_SECTIONS = new Set(["follow-ups", "renewals", "contact"]);
+const OFFICE_SECTIONS = new Set(["follow-ups", "renewals", "contact", "missing-reports"]);
 export { isOfficeUser };
 
 const LIMIT = 8;
@@ -62,6 +63,21 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
   const visitsT = getTable("visits");
   const newVisit = (projectId: number) => `${"/schedule/visits/new"}?project_id=${projectId}&back=/`;
   const jobs: Promise<Section | null>[] = [];
+
+  // F22-b: yesterday's reports not sent (office only), each row opening the Missing reports dashboard.
+  if (isOfficeUser(user)) {
+    jobs.push(
+      (async () => {
+        const date = addDays(today, -1);
+        const missing = (await dayStatuses(date)).filter((r) => r.status === "missing");
+        return {
+          id: "missing-reports",
+          title: tr("Reports not sent yesterday"),
+          rows: missing.map((r) => ({ href: `/insights/missing-reports?date=${date}#e${r.employee_id}`, title: r.employee, meta: r.project, tone: "bad" as const })),
+        };
+      })(),
+    );
+  }
 
   // Upcoming visits (today → 14 days) with their project, used by several sections.
   const upcoming = can("visits")

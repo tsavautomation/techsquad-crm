@@ -28,6 +28,8 @@ export const TimeClockSchema = z.object({
       late_employee_ids: z.array(z.number().int()).default([]),
     })
     .default({ time: "16:00", late_time: "17:00", late_employee_ids: [] }),
+  /** F22-a: who approves check-in / check-out corrections (Fred 2026-10-07: Jessica #1004, Fred #1000, Luana #1005, Saulo #1012). */
+  correction_approver_ids: z.array(z.number().int()).default([1004, 1000, 1005, 1012]),
 });
 export type TimeClockSettings = z.infer<typeof TimeClockSchema>;
 

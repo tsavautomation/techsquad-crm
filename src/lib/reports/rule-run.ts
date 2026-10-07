@@ -8,7 +8,7 @@ import { addDays } from "@/lib/schedule/dates";
 import { deliverQueuedSms, queueSms } from "@/lib/sms/twilio";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { getTable } from "@/registry";
-import { planLate, planMissing, planReminders, type LateFinding, type MissingDeficiency, type RuleEmployee, type RuleMode, type RuleReport, type RuleVisit, type Skipped } from "./rule";
+import { planLate, planMissing, planReminders, statusFor, visitCounts, type LateFinding, type MissingDeficiency, type RuleEmployee, type RuleMode, type RuleReport, type RuleVisit, type Skipped } from "./rule";
 
 // F18 Visit = Report rule (SPEC §9.1 F18): the server side. Loads a day's visits, reports and people,
 // hands them to the pure engine (rule.ts) and acts on the plan: SMS through the outbox, deficiencies
@@ -182,3 +182,21 @@ export async function lateCheckForReport(db: SupabaseClient, reportId: number): 
 }
 
 export type SkippedPhone = Skipped;
+
+// ---------------------------------------------------------------- F22-b office dashboard
+
+export type DayStatusRow = { employee_id: number; employee: string; visit_id: number; project: string; status: "on_time" | "late" | "missing"; report_id: number | null; filed_on: string | null };
+
+/** Every attended visit of a day with each person's report status, as the rule sees it (whatever the mode). */
+export async function dayStatuses(date: string): Promise<DayStatusRow[]> {
+  const db = adminDb();
+  const { since, visits, reports, employees } = await dayInputs(db, date);
+  const names = new Map(employees.map((e) => [e.id, e.name]));
+  const out: DayStatusRow[] = [];
+  for (const v of visits) {
+    if (!visitCounts(v, since)) continue;
+    for (const s of statusFor(v, reports)) out.push({ employee_id: s.employee_id, employee: names.get(s.employee_id) ?? `#${s.employee_id}`, visit_id: v.id, project: v.project, status: s.status, report_id: s.report_id, filed_on: s.filed_on });
+  }
+  const rank = { missing: 0, late: 1, on_time: 2 };
+  return out.sort((a, b) => rank[a.status] - rank[b.status] || a.employee.localeCompare(b.employee) || a.project.localeCompare(b.project));
+}

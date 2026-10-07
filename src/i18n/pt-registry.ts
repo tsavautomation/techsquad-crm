@@ -510,4 +510,9 @@ export const PT_REGISTRY: Record<string, string> = {
   "Proposed from report": "Proposta a partir do relatório",
   "Visit address": "Endereço da visita",
   "Only when it differs from the project's address: a survey at a new client, another site. Blank = the project's address.": "Só quando for diferente do endereço do projeto: um survey em cliente novo, outro local. Em branco = endereço do projeto.",
+  // ---------------------------------------------------------------- F22-c
+  "Project or service call": "Projeto ou service call",
+  "A service call is billed on its own: when it is Done, Accounting gets a task to invoice it.": "Um service call é cobrado à parte: quando fica Done, o financeiro recebe uma tarefa para faturar.",
+  "Part of the project": "Parte do projeto",
+  "Service call (billed separately)": "Service call (cobrado à parte)",
 };

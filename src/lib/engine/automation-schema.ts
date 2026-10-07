@@ -31,6 +31,8 @@ export const ActionSchema = z.discriminatedUnion("type", [
     text: z.string().trim().min(1, "The task needs some text"),
     due_days: z.number().int().min(0).max(365),
     assign: z.string().optional(),
+    /** F22-c: a fixed person (an Employee id), e.g. Accounting, instead of someone on the record. */
+    employee_id: z.number().int().optional(),
     labels: z.array(z.string()).optional(),
   }),
   z.object({

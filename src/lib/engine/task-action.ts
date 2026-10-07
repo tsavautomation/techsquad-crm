@@ -11,7 +11,7 @@ import type { EngineRecord } from "./record-view";
 // F4 automation action "Create a task" (SPEC §9.1 F4-b): e.g. a follow-up 3 days after a proposal is sent.
 // One open task per automation and record: while it isn't Completed, a re-run adds nothing.
 
-export type TaskAction = { type: "task"; text: string; due_days: number; assign?: string; labels?: string[] };
+export type TaskAction = { type: "task"; text: string; due_days: number; assign?: string; employee_id?: number; labels?: string[] };
 
 /** The Employee linked to a login (same email), or null. */
 export async function employeeForUser(db: SupabaseClient, userId: string | null): Promise<number | null> {
@@ -43,8 +43,8 @@ export async function createAutoTask(
   const { data: open } = await db.from("tasks").select("id").eq("source", source).neq("status", "Completed").is("deleted_at", null).limit(1);
   if (open?.length) return null;
 
-  // The person in the chosen field (e.g. the project's Salesperson), else whoever made the change.
-  const memberId = (action.assign ? await liveEmployee(db, rec.values[action.assign]) : null) ?? (await employeeForUser(db, actor));
+  // A fixed person (F22-c: Accounting), else the person in the chosen field (e.g. the project's Salesperson), else whoever made the change.
+  const memberId = (action.employee_id ? await liveEmployee(db, action.employee_id) : null) ?? (action.assign ? await liveEmployee(db, rec.values[action.assign]) : null) ?? (await employeeForUser(db, actor));
   const projectId = t.name === "projects" ? rec.id : typeof rec.values.project_id === "number" ? rec.values.project_id : null;
   const values: Record<string, unknown> = {
     member_id: memberId,

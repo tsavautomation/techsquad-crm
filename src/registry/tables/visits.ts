@@ -61,6 +61,18 @@ export const visits: TableDef = {
     { name: "team_ids", label: "Also going", type: "lookup", multiple: true, lookup: { table: "employees" }, legacy: NEW },
     // Starts with no options; admins add them in Form settings (Fred 2026-09-30, option C).
     { name: "service_type", label: "Service type", type: "select", options: [], legacy: NEW },
+    // F22-c (Fred 2026-10-07): is this visit part of the project under way, or a service call billed on its own?
+    {
+      name: "billing",
+      label: "Project or service call",
+      type: "select",
+      help: "A service call is billed on its own: when it is Done, Accounting gets a task to invoice it.",
+      options: [
+        { label: "Part of the project", value: "Project", color: "#2563eb" },
+        { label: "Service call (billed separately)", value: "Service call", color: "#d97706" },
+      ],
+      legacy: NEW,
+    },
     { name: "instructions", label: "Instructions for the technician", type: "textarea", heading: "Details", maxLength: 2000, placeholder: "E.g. talk to the super, bring the tall ladder…", legacy: NEW },
     { name: "access_notes", label: "Parking and access", type: "textarea", maxLength: 1000, placeholder: "E.g. visitor parking on P2, check in at the front desk…", legacy: NEW },
     // F21-b (Fred 2026-10-07): a survey at a new client has no project address yet, so the visit can carry its own.

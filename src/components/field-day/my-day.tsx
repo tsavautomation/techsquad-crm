@@ -234,6 +234,11 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
             {tr("Briefing and checklist")}
           </Link>
         )}
+        {(v.checked_in_at || v.checked_out_at || v.on_way_at) && (
+          <Link href={`${visitHref}#corrections`} className="text-[13px] text-text-2 underline underline-offset-2">
+            {tr("Wrong check-in or check-out?")}
+          </Link>
+        )}
       </div>
     </li>
   );

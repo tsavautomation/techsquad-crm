@@ -3857,6 +3857,90 @@ export type Database = {
           },
         ]
       }
+      time_corrections: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          employee_id: number
+          field: string
+          id: number
+          previous_at: string | null
+          reason: string
+          requested_at: string
+          requested_by: string
+          status: string
+          visit_id: number
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          employee_id: number
+          field: string
+          id?: number
+          previous_at?: string | null
+          reason: string
+          requested_at: string
+          requested_by: string
+          status?: string
+          visit_id: number
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          employee_id?: number
+          field?: string
+          id?: number
+          previous_at?: string | null
+          reason?: string
+          requested_at?: string
+          requested_by?: string
+          status?: string
+          visit_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_corrections_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_corrections_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_corrections_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_corrections_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_corrections_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_entries: {
         Row: {
           accuracy_m: number | null
@@ -4310,6 +4394,7 @@ export type Database = {
           arrival_window: string | null
           auto_closed_at: string | null
           auto_closed_reason: string | null
+          billing: string | null
           checked_in_at: string | null
           checked_out_at: string | null
           created_at: string
@@ -4347,6 +4432,7 @@ export type Database = {
           arrival_window?: string | null
           auto_closed_at?: string | null
           auto_closed_reason?: string | null
+          billing?: string | null
           checked_in_at?: string | null
           checked_out_at?: string | null
           created_at?: string
@@ -4384,6 +4470,7 @@ export type Database = {
           arrival_window?: string | null
           auto_closed_at?: string | null
           auto_closed_reason?: string | null
+          billing?: string | null
           checked_in_at?: string | null
           checked_out_at?: string | null
           created_at?: string
@@ -4841,6 +4928,7 @@ export type Database = {
           arrival_window: string | null
           auto_closed_at: string | null
           auto_closed_reason: string | null
+          billing: string | null
           checked_in_at: string | null
           checked_out_at: string | null
           created_at: string

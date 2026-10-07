@@ -140,6 +140,24 @@ export function FieldDayEditor({ initial, people, reasons, services }: { initial
             );
           })}
         </div>
+        <h3 className="mt-4 text-sm font-semibold">{t("Who approves time corrections")}</h3>
+        <p className="mb-2 text-xs text-muted-foreground">{t("A technician who checked in or out at the wrong time asks for a correction; these people approve it from the alerts bell or the visit page.")}</p>
+        <div className="flex flex-wrap gap-2">
+          {people.map((p) => {
+            const on = tc.correction_approver_ids.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setTc({ ...tc, correction_approver_ids: on ? tc.correction_approver_ids.filter((id) => id !== p.id) : [...tc.correction_approver_ids, p.id] })}
+                className={`h-9 rounded-full border px-3 text-[13px] ${on ? "border-primary bg-primary/10 font-semibold text-primary" : "text-muted-foreground"}`}
+              >
+                {p.name}
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <section className="rounded-2xl border bg-card p-4 shadow-card">

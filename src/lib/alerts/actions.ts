@@ -2,6 +2,7 @@
 
 import { requireUser } from "@/lib/auth/session";
 import { formatDate, formatDateTime, fromDateTimeLocalET, toDateTimeLocalET, todayET } from "@/lib/dates";
+import { FIELD_LABEL, isApprover, pendingCorrections } from "@/lib/field-day/corrections";
 import { loadFieldDay } from "@/lib/field-day/return-card";
 import { recordsDb } from "@/lib/records/data";
 import { addDays, clock as clockTime } from "@/lib/schedule/dates";
@@ -94,7 +95,7 @@ export async function alertsAction(): Promise<Alerts> {
     const { data } = await db.rpc("my_workflow_queue");
     const rows = ((data ?? []) as { table_name: string; record_id: number; level_title: string; entered_at: string }[]).slice(0, MAX);
     const t = await titles(rows.map((r) => ({ table: r.table_name, id: r.record_id })));
-    return rows
+    const workflow = rows
       .filter((r) => t.has(`${r.table_name}:${r.record_id}`) && link(r.table_name, r.record_id))
       .map((r) => ({
         key: `wf:${r.table_name}:${r.record_id}`,
@@ -102,6 +103,17 @@ export async function alertsAction(): Promise<Alerts> {
         title: t.get(`${r.table_name}:${r.record_id}`)!,
         meta: `${tr(r.level_title)} · ${tr("since {date}", { date: formatDate(r.entered_at) })}`,
       }));
+    // F22-a: check-in / check-out corrections waiting for one of the approvers.
+    if (!(await isApprover(db, user))) return workflow;
+    const visitsT = getTable("visits");
+    const corrections = (await pendingCorrections()).map((c) => ({
+      key: `tc:${c.id}`,
+      href: `${recordHref(visitsT, c.visit_id)}#corrections`,
+      title: c.project,
+      meta: `${tr("{who} asks to correct {field} to {when}", { who: c.employee, field: tr(FIELD_LABEL[c.field]), when: formatDateTime(c.requested_at) })} · ${formatDate(c.created_at)}`,
+      urgent: true,
+    }));
+    return [...corrections, ...workflow];
   })();
 
   const visits = (async (): Promise<AlertItem[]> => {

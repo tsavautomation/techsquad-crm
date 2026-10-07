@@ -10,6 +10,7 @@ import { getTable } from "@/registry";
 import { canDo } from "@/registry/permissions";
 import { recordHref, tableHref } from "@/registry/routes";
 import { getT } from "@/i18n/server";
+import { CorrectionsPanel } from "./corrections-panel";
 import { StepButtons } from "./step-buttons";
 
 // Record-page panels for F2: the visit's check-in buttons, what to bring and the briefing from the
@@ -160,6 +161,8 @@ export async function VisitFieldPanel({ visitId }: { visitId: number }) {
           )}
         </section>
       )}
+      {/* F22-a: ask for a check-in / check-out correction; approvers decide here. */}
+      <CorrectionsPanel visitId={v.id} />
     </div>
   );
 }
