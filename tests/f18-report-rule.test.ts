@@ -54,11 +54,11 @@ describe("visitCounts", () => {
 
 describe("planReminders (the 9 PM job)", () => {
   it("sends one SMS per missing report to active people with a usable phone, and lists the rest", () => {
-    const visits = [visit({ people: [1, 2, 3, 4, 5] }), visit({ id: 11, project: "Lima", people: [1] })];
+    const visits = [visit({ people: [1, 2, 3, 4, 5] }), visit({ id: 11, project_id: 6, project: "Lima", people: [1] })];
     const { reminders, skipped } = planReminders({ visits, reports: [report({ team: [1] })], employees: people, since: null });
     expect(reminders).toEqual([
       { employee_id: 2, visit_id: 10, project_id: 5, project: "Roth Residence", to: "+13055550199", body: 'Tech Squad Reports - Seu report do trabalho "Roth Residence" não foi recebido hoje.' },
-      { employee_id: 1, visit_id: 11, project_id: 5, project: "Lima", to: "+13055550123", body: smsBody("Lima") },
+      { employee_id: 1, visit_id: 11, project_id: 6, project: "Lima", to: "+13055550123", body: smsBody("Lima") },
     ]);
     expect(skipped.map((s) => [s.employee_id, s.reason])).toEqual([
       [3, "inactive"],
