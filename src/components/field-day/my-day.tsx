@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChevronDown, FileText, Navigation, TriangleAlert } from "lucide-react";
 import type { CurrentUser } from "@/lib/auth/session";
 import { toDateTimeLocalET } from "@/lib/dates";
-import { daySummary, formatMinutes, mapsUrl, parkingUrl, routeUrl, wazeUrl } from "@/lib/field-day/day";
+import { appleMapsUrl, daySummary, formatMinutes, mapsUrl, parkingUrl, routeUrl, wazeUrl } from "@/lib/field-day/day";
 import { loadMyDay, type MyVisit } from "@/lib/field-day/load";
 import { clock } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
@@ -119,6 +119,10 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
         <div className="mt-2">
           <p className="text-[13px]">{v.address}</p>
           <div className="mt-1.5 flex flex-wrap gap-2">
+            {/* F24-b: drive there with the iPhone's own Maps app. */}
+            <a href={appleMapsUrl(v.address)} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground hover:brightness-95">
+              <Navigation className="size-4" aria-hidden /> {tr("Drive there")}
+            </a>
             <a href={mapsUrl(v.address)} target="_blank" rel="noopener noreferrer" className={LINK}>
               Google Maps
             </a>

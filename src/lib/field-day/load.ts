@@ -1,12 +1,14 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CurrentUser } from "@/lib/auth/session";
-import { fromDateTimeLocalET, todayET } from "@/lib/dates";
+import { fromDateTimeLocalET, toDateTimeLocalET, todayET } from "@/lib/dates";
 import { pathOf } from "@/lib/files/paths";
 import { fileUrls } from "@/lib/files/store";
 import { adminDb } from "@/lib/supabase/admin";
 import { recordsDb } from "@/lib/records/data";
+import { joinTable } from "@/lib/records/relations";
 import type { Address } from "@/lib/records/values";
+import { getTable } from "@/registry";
 import { addDays } from "@/lib/schedule/dates";
 import { openPendingByProject } from "./pending";
 import { loadFieldDay } from "./return-card";
@@ -137,12 +139,25 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     loadFieldDay(db),
   ]);
   const ids = [...new Set([...rows, ...past].map((v) => v.id))];
+  const projectIds = [...new Set([...rows, ...past].map((v) => v.project_id).filter((x): x is number => x !== null))];
+  // F24-a (Fred 2026-10-07: "the report appears in Reports but the home screen still says it is missing"):
+  // a report counts for a visit when it is linked to it, or when it is unlinked but on the same project
+  // and day with this person on its Team — the same rule as the 9 PM reminder (F18).
+  const teamJoin = joinTable(getTable("job_reports"), getTable("job_reports").fields.find((f) => f.name === "team_ids")!);
+  const or = [ids.length ? `visit_id.in.(${ids.join(",")})` : null, projectIds.length ? `and(visit_id.is.null,project_id.in.(${projectIds.join(",")}))` : null].filter(Boolean).join(",");
   const [{ data: reports }, pending, sites] = await Promise.all([
-    ids.length ? db.from("job_reports").select("id, visit_id").in("visit_id", ids).is("deleted_at", null) : Promise.resolve({ data: [] }),
+    or ? db.from("job_reports").select(`id, visit_id, project_id, date, team:${teamJoin}(target_id)`).or(or).is("deleted_at", null) : Promise.resolve({ data: [] }),
     openPendingByProject(db, rows.map((v) => v.project_id).filter((x): x is number => x !== null)),
     loadSiteCards(rows.map((v) => v.project_id).filter((x): x is number => x !== null)),
   ]);
-  const reportOf = new Map(((reports ?? []) as { id: number; visit_id: number }[]).map((r) => [r.visit_id, r.id]));
+  type Rep = { id: number; visit_id: number | null; project_id: number | null; date: string | null; team: { target_id: number }[] };
+  const all = (reports ?? []) as unknown as Rep[];
+  const reportOf = new Map<number, number>();
+  for (const v of [...rows, ...past]) {
+    const day = toDateTimeLocalET(v.starts_at).slice(0, 10);
+    const r = all.find((x) => x.visit_id === v.id) ?? all.find((x) => x.visit_id === null && x.project_id !== null && x.project_id === v.project_id && x.date === day && x.team.some((t) => people.includes(t.target_id)));
+    if (r) reportOf.set(v.id, r.id);
+  }
 
   const visits = rows.map((v) => ({
     id: v.id,

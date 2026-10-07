@@ -156,4 +156,6 @@ export function routeUrl(addresses: string[]): string | null {
 }
 export const mapsUrl = (a: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
 export const wazeUrl = (a: string) => `https://waze.com/ul?q=${encodeURIComponent(a)}&navigate=yes`;
+/** F24-b (Fred 2026-10-07): opens the iPhone's own Maps app with driving directions to the address. */
+export const appleMapsUrl = (a: string) => `https://maps.apple.com/?daddr=${encodeURIComponent(a)}&dirflg=d`;
 export const parkingUrl = (a: string) => mapsUrl(`parking near ${a}`);

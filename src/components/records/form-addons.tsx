@@ -12,6 +12,8 @@ import { useT } from "@/i18n/client";
 const maps = (a: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a)}`;
 const waze = (a: string) => `https://waze.com/ul?q=${encodeURIComponent(a)}&navigate=yes`;
 const parking = (a: string) => maps(`parking near ${a}`);
+// F24-b: the iPhone's own Maps app, driving directions.
+const apple = (a: string) => `https://maps.apple.com/?daddr=${encodeURIComponent(a)}&dirflg=d`;
 
 /** Visit form (F1): project warnings and links, double-booking check, parking notes from the last visit. */
 export function VisitAddon({ form, recordId, setMany }: { form: Values; recordId: number | null; setMany: (v: Values) => void }) {
@@ -92,6 +94,7 @@ export function VisitAddon({ form, recordId, setMany }: { form: Values; recordId
         <div className="flex flex-wrap gap-2 text-sm">
           <span className="w-full text-muted-foreground">{info.address}</span>
           {[
+            ["Apple Maps", apple(info.address)],
             ["Google Maps", maps(info.address)],
             ["Waze", waze(info.address)],
             [tr("Parking nearby"), parking(info.address)],

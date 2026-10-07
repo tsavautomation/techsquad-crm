@@ -1503,4 +1503,5 @@ export const PT: Record<string, string> = {
   "No file attached.": "Nenhum arquivo anexado.",
   "Expired {date}": "Venceu em {date}",
   "Expires {date}": "Vence em {date}",
+  "Drive there": "Dirigir até lá",
 };
