@@ -28,11 +28,13 @@ describe("statusFor", () => {
   it("counts each person separately: one report with both on the Team covers both", () => {
     expect(statusFor(visit(), [report({ team: [1, 2] })]).map((s) => s.status)).toEqual(["on_time", "on_time"]);
   });
-  it("takes an unlinked report by project and day, but not one for another project or day", () => {
+  it("takes a report by project and day, linked to this visit, to another one or to none, but not one for another project or day", () => {
     expect(statusFor(visit({ people: [1] }), [report({ visit_id: null })])[0].status).toBe("on_time");
     expect(statusFor(visit({ people: [1] }), [report({ visit_id: null, project_id: 6 })])[0].status).toBe("missing");
     expect(statusFor(visit({ people: [1] }), [report({ visit_id: null, date: "2026-10-04" })])[0].status).toBe("missing");
-    expect(reportsForVisit(visit(), [report({ visit_id: 11, project_id: 5 })])).toEqual([]); // linked to another visit
+    // F24-c: two visits of the same project at the same hour look alike; a report linked to the other one still counts.
+    expect(reportsForVisit(visit(), [report({ visit_id: 11, project_id: 5 })])).toHaveLength(1);
+    expect(reportsForVisit(visit(), [report({ visit_id: 11, project_id: 6 })])).toEqual([]);
   });
   it("uses the earliest report when there are two", () => {
     const r = statusFor(visit({ people: [1] }), [report({ id: 101, created_at: "2026-10-07T12:00:00.000Z" }), report({ id: 100 })]);

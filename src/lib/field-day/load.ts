@@ -144,9 +144,9 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
   // a report counts for a visit when it is linked to it, or when it is unlinked but on the same project
   // and day with this person on its Team — the same rule as the 9 PM reminder (F18).
   const teamJoin = joinTable(getTable("job_reports"), getTable("job_reports").fields.find((f) => f.name === "team_ids")!);
-  const or = [ids.length ? `visit_id.in.(${ids.join(",")})` : null, projectIds.length ? `and(visit_id.is.null,project_id.in.(${projectIds.join(",")}))` : null].filter(Boolean).join(",");
+  const or = [ids.length ? `visit_id.in.(${ids.join(",")})` : null, projectIds.length ? `project_id.in.(${projectIds.join(",")})` : null].filter(Boolean).join(",");
   const [{ data: reports }, pending, sites] = await Promise.all([
-    or ? db.from("job_reports").select(`id, visit_id, project_id, date, team:${teamJoin}(target_id)`).or(or).is("deleted_at", null) : Promise.resolve({ data: [] }),
+    or ? db.from("job_reports").select(`id, visit_id, project_id, date, team:${teamJoin}(target_id)`).or(or).gte("date", addDays(today, -15)).is("deleted_at", null) : Promise.resolve({ data: [] }),
     openPendingByProject(db, rows.map((v) => v.project_id).filter((x): x is number => x !== null)),
     loadSiteCards(rows.map((v) => v.project_id).filter((x): x is number => x !== null)),
   ]);
@@ -155,7 +155,7 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
   const reportOf = new Map<number, number>();
   for (const v of [...rows, ...past]) {
     const day = toDateTimeLocalET(v.starts_at).slice(0, 10);
-    const r = all.find((x) => x.visit_id === v.id) ?? all.find((x) => x.visit_id === null && x.project_id !== null && x.project_id === v.project_id && x.date === day && x.team.some((t) => people.includes(t.target_id)));
+    const r = all.find((x) => x.visit_id === v.id) ?? all.find((x) => x.project_id !== null && x.project_id === v.project_id && x.date === day && x.team.some((t) => people.includes(t.target_id)));
     if (r) reportOf.set(v.id, r.id);
   }
 

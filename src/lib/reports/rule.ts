@@ -44,9 +44,13 @@ export function visitCounts(v: RuleVisit, since: string | null): boolean {
   return !v.cancelled && v.attended && (!since || v.date >= since);
 }
 
-/** The reports that belong to a visit: linked to it, or (unlinked) to the same project on the same day. */
+/**
+ * The reports that belong to a visit: linked to it, or on the same project on the same day — linked
+ * to another visit or not (F24-c, Fred 2026-10-07: two visits of the same project at the same hour
+ * carry the same title, and Fabio's report was linked to the other one).
+ */
 export function reportsForVisit(v: RuleVisit, reports: RuleReport[]): RuleReport[] {
-  return reports.filter((r) => r.visit_id === v.id || (r.visit_id === null && r.project_id !== null && r.project_id === v.project_id && r.date === v.date));
+  return reports.filter((r) => r.visit_id === v.id || (r.project_id !== null && r.project_id === v.project_id && r.date === v.date));
 }
 
 /** Status per person going: On time (filed on the visit's day, Eastern), Late (after it), Missing. */

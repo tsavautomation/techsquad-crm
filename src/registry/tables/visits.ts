@@ -24,7 +24,8 @@ export const visits: TableDef = {
   tab: "visits",
   itemLabel: "Visit",
   newRecordLabel: "New Visit",
-  titleFormula: "{project_id} – {starts_at}",
+  // F24-c: the technician in the title tells two visits of the same project at the same hour apart (the Job Report's Visit list).
+  titleFormula: "{project_id} – {starts_at} – {technician_id}",
   origin: "new",
   formAddon: "visit",
   detailAddon: "visit",
