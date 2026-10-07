@@ -123,6 +123,8 @@ export const jobReports: TableDef = {
       ],
       legacy: NEW,
     },
+    // F17-e (Fred 2026-10-06): one line on how the visit ended, filled by the AI review when blank.
+    { name: "outcome", label: "Outcome", type: "text", maxLength: 200, placeholder: "How the visit ended, in one line", legacy: NEW },
     { name: "partial_reason", label: "Reason", type: "select", startsHidden: true, options: REASONS.map((r) => ({ label: r, value: r })), legacy: NEW },
     { name: "waiting_on", label: "Waiting on whom", type: "text", startsHidden: true, maxLength: 200, legacy: NEW },
     { name: "missing_items", label: "What's missing", type: "textarea", startsHidden: true, maxLength: 4000, placeholder: "One item per line", help: "Each line goes on the project checklist and the return card.", legacy: NEW },

@@ -4,6 +4,7 @@ import { decrypt, encrypt } from "@/lib/crypto";
 import { fromDateTimeLocalET } from "@/lib/dates";
 import { runAutomationsForRecord } from "@/lib/engine/automations";
 import { returnDueDate } from "@/lib/field-day/day";
+import { dumpRecordPdfSafely } from "@/lib/files/record-pdf";
 import { loadFieldDay } from "@/lib/field-day/return-card";
 import { buildTitle } from "@/lib/records/title";
 import { realityCheckForReport } from "@/lib/reports/reality-run";
@@ -29,6 +30,7 @@ type Row = {
   report: string | null;
   problems: string | null;
   materials_used: string | null;
+  outcome: string | null;
   result: string | null;
   partial_reason: string | null;
   missing_items: string | null;
@@ -37,7 +39,7 @@ type Row = {
   ai_review_status: string | null;
   team: { target_id: number }[];
 };
-const COLS = "id, project_id, visit_id, vehicle_id, date, report, problems, materials_used, result, partial_reason, missing_items, logins_and_passwords, created_by, ai_review_status, team:job_reports_team(target_id)";
+const COLS = "id, project_id, visit_id, vehicle_id, date, report, problems, materials_used, outcome, result, partial_reason, missing_items, logins_and_passwords, created_by, ai_review_status, team:job_reports_team(target_id)";
 
 export type ReviewSummary = { reviewed: number; skipped: number; errors: number };
 
@@ -146,6 +148,7 @@ export async function reviewReport(db: SupabaseClient, id: number): Promise<"don
     date: row.date,
     problems: row.problems,
     materials: row.materials_used,
+    outcome: row.outcome,
   };
   const started = Date.now();
   try {
@@ -208,6 +211,8 @@ export async function reviewReport(db: SupabaseClient, id: number): Promise<"don
       ms: Date.now() - started,
       tokens: { in: res.usage.input_tokens, out: res.usage.output_tokens },
     });
+    // OD-d: the PDF copy in OneDrive carries the corrected text and the fields the review filled.
+    await dumpRecordPdfSafely("job_reports", id);
     return "done";
   } catch (e) {
     await finish(db, id, "error");

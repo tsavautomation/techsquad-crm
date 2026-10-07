@@ -8,6 +8,8 @@ export const staffPerformance: TableDef = {
   "label": "Staff Performance",
   "module": "forms",
   "tab": "staff-performance",
+  // Permission-protected; OneDrive is open to everyone, so nothing of it goes there (Fred 2026-10-06, SPEC §9.1 OD-e).
+  "privateFiles": true,
   "itemLabel": "Staff Performance",
   "newRecordLabel": "New Staff Performance",
   "titleFormula": "{employee_id} – {date}",

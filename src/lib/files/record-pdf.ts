@@ -4,7 +4,7 @@ import { joinTable } from "@/lib/records/relations";
 import { adminDb } from "@/lib/supabase/admin";
 import { getTable, REGISTRY } from "@/registry";
 import type { TableDef } from "@/registry/types";
-import { folderFor, oneDriveReady, renameItem, replaceContent, uploadBytes } from "./onedrive";
+import { deleteItem, ensureFolder, folderFor, listChildren, oneDriveReady, renameItem, replaceContent, uploadBytes } from "./onedrive";
 import { dateField, fileDate, pdfFileName, technicianField, wantsPdf } from "./pdf-name";
 
 // PDF copies in OneDrive (SPEC §9.1 OD-c): the text of every form that can carry files is written as
@@ -78,7 +78,10 @@ export async function dumpRecordPdf(tableName: string, id: number): Promise<PdfO
       if ((e as { status?: number }).status !== 404) throw e;
     }
   }
-  const folder = await folderFor(t, id);
+  // Next to the record's own photos and videos when it has any (OD-d); folderFor() dates the folder by
+  // today, which would put a PDF written later in a folder of its own.
+  const { data: att } = await db.from("attachments").select("provider_folder").eq("table_name", t.name).eq("record_id", id).eq("provider", "onedrive").is("deleted_at", null).not("provider_folder", "is", null).order("created_at", { ascending: false }).limit(1);
+  const folder = ((att ?? []) as { provider_folder: string | null }[])[0]?.provider_folder || (await folderFor(t, id));
   const item = await uploadBytes(folder, name, bytes);
   await db.from("record_pdfs").upsert({ table_name: t.name, record_id: id, item_id: item.id, name: item.name ?? name, folder, record_updated_at: row.updated_at, written_at: new Date().toISOString() });
   return "written";
@@ -93,20 +96,58 @@ export async function dumpRecordPdfSafely(tableName: string, id: number) {
   }
 }
 
-/** Records with no PDF yet, or a stale one, per table. */
+/**
+ * Records with no PDF yet, or a stale one, per table. Newest changes first (OD-d): a report written
+ * today must never wait behind the thousands imported from WebAuthor.
+ */
 export async function pdfsPending(): Promise<{ table: string; ids: number[] }[]> {
   const db = adminDb();
   const out: { table: string; ids: number[] }[] = [];
   for (const t of pdfTables()) {
-    const [{ data: rows }, { data: done }] = await Promise.all([
-      db.from(t.name).select("id, updated_at").is("deleted_at", null).order("id"),
-      db.from("record_pdfs").select("record_id, record_updated_at").eq("table_name", t.name),
+    const [rows, done] = await Promise.all([
+      allRows<{ id: number; updated_at: string }>((from, to) => db.from(t.name).select("id, updated_at").is("deleted_at", null).order("updated_at", { ascending: false }).order("id").range(from, to)),
+      allRows<{ record_id: number; record_updated_at: string }>((from, to) => db.from("record_pdfs").select("record_id, record_updated_at").eq("table_name", t.name).order("record_id").range(from, to)),
     ]);
-    const stamp = new Map(((done ?? []) as { record_id: number; record_updated_at: string }[]).map((r) => [r.record_id, Date.parse(r.record_updated_at)]));
-    const ids = ((rows ?? []) as { id: number; updated_at: string }[]).filter((r) => (stamp.get(r.id) ?? -1) < Date.parse(r.updated_at)).map((r) => r.id);
+    const stamp = new Map(done.map((r) => [r.record_id, Date.parse(r.record_updated_at)]));
+    const ids = rows.filter((r) => (stamp.get(r.id) ?? -1) < Date.parse(r.updated_at)).map((r) => r.id);
     if (ids.length) out.push({ table: t.name, ids });
   }
   return out;
+}
+
+/** Every row of a query, 1,000 at a time (the database answers at most 1,000 per request). */
+async function allRows<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await page(from, from + 999);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < 1000) return out;
+  }
+}
+
+/**
+ * OD-e: PDF copies that must not be in OneDrive (private tables such as Staff Performance) are
+ * removed, and a record folder left empty goes with them. Idempotent; runs at the start of each backfill.
+ */
+export async function removePrivatePdfs(): Promise<number> {
+  const privateTables = REGISTRY.filter((t) => t.privateFiles).map((t) => t.name);
+  if (!privateTables.length) return 0;
+  const db = adminDb();
+  const { data } = await db.from("record_pdfs").select("table_name, record_id, item_id, folder").in("table_name", privateTables).limit(200);
+  const rows = (data ?? []) as { table_name: string; record_id: number; item_id: string; folder: string }[];
+  let removed = 0;
+  for (const r of rows) {
+    await deleteItem(r.item_id);
+    await db.from("record_pdfs").delete().eq("table_name", r.table_name).eq("record_id", r.record_id);
+    removed++;
+    if (r.folder && (await listChildren(r.folder)).length === 0) {
+      await deleteItem(await ensureFolder(r.folder));
+      await db.from("onedrive_folders").delete().eq("path", r.folder);
+    }
+  }
+  return removed;
 }
 
 /** Write PDFs for pending records until the time budget runs out. */
@@ -115,6 +156,11 @@ export async function backfillRecordPdfs(budgetMs: number): Promise<{ written: n
   const started = Date.now();
   let written = 0;
   const failed: string[] = [];
+  try {
+    await removePrivatePdfs();
+  } catch (e) {
+    failed.push(`private copies: ${e instanceof Error ? e.message : String(e)}`);
+  }
   const pending = await pdfsPending();
   let left = pending.reduce((n, p) => n + p.ids.length, 0);
   for (const p of pending) {

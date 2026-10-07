@@ -19,9 +19,11 @@ export type ReviewInput = {
   logins: string | null;
   /** The report's Date (YYYY-MM-DD), for "from Job Report of m/d/yyyy". */
   date: string | null;
-  /** F19: "Problems found" and "Materials used", read for issue keys and site facts. */
+  /** F19: "Problems found" and "Materials used", read for issue keys and site facts; F17-e fills Problems found when blank. */
   problems?: string | null;
   materials?: string | null;
+  /** F17-e: the one-line Outcome, filled when blank. */
+  outcome?: string | null;
 };
 
 export const AnswerSchema = z.object({
@@ -38,6 +40,10 @@ export const AnswerSchema = z.object({
   site_facts: z.array(z.string()).default([]),
   // F19-c: short keys for the problems found, so repeats on the same site can be counted.
   issue_keys: z.array(z.string()).default([]),
+  // F17-e: the problems as the technician described them, how the visit ended, and whether the work is finished.
+  problems: z.array(z.string()).default([]),
+  outcome: z.string().nullable().default(null),
+  finished: z.boolean().default(false),
 });
 export type ReviewAnswer = z.infer<typeof AnswerSchema>;
 
@@ -47,7 +53,7 @@ export const MOVED_MARKER = "(login details moved to the Logins field)";
 export const SYSTEM_PROMPT = `You review field-service job reports for Tech Squad, an audio / video, network and home-automation installer in South Florida. The technicians are mostly Brazilian and write in Portuguese, English or Spanish, often by dictation on a phone, so the text may have transcription slips, missing punctuation and run-on sentences.
 
 You receive one report and answer with JSON only (no prose, no code fence) of this shape:
-{"report": string, "grammar_changed": boolean, "pending": string[], "reason": string | null, "credentials": string[], "return_visit": {"needed": boolean, "why": string | null, "days": number | null} | null, "parts": string[], "site_facts": string[], "issue_keys": string[]}
+{"report": string, "grammar_changed": boolean, "pending": string[], "reason": string | null, "credentials": string[], "return_visit": {"needed": boolean, "why": string | null, "days": number | null} | null, "parts": string[], "site_facts": string[], "issue_keys": string[], "problems": string[], "outcome": string | null, "finished": boolean}
 
 1. "report": the same text with grammar, spelling, punctuation and clarity corrected. Keep the language it was written in (Portuguese stays Portuguese, English stays English, Spanish stays Spanish, a mixed text keeps its main language; never translate). Keep the meaning, the facts, the order, the line breaks, the brand names, model numbers, room names and quantities. Do not add, summarise, soften or embellish anything. If the text is already clean, return it unchanged and set "grammar_changed" to false.
 2. "pending": work the text says is still to be done, missing, waiting on someone or something, or needing a return visit. One short item per entry, in the language of the report, only what the text actually states. Leave out anything already listed under "already_missing". Empty when the job is finished.
@@ -56,7 +62,10 @@ You receive one report and answer with JSON only (no prose, no code fence) of th
 5. "return_visit": whether the text says someone must come back ("need to come back", "precisa voltar", "hay que volver", "waiting on the GC", "aguardando o cliente", "missing part", "falta peça"…). "why" is a short reason in English; "days" is how soon the text suggests (null when it doesn't say). null when nothing says so.
 6. "parts": parts, materials or equipment the text says are missing, to be ordered or to be brought next time, one per entry, as written. Empty when none.
 7. "site_facts": durable facts about this site a future technician should know, in English, one short sentence each: equipment and models and where they are, network details without passwords (IP ranges, router model, VLANs), quirks ("the Sonos in the den drops when the microwave runs"), access and parking that is not a code. Never a password, PIN, login or gate code. Empty when the text has nothing durable.
-8. "issue_keys": for each distinct problem found in the text, one short lowercase key with hyphens naming the thing and the failure, e.g. "wifi-dropouts", "crestron-processor-reboot", "sonos-den-offline", "camera-3-no-video". Reuse a key from "known_issue_keys" when it is the same problem. Empty when the text reports no problem.`;
+8. "issue_keys": for each distinct problem found in the text, one short lowercase key with hyphens naming the thing and the failure, e.g. "wifi-dropouts", "crestron-processor-reboot", "sonos-den-offline", "camera-3-no-video". Reuse a key from "known_issue_keys" when it is the same problem. Empty when the text reports no problem.
+9. "problems": the problems found, one short entry each, in the language of the report and in the technician's own words, e.g. ["O cliente estava sem volume nas TVs", "o Crestron tinha perdido a autenticação com o Sonos"]. Only what the text states. Empty when the text reports no problem.
+10. "outcome": one short sentence, in the language of the report, saying how the visit ended, taken from the text, e.g. "Tudo ficou funcionando bem." or "Waiting on the GC for the conduit." null when the text does not say.
+11. "finished": true only when the text clearly says the work was completed and nothing is pending; false when something is pending, someone must come back, or the text does not say.`;
 
 /** The user turn: the report and what the form already holds. */
 export function userPrompt(input: ReviewInput, knownIssueKeys: string[] = []): string {
@@ -65,6 +74,7 @@ export function userPrompt(input: ReviewInput, knownIssueKeys: string[] = []): s
       report: input.report,
       problems_found: input.problems ?? null,
       materials_used: input.materials ?? null,
+      outcome: input.outcome ?? null,
       result: input.result,
       already_missing: missingLines(input.missing_items),
       reasons: REASONS,
@@ -149,6 +159,22 @@ export function applyReview(input: ReviewInput, answer: ReviewAnswer): ReviewOut
       }
       if (!input.partial_reason) patch.partial_reason = answer.reason && REASONS.includes(answer.reason) ? answer.reason : "Other";
     }
+  } else if (!input.result && answer.finished && !answer.return_visit?.needed) {
+    // F17-e: a blank Result becomes Completed when the text says the work is done (Fred 2026-10-06).
+    patch.result = "Completed";
+    notes.push("Result set to Completed.");
+  }
+
+  // 2b. F17-e: Problems found and Outcome, filled from the text when the technician left them blank.
+  const problems = cleanLines(answer.problems);
+  if (!input.problems?.trim() && problems.length) {
+    patch.problems = problems.map(squash).join(" / ").slice(0, 4000);
+    notes.push("Problems found filled from the text.");
+  }
+  const outcome = answer.outcome ? squash(answer.outcome).slice(0, 200) : "";
+  if (!input.outcome?.trim() && outcome) {
+    patch.outcome = outcome;
+    notes.push("Outcome filled from the text.");
   }
 
   // 3. Logins and passwords → the report's Login and Passwords field + the project.

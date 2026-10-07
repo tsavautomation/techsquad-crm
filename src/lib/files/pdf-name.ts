@@ -6,8 +6,8 @@ import type { FieldDef, TableDef } from "@/registry/types";
 
 const UPLOAD_TYPES = new Set(["file", "image", "signature"]);
 
-/** Tables whose records get a PDF copy: top-level record types that can carry files (not utility lists). */
-export const wantsPdf = (t: TableDef) => !t.parent && t.module !== "utility" && Boolean(t.tab) && t.fields.some((f) => UPLOAD_TYPES.has(f.type));
+/** Tables whose records get a PDF copy: top-level record types that can carry files (not utility lists, never a private one: OD-e). */
+export const wantsPdf = (t: TableDef) => !t.parent && !t.privateFiles && t.module !== "utility" && Boolean(t.tab) && t.fields.some((f) => UPLOAD_TYPES.has(f.type));
 
 /** The field that says who did the work: a single lookup to employees first, else a multi-lookup. */
 export function technicianField(t: TableDef): FieldDef | null {

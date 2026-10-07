@@ -136,6 +136,8 @@ export type TableDef = {
   legacy: { table: string };
   /** "new" = built for this CRM (Portal features), not carried over from WebAuthor: no legacy names, not in parity tests. */
   origin?: "new";
+  /** Files and PDF copies stay in the CRM's own storage, never OneDrive (shared by everyone): permission-protected tables (SPEC §9.1 OD-e). */
+  privateFiles?: boolean;
   /** Extra panel the form shows for this table (src/components/records/form-addons.tsx). */
   formAddon?: "visit";
   /** Extra panel on the record page (src/components/field-day/*): visit check-in + briefing, return card scheduling. */

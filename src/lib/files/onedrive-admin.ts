@@ -26,13 +26,15 @@ export async function filesToMove(): Promise<{ count: number; bytes: number }> {
   if (!me.isSysadmin) return { count: 0, bytes: 0 };
   const db = adminDb();
   const { data } = await db.from("attachments").select("table_name, field, size_bytes").eq("provider", "supabase").is("deleted_at", null);
-  const rows = ((data ?? []) as { table_name: string; field: string | null; size_bytes: number | null }[]).filter((r) => !isSignature(r.table_name, r.field));
+  const rows = ((data ?? []) as { table_name: string; field: string | null; size_bytes: number | null }[]).filter((r) => !staysInCrm(r.table_name, r.field));
   return { count: rows.length, bytes: rows.reduce((n, r) => n + Number(r.size_bytes ?? 0), 0) };
 }
 
-function isSignature(table: string, field: string | null) {
+/** Signatures and the files of private tables (SPEC §9.1 OD-e) never move to OneDrive. */
+function staysInCrm(table: string, field: string | null) {
   try {
-    return Boolean(field && getTable(table).fields.find((f) => f.name === field)?.type === "signature");
+    const t = getTable(table);
+    return Boolean(t.privateFiles) || Boolean(field && t.fields.find((f) => f.name === field)?.type === "signature");
   } catch {
     return true; // table no longer exists: leave it alone
   }
@@ -62,7 +64,7 @@ export async function moveFilesBatchAction(): Promise<ActionResult & { moved?: n
   if (!(await oneDriveReady())) return { ok: false, message: "Connect OneDrive first." };
   const db = adminDb();
   const { data } = await db.from("attachments").select("id, table_name, record_id, field, provider_path, file_name, size_bytes").eq("provider", "supabase").is("deleted_at", null).order("created_at").limit(200);
-  const rows = ((data ?? []) as { id: string; table_name: string; record_id: number; field: string | null; provider_path: string; file_name: string }[]).filter((r) => !isSignature(r.table_name, r.field));
+  const rows = ((data ?? []) as { id: string; table_name: string; record_id: number; field: string | null; provider_path: string; file_name: string }[]).filter((r) => !staysInCrm(r.table_name, r.field));
   const started = Date.now();
   let moved = 0;
   const failed: string[] = [];

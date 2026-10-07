@@ -24,6 +24,8 @@ describe("PDF copies in OneDrive", () => {
     expect(names).not.toContain("visits"); // no files
     expect(names).not.toContain("contact_interactions"); // a sub-list
     expect(names).not.toContain("brands"); // a utility list
+    expect(names).not.toContain("staff_performance"); // permission-protected: nothing of it goes to OneDrive (OD-e)
+    expect(getTable("staff_performance").privateFiles).toBe(true);
   });
 
   it("knows who did the work and when on a Job Report", () => {

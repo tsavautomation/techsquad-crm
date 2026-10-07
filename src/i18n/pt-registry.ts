@@ -379,6 +379,8 @@ export const PT_REGISTRY: Record<string, string> = {
   "Reports and Pictures Section": "Relatórios e fotos",
   "Residential": "Residencial",
   "Result": "Resultado",
+  "Outcome": "Desfecho",
+  "How the visit ended, in one line": "Como a visita terminou, em uma linha",
   "Returns to manufacturers": "Devoluções aos fabricantes",
   "Review": "Em análise",
   "Reviews of team members": "Avaliações da equipe",

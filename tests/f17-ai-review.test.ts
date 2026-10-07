@@ -94,3 +94,50 @@ describe("applyReview: logins and passwords", () => {
     expect(r.patch.report).toBe(`Set up the router. ${MOVED_MARKER} is the login. Client happy.`);
   });
 });
+
+// F17-e (Fred 2026-10-06): Problems found, Outcome and a blank Result are filled from the text.
+describe("applyReview: problems, outcome and result (F17-e)", () => {
+  const pt: ReviewInput = {
+    ...base,
+    report: "O cliente estava sem volume nas TVs.\nConstatei que o Crestron tinha perdido a autenticação com o Sonos.\n\nTudo ficou funcionando bem.",
+    problems: null,
+    outcome: null,
+  };
+  const answer: Partial<ReviewAnswer> = {
+    report: pt.report,
+    problems: ["O cliente estava sem volume nas TVs", "o Crestron tinha perdido a autenticação com o Sonos"],
+    outcome: "Tudo ficou funcionando bem.",
+    finished: true,
+  };
+
+  it("fills Problems found (joined with slashes), Outcome, and sets a blank Result to Completed", () => {
+    const r = applyReview(pt, answer);
+    expect(r.patch).toEqual({
+      problems: "O cliente estava sem volume nas TVs / o Crestron tinha perdido a autenticação com o Sonos",
+      outcome: "Tudo ficou funcionando bem.",
+      result: "Completed",
+    });
+    expect(r.notes).toEqual(["Result set to Completed.", "Problems found filled from the text.", "Outcome filled from the text."]);
+  });
+
+  it("never overwrites what the technician typed, and leaves a chosen Result alone", () => {
+    const r = applyReview({ ...pt, problems: "TV sem som", outcome: "Resolvido", result: "Partial" }, answer);
+    expect(r.patch).toEqual({});
+    expect(r.notes).toEqual([]);
+  });
+
+  it("does not call the work Completed when something is pending or someone must come back", () => {
+    const pending = applyReview(pt, { ...answer, finished: false, pending: ["trocar o cabo HDMI"], reason: "Missing material" });
+    expect(pending.patch.result).toBe("Partial");
+    const back = applyReview(pt, { ...answer, return_visit: { needed: true, why: "GC not ready", days: null } });
+    expect(back.patch.result).toBeUndefined();
+    const unsure = applyReview(pt, { ...answer, finished: false });
+    expect(unsure.patch.result).toBeUndefined();
+  });
+
+  it("keeps Outcome to one line of at most 200 characters", () => {
+    const r = applyReview(pt, { ...answer, outcome: `  a\n b ${"x".repeat(300)}` });
+    expect(r.patch.outcome).toMatch(/^a b x+$/);
+    expect(String(r.patch.outcome).length).toBe(200);
+  });
+});

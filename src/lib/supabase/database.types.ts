@@ -1322,6 +1322,7 @@ export type Database = {
           materials_used: string | null
           missing_items: string | null
           on_site: string | null
+          outcome: string | null
           parking: string | null
           partial_reason: string | null
           pending_1: string | null
@@ -1363,6 +1364,7 @@ export type Database = {
           materials_used?: string | null
           missing_items?: string | null
           on_site?: string | null
+          outcome?: string | null
           parking?: string | null
           partial_reason?: string | null
           pending_1?: string | null
@@ -1404,6 +1406,7 @@ export type Database = {
           materials_used?: string | null
           missing_items?: string | null
           on_site?: string | null
+          outcome?: string | null
           parking?: string | null
           partial_reason?: string | null
           pending_1?: string | null

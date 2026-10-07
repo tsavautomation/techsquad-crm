@@ -145,8 +145,9 @@ export async function createUploadAction(
     isSignature = f.type === "signature";
   }
 
-  // Everything but signatures goes to OneDrive when it is connected (resumable, big files OK).
-  if (!isSignature && (await oneDriveReady())) {
+  // Everything but signatures goes to OneDrive when it is connected (resumable, big files OK), except
+  // the files of permission-protected tables (SPEC §9.1 OD-e): OneDrive is open to everyone.
+  if (!isSignature && !t.privateFiles && (await oneDriveReady())) {
     if (file.size > MAX_ONEDRIVE_BYTES) return { ok: false, message: `“${file.name}” is larger than 10 GB.` };
     const id = randomUUID();
     try {

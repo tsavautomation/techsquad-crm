@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { reviewQueuedSafely } from "@/lib/ai/review";
 import { runAutomationsNow, sendQueuedSafely } from "@/lib/engine/automations";
+import { wantsPdf } from "@/lib/files/pdf-name";
+import { dumpRecordPdfSafely } from "@/lib/files/record-pdf";
 import type { Values } from "@/lib/rules/evaluate";
 import { getTable } from "@/registry";
 import { tableHref } from "@/registry/routes";
@@ -21,6 +23,8 @@ export async function saveRecordAction(tableName: string, id: number | null, val
   if (result.ok) {
     await runAutomationsNow();
     after(sendQueuedSafely);
+    // SPEC §9.1 OD-c/OD-d: the PDF copy in OneDrive is written right after every form save.
+    if (wantsPdf(t)) after(() => dumpRecordPdfSafely(tableName, result.id));
     // F17: a new Job Report is read by Claude after the reply (the hourly tick catches any left over).
     if (tableName === "job_reports") after(reviewQueuedSafely);
   }
