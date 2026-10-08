@@ -32,7 +32,10 @@ export type FieldType =
 /** What src/lib/ai/extract.ts can read from a photo. */
 export type ExtractKind = "license_expiration";
 
-export type FieldOption = { label: string; value: string; color?: string; retired?: boolean };
+export type FieldOption = { label: string; value: string; color?: string; retired?: boolean;
+  /** Added for this CRM after WebAuthor (not in the parity check), e.g. the Stock stages Separated / Discarded (INV-d). */
+  added?: boolean;
+};
 
 /** Filter applied to a lookup picker: fixed values, or the current value of another field on this form. */
 export type LookupFilter = Record<string, string | string[] | { sameAs: string }>;

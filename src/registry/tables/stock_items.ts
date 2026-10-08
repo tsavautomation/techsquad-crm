@@ -209,7 +209,10 @@ export const stockItems: TableDef = {
           "label": "RMA",
           "value": "RMA",
           "color": "#f44336"
-        }
+        },
+        // INV-d (Fred 2026-10-08): the field stock screens need two more stages.
+        { label: "Separated", value: "Separated", color: "#ff9800", added: true },
+        { label: "Discarded", value: "Discarded", color: "#9e9e9e", added: true }
       ]
     }
   ],

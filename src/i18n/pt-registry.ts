@@ -529,4 +529,7 @@ export const PT_REGISTRY: Record<string, string> = {
   "Expires on": "Vence em",
   "Leave blank when the document does not expire.": "Deixe em branco quando o documento não vence.",
   "Policy number, who issued it, where the original is…": "Número da apólice, quem emitiu, onde está o original…",
+  // ---------------------------------------------------------------- INV-d Stock stages
+  "Separated": "Separado",
+  "Discarded": "Baixado",
 };

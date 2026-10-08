@@ -71,7 +71,8 @@ describe("registry ↔ WebAuthor export", () => {
       const rawOpts = (JSON.parse(String(raw.options || "[]")) as { label: string; value: string }[])
         .filter((o) => o.value !== "")
         .map((o) => ({ label: String(o.label).trim(), value: String(o.value).trim() }));
-      expect(f.options.map(({ label, value }) => ({ label, value })), `${legacyTable}.${raw.column_name}`).toEqual(rawOpts);
+      // Options marked `added` came with this CRM's own features (INV-d Stock stages): not in WebAuthor.
+      expect(f.options.filter((o) => !o.added).map(({ label, value }) => ({ label, value })), `${legacyTable}.${raw.column_name}`).toEqual(rawOpts);
     }
   });
 
