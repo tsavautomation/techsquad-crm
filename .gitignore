@@ -56,3 +56,7 @@ client_secret_*.json
 docs/*.xlsx
 docs/TechSquad-CRM-bible.*
 docs/render-bible.js
+docs/TechSquad-CRM-biblia.*
+docs/render-doc.js
+docs/manual/
+.portal-test-login.txt

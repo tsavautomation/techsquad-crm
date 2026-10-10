@@ -15,6 +15,8 @@ export type CurrentUser = {
   permissions: ReadonlySet<string>;
   /** Administrator (profiles.is_admin): bypasses every permission check and may edit permissions. */
   isSysadmin: boolean;
+  /** F6: set for a customer-portal login (the Contact it belongs to); null for staff. */
+  contactId: number | null;
 };
 
 type SessionState = { status: "signed-out" } | { status: "inactive" } | { status: "active"; user: CurrentUser };
@@ -32,7 +34,7 @@ export const getSession = cache(async (): Promise<SessionState> => {
   if (!userId) return { status: "signed-out" };
 
   const [{ data: profile }, { data: permissions, error }] = await Promise.all([
-    supabase.from("profiles").select("email, first_name, last_name, active, language, is_admin").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("email, first_name, last_name, active, language, is_admin, contact_id").eq("id", userId).maybeSingle(),
     supabase.rpc("my_permissions"),
   ]);
   if (error) throw new Error(`Could not load permissions: ${error.message}`);
@@ -48,14 +50,19 @@ export const getSession = cache(async (): Promise<SessionState> => {
       language: isLang(profile.language) ? profile.language : "en",
       permissions: new Set((permissions as string[] | null) ?? []),
       isSysadmin: Boolean(profile.is_admin),
+      contactId: profile.contact_id ?? null,
     },
   };
 });
 
-/** The active signed-in user, or a redirect to /login (signed out) or /auth/inactive (deactivated). */
+/**
+ * The active signed-in staff member, or a redirect to /login (signed out) or /auth/inactive (deactivated).
+ * A customer-portal login (F6) is sent to /portal: it has no place in the staff app.
+ */
 export async function requireUser(): Promise<CurrentUser> {
   const session = await getSession();
   if (session.status === "signed-out") redirect("/login");
   if (session.status === "inactive") redirect("/auth/inactive");
+  if (session.user.contactId) redirect("/portal");
   return session.user;
 }

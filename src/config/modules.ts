@@ -55,6 +55,9 @@ export const MODULES: ModuleDef[] = [
       tab("administrative", "report-deficiencies", "Report Deficiencies"),
       // F23 (Fred 2026-10-07): the company's documents board, the old CRM's "WIKI".
       tab("administrative", "documents", "Documents"),
+      // F6 (Fred 2026-10-10): what the customer portal can show — documents ticked per project, and apps with store links.
+      tab("administrative", "portal-documents", "Client Documents"),
+      tab("administrative", "portal-apps", "Client Apps"),
     ],
   },
   {

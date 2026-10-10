@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AtSign, Bell, CalendarClock, CheckSquare, ClipboardCheck, Clock, MapPin, SquareKanban, X, type LucideIcon, Phone } from "lucide-react";
+import { AtSign, Bell, CalendarClock, CheckSquare, ClipboardCheck, Clock, MapPin, MessageSquarePlus, SquareKanban, X, type LucideIcon, Phone } from "lucide-react";
 import { alertsAction, markTagsSeenAction, type Alerts, type AlertSection } from "@/lib/alerts/actions";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
@@ -22,6 +22,7 @@ const ICONS: Record<AlertSection["key"], { icon: LucideIcon; tint: string }> = {
   tasks: { icon: SquareKanban, tint: "#f59e0b" },
   checklist: { icon: CheckSquare, tint: "#16a34a" },
   followups: { icon: CalendarClock, tint: "#ef4444" },
+  requests: { icon: MessageSquarePlus, tint: "#0e76ad" },
 };
 
 function List({ alerts, onPick, onTagsRead }: { alerts: Alerts | null; onPick: () => void; onTagsRead: () => void }) {

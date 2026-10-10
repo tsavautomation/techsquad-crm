@@ -477,6 +477,13 @@ export type Database = {
             foreignKeyName: "calendar_events_visit_id_fkey"
             columns: ["visit_id"]
             isOneToOne: false
+            referencedRelation: "portal_visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
             referencedRelation: "visits"
             referencedColumns: ["id"]
           },
@@ -619,6 +626,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_interactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
             referencedColumns: ["id"]
           },
           {
@@ -1176,6 +1190,13 @@ export type Database = {
             foreignKeyName: "field_warnings_visit_id_fkey"
             columns: ["visit_id"]
             isOneToOne: false
+            referencedRelation: "portal_visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_warnings_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
             referencedRelation: "visits"
             referencedColumns: ["id"]
           },
@@ -1233,6 +1254,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_notes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
             referencedColumns: ["id"]
           },
           {
@@ -1333,6 +1361,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_checkouts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
             referencedColumns: ["id"]
           },
           {
@@ -1504,6 +1539,13 @@ export type Database = {
             foreignKeyName: "job_reports_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -1526,6 +1568,13 @@ export type Database = {
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_reports_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
             referencedColumns: ["id"]
           },
           {
@@ -2036,11 +2085,328 @@ export type Database = {
             foreignKeyName: "permits_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "permits_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_access: {
+        Row: {
+          contact_id: number
+          created_at: string
+          invited_at: string | null
+          invited_by: string | null
+          project_id: number
+        }
+        Insert: {
+          contact_id: number
+          created_at?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          project_id: number
+        }
+        Update: {
+          contact_id?: number
+          created_at?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          project_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_access_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_access_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_access_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_access_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_app_projects: {
+        Row: {
+          app_id: number
+          created_at: string
+          created_by: string | null
+          project_id: number
+        }
+        Insert: {
+          app_id: number
+          created_at?: string
+          created_by?: string | null
+          project_id: number
+        }
+        Update: {
+          app_id?: number
+          created_at?: string
+          created_by?: string | null
+          project_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_app_projects_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "portal_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_app_projects_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "portal_my_apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_app_projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_app_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_app_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_apps: {
+        Row: {
+          android_url: string | null
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: number
+          ios_url: string | null
+          locked: boolean
+          purpose: string | null
+          submitted_at: string | null
+          title: string | null
+          updated_at: string
+          updated_by: string | null
+          web_url: string | null
+        }
+        Insert: {
+          android_url?: string | null
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: number
+          ios_url?: string | null
+          locked?: boolean
+          purpose?: string | null
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          web_url?: string | null
+        }
+        Update: {
+          android_url?: string | null
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: number
+          ios_url?: string | null
+          locked?: boolean
+          purpose?: string | null
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          web_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_apps_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_apps_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_document_projects: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_id: number
+          project_id: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_id: number
+          project_id: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_id?: number
+          project_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_document_projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_document_projects_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "portal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_document_projects_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "portal_my_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_document_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_document_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_documents: {
+        Row: {
+          archived_at: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: number
+          locked: boolean
+          notes: string | null
+          project_id: number | null
+          submitted_at: string | null
+          title: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: number
+          locked?: boolean
+          notes?: string | null
+          project_id?: number | null
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: number
+          locked?: boolean
+          notes?: string | null
+          project_id?: number | null
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_documents_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2149,6 +2515,7 @@ export type Database = {
       profiles: {
         Row: {
           active: boolean
+          contact_id: number | null
           created_at: string
           email: string
           first_name: string | null
@@ -2160,6 +2527,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          contact_id?: number | null
           created_at?: string
           email: string
           first_name?: string | null
@@ -2171,6 +2539,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          contact_id?: number | null
           created_at?: string
           email?: string
           first_name?: string | null
@@ -2180,7 +2549,15 @@ export type Database = {
           last_name?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects: {
         Row: {
@@ -2214,12 +2591,15 @@ export type Database = {
           list_items: string | null
           locked: boolean
           maintenance_amount: number | null
+          maintenance_expires_on: string | null
           maintenance_history: string | null
+          maintenance_includes: string | null
           maintenance_plan: boolean
           maintenance_purchase_date: string | null
           maintenance_sales_person_id: number | null
           maintenance_status: string | null
           maintenance_type: string | null
+          maintenance_visits_included: number | null
           older_reports: string | null
           owner_contact: string | null
           owner_contact_intl: string | null
@@ -2274,12 +2654,15 @@ export type Database = {
           list_items?: string | null
           locked?: boolean
           maintenance_amount?: number | null
+          maintenance_expires_on?: string | null
           maintenance_history?: string | null
+          maintenance_includes?: string | null
           maintenance_plan?: boolean
           maintenance_purchase_date?: string | null
           maintenance_sales_person_id?: number | null
           maintenance_status?: string | null
           maintenance_type?: string | null
+          maintenance_visits_included?: number | null
           older_reports?: string | null
           owner_contact?: string | null
           owner_contact_intl?: string | null
@@ -2334,12 +2717,15 @@ export type Database = {
           list_items?: string | null
           locked?: boolean
           maintenance_amount?: number | null
+          maintenance_expires_on?: string | null
           maintenance_history?: string | null
+          maintenance_includes?: string | null
           maintenance_plan?: boolean
           maintenance_purchase_date?: string | null
           maintenance_sales_person_id?: number | null
           maintenance_status?: string | null
           maintenance_type?: string | null
+          maintenance_visits_included?: number | null
           older_reports?: string | null
           owner_contact?: string | null
           owner_contact_intl?: string | null
@@ -2542,6 +2928,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "punch_list_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
             referencedColumns: ["id"]
           },
           {
@@ -2964,6 +3357,13 @@ export type Database = {
             foreignKeyName: "report_deficiencies_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_deficiencies_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -2979,6 +3379,13 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_deficiencies_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
             referencedColumns: ["id"]
           },
           {
@@ -3066,7 +3473,21 @@ export type Database = {
             foreignKeyName: "report_files_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_files_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
             referencedColumns: ["id"]
           },
           {
@@ -3152,6 +3573,13 @@ export type Database = {
             columns: ["manufacturer_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rmas_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
             referencedColumns: ["id"]
           },
           {
@@ -3253,6 +3681,13 @@ export type Database = {
             foreignKeyName: "sales_destination_project_id_fkey"
             columns: ["destination_project_id"]
             isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_destination_project_id_fkey"
+            columns: ["destination_project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -3310,6 +3745,116 @@ export type Database = {
         }
         Relationships: []
       }
+      service_requests: {
+        Row: {
+          archived_at: string | null
+          contact_id: number | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          id: number
+          kind: string | null
+          locked: boolean
+          office_notes: string | null
+          project_id: number
+          status: string
+          submitted_at: string | null
+          title: string | null
+          updated_at: string
+          updated_by: string | null
+          visit_id: number | null
+        }
+        Insert: {
+          archived_at?: string | null
+          contact_id?: number | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: number
+          kind?: string | null
+          locked?: boolean
+          office_notes?: string | null
+          project_id: number
+          status?: string
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          visit_id?: number | null
+        }
+        Update: {
+          archived_at?: string | null
+          contact_id?: number | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: number
+          kind?: string | null
+          locked?: boolean
+          office_notes?: string | null
+          project_id?: number
+          status?: string
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          visit_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_requests_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_outbox: {
         Row: {
           body: string
@@ -3366,6 +3911,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_outbox_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
             referencedColumns: ["id"]
           },
           {
@@ -3464,6 +4016,13 @@ export type Database = {
             foreignKeyName: "staff_performance_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_performance_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -3472,6 +4031,13 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_performance_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
             referencedColumns: ["id"]
           },
           {
@@ -3572,6 +4138,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_items_destination_project_id_fkey"
+            columns: ["destination_project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
             referencedColumns: ["id"]
           },
           {
@@ -3783,6 +4356,13 @@ export type Database = {
             foreignKeyName: "survey_proposals_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -3901,6 +4481,13 @@ export type Database = {
             foreignKeyName: "tasks_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -3909,6 +4496,13 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
             referencedColumns: ["id"]
           },
           {
@@ -3993,6 +4587,13 @@ export type Database = {
             columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_corrections_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
             referencedColumns: ["id"]
           },
           {
@@ -4089,6 +4690,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
             referencedColumns: ["id"]
           },
           {
@@ -4193,6 +4801,13 @@ export type Database = {
             foreignKeyName: "transactions_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -4269,6 +4884,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tv_installations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
             referencedColumns: ["id"]
           },
           {
@@ -4470,6 +5092,7 @@ export type Database = {
           id: number
           instructions: string | null
           locked: boolean
+          maintenance_visit: boolean
           on_way_at: string | null
           project_id: number | null
           proposed_from_report_id: number | null
@@ -4508,6 +5131,7 @@ export type Database = {
           id?: number
           instructions?: string | null
           locked?: boolean
+          maintenance_visit?: boolean
           on_way_at?: string | null
           project_id?: number | null
           proposed_from_report_id?: number | null
@@ -4546,6 +5170,7 @@ export type Database = {
           id?: number
           instructions?: string | null
           locked?: boolean
+          maintenance_visit?: boolean
           on_way_at?: string | null
           project_id?: number | null
           proposed_from_report_id?: number | null
@@ -4570,6 +5195,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
             referencedColumns: ["id"]
           },
           {
@@ -4644,6 +5276,13 @@ export type Database = {
           target_id?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "visits_team_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "visits_team_record_id_fkey"
             columns: ["record_id"]
@@ -4883,6 +5522,230 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_files: {
+        Row: {
+          field: string | null
+          file_name: string | null
+          id: string | null
+          mime_type: string | null
+          provider: string | null
+          provider_path: string | null
+          record_id: number | null
+          size_bytes: number | null
+          table_name: string | null
+        }
+        Insert: {
+          field?: string | null
+          file_name?: string | null
+          id?: string | null
+          mime_type?: string | null
+          provider?: string | null
+          provider_path?: string | null
+          record_id?: number | null
+          size_bytes?: number | null
+          table_name?: string | null
+        }
+        Update: {
+          field?: string | null
+          file_name?: string | null
+          id?: string | null
+          mime_type?: string | null
+          provider?: string | null
+          provider_path?: string | null
+          record_id?: number | null
+          size_bytes?: number | null
+          table_name?: string | null
+        }
+        Relationships: []
+      }
+      portal_my_apps: {
+        Row: {
+          android_url: string | null
+          id: number | null
+          ios_url: string | null
+          project_id: number | null
+          purpose: string | null
+          title: string | null
+          web_url: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_app_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_app_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_my_documents: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: number | null
+          notes: string | null
+          project_id: number | null
+          title: string | null
+        }
+        Relationships: []
+      }
+      portal_projects: {
+        Row: {
+          apartment_or_unit: string | null
+          approved_amount: number | null
+          id: number | null
+          invoiced_amount: number | null
+          job_address: Json | null
+          job_status: string | null
+          maintenance_amount: number | null
+          maintenance_expires_on: string | null
+          maintenance_includes: string | null
+          maintenance_plan: boolean | null
+          maintenance_purchase_date: string | null
+          maintenance_status: string | null
+          maintenance_type: string | null
+          maintenance_visits_included: number | null
+          maintenance_visits_used: number | null
+          paid_amount: number | null
+          start_date: string | null
+          system_credentials: string | null
+          systems: string[] | null
+          title: string | null
+          type: string | null
+        }
+        Insert: {
+          apartment_or_unit?: string | null
+          approved_amount?: never
+          id?: number | null
+          invoiced_amount?: never
+          job_address?: Json | null
+          job_status?: string | null
+          maintenance_amount?: number | null
+          maintenance_expires_on?: string | null
+          maintenance_includes?: string | null
+          maintenance_plan?: boolean | null
+          maintenance_purchase_date?: string | null
+          maintenance_status?: string | null
+          maintenance_type?: string | null
+          maintenance_visits_included?: number | null
+          maintenance_visits_used?: never
+          paid_amount?: never
+          start_date?: string | null
+          system_credentials?: string | null
+          systems?: string[] | null
+          title?: string | null
+          type?: string | null
+        }
+        Update: {
+          apartment_or_unit?: string | null
+          approved_amount?: never
+          id?: number | null
+          invoiced_amount?: never
+          job_address?: Json | null
+          job_status?: string | null
+          maintenance_amount?: number | null
+          maintenance_expires_on?: string | null
+          maintenance_includes?: string | null
+          maintenance_plan?: boolean | null
+          maintenance_purchase_date?: string | null
+          maintenance_status?: string | null
+          maintenance_type?: string | null
+          maintenance_visits_included?: number | null
+          maintenance_visits_used?: never
+          paid_amount?: never
+          start_date?: string | null
+          system_credentials?: string | null
+          systems?: string[] | null
+          title?: string | null
+          type?: string | null
+        }
+        Relationships: []
+      }
+      portal_transactions: {
+        Row: {
+          amount: number | null
+          date: string | null
+          description: string | null
+          id: number | null
+          portal_number: string | null
+          project_id: number | null
+          type: string | null
+        }
+        Insert: {
+          amount?: number | null
+          date?: string | null
+          description?: string | null
+          id?: number | null
+          portal_number?: string | null
+          project_id?: number | null
+          type?: string | null
+        }
+        Update: {
+          amount?: number | null
+          date?: string | null
+          description?: string | null
+          id?: number | null
+          portal_number?: string | null
+          project_id?: number | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_visits: {
+        Row: {
+          arrival_window: string | null
+          billing: string | null
+          checked_in_at: string | null
+          checked_out_at: string | null
+          duration: string | null
+          id: number | null
+          maintenance_visit: boolean | null
+          on_way_at: string | null
+          project_id: number | null
+          service_type: string | null
+          starts_at: string | null
+          status: string | null
+          technician_first_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_levels: {
         Row: {
           last_moved_at: string | null
@@ -5004,6 +5867,7 @@ export type Database = {
           id: number
           instructions: string | null
           locked: boolean
+          maintenance_visit: boolean
           on_way_at: string | null
           project_id: number | null
           proposed_from_report_id: number | null

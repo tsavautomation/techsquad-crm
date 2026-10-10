@@ -22,7 +22,7 @@ export default async function UserPage(props: PageProps<"/admin/users/[id]">) {
     db.from("profiles").select("id, email, first_name, last_name, active, is_admin").eq("id", id).maybeSingle(),
     db.from("permissions").select("key"),
     db.from("user_permissions").select("user_id, permission_key"),
-    db.from("profiles").select("id, email, first_name, last_name, is_admin").eq("active", true).neq("id", id).order("first_name"),
+    db.from("profiles").select("id, email, first_name, last_name, is_admin").eq("active", true).is("contact_id", null).neq("id", id).order("first_name"),
     db.rpc("user_last_sign_in"),
   ]);
   // F11-b: a login that never signed in can be deleted for good (administrators).

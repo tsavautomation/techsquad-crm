@@ -730,6 +730,11 @@ export const projects: TableDef = {
       },
       "startsHidden": true
     },
+    // F6 Client portal (Fred 2026-10-10): what the plan gives, when it ends and how many visits it includes.
+    // The portal shows these with the visits used (visits ticked "Counts toward the maintenance plan").
+    { name: "maintenance_expires_on", label: "Expires on", type: "date", startsHidden: true, legacy: NEW },
+    { name: "maintenance_visits_included", label: "Visits included", type: "number", startsHidden: true, legacy: NEW },
+    { name: "maintenance_includes", label: "What it includes", type: "textarea", startsHidden: true, maxLength: 2000, placeholder: "One item per line. The customer reads this in the portal.", legacy: NEW },
     {
       "name": "special_orders",
       "label": "Special Orders",
@@ -1290,7 +1295,28 @@ export const projects: TableDef = {
           "field": "referral_organization_id"
         }
       ]
-    }
+    },
+    // F6: the portal's plan fields follow the Maintenance Plan switch like the WebAuthor ones above.
+    {
+      id: 900601,
+      title: "Show the plan details for the portal",
+      when: [{ field: "maintenance_plan", op: "equal", value: "1" }],
+      then: [
+        { do: "show", field: "maintenance_expires_on" },
+        { do: "show", field: "maintenance_visits_included" },
+        { do: "show", field: "maintenance_includes" },
+      ],
+    },
+    {
+      id: 900602,
+      title: "Hide the plan details for the portal",
+      when: [{ field: "maintenance_plan", op: "equal", value: "0" }],
+      then: [
+        { do: "hide", field: "maintenance_expires_on" },
+        { do: "hide", field: "maintenance_visits_included" },
+        { do: "hide", field: "maintenance_includes" },
+      ],
+    },
   ],
   "legacy": {
     "table": "fx_techsquad_projects"

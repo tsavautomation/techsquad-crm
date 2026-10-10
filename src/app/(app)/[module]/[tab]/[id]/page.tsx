@@ -44,6 +44,8 @@ import { StockLevels } from "@/components/product/stock-levels";
 import { PayRatePanel } from "@/components/employee/pay-rate-panel";
 import { Timeline } from "@/components/contact/timeline";
 import { loadMessagePanel } from "@/lib/messages/load";
+import { PortalPanel } from "@/components/project/portal-panel";
+import { loadPortalPanel } from "@/lib/portal/staff-data";
 import { loadTimeline } from "@/lib/records/timeline";
 
 
@@ -112,10 +114,12 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
   const canModify = canDo(perms, t, "modify", getTable);
   // F4: contact log, message templates and the client timeline on Projects and Contacts.
   const client = t.detailAddon === "project" || t.detailAddon === "contact" ? t.name as "projects" | "contacts" : null;
-  const [{ data: workflow }, messages, timeline] = await Promise.all([
+  const [{ data: workflow }, messages, timeline, portal] = await Promise.all([
     db.rpc("workflow_panel", { p_table: t.name, p_id: recordId }),
     client ? loadMessagePanel(db, user, client, recordId) : Promise.resolve(null),
     client ? loadTimeline(db, perms, client, recordId) : Promise.resolve(null),
+    // F6: the customer portal card (who sees the project, documents and apps shown).
+    client === "projects" ? loadPortalPanel(recordId) : Promise.resolve(null),
   ]);
 
   // Phones: one column — header, workflow, add-on cards, toolbar, fields, sections (flex `order`).
@@ -175,6 +179,11 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
         {messages && (messages.templates.length > 0 || messages.canLog) && (
           <Section id="message" title={client === "projects" ? tr("Contact the client") : tr("Contact")} open>
             <MessagePanel data={messages} projectId={client === "projects" ? recordId : null} />
+          </Section>
+        )}
+        {portal && (portal.canEdit || portal.access.length > 0) && (
+          <Section id="portal" title={tr("Customer portal")} count={portal.access.length} open={portal.access.length > 0}>
+            <PortalPanel projectId={recordId} data={portal} />
           </Section>
         )}
         {timeline && (

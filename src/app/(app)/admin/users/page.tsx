@@ -22,7 +22,7 @@ export default async function UsersPage(props: PageProps<"/admin/users">) {
 
   const db = await recordsDb();
   const [{ data }, { data: signIns }] = await Promise.all([
-    db.from("profiles").select("id, email, first_name, last_name, active, is_admin, user_permissions(count)").order("first_name"),
+    db.from("profiles").select("id, email, first_name, last_name, active, is_admin, user_permissions(count)").is("contact_id", null).order("first_name"), // customer-portal logins (F6) are not staff
     db.rpc("user_last_sign_in"),
   ]);
   const lastSeen = new Map(((signIns ?? []) as { id: string; last_sign_in_at: string | null }[]).map((r) => [r.id, r.last_sign_in_at]));

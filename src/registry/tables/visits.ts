@@ -95,6 +95,8 @@ export const visits: TableDef = {
       ],
       legacy: NEW,
     },
+    // F6 Client portal (Fred 2026-10-10): the office ticks the visits the maintenance plan pays for; the portal counts them.
+    { name: "maintenance_visit", label: "Counts toward the maintenance plan", type: "boolean", default: false, help: "Tick when this visit is one of the visits included in the customer's maintenance plan.", legacy: NEW },
     // F2 Field day: set by the people going (Today screen), shown on the visit once filled.
     { name: "on_way_at", label: "On my way", type: "datetime", readOnly: true, formHidden: true, heading: "In the field", legacy: NEW },
     { name: "checked_in_at", label: "Checked in", type: "datetime", readOnly: true, formHidden: true, legacy: NEW },

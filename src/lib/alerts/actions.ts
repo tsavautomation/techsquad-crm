@@ -18,7 +18,7 @@ import { getT } from "@/i18n/server";
 // once done (approved, task completed, checklist ticked, visit done…). Row-level security applies throughout.
 
 export type AlertItem = { key: string; href: string; title: string; meta: string; urgent?: boolean };
-export type AlertSection = { key: "clock" | "phones" | "tags" | "approvals" | "visits" | "tasks" | "checklist" | "followups"; title: string; items: AlertItem[] };
+export type AlertSection = { key: "clock" | "phones" | "tags" | "approvals" | "visits" | "tasks" | "checklist" | "followups" | "requests"; title: string; items: AlertItem[] };
 export type Alerts = { count: number; urgent: boolean; sections: AlertSection[] };
 
 const MAX = 20;
@@ -223,10 +223,32 @@ export async function alertsAction(): Promise<Alerts> {
       .map((s) => ({ key: `phone:${s.employee_id}`, href: `${recordHref(getTable("employees"), s.employee_id)}/edit`, title: s.name, meta: tr("No usable phone number for the report reminders. Fix it on the Employee card."), urgent: false }));
   })();
 
-  const [a, b, c, d, e, f, g, h] = await Promise.all([tags, approvals, visits, tasks, checklist, followups, clock, phones]);
+  // F6: customers' requests from the portal, for the office (everyone who sees all projects).
+  const requests = (async (): Promise<AlertItem[]> => {
+    if (!user.permissions.has("projects.projects.view_all")) return [];
+    const { data } = await db
+      .from("service_requests")
+      .select("id, project_id, kind, description, created_at, projects(title)")
+      .eq("status", "Requested")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(MAX);
+    const rows = (data ?? []) as unknown as { id: number; project_id: number; kind: string | null; description: string | null; created_at: string; projects: { title: string | null } | null }[];
+    const projects = getTable("projects");
+    return rows.map((r) => ({
+      key: `request:${r.id}`,
+      href: `${recordHref(projects, r.project_id)}/sub/service_requests/${r.id}/edit`,
+      title: `${tr(r.kind ?? "Other")} · ${r.projects?.title ?? `#${r.project_id}`}`,
+      meta: `${formatDate(r.created_at)} · ${(r.description ?? "").length > 80 ? `${(r.description ?? "").slice(0, 80)}…` : r.description ?? ""}`,
+      urgent: Date.now() - new Date(r.created_at).getTime() > 2 * 24 * 3600_000,
+    }));
+  })();
+
+  const [a, b, c, d, e, f, g, h, i] = await Promise.all([tags, approvals, visits, tasks, checklist, followups, clock, phones, requests]);
   const sections: AlertSection[] = [
     { key: "clock" as const, title: tr("Time clock"), items: g },
     { key: "phones" as const, title: tr("Report reminders"), items: h },
+    { key: "requests" as const, title: tr("Customer requests from the portal"), items: i },
     { key: "tags" as const, title: tr("Tagged you"), items: a },
     { key: "approvals" as const, title: tr("Waiting for your approval"), items: b },
     { key: "visits" as const, title: tr("Your visits today"), items: c },

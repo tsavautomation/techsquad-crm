@@ -27,6 +27,9 @@ import { tvInstallations } from "./tables/tv_installations";
 import { visits } from "./tables/visits";
 import { reportDeficiencies } from "./tables/report_deficiencies";
 import { companyDocuments } from "./tables/company_documents";
+import { serviceRequests } from "./tables/service_requests";
+import { portalDocuments } from "./tables/portal_documents";
+import { portalApps } from "./tables/portal_apps";
 
 /** Tables carried over from WebAuthor (the parity tests check these against the export). TS Help Desk was removed (SPEC §9.1 H-a). */
 export const WEBAUTHOR_REGISTRY: TableDef[] = [
@@ -57,7 +60,7 @@ export const WEBAUTHOR_REGISTRY: TableDef[] = [
 ];
 
 /** Tables built for this CRM (Portal features, docs/portal-features-merge.md). */
-export const NEW_TABLES: TableDef[] = [visits, reportDeficiencies, companyDocuments];
+export const NEW_TABLES: TableDef[] = [visits, reportDeficiencies, companyDocuments, serviceRequests, portalDocuments, portalApps];
 
 export const REGISTRY: TableDef[] = [...WEBAUTHOR_REGISTRY, ...NEW_TABLES];
 
