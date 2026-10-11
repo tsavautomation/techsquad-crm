@@ -5,7 +5,7 @@ import { isSupabaseConfigured, supabaseEnv } from "./env";
 /** Paths reachable without being signed in. */
 // /api/cron checks its own secret (CRON_SECRET) instead of a signed-in user.
 // /portal/login and /portal/install (F6) are the customer portal's own public pages.
-export const PUBLIC_PATHS = ["/login", "/auth", "/setup", "/api/cron", "/privacy", "/portal/login", "/portal/install"];
+export const PUBLIC_PATHS = ["/login", "/auth", "/setup", "/api/cron", "/privacy", "/portal/login", "/portal/install", "/portal/manifest.webmanifest"];
 const isPortalPath = (pathname: string) => pathname === "/portal" || pathname.startsWith("/portal/");
 
 export function isPublicPath(pathname: string) {

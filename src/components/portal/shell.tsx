@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 export function PortalTopBar({ name, projectsHref }: { name: string; projectsHref: string | null }) {
   const t = useT();
   return (
-    <header className="sticky top-0 z-20 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+    <header className="sticky top-0 z-20 border-b bg-card/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="mx-auto flex h-14 max-w-3xl items-center gap-3 px-4">
         <Link href="/portal" className="flex min-w-0 items-center gap-2" aria-label={t("Home")}>
           <Logo className="size-8" />

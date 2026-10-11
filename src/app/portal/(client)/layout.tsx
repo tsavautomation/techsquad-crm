@@ -1,9 +1,7 @@
-import type { Metadata } from "next";
 import { requireClient } from "@/lib/portal/session";
 import { recordsDb } from "@/lib/records/data";
 import { PortalTopBar } from "@/components/portal/shell";
 
-export const metadata: Metadata = { title: "Tech Squad · Client portal" };
 
 /** Customer portal (F6): a customer's own view of their projects. Staff are sent back to the app. */
 export default async function PortalLayout({ children }: LayoutProps<"/portal">) {

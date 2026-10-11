@@ -5,7 +5,7 @@ import { PortalLoginForm } from "./login-form";
 import { getT } from "@/i18n/server";
 
 export async function generateMetadata() {
-  return { title: `Tech Squad · ${(await getT())("Client portal")}` };
+  return { title: (await getT())("Client portal") };
 }
 
 /** Customer sign-in (F6). Same Supabase Auth as staff; the profile's Contact decides which app opens. */
