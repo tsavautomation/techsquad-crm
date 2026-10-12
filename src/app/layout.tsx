@@ -23,6 +23,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover", // lets the layout use the iPhone safe-area insets
+  // No pinch or double-tap zoom when installed on the home screen (Fred 2026-10-11, "um app não deixaria").
+  // Safari in browser mode ignores this on purpose; the standalone app honours it.
+  maximumScale: 1,
+  userScalable: false,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f3f5f8" },
     { media: "(prefers-color-scheme: dark)", color: "#0b1220" },

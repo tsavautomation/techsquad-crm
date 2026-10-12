@@ -166,6 +166,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* no double-tap zoom on phones; pinch zoom is off by the viewport when installed */
+    touch-action: manipulation;
   }
   html {
     @apply font-sans;
