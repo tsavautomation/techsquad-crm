@@ -87,24 +87,28 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                 </div>
                 <ol className="divide-y text-[13px]">
                   {entries.map((e) => (
-                    <li key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                      <span className="w-[76px] shrink-0 font-medium tabular-nums">{time(e.at)}</span>
-                      <span className="min-w-0 flex-1">
-                        {tr(KIND_LABEL[e.kind])}
-                        {e.visits?.projects?.title && <span className="text-text-2"> · {e.visits.projects.title}</span>}
-                        {e.corrected_at && e.original_at && <span className="ml-1 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">{tr("corrected from {time}", { time: time(e.original_at) })}</span>}
-                      </span>
-                      <span className={cn("flex shrink-0 items-center gap-1 text-xs", PLACE_TONE[e.place])}>
-                        <MapPin className="size-3.5" aria-hidden />
-                        {e.lat !== null && e.lng !== null ? (
-                          <a href={`https://www.google.com/maps/search/?api=1&query=${e.lat},${e.lng}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                            {tr(e.place)}
-                            {e.place !== "Office" && e.place !== "On site" && e.distance_m !== null && ` · ${formatDistance(e.distance_m)}`}
-                          </a>
-                        ) : (
-                          tr("no location")
-                        )}
-                      </span>
+                    {/* Time | what happened (place under it) | tools. The place sits under the text so a long project
+                        name never gets squeezed into one word per line on a phone with large text (Fred 2026-10-11). */}
+                    <li key={e.id} className="flex items-start gap-x-3 py-2">
+                      <span className="w-[64px] shrink-0 pt-px font-medium tabular-nums">{time(e.at)}</span>
+                      <div className="min-w-0 flex-1">
+                        <p>
+                          {tr(KIND_LABEL[e.kind])}
+                          {e.visits?.projects?.title && <span className="text-text-2"> · {e.visits.projects.title}</span>}
+                          {e.corrected_at && e.original_at && <span className="ml-1 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">{tr("corrected from {time}", { time: time(e.original_at) })}</span>}
+                        </p>
+                        <span className={cn("mt-0.5 flex items-center gap-1 text-xs", PLACE_TONE[e.place])}>
+                          <MapPin className="size-3.5 shrink-0" aria-hidden />
+                          {e.lat !== null && e.lng !== null ? (
+                            <a href={`https://www.google.com/maps/search/?api=1&query=${e.lat},${e.lng}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                              {tr(e.place)}
+                              {e.place !== "Office" && e.place !== "On site" && e.distance_m !== null && ` · ${formatDistance(e.distance_m)}`}
+                            </a>
+                          ) : (
+                            tr("no location")
+                          )}
+                        </span>
+                      </div>
                       {canFix && <EntryTools id={e.id} time={toDateTimeLocalET(e.at).slice(11, 16)} />}
                     </li>
                   ))}
