@@ -87,8 +87,8 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                 </div>
                 <ol className="divide-y text-[13px]">
                   {entries.map((e) => (
-                    {/* Time | what happened (place under it) | tools. The place sits under the text so a long project
-                        name never gets squeezed into one word per line on a phone with large text (Fred 2026-10-11). */}
+                    // Time | what happened (place under it) | tools. The place sits under the text so a long project
+                    // name never gets squeezed into one word per line on a phone with large text (Fred 2026-10-11).
                     <li key={e.id} className="flex items-start gap-x-3 py-2">
                       <span className="w-[64px] shrink-0 pt-px font-medium tabular-nums">{time(e.at)}</span>
                       <div className="min-w-0 flex-1">
