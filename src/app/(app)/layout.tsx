@@ -48,7 +48,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   };
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex min-h-dvh" style={{ zoom: "var(--app-zoom, 1)" }}>
       <Sidebar items={navItems} create={create} me={me} showAdmin={showAdmin} extras={extras} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar me={me} />

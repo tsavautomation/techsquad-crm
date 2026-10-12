@@ -27,6 +27,7 @@ import type { ModuleDef } from "@/config/modules";
 import { cn } from "@/lib/utils";
 import { LANGS, type Lang } from "@/i18n/core";
 import { setLanguageAction } from "@/i18n/actions";
+import { TextSizeChoice } from "@/components/portal/text-size";
 import { useLang, useT } from "@/i18n/client";
 import { AlertsBell } from "./alerts-bell";
 import { GlobalSearch } from "./global-search";
@@ -508,6 +509,7 @@ export function Sidebar({
       <Sheet open={menu} onClose={() => setMenu(false)} title={me.name}>
         <ThemeChoice />
         <LanguageChoice />
+        <TextSizeChoice />
         <ChangePassword />
         <SignOut />
       </Sheet>
@@ -548,6 +550,7 @@ export function TopBar({ me }: { me: Me }) {
         <p className="px-3 pb-1 text-sm text-muted-foreground">{me.email}</p>
         <ThemeChoice />
         <LanguageChoice />
+        <TextSizeChoice />
         <ChangePassword />
         <SignOut />
       </Sheet>
@@ -773,6 +776,7 @@ export function BottomNav({
         />
         <ThemeChoice />
         <LanguageChoice />
+        <TextSizeChoice />
       </Sheet>
     </>
   );

@@ -6,6 +6,7 @@ import { useTransition } from "react";
 import { LogOut } from "lucide-react";
 import { Logo } from "@/components/shell/nav";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { TextSizeButton } from "@/components/portal/text-size";
 import { setLanguageAction } from "@/i18n/actions";
 import { useLang, useT } from "@/i18n/client";
 import { LANGS, type Lang } from "@/i18n/core";
@@ -19,7 +20,7 @@ export function PortalTopBar({ name, projectsHref }: { name: string; projectsHre
       <div className="mx-auto flex h-14 max-w-3xl items-center gap-3 px-4">
         <Link href="/portal" className="flex min-w-0 items-center gap-2" aria-label={t("Home")}>
           <Logo className="size-8" />
-          <span className="truncate text-[15px] font-semibold">Tech Squad</span>
+          <span className="hidden truncate text-[15px] font-semibold sm:inline">Tech Squad</span>
         </Link>
         <div className="ml-auto flex items-center gap-1.5">
           {projectsHref && (
@@ -27,6 +28,7 @@ export function PortalTopBar({ name, projectsHref }: { name: string; projectsHre
               {t("My projects")}
             </Link>
           )}
+          <TextSizeButton />
           <LangToggle />
           <ThemeToggle />
           <form action="/auth/signout?to=portal" method="post">

@@ -10,7 +10,7 @@ export default async function PortalLayout({ children }: LayoutProps<"/portal">)
   const { count } = await db.from("portal_projects").select("id", { count: "exact", head: true });
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className="flex min-h-dvh flex-col bg-background" style={{ zoom: "var(--portal-zoom, 1.15)" }}>
       <PortalTopBar name={name} projectsHref={(count ?? 0) > 1 ? "/portal" : null} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-4 pb-[max(2rem,env(safe-area-inset-bottom))]">{children}</main>
     </div>
