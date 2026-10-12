@@ -93,13 +93,25 @@ async function recentlyModified(user: CurrentUser, tr: T, module?: string): Prom
     return true;
   });
   const titles = await titlesFor(rows.map((r) => ({ table: r.table_name, id: r.record_id })));
-  return rows
-    .filter((r) => titles.has(`${r.table_name}:${r.record_id}`)) // deleted records drop out
-    .slice(0, 10)
-    .map((r) => {
-      const t: TableDef = getTable(r.table_name);
-      return { href: recordHref(t, r.record_id), title: titles.get(`${r.table_name}:${r.record_id}`) || `${tr(t.itemLabel)} #${r.record_id}`, meta: `${tr(t.itemLabel)} · ${formatDateTime(r.at)}` };
-    });
+  const shown = rows.filter((r) => titles.has(`${r.table_name}:${r.record_id}`)).slice(0, 10); // deleted records drop out
+  // A stock unit's title is its serial, which says nothing at a glance (Fred 2026-10-12): show the product
+  // (brand, model, SKU) as the title and keep the serial in the meta line.
+  const stockIds = shown.filter((r) => r.table_name === "stock_items").map((r) => r.record_id);
+  const products = new Map<number, string>();
+  if (stockIds.length) {
+    const { data: units } = await db.from("stock_items").select("id, products:product_id(title)").in("id", stockIds);
+    for (const u of (units ?? []) as unknown as { id: number; products: { title: string | null } | null }[]) if (u.products?.title) products.set(u.id, u.products.title);
+  }
+  return shown.map((r) => {
+    const t: TableDef = getTable(r.table_name);
+    const title = titles.get(`${r.table_name}:${r.record_id}`) || `${tr(t.itemLabel)} #${r.record_id}`;
+    const product = r.table_name === "stock_items" ? products.get(r.record_id) : undefined;
+    return {
+      href: recordHref(t, r.record_id),
+      title: product ?? title,
+      meta: `${tr(t.itemLabel)} · ${product ? `S/N ${title} · ` : ""}${formatDateTime(r.at)}`,
+    };
+  });
 }
 
 function Widget({ title, empty, items }: { title: string; empty: string; items: Item[] }) {
