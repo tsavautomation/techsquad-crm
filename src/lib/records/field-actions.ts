@@ -255,19 +255,45 @@ export async function extractFromUploadAction(tableName: string, fieldName: stri
   return { ok: true, values, labels };
 }
 
-/** The employee whose name matches the payee written on the check: every word of the payee must appear in the title. */
-async function matchEmployee(payee: string): Promise<{ id: number; title: string } | null> {
-  const words = payee
+/** Lower case, letters and digits only, without the company suffixes nobody writes the same way twice. */
+function normName(s: string) {
+  return s
     .toLowerCase()
-    .replace(/[^a-zÀ-ſ\s]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w.length >= 2);
+    .replace(/\b(llc|l\.l\.c\.|inc|inc\.|corp|corp\.|co\.|ltd|ltda|me|mei|eireli)\b/g, " ")
+    .replace(/[^a-z0-9À-ſ\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * The employee the check is made out to. Checks are usually written to the person's company (Fred
+ * 2026-10-13), so the payee is compared with each Employee's Company Name first, then with their name.
+ */
+async function matchEmployee(payee: string): Promise<{ id: number; title: string } | null> {
+  const target = normName(payee);
+  const words = target.split(" ").filter((w) => w.length >= 2);
   if (!words.length) return null;
   const db = await recordsDb();
-  const { data } = await db.from("employees").select("id, title, first_name, last_name").is("deleted_at", null);
-  const rows = ((data ?? []) as { id: number; title: string | null; first_name: string | null; last_name: string | null }[]).map((e) => ({ id: e.id, title: e.title ?? [e.first_name, e.last_name].filter(Boolean).join(" "), name: `${e.first_name ?? ""} ${e.last_name ?? ""} ${e.title ?? ""}`.toLowerCase() }));
+  const { data } = await db.from("employees").select("id, title, first_name, last_name, company_name").is("deleted_at", null);
+  const rows = ((data ?? []) as { id: number; title: string | null; first_name: string | null; last_name: string | null; company_name: string | null }[]).map((e) => ({
+    id: e.id,
+    title: e.title ?? [e.first_name, e.last_name].filter(Boolean).join(" "),
+    company: e.company_name ? normName(e.company_name) : "",
+    person: normName(`${e.first_name ?? ""} ${e.last_name ?? ""} ${e.title ?? ""}`),
+  }));
+
+  // 1. The company name written on the check is the employee's Company Name (or contains it, or is contained by it).
+  const byCompany = rows.filter((e) => e.company.length >= 3 && (target === e.company || target.includes(e.company) || e.company.includes(target)));
+  if (byCompany.length === 1) return { id: byCompany[0].id, title: byCompany[0].title };
+  if (byCompany.length > 1) {
+    const exact = byCompany.filter((e) => e.company === target);
+    if (exact.length === 1) return { id: exact[0].id, title: exact[0].title };
+    return null;
+  }
+
+  // 2. The person's own name: every word of the payee must appear, or at least two of them.
   const scored = rows
-    .map((e) => ({ e, hits: words.filter((w) => e.name.includes(w)).length }))
+    .map((e) => ({ e, hits: words.filter((w) => e.person.includes(w) || e.company.includes(w)).length }))
     .filter((s) => s.hits === words.length || (words.length >= 2 && s.hits >= 2))
     .sort((a, b) => b.hits - a.hits);
   // Only an unambiguous match fills the field; two people with the same hits leave it empty.
