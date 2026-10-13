@@ -17,6 +17,9 @@ import { USERS } from "./data/users";
 const apply = process.argv.includes("--apply");
 const onlyArg = process.argv[process.argv.indexOf("--only") + 1];
 const only = process.argv.includes("--only") && onlyArg ? new Set(onlyArg.toLowerCase().split(",")) : null;
+/** --revoke administrative.transactions takes one resource away from the users named with --only (and only them). */
+const revokeArg = process.argv[process.argv.indexOf("--revoke") + 1];
+const revoke = process.argv.includes("--revoke") && revokeArg ? `${revokeArg}.` : null;
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const secret = process.env.SUPABASE_SECRET_KEY;
 const site = process.env.INVITE_SITE_URL ?? "https://crm.tsav.net";
@@ -108,7 +111,7 @@ async function main() {
     const have = new Set((current ?? []).map((r) => r.permission_key as string));
     const add = [...want].filter((k) => !have.has(k));
     // Admin › Users is also a source (SPEC §9.1 P1): keys given there are kept unless --prune is passed.
-    const remove = process.argv.includes("--prune") ? [...have].filter((k) => !want.has(k)) : [];
+    const remove = process.argv.includes("--prune") ? [...have].filter((k) => !want.has(k)) : revoke ? [...have].filter((k) => k.startsWith(revoke)) : [];
     if (Boolean(profile?.is_admin) !== seed.admin) console.log(`    administrator ${seed.admin ? "yes" : "no"}`);
     if (add.length) console.log(`    add          ${add.length}: ${add.slice(0, 6).join(", ")}${add.length > 6 ? ", …" : ""}`);
     if (remove.length) console.log(`    remove       ${remove.length}: ${remove.slice(0, 6).join(", ")}${remove.length > 6 ? ", …" : ""}`);
@@ -130,8 +133,22 @@ async function main() {
     }
   }
 
-  // Logins that exist in Supabase but are not in the list (report only; never deleted automatically).
+  // --revoke also reaches logins made in Admin › Users that are not in the list (named with --only).
   const listed = new Set(USERS.map((u) => u.email.toLowerCase()));
+  if (revoke && only) {
+    for (const email of only) {
+      const authUser = existing.get(email);
+      if (listed.has(email) || !authUser) continue;
+      const { data: current } = await db.from("user_permissions").select("permission_key").eq("user_id", authUser.id);
+      const remove = ((current ?? []) as { permission_key: string }[]).map((r) => r.permission_key).filter((k) => k.startsWith(revoke));
+      console.log(`= not in list    ${email}${remove.length ? `\n    remove       ${remove.length}: ${remove.join(", ")}` : ""}`);
+      if (apply && remove.length) {
+        const { error } = await db.from("user_permissions").delete().eq("user_id", authUser.id).in("permission_key", remove);
+        if (error) throw error;
+      }
+    }
+  }
+  // Logins that exist in Supabase but are not in the list (report only; never deleted automatically).
   for (const [email] of existing) if (email && !listed.has(email)) console.log(`! not in list    ${email} (left unchanged)`);
 
   if (apply && links.length) {

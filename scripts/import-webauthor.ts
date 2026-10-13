@@ -55,6 +55,7 @@ const FILES: [table: string, file: string][] = [
   ["staff_performance", "WA_StaffPerformance.csv"],
   // Fred's own Payroll export (2026-10-02; no Record ID column, see ROW_IDS). Loaded with --only payouts.
   ["payouts", "Payouts.csv"],
+  ["transactions", "WA_Transactions.csv"],
 ];
 /** Links written in a second pass (the target table is loaded later, or it is the same table). */
 const DEFERRED: Record<string, string[]> = { contacts: ["referred_by_contact_id"], projects: ["permit_id"] };
