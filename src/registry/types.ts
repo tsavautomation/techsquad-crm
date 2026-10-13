@@ -30,7 +30,7 @@ export type FieldType =
 
 /** `retired` (Form settings, M12): no longer offered for new choices; existing records keep and show it. */
 /** What src/lib/ai/extract.ts can read from a photo. */
-export type ExtractKind = "license_expiration";
+export type ExtractKind = "license_expiration" | "check";
 
 export type FieldOption = { label: string; value: string; color?: string; retired?: boolean;
   /** Added for this CRM after WebAuthor (not in the parity check), e.g. the Stock stages Separated / Discarded (INV-d). */
@@ -94,7 +94,9 @@ export type FieldDef = {
   notFuture?: boolean;
   fileTypes?: string[];
   /** Upload fields: read a value from the uploaded image with AI and fill another field (e.g. licence expiry). */
-  extract?: { what: ExtractKind; to: string };
+  // `to`: the one field a single value goes to (licence expiry). `fields`: extracted key → form field for
+  // readings with several values (a check: amount, date, check_number, payee, method).
+  extract?: { what: ExtractKind; to?: string; fields?: Record<string, string> };
   computed?: ComputedDef;
   /** Encrypted at rest, masked in the UI, never emailed. */
   sensitive?: boolean;

@@ -534,6 +534,7 @@ export const PT_REGISTRY: Record<string, string> = {
   "Discarded": "Baixado",
   // ---------------------------------------------------------------- F6 Customer portal
   "Visits included": "Visitas incluídas",
+  "Take a picture of the check: the amount, date, check number and employee are read from it.": "Tire uma foto do cheque: valor, data, número do cheque e funcionário são lidos dela.",
   "One item per line. The customer reads this in the portal.": "Um item por linha. O cliente lê isto no portal.",
   "Counts toward the maintenance plan": "Conta no plano de manutenção",
   "Tick when this visit is one of the visits included in the customer's maintenance plan.": "Marque quando esta visita for uma das incluídas no plano de manutenção do cliente.",

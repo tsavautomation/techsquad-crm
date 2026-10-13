@@ -133,7 +133,11 @@ export const payouts: TableDef = {
       "legacy": {
         "column": "check_image_or_electronic_receipt",
         "fieldId": 67376
-      }
+      },
+      // Fred 2026-10-13: the check photo fills amount, date, check number, employee and method by AI; only
+      // the Reason stays by hand. The person checks the values before saving.
+      help: "Take a picture of the check: the amount, date, check number and employee are read from it.",
+      extract: { what: "check", fields: { amount: "amount", date: "date_issued", check_number: "check_number", payee: "employee_id", method: "payment_method" } },
     },
     {
       "name": "details",

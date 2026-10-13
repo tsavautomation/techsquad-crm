@@ -77,14 +77,26 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
     const before = new Set(((values[name] as FileItem[] | undefined) ?? []).map((x) => x.path));
     const added = (v as FileItem[]).find((x) => !before.has(x.path) && !x.id);
     if (!added) return;
-    const target = table.fields.find((x) => x.name === f.extract!.to);
-    const reading = toast.loading(`Reading ${target?.label ?? "the date"} from the photo…`);
+    const targets = f.extract.fields ? Object.values(f.extract.fields) : f.extract.to ? [f.extract.to] : [];
+    const labelOf = (n: string) => table.fields.find((x) => x.name === n)?.label ?? n;
+    const reading = toast.loading(targets.length === 1 ? t("Reading {field} from the photo…", { field: labelOf(targets[0]) }) : t("Reading the photo…"));
     void extractFromUploadAction(table.name, name, added.path).then((r) => {
       toast.dismiss(reading);
       if (!r.ok) return void toast.error(t(r.message));
-      if (!r.value) return void toast.warning(`Couldn't read ${target?.label ?? "it"} from the photo. Please type it in.`);
-      setValues((prev) => ({ ...prev, [r.field]: r.value }));
-      toast.success(`${target?.label ?? "Date"} filled in from the photo: ${formatDate(r.value)}. Please check it.`);
+      const filled = Object.entries(r.values).filter(([, v]) => v !== null && v !== "");
+      if (!filled.length) return void toast.warning(t("Couldn't read anything from the photo. Please type it in."));
+      setValues((prev) => ({ ...prev, ...Object.fromEntries(filled) }));
+      if (Object.keys(r.labels).length) setLabels((prev) => ({ ...prev, ...Object.fromEntries(Object.entries(r.labels).map(([k, v]) => [k, { ...(prev[k] ?? {}), ...v }])) }));
+      const summary = filled
+        .map(([k, v]) => {
+          const fd = table.fields.find((x) => x.name === k);
+          const shown = fd?.type === "date" ? formatDate(String(v)) : fd?.type === "lookup" ? (r.labels[k]?.[String(v)] ?? String(v)) : String(v);
+          return `${labelOf(k)}: ${shown}`;
+        })
+        .join(" · ");
+      const missing = targets.filter((n) => !filled.some(([k]) => k === n) && n !== "payment_method").map(labelOf);
+      toast.success(t("Filled in from the photo: {fields}. Please check.", { fields: summary }), { duration: 8000 });
+      if (missing.length) toast.warning(t("Not read from the photo: {fields}. Please type them in.", { fields: missing.join(", ") }), { duration: 8000 });
     });
   }
 

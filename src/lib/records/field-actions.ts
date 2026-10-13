@@ -204,7 +204,10 @@ export async function previewUrlAction(path: string): Promise<string | null> {
  * Read a value out of a photo the user just uploaded (e.g. the licence expiry, SPEC §9.1 B1-a)
  * and return it for the form to pre-fill. Only the uploader's own new uploads can be read.
  */
-export async function extractFromUploadAction(tableName: string, fieldName: string, path: string): Promise<{ ok: true; field: string; value: string | null } | { ok: false; message: string }> {
+/** What a photo reading fills in: form field → value, plus the titles of any lookup records it picked. */
+export type ExtractOutcome = { ok: true; values: Record<string, string | number | null>; labels: Record<string, Record<string, string>> } | { ok: false; message: string };
+
+export async function extractFromUploadAction(tableName: string, fieldName: string, path: string): Promise<ExtractOutcome> {
   const user = await requireUser();
   const { t, f } = fieldOf(tableName, fieldName);
   if (!f.extract) return { ok: false, message: "This field can't be read automatically." };
@@ -223,5 +226,51 @@ export async function extractFromUploadAction(tableName: string, fieldName: stri
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
   const mime = file.mime && !file.mime.includes("octet-stream") ? file.mime.split(";")[0] : ext === "pdf" ? "application/pdf" : ext === "png" ? "image/png" : "image/jpeg";
   const r = await extractFromFile(f.extract.what, file.bytes, mime);
-  return r.ok ? { ok: true, field: f.extract.to, value: r.value } : r;
+  if (!r.ok) return r;
+
+  // One value → one field (licence expiry), or a map of readings → fields (a check).
+  const map: Record<string, string> = f.extract.fields ?? (f.extract.to ? { date: f.extract.to } : {});
+  const values: Record<string, string | number | null> = {};
+  const labels: Record<string, Record<string, string>> = {};
+  for (const [key, target] of Object.entries(map)) {
+    const field = t.fields.find((x) => x.name === target);
+    if (!field) continue;
+    const raw = r.values[key] ?? null;
+    if (key === "method") {
+      // A paper check sets Method of payment = Check (which also reveals Check Number); anything else is left to the person.
+      if (r.values.is_check === "true") values[target] = "Check";
+      continue;
+    }
+    if (field.type === "lookup" && raw) {
+      // The payee's name → the Employee record (Fred 2026-10-13: the check photo fills the employee too).
+      const hit = await matchEmployee(raw);
+      if (hit) {
+        values[target] = hit.id;
+        labels[target] = { [String(hit.id)]: hit.title };
+      }
+      continue;
+    }
+    values[target] = raw;
+  }
+  return { ok: true, values, labels };
+}
+
+/** The employee whose name matches the payee written on the check: every word of the payee must appear in the title. */
+async function matchEmployee(payee: string): Promise<{ id: number; title: string } | null> {
+  const words = payee
+    .toLowerCase()
+    .replace(/[^a-zÀ-ſ\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 2);
+  if (!words.length) return null;
+  const db = await recordsDb();
+  const { data } = await db.from("employees").select("id, title, first_name, last_name").is("deleted_at", null);
+  const rows = ((data ?? []) as { id: number; title: string | null; first_name: string | null; last_name: string | null }[]).map((e) => ({ id: e.id, title: e.title ?? [e.first_name, e.last_name].filter(Boolean).join(" "), name: `${e.first_name ?? ""} ${e.last_name ?? ""} ${e.title ?? ""}`.toLowerCase() }));
+  const scored = rows
+    .map((e) => ({ e, hits: words.filter((w) => e.name.includes(w)).length }))
+    .filter((s) => s.hits === words.length || (words.length >= 2 && s.hits >= 2))
+    .sort((a, b) => b.hits - a.hits);
+  // Only an unambiguous match fills the field; two people with the same hits leave it empty.
+  if (!scored.length || (scored.length > 1 && scored[0].hits === scored[1].hits)) return null;
+  return { id: scored[0].e.id, title: scored[0].e.title };
 }
