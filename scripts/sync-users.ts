@@ -107,7 +107,8 @@ async function main() {
     ]);
     const have = new Set((current ?? []).map((r) => r.permission_key as string));
     const add = [...want].filter((k) => !have.has(k));
-    const remove = [...have].filter((k) => !want.has(k));
+    // Admin › Users is also a source (SPEC §9.1 P1): keys given there are kept unless --prune is passed.
+    const remove = process.argv.includes("--prune") ? [...have].filter((k) => !want.has(k)) : [];
     if (Boolean(profile?.is_admin) !== seed.admin) console.log(`    administrator ${seed.admin ? "yes" : "no"}`);
     if (add.length) console.log(`    add          ${add.length}: ${add.slice(0, 6).join(", ")}${add.length > 6 ? ", …" : ""}`);
     if (remove.length) console.log(`    remove       ${remove.length}: ${remove.slice(0, 6).join(", ")}${remove.length > 6 ? ", …" : ""}`);
