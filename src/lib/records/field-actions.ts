@@ -250,6 +250,13 @@ export async function extractFromUploadAction(tableName: string, fieldName: stri
       }
       continue;
     }
+    // Numbers go in as numbers, as if typed: the form validates money / number fields on their type (Fred 2026-10-13,
+    // "diz que o formato está inválido, preciso apagar o último caractere e escrever de novo").
+    if ((field.type === "money" || field.type === "number") && raw !== null) {
+      const n = Number(raw);
+      values[target] = Number.isFinite(n) ? (field.type === "number" ? Math.round(n) : Math.round(n * 100) / 100) : null;
+      continue;
+    }
     values[target] = raw;
   }
   return { ok: true, values, labels };
