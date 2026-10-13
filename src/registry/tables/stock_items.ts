@@ -163,6 +163,41 @@ export const stockItems: TableDef = {
       "readOnly": true
     },
     {
+      "name": "location_id",
+      "label": "Stock location",
+      "type": "lookup",
+      "legacy": { "column": "", "fieldId": 0 },
+      "lookup": { "table": "stock_locations" }
+    },
+    {
+      "name": "supplier_id",
+      "label": "Supplier",
+      "type": "lookup",
+      "heading": "Purchase",
+      "legacy": { "column": "", "fieldId": 0 },
+      "lookup": { "table": "suppliers" }
+    },
+    {
+      "name": "po_number",
+      "label": "PO number",
+      "type": "text",
+      "legacy": { "column": "", "fieldId": 0 },
+      "maxLength": 40
+    },
+    {
+      "name": "received_on",
+      "label": "Received on",
+      "type": "date",
+      "legacy": { "column": "", "fieldId": 0 }
+    },
+    {
+      "name": "purchased_for_project_id",
+      "label": "Purchased for project",
+      "type": "lookup",
+      "legacy": { "column": "", "fieldId": 0 },
+      "lookup": { "table": "projects" }
+    },
+    {
       "name": "destination_project_id",
       "label": "Destination",
       "type": "lookup",

@@ -24,13 +24,14 @@ export default async function StockPage(props: PageProps<"/inventory/stock">) {
   const t = getTable("stock_items");
   if (!canOpen(user.permissions, t, getTable)) notFound();
   const db = await recordsDb();
-  const [units, lists, recent] = await Promise.all([loadStockUnits(db), loadPickLists(db), loadRecentCheckouts(db)]);
+  const productTypes = (getTable("products").fields.find((f) => f.name === "product_type")?.options ?? []).map((o) => o.value);
+  const [units, lists, recent] = await Promise.all([loadStockUnits(db), loadPickLists(db, productTypes), loadRecentCheckouts(db)]);
   return (
     <StockApp
       units={units}
       lists={lists}
       recent={recent}
-      can={{ move: canDo(user.permissions, t, "modify", getTable), add: canDo(user.permissions, t, "create", getTable), handover: canDo(user.permissions, getTable("inventory_checkouts"), "create", getTable) }}
+      can={{ move: canDo(user.permissions, t, "modify", getTable), add: canDo(user.permissions, t, "create", getTable), handover: canDo(user.permissions, getTable("inventory_checkouts"), "create", getTable), addProduct: canDo(user.permissions, getTable("products"), "create", getTable) }}
       initialTab={typeof sp.tab === "string" ? sp.tab : "stock"}
     />
   );

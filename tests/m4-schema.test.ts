@@ -10,7 +10,8 @@ for (const tab of ["job-reports", "notes", "staff-performance", "survey-and-prop
   for (const action of ["view_page", "view_all", "create", "modify", "delete", "archive"]) keys.add(`forms.${tab}.${action}`);
 // SPEC §9.1 INV-a: Inventory Checkout moved under Inventory (migration 20261004000000).
 for (const action of ["view_page", "view_all", "create", "modify", "delete", "archive"]) keys.add(`inventory.inventory-checkout.${action}`);
-const migration = readFileSync("supabase/migrations/20260925230100_m4_record_tables.sql", "utf8");
+// SPEC §9.1 INV-e: Stock Locations list (migration 20261013020000).
+const migration = readFileSync("supabase/migrations/20260925230100_m4_record_tables.sql", "utf8") + readFileSync("supabase/migrations/20261013020000_inv_e_locations_purchases.sql", "utf8");
 
 describe("record tables ↔ permission catalogue", () => {
   it("every permission key the database checks exists", () => {
@@ -38,7 +39,7 @@ describe("record tables ↔ permission catalogue", () => {
 
   it("only child tables and utility lists have no resource", () => {
     const without = REGISTRY.filter((t) => !permissionResource(t)).map((t) => t.name).sort();
-    expect(without).toEqual(["brands", "contact_interactions", "suppliers"]);
+    expect(without).toEqual(["brands", "contact_interactions", "stock_locations", "suppliers"]);
   });
 });
 

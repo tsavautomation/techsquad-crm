@@ -43,7 +43,7 @@ const normLabel = (s: string) => s.replace(/\s+/g, " ").trim();
 
 describe("registry ↔ WebAuthor export", () => {
   it("covers all 28 WebAuthor tables except the 4 deleted Help Desk ones", () => {
-    expect(REGISTRY).toHaveLength(24);
+    expect(REGISTRY).toHaveLength(25); // 24 + Stock Locations (INV-e), born in this CRM
     for (const legacy of Object.keys(spec.tables)) if (!REMOVED.has(legacy)) expect(byLegacyTable.has(legacy), legacy).toBe(true);
   });
 

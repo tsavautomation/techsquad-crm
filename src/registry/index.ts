@@ -19,6 +19,7 @@ import { sales } from "./tables/sales";
 import { stockItems } from "./tables/stock_items";
 import { suppliers } from "./tables/suppliers";
 import { brands } from "./tables/brands";
+import { stockLocations } from "./tables/stock_locations";
 import { jobReports } from "./tables/job_reports";
 import { formNotes } from "./tables/form_notes";
 import { staffPerformance } from "./tables/staff_performance";
@@ -52,6 +53,7 @@ export const WEBAUTHOR_REGISTRY: TableDef[] = [
   stockItems,
   suppliers,
   brands,
+  stockLocations,
   jobReports,
   formNotes,
   staffPerformance,

@@ -8,6 +8,13 @@ import { toast } from "sonner";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { createHandoverAction, registerMovementAction, unitHistoryAction } from "@/lib/inventory/actions";
 import { dashboard, MOVEMENTS, movementOf, STATUS_TONE, STATUSES, type MovementKey, type StockStatus } from "@/lib/inventory/engine";
+import { canMove, productMatches, validateMovement, type ProductChoice } from "@/lib/inventory/rules";
+import type { Purchase } from "@/lib/inventory/actions";
+import { Combobox } from "./combobox";
+import { MoveMany } from "./move-many";
+import { NewProductModal } from "./new-product-modal";
+import { EMPTY_PURCHASE, PurchaseFields } from "./purchase-fields";
+import { RegisterBatch } from "./register-batch";
 import type { HistoryRow, PickLists, RecentCheckout, StockUnit } from "@/lib/inventory/load";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
@@ -15,7 +22,7 @@ import { useT } from "@/i18n/client";
 // INV-d "Estoque em Campo": the four screens of the stock app (Stock · Register · Hand-over · Dashboard).
 
 type Tab = "stock" | "register" | "handover" | "dashboard";
-type Props = { units: StockUnit[]; lists: PickLists; recent: RecentCheckout[]; can: { move: boolean; add: boolean; handover: boolean }; initialTab: string };
+type Props = { units: StockUnit[]; lists: PickLists; recent: RecentCheckout[]; can: { move: boolean; add: boolean; handover: boolean; addProduct: boolean }; initialTab: string };
 
 const PAGE = 60;
 const BOX = "w-full rounded-lg border border-input bg-card px-3 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -60,7 +67,7 @@ export function StockApp({ units, lists, recent, can, initialTab }: Props) {
         ))}
       </nav>
 
-      {tab === "stock" && <StockList units={units} onOpen={setOpen} />}
+      {tab === "stock" && <StockList units={units} lists={lists} canMove={can.move} onOpen={setOpen} />}
       {tab === "register" && (
         <RegisterForm
           units={units}
@@ -79,6 +86,7 @@ export function StockApp({ units, lists, recent, can, initialTab }: Props) {
       {open && (
         <UnitSheet
           unit={open}
+          lists={lists}
           canMove={can.move}
           onClose={() => setOpen(null)}
           onMove={() => {
@@ -94,11 +102,14 @@ export function StockApp({ units, lists, recent, can, initialTab }: Props) {
 
 // ---------------------------------------------------------------- Stock
 
-function StockList({ units, onOpen }: { units: StockUnit[]; onOpen: (u: StockUnit) => void }) {
+function StockList({ units, lists, canMove, onOpen }: { units: StockUnit[]; lists: PickLists; canMove: boolean; onOpen: (u: StockUnit) => void }) {
   const t = useT();
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<StockStatus | "">("");
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [moving, setMoving] = useState(false);
   const counts = useMemo(() => {
     const c = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<StockStatus, number>;
     for (const u of units) c[u.status]++;
@@ -110,6 +121,14 @@ function StockList({ units, onOpen }: { units: StockUnit[]; onOpen: (u: StockUni
   }, [units, q, status]);
   const shown = list.slice(0, page * PAGE);
   const chips: { value: StockStatus | ""; label: string; n: number }[] = [{ value: "", label: t("All"), n: units.length }, ...STATUSES.map((s) => ({ value: s, label: t(s), n: counts[s] }))];
+  const toggle = (id: number) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const picked = units.filter((u) => selected.has(u.id));
 
   return (
     <div>
@@ -155,14 +174,29 @@ function StockList({ units, onOpen }: { units: StockUnit[]; onOpen: (u: StockUni
           </button>
         ))}
       </div>
-      <p className="mb-2 text-xs text-muted-foreground">{list.length === 1 ? t("1 unit") : t("{n} units", { n: list.length })}</p>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">{list.length === 1 ? t("1 unit") : t("{n} units", { n: list.length })}</p>
+        {canMove && (
+          <div className="flex items-center gap-2">
+            {shown.length > 0 && (
+              <button type="button" onClick={() => setSelected(selected.size === shown.length ? new Set() : new Set(shown.map((u) => u.id)))} className="text-xs text-text-2 underline underline-offset-2">
+                {selected.size === shown.length ? t("Select none") : t("Select all shown")}
+              </button>
+            )}
+            <button type="button" disabled={selected.size === 0} onClick={() => setMoving(true)} className={cn(LINK, "h-9 gap-1.5 disabled:opacity-50")}>
+              <ClipboardList className="size-4" aria-hidden /> {t("Move selected")} {selected.size > 0 && <span className="rounded-full bg-primary/10 px-1.5 text-xs font-semibold text-primary">{selected.size}</span>}
+            </button>
+          </div>
+        )}
+      </div>
       {list.length === 0 ? (
         <p className="rounded-2xl border bg-card px-[18px] py-6 text-center text-sm text-muted-foreground shadow-card">{t("No unit matches.")}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {shown.map((u) => (
-            <li key={u.id}>
-              <button type="button" onClick={() => onOpen(u)} className="flex w-full items-center gap-3 rounded-xl border bg-card px-3 py-2.5 text-left shadow-card hover:bg-muted/40">
+            <li key={u.id} className={cn("flex items-center gap-2 rounded-xl border bg-card pl-2 shadow-card", selected.has(u.id) && "border-primary bg-primary/5")}>
+              {canMove && <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggle(u.id)} aria-label={t("Select {serial}", { serial: u.serial ?? `#${u.id}` })} className="size-5 shrink-0 accent-primary" />}
+              <button type="button" onClick={() => onOpen(u)} className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pr-3 text-left hover:bg-muted/40">
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-sm font-semibold">{u.serial || t("No serial")}</p>
                   <p className="truncate text-sm">{u.product}</p>
@@ -181,11 +215,23 @@ function StockList({ units, onOpen }: { units: StockUnit[]; onOpen: (u: StockUni
           {t("Show more")}
         </button>
       )}
+      {moving && picked.length > 0 && (
+        <MoveMany
+          units={picked}
+          lists={lists}
+          onClose={() => setMoving(false)}
+          onDone={() => {
+            setMoving(false);
+            setSelected(new Set());
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function UnitSheet({ unit, canMove, onClose, onMove }: { unit: StockUnit; canMove: boolean; onClose: () => void; onMove: () => void }) {
+function UnitSheet({ unit, lists, canMove, onClose, onMove }: { unit: StockUnit; lists: PickLists; canMove: boolean; onClose: () => void; onMove: () => void }) {
   const t = useT();
   const [history, setHistory] = useState<HistoryRow[] | null>(null);
   useEffect(() => {
@@ -200,6 +246,7 @@ function UnitSheet({ unit, canMove, onClose, onMove }: { unit: StockUnit; canMov
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+  const supplier = unit.supplierId ? (lists.suppliers.find((s) => s.id === unit.supplierId)?.title ?? null) : null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 md:items-center" onClick={onClose}>
       <div role="dialog" aria-modal="true" className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-card p-4 shadow-card md:rounded-2xl" onClick={(e) => e.stopPropagation()}>
@@ -227,6 +274,12 @@ function UnitSheet({ unit, canMove, onClose, onMove }: { unit: StockUnit; canMov
             <>
               <dt className="text-text-2">MAC</dt>
               <dd className="font-mono">{unit.mac}</dd>
+            </>
+          )}
+          {(supplier || unit.poNumber || unit.receivedOn) && (
+            <>
+              <dt className="text-text-2">{t("Purchase")}</dt>
+              <dd>{[supplier, unit.poNumber ? `PO ${unit.poNumber}` : null, unit.receivedOn ? formatDate(unit.receivedOn) : null, unit.cost !== null ? money.format(unit.cost) : null].filter(Boolean).join(" · ")}</dd>
             </>
           )}
           <dt className="text-text-2">{t("Last change")}</dt>
@@ -275,13 +328,17 @@ function UnitSheet({ unit, canMove, onClose, onMove }: { unit: StockUnit; canMov
 function RegisterForm({ units, lists, can, preset, onDone }: { units: StockUnit[]; lists: PickLists; can: Props["can"]; preset: StockUnit | null; onDone: () => void }) {
   const t = useT();
   const router = useRouter();
+  const [mode, setMode] = useState<"one" | "batch">("one");
   const [serial, setSerial] = useState(preset?.serial ?? "");
   const [picked, setPicked] = useState<StockUnit | null>(preset);
+  const [products, setProducts] = useState<ProductChoice[]>(lists.products);
   const [productId, setProductId] = useState<number | null>(null);
+  const [creating, setCreating] = useState<string | null>(null);
   const [movement, setMovement] = useState<MovementKey | "">("");
   const [projectId, setProjectId] = useState<number | null>(preset?.projectId ?? null);
   const [staffId, setStaffId] = useState<number | null>(preset?.staffId ?? null);
-  const [location, setLocation] = useState(preset?.location ?? "");
+  const [locationId, setLocationId] = useState<number | null>(preset?.locationId ?? lists.locations.find((l) => l.kind === "Warehouse")?.id ?? null);
+  const [purchase, setPurchase] = useState<Purchase>(EMPTY_PURCHASE);
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
   const matches = useMemo(() => {
@@ -290,13 +347,17 @@ function RegisterForm({ units, lists, can, preset, onDone }: { units: StockUnit[
   }, [serial, units, picked]);
   const exact = picked ?? units.find((u) => (u.serial ?? "").toLowerCase() === serial.trim().toLowerCase()) ?? null;
   const isNew = !exact && serial.trim().length > 0;
+  const prev: StockStatus | null = exact ? exact.status : null;
   const mv = movement ? movementOf(movement) : undefined;
-  const canSave = Boolean(serial.trim() && mv && (exact ? can.move : can.add && productId));
+  const locationName = lists.locations.find((l) => l.id === locationId)?.name ?? null;
+  const why = mv ? validateMovement(mv.key, prev, { projectId, staffId, location: locationName, note }) : null;
+  const canSave = Boolean(serial.trim() && mv && !why && (exact ? can.move : can.add && productId));
+  const productItems = useMemo(() => products.map((p) => ({ ...p, label: p.title, hint: [p.brand, p.sku, p.description].filter(Boolean).join(" · ") || null })), [products]);
 
   const submit = () =>
     start(async () => {
       if (!mv) return;
-      const r = await registerMovementAction({ itemId: exact?.id ?? null, serial: serial.trim(), productId: exact ? null : productId, movement: mv.key, projectId, staffId, location: location.trim() || null, note });
+      const r = await registerMovementAction({ itemId: exact?.id ?? null, serial: serial.trim(), productId: exact ? null : productId, movement: mv.key, projectId, staffId, locationId, note, purchase: mv.key === "receive" ? purchase : undefined });
       if (!r.ok) return void toast.error(t(r.message));
       toast.success(exact ? t("Saved · {from} → {to}", { from: t(exact.status), to: t(r.status) }) : t("Registered · {to}", { to: t(r.status) }));
       router.refresh();
@@ -305,138 +366,181 @@ function RegisterForm({ units, lists, can, preset, onDone }: { units: StockUnit[
 
   if (!can.move && !can.add) return <p className="rounded-2xl border bg-card px-[18px] py-4 text-sm text-muted-foreground shadow-card">{t("You can see the stock but not change it.")}</p>;
 
+  const modeBar = can.add && (
+    <div className="mb-3 flex gap-1 rounded-xl bg-muted p-1" role="radiogroup" aria-label={t("Register mode")}>
+      {(["one", "batch"] as const).map((m) => (
+        <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => setMode(m)} className={cn("h-10 flex-1 rounded-lg text-sm font-medium", mode === m ? "bg-card shadow-card" : "text-text-2")}>
+          {m === "one" ? t("One unit") : t("Receive a batch")}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (mode === "batch")
+    return (
+      <div>
+        {modeBar}
+        <RegisterBatch units={units} lists={lists} canAddProduct={can.addProduct} onDone={onDone} />
+      </div>
+    );
+
   return (
-    <form
-      className="flex flex-col gap-4 rounded-2xl border bg-card px-[18px] py-4 shadow-card"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (canSave) submit();
-      }}
-    >
-      <div className="relative">
-        <label className="block text-sm font-medium">
-          {t("Unit (serial)")}
-          <input
-            value={serial}
-            onChange={(e) => {
-              setSerial(e.target.value);
-              setPicked(null);
-            }}
-            placeholder={t("Type or scan the serial")}
-            className={`${BOX} mt-1 h-11 font-mono`}
-            autoComplete="off"
-          />
-        </label>
-        {matches.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border bg-card shadow-card">
-            {matches.map((u) => (
-              <li key={u.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSerial(u.serial ?? "");
-                    setPicked(u);
-                    setProjectId(u.projectId);
-                    setStaffId(u.staffId);
-                    setLocation(u.location ?? "");
-                  }}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
-                >
-                  <span>
-                    <span className="font-mono font-semibold">{u.serial}</span> · {u.product}
-                  </span>
-                  <Badge status={u.status} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {exact && (
-          <p className="mt-1 text-xs text-text-2">
-            {exact.product} · {t("now")}: <b>{t(exact.status)}</b>
-          </p>
-        )}
-        {isNew && <p className="mt-1 text-xs text-warn-fg">{t("New serial: a Stock record will be created.")}</p>}
-      </div>
-      {isNew && (
-        <label className="block text-sm font-medium">
-          {t("Product")}
-          <select value={productId ?? ""} onChange={(e) => setProductId(e.target.value ? Number(e.target.value) : null)} className={`${BOX} mt-1 h-11`} required>
-            <option value="">{t("Choose…")}</option>
-            {lists.products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <fieldset>
-        <legend className="mb-1 text-sm font-medium">{t("Movement")}</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {MOVEMENTS.map((m) => (
-            <button key={m.key} type="button" onClick={() => setMovement(m.key)} aria-pressed={movement === m.key} className={cn("flex min-h-11 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm", movement === m.key ? "border-primary bg-primary/10 font-semibold" : "hover:bg-muted")}>
-              <span>{t(m.label)}</span>
-              <Badge status={m.to} />
-            </button>
-          ))}
+    <div>
+      {modeBar}
+      <form
+        className="flex flex-col gap-4 rounded-2xl border bg-card px-[18px] py-4 shadow-card"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canSave) submit();
+        }}
+      >
+        <div className="relative">
+          <label className="block text-sm font-medium">
+            {t("Unit (serial)")}
+            <input
+              value={serial}
+              onChange={(e) => {
+                setSerial(e.target.value);
+                setPicked(null);
+              }}
+              placeholder={t("Type or scan the serial")}
+              className={`${BOX} mt-1 h-11 font-mono`}
+              autoComplete="off"
+            />
+          </label>
+          {matches.length > 0 && (
+            <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border bg-card shadow-card">
+              {matches.map((u) => (
+                <li key={u.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSerial(u.serial ?? "");
+                      setPicked(u);
+                      setProjectId(u.projectId);
+                      setStaffId(u.staffId);
+                      setLocationId(u.locationId ?? lists.locations.find((l) => l.name === u.location)?.id ?? locationId);
+                    }}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
+                  >
+                    <span>
+                      <span className="font-mono font-semibold">{u.serial}</span> · {u.product}
+                    </span>
+                    <Badge status={u.status} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {exact && (
+            <p className="mt-1 text-xs text-text-2">
+              {exact.product} · {t("now")}: <b>{t(exact.status)}</b>
+            </p>
+          )}
+          {isNew && <p className="mt-1 text-xs text-warn-fg">{t("New serial: a Stock record will be created.")}</p>}
         </div>
-        {mv && (
-          <p className="mt-2 text-xs text-text-2">
-            {exact ? (
-              <>
-                {t("Stage")}: <Badge status={exact.status} /> → <Badge status={mv.to} />
-              </>
-            ) : (
-              <>
-                {t("First movement of this unit")} → <Badge status={mv.to} />
-              </>
-            )}
-          </p>
+        {isNew && (
+          <label className="block text-sm font-medium">
+            {t("Product")}
+            <Combobox
+              className="mt-1"
+              items={productItems}
+              value={productId}
+              onChange={(id) => setProductId(id)}
+              matches={(p, q) => productMatches(p, q)}
+              placeholder={t("Search by name, brand, model, SKU…")}
+              onCreate={can.addProduct ? (q) => setCreating(q) : undefined}
+              createLabel={t("Create product")}
+            />
+          </label>
         )}
-      </fieldset>
-      <label className="block text-sm font-medium">
-        {t("Client / site (project)")}
-        <select value={projectId ?? ""} onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)} className={`${BOX} mt-1 h-11`}>
-          <option value="">{mv?.wantsProject ? t("Choose…") : t("None")}</option>
-          {lists.projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.title}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="grid gap-4 sm:grid-cols-2">
+        <fieldset>
+          <legend className="mb-1 text-sm font-medium">{t("Movement")}</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {MOVEMENTS.map((m) => {
+              const possible = canMove(m.key, prev);
+              return (
+                <button key={m.key} type="button" disabled={!possible} onClick={() => setMovement(m.key)} aria-pressed={movement === m.key} className={cn("flex min-h-11 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm disabled:opacity-40", movement === m.key ? "border-primary bg-primary/10 font-semibold" : "hover:bg-muted")}>
+                  <span>{t(m.label)}</span>
+                  <Badge status={m.to} />
+                </button>
+              );
+            })}
+          </div>
+          {mv && (
+            <p className="mt-2 text-xs text-text-2">
+              {exact ? (
+                <>
+                  {t("Stage")}: <Badge status={exact.status} /> → <Badge status={mv.to} />
+                </>
+              ) : (
+                <>
+                  {t("First movement of this unit")} → <Badge status={mv.to} />
+                </>
+              )}
+            </p>
+          )}
+        </fieldset>
+        {mv?.key === "receive" && <PurchaseFields value={purchase} onChange={setPurchase} lists={lists} />}
         <label className="block text-sm font-medium">
-          {t("Responsible")}
-          <select value={staffId ?? ""} onChange={(e) => setStaffId(e.target.value ? Number(e.target.value) : null)} className={`${BOX} mt-1 h-11`}>
-            <option value="">{t("None")}</option>
-            {lists.employees.map((p) => (
+          {t("Client / site (project)")}
+          {mv?.key === "pick" && <span className="ml-1 text-xs font-normal text-text-2">({t("recommended")})</span>}
+          <select value={projectId ?? ""} onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)} className={`${BOX} mt-1 h-11`}>
+            <option value="">{mv?.wantsProject ? t("Choose…") : t("None")}</option>
+            {lists.projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.title}
               </option>
             ))}
           </select>
         </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm font-medium">
+            {t("Responsible")}
+            <select value={staffId ?? ""} onChange={(e) => setStaffId(e.target.value ? Number(e.target.value) : null)} className={`${BOX} mt-1 h-11`}>
+              <option value="">{t("None")}</option>
+              {lists.employees.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm font-medium">
+            {t("Location (when it comes back to stock)")}
+            <select value={locationId ?? ""} onChange={(e) => setLocationId(e.target.value ? Number(e.target.value) : null)} className={`${BOX} mt-1 h-11`}>
+              <option value="">{t("Choose…")}</option>
+              {lists.locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <label className="block text-sm font-medium">
-          {t("Location (when it comes back to stock)")}
-          <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Warehouse" className={`${BOX} mt-1 h-11`} list="stock-locations" />
-          <datalist id="stock-locations">
-            {[...new Set(units.map((u) => u.location).filter(Boolean))].map((l) => (
-              <option key={l!} value={l!} />
-            ))}
-          </datalist>
+          {t("Note")}
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500} className={`${BOX} mt-1 py-2`} placeholder={mv?.key === "rma_out" ? t("Reason (required)") : t("Optional")} />
         </label>
-      </div>
-      <label className="block text-sm font-medium">
-        {t("Note")}
-        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500} className={`${BOX} mt-1 py-2`} placeholder={t("Optional")} />
-      </label>
-      <button type="submit" disabled={!canSave || pending} className={BTN}>
-        {t("Save movement")}
-      </button>
-      <p className="text-xs text-muted-foreground">{t("Saving updates the unit's stage and location, adds a ledger row (so stock by location follows) and keeps the history.")}</p>
-    </form>
+        {why && mv && <p className="text-sm text-warn-fg">{t(why)}</p>}
+        <button type="submit" disabled={!canSave || pending} className={BTN}>
+          {t("Save movement")}
+        </button>
+        <p className="text-xs text-muted-foreground">{t("Saving updates the unit's stage and location, adds a ledger row (so stock by location follows) and keeps the history.")}</p>
+      </form>
+      {creating !== null && (
+        <NewProductModal
+          lists={lists}
+          initialModel={creating}
+          onClose={() => setCreating(null)}
+          onCreated={(p) => {
+            setProducts((list) => [p, ...list]);
+            setProductId(p.id);
+            setCreating(null);
+          }}
+        />
+      )}
+    </div>
   );
 }
 

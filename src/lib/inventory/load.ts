@@ -1,9 +1,11 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { STATUSES, type StockStatus } from "./engine";
+import type { ProductChoice } from "./rules";
 
 // INV-d "Estoque em Campo": what the stock screens read. Through the viewer's session, so the Stock
 // permissions apply (row-level security on stock_items; stock_movements readable by Stock viewers).
+// INV-e adds the purchase data of a unit, the stock locations list and richer product choices.
 
 export type StockUnit = {
   id: number;
@@ -13,11 +15,15 @@ export type StockUnit = {
   productId: number | null;
   status: StockStatus;
   location: string | null;
+  locationId: number | null;
   client: string | null;
   projectId: number | null;
   staff: string | null;
   staffId: number | null;
   cost: number | null;
+  supplierId: number | null;
+  poNumber: string | null;
+  receivedOn: string | null;
   updatedAt: string;
 };
 
@@ -29,13 +35,17 @@ type Row = {
   product_id: number | null;
   status: string | null;
   location: string | null;
+  location_id: number | null;
   destination_project_id: number | null;
   staff_id: number | null;
   cost: number | null;
+  supplier_id: number | null;
+  po_number: string | null;
+  received_on: string | null;
   updated_at: string;
   products: { title: string | null; model: string | null; cost: number | null } | null;
 };
-const COLS = "id, serial, mac_address, model, product_id, status, location, destination_project_id, staff_id, cost, updated_at, products(title, model, cost)";
+const COLS = "id, serial, mac_address, model, product_id, status, location, location_id, destination_project_id, staff_id, cost, supplier_id, po_number, received_on, updated_at, products(title, model, cost)";
 
 /** Titles of projects and employees by id (employee_names is readable by everyone; projects follow their own permissions). */
 async function names(db: SupabaseClient, table: "projects" | "employee_names", ids: (number | null)[]): Promise<Map<number, string>> {
@@ -67,11 +77,15 @@ export async function loadStockUnits(db: SupabaseClient): Promise<StockUnit[]> {
         productId: r.product_id,
         status: asStatus(r.status),
         location: r.location,
+        locationId: r.location_id,
         client: r.destination_project_id ? (projects.get(r.destination_project_id) ?? null) : null,
         projectId: r.destination_project_id,
         staff: r.staff_id ? (staff.get(r.staff_id) ?? null) : null,
         staffId: r.staff_id,
         cost: r.cost ?? r.products?.cost ?? null,
+        supplierId: r.supplier_id,
+        poNumber: r.po_number,
+        receivedOn: r.received_on,
         updatedAt: r.updated_at,
       })),
     );
@@ -79,27 +93,41 @@ export async function loadStockUnits(db: SupabaseClient): Promise<StockUnit[]> {
   }
 }
 
-export type PickLists = { projects: { id: number; title: string }[]; employees: { id: number; title: string }[]; products: { id: number; title: string }[] };
+export type Named = { id: number; title: string };
+export type StockLocation = { id: number; name: string; kind: string; employeeId: number | null };
+export type PickLists = { projects: Named[]; employees: Named[]; products: ProductChoice[]; locations: StockLocation[]; brands: Named[]; suppliers: Named[]; productTypes: string[] };
 
-/** The lists the forms pick from: open projects, active employees, products (title with the model). */
-export async function loadPickLists(db: SupabaseClient): Promise<PickLists> {
-  const [{ data: pr }, { data: em }, products] = await Promise.all([
+/** Every product with what the search looks at (name, brand, model, SKU / UPC, description). */
+export async function loadProductChoices(db: SupabaseClient): Promise<ProductChoice[]> {
+  const out: ProductChoice[] = [];
+  const { data: br } = await db.from("brands").select("id, name").is("deleted_at", null);
+  const brand = new Map(((br ?? []) as { id: number; name: string | null }[]).map((b) => [b.id, b.name]));
+  for (let from = 0; ; from += 1000) {
+    const { data } = await db.from("products").select("id, title, model, brand_id, sku, description").is("deleted_at", null).is("archived_at", null).order("model").range(from, from + 999);
+    const rows = (data ?? []) as { id: number; title: string | null; model: string | null; brand_id: number | null; sku: string | null; description: string | null }[];
+    out.push(...rows.map((p) => ({ id: p.id, title: p.title || p.model || `#${p.id}`, model: p.model, brand: p.brand_id ? (brand.get(p.brand_id) ?? null) : null, sku: p.sku, description: p.description })));
+    if (rows.length < 1000) return out;
+  }
+}
+
+/** The lists the forms pick from: open projects, active employees, products, stock locations, brands, suppliers. */
+export async function loadPickLists(db: SupabaseClient, productTypes: string[] = []): Promise<PickLists> {
+  const [{ data: pr }, { data: em }, products, { data: loc }, { data: br }, { data: su }] = await Promise.all([
     db.from("projects").select("id, title").is("deleted_at", null).is("archived_at", null).not("title", "is", null).order("title"),
     db.from("employee_names").select("id, title").is("deleted_at", null).is("archived_at", null).neq("status", "Inactive").not("title", "is", null).order("title"),
-    (async () => {
-      const out: { id: number; title: string }[] = [];
-      for (let from = 0; ; from += 1000) {
-        const { data } = await db.from("products").select("id, title, model").is("deleted_at", null).order("model").range(from, from + 999);
-        const rows = (data ?? []) as { id: number; title: string | null; model: string | null }[];
-        out.push(...rows.map((p) => ({ id: p.id, title: p.title || p.model || `#` })));
-        if (rows.length < 1000) return out;
-      }
-    })(),
+    loadProductChoices(db),
+    db.from("stock_locations").select("id, name, kind, employee_id").is("deleted_at", null).is("archived_at", null).eq("active", true).order("kind").order("name"),
+    db.from("brands").select("id, name").is("deleted_at", null).is("archived_at", null).order("name"),
+    db.from("suppliers").select("id, name").is("deleted_at", null).is("archived_at", null).order("name"),
   ]);
   return {
-    projects: ((pr ?? []) as { id: number; title: string }[]),
-    employees: ((em ?? []) as { id: number; title: string }[]),
+    projects: (pr ?? []) as Named[],
+    employees: (em ?? []) as Named[],
     products,
+    locations: ((loc ?? []) as { id: number; name: string; kind: string; employee_id: number | null }[]).map((l) => ({ id: l.id, name: l.name, kind: l.kind, employeeId: l.employee_id })),
+    brands: ((br ?? []) as { id: number; name: string | null }[]).filter((b) => b.name).map((b) => ({ id: b.id, title: b.name! })),
+    suppliers: ((su ?? []) as { id: number; name: string | null }[]).filter((s) => s.name).map((s) => ({ id: s.id, title: s.name! })),
+    productTypes,
   };
 }
 

@@ -4060,17 +4060,22 @@ export type Database = {
           destination_project_id: number | null
           id: number
           location: string | null
+          location_id: number | null
           locked: boolean
           mac_address: string | null
           model: string | null
+          po_number: string | null
           product_id: number | null
           product_type: string | null
+          purchased_for_project_id: number | null
+          received_on: string | null
           sell_price: number | null
           serial: string | null
           source_ref: string | null
           staff_id: number | null
           status: string | null
           submitted_at: string | null
+          supplier_id: number | null
           title: string | null
           updated_at: string
           updated_by: string | null
@@ -4085,17 +4090,22 @@ export type Database = {
           destination_project_id?: number | null
           id?: number
           location?: string | null
+          location_id?: number | null
           locked?: boolean
           mac_address?: string | null
           model?: string | null
+          po_number?: string | null
           product_id?: number | null
           product_type?: string | null
+          purchased_for_project_id?: number | null
+          received_on?: string | null
           sell_price?: number | null
           serial?: string | null
           source_ref?: string | null
           staff_id?: number | null
           status?: string | null
           submitted_at?: string | null
+          supplier_id?: number | null
           title?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -4110,17 +4120,22 @@ export type Database = {
           destination_project_id?: number | null
           id?: number
           location?: string | null
+          location_id?: number | null
           locked?: boolean
           mac_address?: string | null
           model?: string | null
+          po_number?: string | null
           product_id?: number | null
           product_type?: string | null
+          purchased_for_project_id?: number | null
+          received_on?: string | null
           sell_price?: number | null
           serial?: string | null
           source_ref?: string | null
           staff_id?: number | null
           status?: string | null
           submitted_at?: string | null
+          supplier_id?: number | null
           title?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -4155,10 +4170,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_items_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_items_purchased_for_project_id_fkey"
+            columns: ["purchased_for_project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_items_purchased_for_project_id_fkey"
+            columns: ["purchased_for_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -4176,7 +4212,94 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_locations: {
+        Row: {
+          active: boolean
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          employee_id: number | null
+          id: number
+          kind: string
+          locked: boolean
+          name: string
+          submitted_at: string | null
+          title: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id?: number | null
+          id?: number
+          kind?: string
+          locked?: boolean
+          name: string
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id?: number | null
+          id?: number
+          kind?: string
+          locked?: boolean
+          name?: string
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_locations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_locations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_locations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_locations_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -4193,11 +4316,14 @@ export type Database = {
           location: string
           moved_at: string
           notes: string | null
+          po_number: string | null
           product_id: number
           quantity: number
           reference: string | null
           serial: string | null
           source_ref: string | null
+          supplier_id: number | null
+          unit_cost: number | null
         }
         Insert: {
           created_at?: string
@@ -4207,11 +4333,14 @@ export type Database = {
           location?: string
           moved_at?: string
           notes?: string | null
+          po_number?: string | null
           product_id: number
           quantity: number
           reference?: string | null
           serial?: string | null
           source_ref?: string | null
+          supplier_id?: number | null
+          unit_cost?: number | null
         }
         Update: {
           created_at?: string
@@ -4221,11 +4350,14 @@ export type Database = {
           location?: string
           moved_at?: string
           notes?: string | null
+          po_number?: string | null
           product_id?: number
           quantity?: number
           reference?: string | null
           serial?: string | null
           source_ref?: string | null
+          supplier_id?: number | null
+          unit_cost?: number | null
         }
         Relationships: [
           {
@@ -4240,6 +4372,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]

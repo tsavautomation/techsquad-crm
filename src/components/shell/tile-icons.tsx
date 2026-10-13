@@ -39,6 +39,7 @@ import {
   Zap,
   MessageSquareText,
   type LucideIcon,
+  Warehouse,
 } from "lucide-react";
 
 // One icon (and tint) per page, used by the tile menus and sheets (Portal look).
@@ -75,6 +76,7 @@ export const TILE_ICONS: Record<string, { icon: LucideIcon; tint: string }> = {
   "tv-installations": { icon: Tv, tint: "#0891b2" },
   // Lists
   brands: { icon: Tag, tint: "#ef4444" },
+  stock_locations: { icon: Warehouse, tint: "#0ea5e9" },
   suppliers: { icon: Factory, tint: "#64748b" },
   // Admin
   users: { icon: Users, tint: "#0e76ad" },
@@ -146,5 +148,6 @@ export const TILE_TEXT: Record<string, string> = {
   "survey-and-proposals": "Site surveys and proposals",
   "tv-installations": "Installation and condition forms",
   brands: "Equipment brands",
+  stock_locations: "Where stock sits: warehouse, vans, sites",
   suppliers: "Where products come from",
 };
