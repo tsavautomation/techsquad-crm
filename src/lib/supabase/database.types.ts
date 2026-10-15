@@ -2679,6 +2679,7 @@ export type Database = {
           is_admin: boolean
           language: string
           last_name: string | null
+          palette: string
           updated_at: string
         }
         Insert: {
@@ -2691,6 +2692,7 @@ export type Database = {
           is_admin?: boolean
           language?: string
           last_name?: string | null
+          palette?: string
           updated_at?: string
         }
         Update: {
@@ -2703,6 +2705,7 @@ export type Database = {
           is_admin?: boolean
           language?: string
           last_name?: string | null
+          palette?: string
           updated_at?: string
         }
         Relationships: [

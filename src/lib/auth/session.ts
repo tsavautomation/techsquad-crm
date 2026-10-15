@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ensureFieldSettings } from "@/lib/admin/field-settings";
 import { createClient } from "@/lib/supabase/server";
 import { isLang, type Lang } from "@/i18n/core";
+import { paletteOr } from "@/lib/palettes";
 
 export type CurrentUser = {
   id: string;
@@ -12,6 +13,8 @@ export type CurrentUser = {
   lastName: string | null;
   /** Language of this person's screens (their choice in the account menu). */
   language: Lang;
+  /** UI-m: brand colours chosen under the profile icon (a palette id from src/lib/palettes.ts). */
+  palette: string;
   permissions: ReadonlySet<string>;
   /** Administrator (profiles.is_admin): bypasses every permission check and may edit permissions. */
   isSysadmin: boolean;
@@ -34,7 +37,7 @@ export const getSession = cache(async (): Promise<SessionState> => {
   if (!userId) return { status: "signed-out" };
 
   const [{ data: profile }, { data: permissions, error }] = await Promise.all([
-    supabase.from("profiles").select("email, first_name, last_name, active, language, is_admin, contact_id").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("email, first_name, last_name, active, language, palette, is_admin, contact_id").eq("id", userId).maybeSingle(),
     supabase.rpc("my_permissions"),
   ]);
   if (error) throw new Error(`Could not load permissions: ${error.message}`);
@@ -48,6 +51,7 @@ export const getSession = cache(async (): Promise<SessionState> => {
       firstName: profile.first_name,
       lastName: profile.last_name,
       language: isLang(profile.language) ? profile.language : "en",
+      palette: paletteOr(profile.palette),
       permissions: new Set((permissions as string[] | null) ?? []),
       isSysadmin: Boolean(profile.is_admin),
       contactId: profile.contact_id ?? null,

@@ -4,6 +4,8 @@ import { ThemeProvider } from "@/components/shell/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { I18nProvider } from "@/i18n/client";
 import { getLang } from "@/i18n/server";
+import { cookies } from "next/headers";
+import { PALETTE_COOKIE, paletteOr } from "@/lib/palettes";
 import "./globals.css";
 
 const inter = Inter({
@@ -35,8 +37,9 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const lang = await getLang();
+  const palette = paletteOr((await cookies()).get(PALETTE_COOKIE)?.value); // UI-m
   return (
-    <html lang={lang === "pt" ? "pt-BR" : "en"} suppressHydrationWarning className={`${inter.variable} h-full antialiased`}>
+    <html lang={lang === "pt" ? "pt-BR" : "en"} data-palette={palette} suppressHydrationWarning className={`${inter.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
           <I18nProvider lang={lang}>

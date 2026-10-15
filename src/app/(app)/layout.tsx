@@ -13,6 +13,7 @@ import { loadMyWarnings } from "@/lib/field-day/warnings";
 import { readImpersonator } from "@/lib/admin/impersonate";
 import { ImpersonationBar } from "@/components/shell/impersonation-bar";
 import { UsageBeacon } from "@/components/shell/usage-beacon";
+import { PaletteSync } from "@/components/shell/palette-sync";
 // What the Create button offers, most used first (only tables the person may add to).
 // Names are our own: WebAuthor's item labels are vague here ("Record", "Item").
 const CREATE: [table: string, label: string][] = [
@@ -59,6 +60,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <TopBar me={me} />
         <NavHistory />
         <UsageBeacon />
+        <PaletteSync palette={user.palette} />
         <ForgottenWarning items={warnings} />
         <ModuleTabsBar items={navItems} />
         {/* pb-28 keeps content clear of the mobile bottom bar and its + button */}

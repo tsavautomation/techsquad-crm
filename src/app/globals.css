@@ -160,6 +160,177 @@
   --sh2: 0 12px 32px rgb(0 0 0 / 0.5);
 }
 
+/* UI-m Brand colours: one block per brand in src/lib/palettes.ts, copied from that brand's app. Each overrides only
+   the accent variables; page, cards and text stay as they are so every screen keeps working. Night variants under .dark. */
+
+/* OvrC: sky-blue app, deep blue bar, orange in the logo. */
+html[data-palette="ovrc"] {
+  --primary: #1b8ce6;
+  --primary-foreground: #ffffff;
+  --ring: #1b8ce6;
+  --secondary: #e3f2fd;
+  --secondary-foreground: #0b5d8e;
+  --brand: #ff7a1a;
+  --sidebar: #0a6ea0;
+  --sidebar-foreground: #d6ecfa;
+  --sidebar-primary: #7fd0ff;
+  --sidebar-primary-foreground: #06324a;
+  --sidebar-accent: rgb(255 255 255 / 0.14);
+  --sidebar-ring: #7fd0ff;
+  --info-bg: #e3f2fd;
+  --info-fg: #0b5d8e;
+  --info-border: #93cdf5;
+  --chart-1: #1b8ce6;
+  --chart-2: #ff7a1a;
+}
+html[data-palette="ovrc"].dark {
+  --primary: #4fb3ff;
+  --primary-foreground: #04263a;
+  --ring: #4fb3ff;
+  --secondary: #0b3550;
+  --secondary-foreground: #a9ddf5;
+  --sidebar: #052f45;
+  --sidebar-primary: #7fd0ff;
+  --info-bg: #0b3550;
+  --info-fg: #a9ddf5;
+  --info-border: #1b6e9c;
+  --chart-1: #4fb3ff;
+}
+
+/* Lutron: one deep blue, white type. */
+html[data-palette="lutron"] {
+  --primary: #1577cf;
+  --primary-foreground: #ffffff;
+  --ring: #1577cf;
+  --secondary: #e2eefb;
+  --secondary-foreground: #0d4f91;
+  --brand: #8ec5ff;
+  --sidebar: #0d4f91;
+  --sidebar-foreground: #d2e4f7;
+  --sidebar-primary: #8ec5ff;
+  --sidebar-primary-foreground: #062c52;
+  --sidebar-accent: rgb(255 255 255 / 0.14);
+  --sidebar-ring: #8ec5ff;
+  --info-bg: #e2eefb;
+  --info-fg: #0d4f91;
+  --info-border: #9cc3ee;
+  --chart-1: #1577cf;
+  --chart-2: #0d4f91;
+}
+html[data-palette="lutron"].dark {
+  --primary: #4fa3f0;
+  --primary-foreground: #04203a;
+  --ring: #4fa3f0;
+  --secondary: #0a3560;
+  --secondary-foreground: #bcdcfb;
+  --sidebar: #06284a;
+  --info-bg: #0a3560;
+  --info-fg: #bcdcfb;
+  --info-border: #1d5a99;
+  --chart-1: #4fa3f0;
+}
+
+/* Crestron and Sonos are black apps: these palettes are dark in Day and Night alike. */
+html[data-palette="crestron"],
+html[data-palette="crestron"].dark {
+  --background: #000000;
+  --foreground: #f5f5f7;
+  --card: #1c1c1e;
+  --card-foreground: #f5f5f7;
+  --popover: #1c1c1e;
+  --popover-foreground: #f5f5f7;
+  --primary: #e5473a;
+  --primary-foreground: #ffffff;
+  --secondary: #2c2c2e;
+  --secondary-foreground: #f5f5f7;
+  --muted: #2a2a2d;
+  --muted-foreground: #a1a1aa;
+  --accent: #2c2c2e;
+  --accent-foreground: #f5f5f7;
+  --destructive: #ff6b5e;
+  --border: #2c2c2e;
+  --input: #3a3a3c;
+  --ring: #e5473a;
+  --chart-1: #e5473a;
+  --chart-2: #e0457b;
+  --chart-3: #34d399;
+  --chart-4: #fbbf24;
+  --chart-5: #a78bfa;
+  --sidebar: #0e0e10;
+  --sidebar-foreground: #c9c9ce;
+  --sidebar-primary: #e5473a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgb(255 255 255 / 0.1);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.08);
+  --sidebar-ring: #e5473a;
+  --brand: #e5473a;
+  --text-2: #b3b3b8;
+  --ok-bg: #0f3b24;
+  --ok-fg: #8ee0ac;
+  --warn-bg: #4a3208;
+  --warn-fg: #ffd27a;
+  --bad-bg: #4a1218;
+  --bad-fg: #ffb3bc;
+  --bad-border: #8a2a35;
+  --info-bg: #2c2c2e;
+  --info-fg: #e0e0e5;
+  --info-border: #4a4a4f;
+  --sh1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --sh2: 0 12px 32px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+html[data-palette="sonos"],
+html[data-palette="sonos"].dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #1e1f22;
+  --card-foreground: #ffffff;
+  --popover: #1e1f22;
+  --popover-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #0a0a0a;
+  --secondary: #2c2d30;
+  --secondary-foreground: #ffffff;
+  --muted: #232427;
+  --muted-foreground: #9b9ca3;
+  --accent: #2c2d30;
+  --accent-foreground: #ffffff;
+  --destructive: #ff6b5e;
+  --border: #2c2d30;
+  --input: #3a3b3f;
+  --ring: #ffffff;
+  --chart-1: #ffffff;
+  --chart-2: #1ed760;
+  --chart-3: #4fd9e8;
+  --chart-4: #fbbf24;
+  --chart-5: #a78bfa;
+  --sidebar: #121316;
+  --sidebar-foreground: #c9cacf;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: rgb(255 255 255 / 0.12);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.08);
+  --sidebar-ring: #ffffff;
+  --brand: #1ed760;
+  --text-2: #b5b6bc;
+  --ok-bg: #0f3b24;
+  --ok-fg: #1ed760;
+  --warn-bg: #4a3208;
+  --warn-fg: #ffd27a;
+  --bad-bg: #4a1218;
+  --bad-fg: #ffb3bc;
+  --bad-border: #8a2a35;
+  --info-bg: #2c2d30;
+  --info-fg: #e6e6ea;
+  --info-border: #4a4b50;
+  --sh1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --sh2: 0 12px 32px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -1823,4 +1823,5 @@ export const PT: Record<string, string> = {
   "Last": "Último",
   "Time": "Tempo",
   "No users.": "Nenhum usuário.",
+  "Brand colours": "Cores da marca",
 };

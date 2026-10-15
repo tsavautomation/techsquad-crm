@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -27,6 +27,8 @@ import type { ModuleDef } from "@/config/modules";
 import { cn } from "@/lib/utils";
 import { LANGS, type Lang } from "@/i18n/core";
 import { setLanguageAction } from "@/i18n/actions";
+import { setPaletteAction } from "@/lib/palette-actions";
+import { DEFAULT_PALETTE, PALETTES } from "@/lib/palettes";
 import { TextSizeChoice } from "@/components/portal/text-size";
 import { useLang, useT } from "@/i18n/client";
 import { AlertsBell } from "./alerts-bell";
@@ -232,6 +234,57 @@ function ThemeChoice() {
           <Icon className="size-4" aria-hidden /> {t(label)}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** UI-m: brand colours (my profile). The page repaints at once; the server remembers it for every device. */
+const readPalette = () => document.documentElement.dataset.palette ?? DEFAULT_PALETTE;
+const subscribePalette = (cb: () => void) => {
+  const o = new MutationObserver(cb);
+  o.observe(document.documentElement, { attributes: true, attributeFilter: ["data-palette"] });
+  return () => o.disconnect();
+};
+const applyPalette = (id: string) => {
+  document.documentElement.setAttribute("data-palette", id);
+};
+
+function PaletteChoice() {
+  const t = useT();
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const current = useSyncExternalStore(subscribePalette, readPalette, () => DEFAULT_PALETTE);
+  if (PALETTES.length < 2) return null;
+  const pick = (id: string) => {
+    applyPalette(id);
+    start(async () => {
+      await setPaletteAction(id);
+      router.refresh();
+    });
+  };
+  return (
+    <div className="mx-2 my-2">
+      <p className="mb-1 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("Brand colours")}</p>
+      <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label={t("Brand colours")}>
+        {PALETTES.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            role="radio"
+            aria-checked={current === p.id}
+            disabled={pending}
+            onClick={() => pick(p.id)}
+            className={cn("flex min-h-11 flex-col items-start gap-1 rounded-[10px] border bg-muted px-2 py-1.5 text-left text-[12px] text-muted-foreground", current === p.id && "border-primary bg-card font-semibold text-foreground shadow-card")}
+          >
+            <span className="flex gap-0.5" aria-hidden>
+              {p.swatch.map((c, i) => (
+                <span key={i} className="size-3.5 rounded-full border border-black/10" style={{ background: c }} />
+              ))}
+            </span>
+            <span className="truncate">{p.name}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -508,6 +561,7 @@ export function Sidebar({
       </Sheet>
       <Sheet open={menu} onClose={() => setMenu(false)} title={me.name}>
         <ThemeChoice />
+        <PaletteChoice />
         <LanguageChoice />
         <TextSizeChoice />
         <ChangePassword />
@@ -549,6 +603,7 @@ export function TopBar({ me }: { me: Me }) {
       <Sheet open={menu} onClose={() => setMenu(false)} title={me.name}>
         <p className="px-3 pb-1 text-sm text-muted-foreground">{me.email}</p>
         <ThemeChoice />
+        <PaletteChoice />
         <LanguageChoice />
         <TextSizeChoice />
         <ChangePassword />
@@ -775,6 +830,7 @@ export function BottomNav({
           ]}
         />
         <ThemeChoice />
+        <PaletteChoice />
         <LanguageChoice />
         <TextSizeChoice />
       </Sheet>
