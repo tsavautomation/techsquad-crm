@@ -10,6 +10,8 @@ import { getT } from "@/i18n/server";
 import { NavHistory } from "@/components/shell/nav-history";
 import { ForgottenWarning } from "@/components/field-day/forgotten-warning";
 import { loadMyWarnings } from "@/lib/field-day/warnings";
+import { readImpersonator } from "@/lib/admin/impersonate";
+import { ImpersonationBar } from "@/components/shell/impersonation-bar";
 // What the Create button offers, most used first (only tables the person may add to).
 // Names are our own: WebAuthor's item labels are vague here ("Record", "Item").
 const CREATE: [table: string, label: string][] = [
@@ -40,6 +42,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const extras: Extras = { tasks: opens("tasks"), pipeline: opens("projects"), insights: user.permissions.has("insights.page.view"), data: opens("contacts"), timeClock: user.permissions.has("administrative.employees.view_all") };
   const showAdmin = ADMIN_SCREENS.some((s) => canSeeScreen(s, user.permissions, user.isSysadmin));
   const warnings = await loadMyWarnings();
+  const impersonator = await readImpersonator(); // ADM-a
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const me: Me = {
     name,
@@ -51,6 +54,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <div className="flex min-h-dvh" style={{ zoom: "var(--app-zoom, 1)" }}>
       <Sidebar items={navItems} create={create} me={me} showAdmin={showAdmin} extras={extras} />
       <div className="flex min-w-0 flex-1 flex-col">
+        {impersonator && impersonator.id !== user.id && <ImpersonationBar as={name} admin={impersonator.name} />}
         <TopBar me={me} />
         <NavHistory />
         <ForgottenWarning items={warnings} />

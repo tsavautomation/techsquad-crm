@@ -1417,6 +1417,45 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonations: {
+        Row: {
+          admin_id: string
+          ended_at: string | null
+          id: number
+          started_at: string
+          target_id: string
+        }
+        Insert: {
+          admin_id: string
+          ended_at?: string | null
+          id?: number
+          started_at?: string
+          target_id: string
+        }
+        Update: {
+          admin_id?: string
+          ended_at?: string | null
+          id?: number
+          started_at?: string
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonations_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impersonations_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_checkouts: {
         Row: {
           archived_at: string | null

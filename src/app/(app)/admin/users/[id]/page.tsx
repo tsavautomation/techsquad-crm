@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PermissionChecklist, type OtherPerson } from "@/components/admin/permission-checklist";
+import { ImpersonateButton } from "@/components/admin/impersonate-button";
 import { UserForm } from "@/components/admin/user-forms";
 import { requireUser } from "@/lib/auth/session";
 import { availableChecklist } from "@/lib/permissions/checklist";
@@ -47,6 +48,12 @@ export default async function UserPage(props: PageProps<"/admin/users/[id]">) {
         <h2 className="mb-3 text-[15px] font-semibold tracking-tight">{t("Login")}</h2>
         <UserForm userId={profile.id} email={profile.email} initial={{ firstName: profile.first_name ?? "", lastName: profile.last_name ?? "", active: profile.active }} can={{ edit: true, link: true, delete: me.isSysadmin && neverSignedIn }} isMe={me.id === profile.id} />
       </section>
+      {me.isSysadmin && me.id !== profile.id && profile.active && (
+        <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+          <h2 className="mb-3 text-[15px] font-semibold tracking-tight">{t("See the CRM as this person")}</h2>
+          <ImpersonateButton userId={profile.id} name={name} />
+        </section>
+      )}
       <PermissionChecklist key={profile.id} userId={profile.id} initialAdmin={profile.is_admin} initialKeys={byUser.get(profile.id) ?? []} sections={sections} others={others} canEdit={me.isSysadmin} isMe={me.id === profile.id} />
     </div>
   );
