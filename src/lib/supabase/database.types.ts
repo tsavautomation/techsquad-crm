@@ -5521,6 +5521,7 @@ export type Database = {
           id: number
           is_start: boolean
           place: number
+          queue: boolean
           title: string
           workflow_id: string
         }
@@ -5531,6 +5532,7 @@ export type Database = {
           id?: number
           is_start?: boolean
           place: number
+          queue?: boolean
           title: string
           workflow_id: string
         }
@@ -5541,6 +5543,7 @@ export type Database = {
           id?: number
           is_start?: boolean
           place?: number
+          queue?: boolean
           title?: string
           workflow_id?: string
         }

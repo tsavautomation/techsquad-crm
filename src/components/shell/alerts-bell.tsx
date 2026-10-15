@@ -4,24 +4,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AtSign, Bell, CalendarClock, CheckSquare, ClipboardCheck, Clock, MapPin, MessageSquarePlus, SquareKanban, X, type LucideIcon, Phone } from "lucide-react";
+import { AtSign, Bell, CheckSquare, Clock, IdCard, MessageSquarePlus, SquareKanban, X, type LucideIcon, Phone } from "lucide-react";
 import { alertsAction, markTagsSeenAction, type Alerts, type AlertSection } from "@/lib/alerts/actions";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
-// Alerts bell next to the account initials: a red count of what is waiting for me (tags in notes,
-// approvals, today's visits, open tasks, checklist items, follow-ups), each linking to its record.
+// Alerts bell next to the account initials: a red count of what needs me (tags in notes, open tasks,
+// checklist items, the time clock, report reminders, portal requests, driver licences), each linking to its record.
 // Refreshed on every page change, when the app comes back to the front, and every two minutes.
 
 const ICONS: Record<AlertSection["key"], { icon: LucideIcon; tint: string }> = {
   clock: { icon: Clock, tint: "#f97316" },
   phones: { icon: Phone, tint: "#f59e0b" },
   tags: { icon: AtSign, tint: "#0e76ad" },
-  approvals: { icon: ClipboardCheck, tint: "#8b5cf6" },
-  visits: { icon: MapPin, tint: "#0ea5e9" },
+  licence: { icon: IdCard, tint: "#8b5cf6" },
   tasks: { icon: SquareKanban, tint: "#f59e0b" },
   checklist: { icon: CheckSquare, tint: "#16a34a" },
-  followups: { icon: CalendarClock, tint: "#ef4444" },
   requests: { icon: MessageSquarePlus, tint: "#0e76ad" },
 };
 

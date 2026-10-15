@@ -1,7 +1,7 @@
 "use server";
 
 import { requireUser } from "@/lib/auth/session";
-import { formatDate, formatDateTime, fromDateTimeLocalET, toDateTimeLocalET, todayET } from "@/lib/dates";
+import { formatDate, formatDateTime, toDateTimeLocalET, todayET } from "@/lib/dates";
 import { FIELD_LABEL, isApprover, pendingCorrections } from "@/lib/field-day/corrections";
 import { loadFieldDay } from "@/lib/field-day/return-card";
 import { recordsDb } from "@/lib/records/data";
@@ -15,10 +15,14 @@ import { getT } from "@/i18n/server";
 
 // The alerts bell in the top bar: what is waiting for the signed-in person, each linking to its record.
 // Tags in notes stay until the record is opened (or "Mark tags read"); the rest are live: they drop out
-// once done (approved, task completed, checklist ticked, visit done…). Row-level security applies throughout.
+// once done (approved, task completed, checklist ticked…). Row-level security applies throughout.
+// N-b (Fred 2026-10-14, "that defeats the importance of the alert, since anything is an alert"): the bell
+// carries only what needs the person — tags, tasks, checklist items, the time clock (open day, corrections
+// to approve), report reminders the office must follow up, portal requests, and driver's licences expiring.
+// Workflow stages, today's visits and client follow-ups live on Today and the calendar, not in the bell.
 
 export type AlertItem = { key: string; href: string; title: string; meta: string; urgent?: boolean };
-export type AlertSection = { key: "clock" | "phones" | "tags" | "approvals" | "visits" | "tasks" | "checklist" | "followups" | "requests"; title: string; items: AlertItem[] };
+export type AlertSection = { key: "clock" | "phones" | "tags" | "tasks" | "checklist" | "requests" | "licence"; title: string; items: AlertItem[] };
 export type Alerts = { count: number; urgent: boolean; sections: AlertSection[] };
 
 const MAX = 20;
@@ -91,46 +95,38 @@ export async function alertsAction(): Promise<Alerts> {
       });
   })();
 
-  const approvals = (async (): Promise<AlertItem[]> => {
-    const { data } = await db.rpc("my_workflow_queue");
-    const rows = ((data ?? []) as { table_name: string; record_id: number; level_title: string; entered_at: string }[]).slice(0, MAX);
-    const t = await titles(rows.map((r) => ({ table: r.table_name, id: r.record_id })));
-    const workflow = rows
-      .filter((r) => t.has(`${r.table_name}:${r.record_id}`) && link(r.table_name, r.record_id))
-      .map((r) => ({
-        key: `wf:${r.table_name}:${r.record_id}`,
-        href: link(r.table_name, r.record_id)!,
-        title: t.get(`${r.table_name}:${r.record_id}`)!,
-        meta: `${tr(r.level_title)} · ${tr("since {date}", { date: formatDate(r.entered_at) })}`,
-      }));
-    // F22-a: check-in / check-out corrections waiting for one of the approvers.
-    if (!(await isApprover(db, user))) return workflow;
+  // F22-a: check-in / check-out corrections waiting for one of the approvers (shown under Time clock).
+  const corrections = (async (): Promise<AlertItem[]> => {
+    if (!(await isApprover(db, user))) return [];
     const visitsT = getTable("visits");
-    const corrections = (await pendingCorrections()).map((c) => ({
+    return (await pendingCorrections()).map((c) => ({
       key: `tc:${c.id}`,
       href: `${recordHref(visitsT, c.visit_id)}#corrections`,
       title: c.project,
       meta: `${tr("{who} asks to correct {field} to {when}", { who: c.employee, field: tr(FIELD_LABEL[c.field]), when: formatDateTime(c.requested_at) })} · ${formatDate(c.created_at)}`,
       urgent: true,
     }));
-    return [...corrections, ...workflow];
   })();
 
-  const visits = (async (): Promise<AlertItem[]> => {
-    const emp = await myEmployees;
-    if (!emp.length || !can("visits")) return [];
-    const from = fromDateTimeLocalET(`${today}T00:00`);
-    const to = fromDateTimeLocalET(`${addDays(today, 1)}T00:00`);
-    const { data: team } = await db.from("visits_team").select("record_id").in("target_id", emp);
-    const along = ((team ?? []) as { record_id: number }[]).map((r) => r.record_id);
-    let q = db.from("visits").select("id, title, starts_at, status").gte("starts_at", from).lt("starts_at", to).is("deleted_at", null).not("status", "in", "(Done,Cancelled)");
-    q = along.length ? q.or(`technician_id.in.(${emp.join(",")}),id.in.(${along.join(",")})`) : q.in("technician_id", emp);
-    const { data } = await q.order("starts_at").limit(MAX);
-    return ((data ?? []) as { id: number; title: string | null; starts_at: string; status: string }[]).map((v) => ({
-      key: `visit:${v.id}`,
-      href: recordHref(getTable("visits"), v.id),
-      title: v.title || tr("Visit #{id}", { id: v.id }),
-      meta: `${formatDateTime(v.starts_at).split(" ").slice(1).join(" ")} · ${tr(v.status)}`,
+  // N-b: driver's licences expired or expiring within 30 days — mine, and (for people who manage employees) everyone's.
+  const licence = (async (): Promise<AlertItem[]> => {
+    if (!can("employees")) return [];
+    const limit = addDays(today, 30);
+    const mine = await myEmployees;
+    const office = user.permissions.has("administrative.employees.view_all");
+    let q = db.from("employees").select("id, title, dl_expiration, status").is("deleted_at", null).not("dl_expiration", "is", null).lte("dl_expiration", limit).neq("status", "Inactive");
+    if (!office) {
+      if (!mine.length) return [];
+      q = q.in("id", mine);
+    }
+    const { data } = await q.order("dl_expiration").limit(MAX);
+    const et = getTable("employees");
+    return ((data ?? []) as { id: number; title: string | null; dl_expiration: string }[]).map((e) => ({
+      key: `dl:${e.id}`,
+      href: recordHref(et, e.id),
+      title: mine.includes(e.id) ? tr("Your driver's licence") : (e.title ?? `#${e.id}`),
+      meta: e.dl_expiration < today ? tr("Driver's licence expired on {date}", { date: formatDate(e.dl_expiration) }) : tr("Driver's licence expires on {date}", { date: formatDate(e.dl_expiration) }),
+      urgent: e.dl_expiration < today,
     }));
   })();
 
@@ -180,28 +176,6 @@ export async function alertsAction(): Promise<Alerts> {
   })();
 
   // Follow-up dates on my own notes, from a week ago up to today.
-  const followups = (async (): Promise<AlertItem[]> => {
-    const { data } = await db
-      .from("record_notes")
-      .select("id, table_name, record_id, body, follow_up_date")
-      .eq("created_by", user.id)
-      .gte("follow_up_date", addDays(today, -7))
-      .lte("follow_up_date", today)
-      .order("follow_up_date", { ascending: false })
-      .limit(MAX);
-    const rows = (data ?? []) as { id: number; table_name: string; record_id: number; body: string; follow_up_date: string }[];
-    const t = await titles(rows.map((r) => ({ table: r.table_name, id: r.record_id })));
-    return rows
-      .filter((r) => t.has(`${r.table_name}:${r.record_id}`) && link(r.table_name, r.record_id))
-      .map((r) => ({
-        key: `follow:${r.id}`,
-        href: `${link(r.table_name, r.record_id)}#notes`,
-        title: t.get(`${r.table_name}:${r.record_id}`)!,
-        meta: `${r.follow_up_date === today ? tr("Follow up today") : tr("Follow up since {date}", { date: formatDate(r.follow_up_date) })} · “${r.body.length > 60 ? `${r.body.slice(0, 60)}…` : r.body}”`,
-        urgent: r.follow_up_date < today,
-      }));
-  })();
-
   // P2: still clocked in past the reminder time for my group.
   const clock = (async (): Promise<AlertItem[]> => {
     const mine = await myClockToday(db, user);
@@ -244,17 +218,15 @@ export async function alertsAction(): Promise<Alerts> {
     }));
   })();
 
-  const [a, b, c, d, e, f, g, h, i] = await Promise.all([tags, approvals, visits, tasks, checklist, followups, clock, phones, requests]);
+  const [a, b, d, e, g, h, i, l] = await Promise.all([tags, corrections, tasks, checklist, clock, phones, requests, licence]);
   const sections: AlertSection[] = [
-    { key: "clock" as const, title: tr("Time clock"), items: g },
+    { key: "clock" as const, title: tr("Time clock"), items: [...g, ...b] },
+    { key: "licence" as const, title: tr("Driver's licences"), items: l },
     { key: "phones" as const, title: tr("Report reminders"), items: h },
     { key: "requests" as const, title: tr("Customer requests from the portal"), items: i },
     { key: "tags" as const, title: tr("Tagged you"), items: a },
-    { key: "approvals" as const, title: tr("Waiting for your approval"), items: b },
-    { key: "visits" as const, title: tr("Your visits today"), items: c },
     { key: "tasks" as const, title: tr("Your open tasks"), items: d },
     { key: "checklist" as const, title: tr("Checklist items for you"), items: e },
-    { key: "followups" as const, title: tr("Follow-ups"), items: f },
   ].filter((s) => s.items.length);
   const all = sections.flatMap((s) => s.items);
   return { count: all.length, urgent: all.some((i) => i.urgent), sections };
