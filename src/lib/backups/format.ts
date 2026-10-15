@@ -10,7 +10,7 @@ export type BackupStatus = "running" | "done" | "failed" | "expired";
 export type BackupTable = { name: string; rows: number; bytes: number; json_id: string; csv_id: string | null };
 
 /** Tables that are copied but can never be restored from this page: they are the engine's own bookkeeping. */
-export const RESTORE_BLOCKED = new Set(["backups", "backup_restores", "scheduled_runs", "onedrive_folders", "uploads"]);
+export const RESTORE_BLOCKED = new Set(["backups", "backup_restores", "scheduled_runs", "onedrive_folders", "onedrive_uploads"]);
 
 /** The OneDrive folder of a run: nightly ones are the plain date, the others say why and when. */
 export function backupFolder(kind: BackupKind, day: string, time: string): string {

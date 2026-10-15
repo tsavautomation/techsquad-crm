@@ -35,6 +35,7 @@ export function BackupsPanel({ backups, restores, canRestore, restoreEmails, one
       if (!r.ok) return void toast.error(t(r.message));
       if (r.result.status === "done") toast.success(t("Backup written: {n} tables, {rows} rows, {size}.", { n: r.result.tables_done, rows: r.result.rows, size: formatBytes(r.result.bytes) }));
       else if (r.result.skipped) toast.info(t(r.result.skipped));
+      else if (r.result.status === "running") toast.info(t("{n} of {total} tables copied so far; the rest continues within the hour (or press the button again).", { n: r.result.tables_done, total: r.result.tables_total }));
       else toast.warning(t("The backup did not finish: {error}", { error: r.result.error ?? r.result.status }));
       router.refresh();
     });
@@ -91,12 +92,12 @@ export function BackupsPanel({ backups, restores, canRestore, restoreEmails, one
                         {[...b.tables]
                           .sort((x, y) => x.name.localeCompare(y.name))
                           .map((tb) => (
-                            <li key={tb.name} className="flex items-center gap-2 px-3 py-1.5">
-                              <span className="min-w-0 flex-1 truncate font-mono text-[13px]">{tb.name}</span>
+                            <li key={tb.name} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5">
+                              <span className="min-w-0 basis-full break-all font-mono text-[13px] sm:basis-auto sm:flex-1 sm:truncate">{tb.name}</span>
                               <span className="text-xs text-muted-foreground tabular-nums">{t("{rows} rows", { rows: tb.rows.toLocaleString() })}</span>
-                              <span className="w-16 text-right text-xs text-muted-foreground tabular-nums">{formatBytes(tb.bytes)}</span>
+                              <span className="w-16 text-right text-xs text-muted-foreground tabular-nums sm:ml-0">{formatBytes(tb.bytes)}</span>
                               {canRestore && b.status === "done" && !RESTORE_BLOCKED.has(tb.name) && (
-                                <button type="button" onClick={() => setRestoring({ backup: b, table: tb })} className={LINK}>
+                                <button type="button" onClick={() => setRestoring({ backup: b, table: tb })} className={cn(LINK, "ml-auto")}>
                                   <RotateCcw className="size-3.5" aria-hidden /> {t("Restore")}
                                 </button>
                               )}

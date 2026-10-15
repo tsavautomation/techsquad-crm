@@ -39,12 +39,16 @@ export async function runBackup(opts: { kind: BackupKind; budgetMs: number; now?
   const time = new Intl.DateTimeFormat("en-GB", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).format(now);
   const deadline = now.getTime() + opts.budgetMs;
 
-  // The row: today's nightly one (new or still running), or a fresh manual / before-restore one.
+  // The row: today's nightly one (new or still running), a manual one left unfinished (continued), or a fresh one.
   let row: BackupRow | null = null;
   if (opts.kind === "nightly") {
     const { data } = await db.from("backups").select("*").eq("kind", "nightly").eq("day", slot.date).maybeSingle();
     row = data as BackupRow | null;
     if (row && row.status !== "running") return summary(row, "already done");
+    if (row && row.lease_until && Date.parse(row.lease_until) > now.getTime()) return summary(row, "another tick is on it");
+  } else if (opts.kind === "manual") {
+    const { data } = await db.from("backups").select("*").eq("kind", "manual").eq("status", "running").order("id", { ascending: false }).limit(1).maybeSingle();
+    row = data as BackupRow | null;
     if (row && row.lease_until && Date.parse(row.lease_until) > now.getTime()) return summary(row, "another tick is on it");
   }
   if (!row) {
@@ -74,8 +78,10 @@ export async function runBackup(opts: { kind: BackupKind; budgetMs: number; now?
       if (Date.now() > deadline) break;
       const rows = await readAll(db, t.table_name, pkColumns(t.pk));
       const json = gzipSync(strToU8(JSON.stringify(rows)), { level: 6 });
-      const jsonItem = await uploadBytes(row.folder_path, `${t.table_name}.json.gz`, Buffer.from(json));
-      const csvItem = await uploadBytes(row.folder_path, `${t.table_name}.csv`, Buffer.from(toCsv(rows, columnsOf(rows)), "utf8"));
+      const [jsonItem, csvItem] = await Promise.all([
+        uploadBytes(row.folder_path, `${t.table_name}.json.gz`, Buffer.from(json)),
+        uploadBytes(row.folder_path, `${t.table_name}.csv`, Buffer.from(toCsv(rows, columnsOf(rows)), "utf8")),
+      ]);
       const entry: BackupTable = { name: t.table_name, rows: rows.length, bytes: (jsonItem.size ?? json.length) + (csvItem.size ?? 0), json_id: jsonItem.id, csv_id: csvItem.id };
       done.set(t.table_name, entry);
       row.tables = [...done.values()];
@@ -91,7 +97,7 @@ export async function runBackup(opts: { kind: BackupKind; budgetMs: number; now?
       row.status = "done";
       if (opts.kind === "nightly") await sweep(db, slot.date);
     } else {
-      await db.from("backups").update({ lease_until: null }).eq("id", row.id);
+      await db.from("backups").update({ lease_until: new Date().toISOString() }).eq("id", row.id); // free for the next tick / click
     }
     return { ...summary(row), tables_total: tables.length };
   } catch (e) {
@@ -128,6 +134,9 @@ export async function nightlyBackupStep(now: Date, budgetMs: number): Promise<Ru
   const db = adminDb();
   const settings = await loadBackupSettings(db);
   const slot = etSlot(now);
+  // A manual copy that outlived its request (240 s) is finished here first, then tonight's copy.
+  const { data: stale } = await db.from("backups").select("id").eq("kind", "manual").eq("status", "running").lt("lease_until", now.toISOString()).limit(1);
+  if (stale?.length) return runBackup({ kind: "manual", budgetMs, now });
   if (Number(slot.hour) < settings.hour) return { skipped: `before ${settings.hour}:00` };
   return runBackup({ kind: "nightly", budgetMs, now });
 }

@@ -249,6 +249,123 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_restores: {
+        Row: {
+          backup_id: number
+          error: string | null
+          id: number
+          restored_at: string
+          restored_by: string | null
+          rows_deleted: number
+          rows_written: number
+          snapshot_backup_id: number | null
+          table_name: string
+        }
+        Insert: {
+          backup_id: number
+          error?: string | null
+          id?: number
+          restored_at?: string
+          restored_by?: string | null
+          rows_deleted?: number
+          rows_written?: number
+          snapshot_backup_id?: number | null
+          table_name: string
+        }
+        Update: {
+          backup_id?: number
+          error?: string | null
+          id?: number
+          restored_at?: string
+          restored_by?: string | null
+          rows_deleted?: number
+          rows_written?: number
+          snapshot_backup_id?: number | null
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backup_restores_backup_id_fkey"
+            columns: ["backup_id"]
+            isOneToOne: false
+            referencedRelation: "backups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backup_restores_restored_by_fkey"
+            columns: ["restored_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backup_restores_snapshot_backup_id_fkey"
+            columns: ["snapshot_backup_id"]
+            isOneToOne: false
+            referencedRelation: "backups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backups: {
+        Row: {
+          bytes: number
+          created_at: string
+          day: string
+          error: string | null
+          finished_at: string | null
+          folder_path: string
+          id: number
+          kind: string
+          lease_until: string | null
+          rows_total: number
+          started_at: string
+          started_by: string | null
+          status: string
+          tables: Json
+        }
+        Insert: {
+          bytes?: number
+          created_at?: string
+          day: string
+          error?: string | null
+          finished_at?: string | null
+          folder_path: string
+          id?: number
+          kind?: string
+          lease_until?: string | null
+          rows_total?: number
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          tables?: Json
+        }
+        Update: {
+          bytes?: number
+          created_at?: string
+          day?: string
+          error?: string | null
+          finished_at?: string | null
+          folder_path?: string
+          id?: number
+          kind?: string
+          lease_until?: string | null
+          rows_total?: number
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          tables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backups_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           archived_at: string | null
@@ -5935,6 +6052,13 @@ export type Database = {
       }
     }
     Functions: {
+      backup_tables: {
+        Args: never
+        Returns: {
+          pk: string
+          table_name: string
+        }[]
+      }
       close_my_open_visits: {
         Args: { p_except: number; p_reason: string }
         Returns: number
@@ -5983,6 +6107,12 @@ export type Database = {
           visit_days: number
         }[]
       }
+      restore_delete_missing: {
+        Args: { p_ids: number[]; p_table: string }
+        Returns: number
+      }
+      restore_fix_sequence: { Args: { p_table: string }; Returns: undefined }
+      restore_rows: { Args: { p_rows: Json; p_table: string }; Returns: number }
       user_last_sign_in: {
         Args: never
         Returns: {

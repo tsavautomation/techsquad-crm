@@ -1793,4 +1793,5 @@ export const PT: Record<string, string> = {
   "another tick is on it": "outra execução já está cuidando disso",
   "already started": "já iniciado",
   "OneDrive is not connected": "O OneDrive não está conectado",
+  "{n} of {total} tables copied so far; the rest continues within the hour (or press the button again).": "{n} de {total} tabelas copiadas até agora; o resto continua dentro de uma hora (ou aperte o botão de novo).",
 };
