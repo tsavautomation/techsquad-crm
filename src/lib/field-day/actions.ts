@@ -9,13 +9,17 @@ import { getTable } from "@/registry";
 import { tableHref } from "@/registry/routes";
 import type { EntryKind, Geo } from "@/lib/time-clock/clock";
 import { geocode } from "@/lib/time-clock/geocode";
-import { recordEntry } from "@/lib/time-clock/record";
+import { myClockToday, recordEntry } from "@/lib/time-clock/record";
+import { fromDateTimeLocalET, todayET } from "@/lib/dates";
+import { addDays } from "@/lib/schedule/dates";
+import { myEmployeeIds } from "./load";
 import { FieldDaySchema, type FieldDaySettings } from "./day";
 
 // F2 Field day actions. Check-in steps go through public.visit_step (only the people going, or
 // whoever may change visits); settings through app_settings (Form designers, as Form settings).
 
-export type StepResult = { ok: true; next?: string } | { ok: false; message: string };
+/** F20-d: `askClockOut` is set when the check-out was the person's last visit of the day and they are still clocked in. */
+export type StepResult = { ok: true; next?: string; askClockOut?: boolean } | { ok: false; message: string };
 type Step = "on_way" | "check_in" | "check_out";
 
 const ENTRY_KIND: Record<Step, EntryKind> = { on_way: "on_way", check_in: "visit_in", check_out: "visit_out" };
@@ -42,7 +46,34 @@ export async function visitStepAction(id: number, step: Step, geo: Geo | null = 
   const q = new URLSearchParams({ visit_id: String(id), back: "/" });
   if (v.project_id) q.set("project_id", String(v.project_id));
   if (people.length) q.set("team_ids", [...new Set(people)].join(","));
-  return { ok: true, next: `${tableHref(getTable("job_reports"))}/new?${q}` };
+  return { ok: true, next: `${tableHref(getTable("job_reports"))}/new?${q}`, askClockOut: await lastVisitWhileClockedIn(db, user, id) };
+}
+
+// F20-d (Fred 2026-10-14, "many people are not clocking out, because they think left the job may be the same"):
+// true when the person is clocked in and has no other visit today still to do.
+async function lastVisitWhileClockedIn(db: Awaited<ReturnType<typeof recordsDb>>, user: Awaited<ReturnType<typeof requireUser>>, visitId: number): Promise<boolean> {
+  try {
+    const mine = await myClockToday(db, user);
+    if (!mine?.day.openSince) return false;
+    const people = await myEmployeeIds(db, user);
+    if (!people.length) return false;
+    const today = todayET();
+    const { data: team } = await db.from("visits_team").select("record_id").in("target_id", people);
+    const teamIds = ((team ?? []) as { record_id: number }[]).map((x) => x.record_id);
+    const or = [`technician_id.in.(${people.join(",")})`, teamIds.length ? `id.in.(${teamIds.join(",")})` : null].filter(Boolean).join(",");
+    const { count } = await db
+      .from("visits")
+      .select("id", { count: "exact", head: true })
+      .or(or)
+      .gte("starts_at", fromDateTimeLocalET(`${today}T00:00`))
+      .lt("starts_at", fromDateTimeLocalET(`${addDays(today, 1)}T00:00`))
+      .not("status", "in", "(Done,Cancelled)")
+      .neq("id", visitId)
+      .is("deleted_at", null);
+    return (count ?? 0) === 0;
+  } catch {
+    return false;
+  }
 }
 
 export async function saveFieldDayAction(input: FieldDaySettings): Promise<{ ok: true } | { ok: false; message: string }> {

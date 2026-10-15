@@ -3,13 +3,17 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Car, Loader2, LogIn, LogOut } from "lucide-react";
+import { toast } from "sonner";
 import { visitStepAction } from "@/lib/field-day/actions";
+import { clockAction } from "@/lib/time-clock/actions";
 import { currentPosition } from "@/lib/time-clock/geo-client";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
 // "On my way" / Check in / Check out (F2). Check-out opens the visit's Job Report, filled in.
 // P2: the phone's position goes with each step (time clock), asked only when the button is pressed.
+// F20-d: when the check-out was the last visit of the day and the person is still clocked in, a prompt asks
+// "Done for the day?" with Clock out / Stay clocked in, because "Left the job" was being mistaken for a clock-out.
 
 const BTN = "inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[10px] px-4 text-sm font-semibold disabled:opacity-60 sm:flex-none";
 
@@ -19,7 +23,8 @@ export function StepButtons({ id, status }: { id: number; status: string }) {
   const [pending, start] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  if (status === "Done" || status === "Cancelled") return null;
+  const [doneForDay, setDoneForDay] = useState<{ next: string } | null>(null);
+  if (status === "Done" || status === "Cancelled") return doneForDay ? <DoneForDay next={doneForDay.next} /> : null;
 
   const run = (step: "on_way" | "check_in" | "check_out") => {
     setBusy(step);
@@ -28,7 +33,10 @@ export function StepButtons({ id, status }: { id: number; status: string }) {
       const geo = await currentPosition();
       const r = await visitStepAction(id, step, geo);
       if (!r.ok) setError(t(r.message));
-      else if (r.next) router.push(r.next);
+      else if (r.next && r.askClockOut) {
+        setDoneForDay({ next: r.next });
+        router.refresh();
+      } else if (r.next) router.push(r.next);
       else router.refresh();
       setBusy(null);
     });
@@ -59,6 +67,44 @@ export function StepButtons({ id, status }: { id: number; status: string }) {
           {error}
         </p>
       )}
+      {doneForDay && <DoneForDay next={doneForDay.next} />}
+    </div>
+  );
+}
+
+function DoneForDay({ next }: { next: string }) {
+  const t = useT();
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [choice, setChoice] = useState<"out" | "stay" | null>(null);
+  const stay = () => {
+    setChoice("stay");
+    router.push(next);
+  };
+  const clockOut = () => {
+    setChoice("out");
+    start(async () => {
+      const geo = await currentPosition();
+      const r = await clockAction("clock_out", geo);
+      if (!r.ok) toast.error(t(r.message));
+      else toast.success(t("Clocked out. Now the report."));
+      router.push(next);
+    });
+  };
+  return (
+    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/50 p-4 md:items-center" role="dialog" aria-modal="true">
+      <div className="w-full max-w-sm rounded-2xl bg-card p-5 shadow-xl">
+        <h2 className="text-[19px] font-semibold tracking-tight">{t("Done for the day?")}</h2>
+        <p className="mt-1 text-sm text-text-2">{t("That was your last visit today and you are still clocked in. Leaving the job does not clock you out.")}</p>
+        <div className="mt-4 flex flex-col gap-2">
+          <button type="button" onClick={clockOut} disabled={choice !== null} className={cn(BTN, "bg-primary text-primary-foreground hover:brightness-95")}>
+            {choice === "out" && pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <LogOut className="size-4" aria-hidden />} {t("Clock out")}
+          </button>
+          <button type="button" onClick={stay} disabled={choice !== null} className={cn(BTN, "border bg-card hover:bg-muted")}>
+            {t("Stay clocked in")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

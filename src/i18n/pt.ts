@@ -1794,4 +1794,8 @@ export const PT: Record<string, string> = {
   "already started": "já iniciado",
   "OneDrive is not connected": "O OneDrive não está conectado",
   "{n} of {total} tables copied so far; the rest continues within the hour (or press the button again).": "{n} de {total} tabelas copiadas até agora; o resto continua dentro de uma hora (ou aperte o botão de novo).",
+  "Done for the day?": "Terminou por hoje?",
+  "That was your last visit today and you are still clocked in. Leaving the job does not clock you out.": "Essa foi sua última visita de hoje e você ainda está com o ponto aberto. Sair do serviço não bate a saída.",
+  "Stay clocked in": "Continuar no ponto",
+  "Clocked out. Now the report.": "Saída batida. Agora o relatório.",
 };
