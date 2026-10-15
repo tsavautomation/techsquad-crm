@@ -48,6 +48,8 @@ export const PAGE_ITEMS: ChecklistItem[] = [
   { key: "insights.page.view", label: "Insights (charts and numbers)" },
   // F13: costs, pay rates and margin. Fred 2026-10-03: only Lucas, Saulo, Fred, Jessica and Luana.
   { key: "job_costing.view", label: "Job costing (costs, pay rates and margin)" },
+  // BK-a: Fred 2026-10-14, "Jessica, Luana, Saulo and Lucas can see the backup versioning, only fred can click a file to recover".
+  { key: "backups.page.view", label: "Backups (the nightly copies in OneDrive)" },
 ];
 
 export const ADMIN_ITEMS: ChecklistItem[] = [

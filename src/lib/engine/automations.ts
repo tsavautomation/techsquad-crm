@@ -23,6 +23,7 @@ import { cardFields, displayStrings, loadConditionValues, loadEngineRecord, type
 import { etSlot, runKeys } from "./schedule";
 
 import { closeForgottenDay } from "@/lib/field-day/forgotten";
+import { nightlyBackupStep } from "@/lib/backups/run";
 // Automations engine (SPEC §5). Data-driven: every WebAuthor trigger is a row in public.automations.
 //
 // Event runs: after each request, pending change-history rows (audit_log.automation_status is null)
@@ -369,6 +370,12 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
     await deliverQueuedSms(db);
   } catch (e) {
     out.reports = { error: e instanceof Error ? e.message : String(e) };
+  }
+  // BK-a: tonight's copy of every table to OneDrive (from the configured hour; continues next tick if cut short).
+  try {
+    out.backup = await nightlyBackupStep(now, 120_000);
+  } catch (e) {
+    out.backup = { error: e instanceof Error ? e.message : String(e) };
   }
   return out;
 }

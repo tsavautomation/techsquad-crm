@@ -15,6 +15,7 @@ import {
   Cloud,
   Contact,
   Database,
+  DatabaseBackup,
   Factory,
   FileSignature,
   FolderKanban,
@@ -90,6 +91,7 @@ export const TILE_ICONS: Record<string, { icon: LucideIcon; tint: string }> = {
   ai: { icon: Sparkles, tint: "#8b5cf6" },
   automations: { icon: Zap, tint: "#8b5cf6" },
   catalogue: { icon: BookOpen, tint: "#64748b" },
+  backups: { icon: DatabaseBackup, tint: "#0e76ad" },
   "field-day": { icon: Truck, tint: "#0891b2" },
   messages: { icon: MessageSquareText, tint: "#16a34a" },
   // Modules and other pages (sheets)
