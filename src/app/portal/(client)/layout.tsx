@@ -1,4 +1,5 @@
 import { requireClient } from "@/lib/portal/session";
+import { PortalTextSize } from "@/components/portal/text-size";
 import { recordsDb } from "@/lib/records/data";
 import { PortalTopBar } from "@/components/portal/shell";
 
@@ -10,7 +11,8 @@ export default async function PortalLayout({ children }: LayoutProps<"/portal">)
   const { count } = await db.from("portal_projects").select("id", { count: "exact", head: true });
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   return (
-    <div className="flex min-h-dvh flex-col bg-background" style={{ zoom: "var(--portal-zoom, 1.15)" }}>
+    <div className="flex min-h-dvh flex-col overflow-x-clip bg-background">
+      <PortalTextSize />
       <PortalTopBar name={name} projectsHref={(count ?? 0) > 1 ? "/portal" : null} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-4 pb-[max(2rem,env(safe-area-inset-bottom))]">{children}</main>
     </div>

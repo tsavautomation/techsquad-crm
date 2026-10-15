@@ -50,8 +50,8 @@ export default async function DashboardPage() {
           </div>
           <DashboardKpis user={user} now={now.getTime()} />
           {/* Wide screens: what needs attention on the left, my assigned work on the right (same order on phones). */}
-          <div className="grid gap-3.5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start">
-            <div className="grid gap-3.5">
+          <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start">
+            <div className="grid grid-cols-1 gap-3.5">
               <TodaySections user={user} now={now.getTime()} />
             </div>
             <div id="assigned">

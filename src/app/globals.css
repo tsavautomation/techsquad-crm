@@ -160,74 +160,109 @@
   --sh2: 0 12px 32px rgb(0 0 0 / 0.5);
 }
 
-/* UI-m Brand colours: one block per brand in src/lib/palettes.ts, copied from that brand's app. Each overrides only
-   the accent variables; page, cards and text stay as they are so every screen keeps working. Night variants under .dark. */
+/* UI-m Theme colors: one block per brand in src/lib/palettes.ts, copied from that brand's app. Each brand sets the whole
+   token set and applies in Day and Night alike (Day / Night is Tech Squad's only); Tech Squad is :root / .dark above. */
 
-/* OvrC: sky-blue app, deep blue bar, orange in the logo. */
-html[data-palette="ovrc"] {
+/* OvrC: light and airy like its sign-in screen: sky-blue sidebar, white cards, orange from the logo. Same in Night. */
+html[data-palette="ovrc"],
+html[data-palette="ovrc"].dark {
+  --background: #f5faff;
+  --foreground: #0f2a3f;
+  --card: #ffffff;
+  --card-foreground: #0f2a3f;
+  --popover: #ffffff;
+  --popover-foreground: #0f2a3f;
   --primary: #1b8ce6;
   --primary-foreground: #ffffff;
-  --ring: #1b8ce6;
   --secondary: #e3f2fd;
   --secondary-foreground: #0b5d8e;
+  --muted: #edf5fc;
+  --muted-foreground: #5b7489;
+  --accent: #e3f2fd;
+  --accent-foreground: #0f2a3f;
+  --destructive: #d64545;
+  --border: #d6e7f5;
+  --input: #d6e7f5;
+  --ring: #1b8ce6;
+  --chart-1: #1b8ce6;
+  --chart-2: #ff7a1a;
+  --chart-3: #27c21e;
+  --chart-4: #f59e0b;
+  --chart-5: #8b5cf6;
+  --sidebar: #1b8ce6;
+  --sidebar-foreground: #e8f4ff;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #0b5d8e;
+  --sidebar-accent: rgb(255 255 255 / 0.18);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.15);
+  --sidebar-ring: #ffffff;
   --brand: #ff7a1a;
-  --sidebar: #0a6ea0;
-  --sidebar-foreground: #d6ecfa;
-  --sidebar-primary: #7fd0ff;
-  --sidebar-primary-foreground: #06324a;
-  --sidebar-accent: rgb(255 255 255 / 0.14);
-  --sidebar-ring: #7fd0ff;
+  --text-2: #3f5b73;
   --info-bg: #e3f2fd;
   --info-fg: #0b5d8e;
   --info-border: #93cdf5;
-  --chart-1: #1b8ce6;
-  --chart-2: #ff7a1a;
-}
-html[data-palette="ovrc"].dark {
-  --primary: #4fb3ff;
-  --primary-foreground: #04263a;
-  --ring: #4fb3ff;
-  --secondary: #0b3550;
-  --secondary-foreground: #a9ddf5;
-  --sidebar: #052f45;
-  --sidebar-primary: #7fd0ff;
-  --info-bg: #0b3550;
-  --info-fg: #a9ddf5;
-  --info-border: #1b6e9c;
-  --chart-1: #4fb3ff;
+  --ok-bg: #e3f5ea;
+  --ok-fg: #146c36;
+  --warn-bg: #fff1d6;
+  --warn-fg: #7a4b00;
+  --bad-bg: #fde8ea;
+  --bad-fg: #a61b2b;
+  --bad-border: #f2a5ae;
+  --sh1: 0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px rgb(16 24 40 / 0.06);
+  --sh2: 0 12px 32px rgb(16 24 40 / 0.18);
+  color-scheme: light;
 }
 
-/* Lutron: one deep blue, white type. */
-html[data-palette="lutron"] {
-  --primary: #1577cf;
+/* Lutron: blue-grey page, deep Lutron blue for the sidebar and buttons. Same in Night. */
+html[data-palette="lutron"],
+html[data-palette="lutron"].dark {
+  --background: #e8eff8;
+  --foreground: #0b1f36;
+  --card: #ffffff;
+  --card-foreground: #0b1f36;
+  --popover: #ffffff;
+  --popover-foreground: #0b1f36;
+  --primary: #0d5fb0;
   --primary-foreground: #ffffff;
-  --ring: #1577cf;
-  --secondary: #e2eefb;
+  --secondary: #d9e7f7;
   --secondary-foreground: #0d4f91;
-  --brand: #8ec5ff;
+  --muted: #edf2f9;
+  --muted-foreground: #5a6b80;
+  --accent: #d9e7f7;
+  --accent-foreground: #0b1f36;
+  --destructive: #a61b2b;
+  --border: #cbd9ea;
+  --input: #cbd9ea;
+  --ring: #0d5fb0;
+  --chart-1: #0d5fb0;
+  --chart-2: #1577cf;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #8b5cf6;
   --sidebar: #0d4f91;
   --sidebar-foreground: #d2e4f7;
   --sidebar-primary: #8ec5ff;
   --sidebar-primary-foreground: #062c52;
   --sidebar-accent: rgb(255 255 255 / 0.14);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.1);
   --sidebar-ring: #8ec5ff;
-  --info-bg: #e2eefb;
+  --brand: #1577cf;
+  --text-2: #3b4f66;
+  --info-bg: #d9e7f7;
   --info-fg: #0d4f91;
   --info-border: #9cc3ee;
-  --chart-1: #1577cf;
-  --chart-2: #0d4f91;
-}
-html[data-palette="lutron"].dark {
-  --primary: #4fa3f0;
-  --primary-foreground: #04203a;
-  --ring: #4fa3f0;
-  --secondary: #0a3560;
-  --secondary-foreground: #bcdcfb;
-  --sidebar: #06284a;
-  --info-bg: #0a3560;
-  --info-fg: #bcdcfb;
-  --info-border: #1d5a99;
-  --chart-1: #4fa3f0;
+  --ok-bg: #e3f5ea;
+  --ok-fg: #146c36;
+  --warn-bg: #fff1d6;
+  --warn-fg: #7a4b00;
+  --bad-bg: #fde8ea;
+  --bad-fg: #a61b2b;
+  --bad-border: #f2a5ae;
+  --sh1: 0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px rgb(16 24 40 / 0.06);
+  --sh2: 0 12px 32px rgb(16 24 40 / 0.18);
+  color-scheme: light;
 }
 
 /* Crestron and Sonos are black apps: these palettes are dark in Day and Night alike. */

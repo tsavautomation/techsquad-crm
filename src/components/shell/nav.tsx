@@ -208,11 +208,14 @@ function CreateList({
 function ThemeChoice() {
   const t = useT();
   const { theme, setTheme } = useTheme();
+  const palette = usePalette();
   const opts = [
     ["system", "Auto", Monitor],
     ["light", "Day", Sun],
     ["dark", "Night", Moon],
   ] as const;
+  // UI-m: the brand themes carry their own light or dark look; Day / Night applies to Tech Squad only.
+  if (palette !== DEFAULT_PALETTE) return null;
   return (
     <div
       className="mx-2 my-2 flex rounded-[10px] border bg-muted p-0.5"
@@ -238,7 +241,7 @@ function ThemeChoice() {
   );
 }
 
-/** UI-m: brand colours (my profile). The page repaints at once; the server remembers it for every device. */
+/** UI-m: theme colours (my profile). The page repaints at once; the server remembers it for every device. */
 const readPalette = () => document.documentElement.dataset.palette ?? DEFAULT_PALETTE;
 const subscribePalette = (cb: () => void) => {
   const o = new MutationObserver(cb);
@@ -249,11 +252,13 @@ const applyPalette = (id: string) => {
   document.documentElement.setAttribute("data-palette", id);
 };
 
+const usePalette = () => useSyncExternalStore(subscribePalette, readPalette, () => DEFAULT_PALETTE);
+
 function PaletteChoice() {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
-  const current = useSyncExternalStore(subscribePalette, readPalette, () => DEFAULT_PALETTE);
+  const current = usePalette();
   if (PALETTES.length < 2) return null;
   const pick = (id: string) => {
     applyPalette(id);
@@ -264,8 +269,8 @@ function PaletteChoice() {
   };
   return (
     <div className="mx-2 my-2">
-      <p className="mb-1 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("Brand colours")}</p>
-      <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label={t("Brand colours")}>
+      <p className="mb-1 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("Theme colors")}</p>
+      <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label={t("Theme colors")}>
         {PALETTES.map((p) => (
           <button
             key={p.id}

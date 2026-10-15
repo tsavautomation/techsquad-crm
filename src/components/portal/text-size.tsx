@@ -5,14 +5,16 @@ import { useT } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
 // Text size (Fred 2026-10-11, "ficou um pouco difícil de ler sem óculos"): three steps, remembered on this
-// device, applied as CSS `zoom` on the page by the layout. Pinch zoom is off in the installed app, so this
-// is the way to read bigger. The portal starts one step larger than the staff app.
+// device, applied as the root font size (everything measured in rem grows with it). Pinch zoom is off in the
+// installed app, so this is the way to read bigger. The portal starts one step larger than the staff app.
+// UI-m (Fred 2026-10-14, "it's wider than it should… this has to feel like an app"): CSS zoom made the page
+// wider than the phone and scroll sideways on iPhone, so the size is a font size now, never a zoom.
 const STEPS = [1, 1.15, 1.3] as const;
 const LABELS = ["Normal", "Larger", "Largest"] as const;
 
-type Store = { key: string; cssVar: string; defaultIndex: number; listeners: Set<() => void> };
-const PORTAL: Store = { key: "portal-text-size", cssVar: "--portal-zoom", defaultIndex: 1, listeners: new Set() };
-const APP: Store = { key: "app-text-size", cssVar: "--app-zoom", defaultIndex: 0, listeners: new Set() };
+type Store = { key: string; defaultIndex: number; listeners: Set<() => void> };
+const PORTAL: Store = { key: "portal-text-size", defaultIndex: 1, listeners: new Set() };
+const APP: Store = { key: "app-text-size", defaultIndex: 0, listeners: new Set() };
 
 function read(s: Store): number {
   try {
@@ -35,7 +37,7 @@ function useTextSize(s: Store) {
   );
   // The remembered size is applied once the page is on screen (and whenever it changes).
   useEffect(() => {
-    document.documentElement.style.setProperty(s.cssVar, String(STEPS[index]));
+    document.documentElement.style.fontSize = `${STEPS[index] * 100}%`;
   }, [s, index]);
   const set = (n: number) => {
     try {
@@ -46,6 +48,16 @@ function useTextSize(s: Store) {
     s.listeners.forEach((l) => l());
   };
   return { index, set };
+}
+
+/** Mounted by the layouts so the remembered size applies as soon as the page loads. */
+export function AppTextSize() {
+  useTextSize(APP);
+  return null;
+}
+export function PortalTextSize() {
+  useTextSize(PORTAL);
+  return null;
 }
 
 /** Portal top bar: one button that cycles A → A+ → A++. */

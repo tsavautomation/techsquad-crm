@@ -14,6 +14,7 @@ import { readImpersonator } from "@/lib/admin/impersonate";
 import { ImpersonationBar } from "@/components/shell/impersonation-bar";
 import { UsageBeacon } from "@/components/shell/usage-beacon";
 import { PaletteSync } from "@/components/shell/palette-sync";
+import { AppTextSize } from "@/components/portal/text-size";
 // What the Create button offers, most used first (only tables the person may add to).
 // Names are our own: WebAuthor's item labels are vague here ("Record", "Item").
 const CREATE: [table: string, label: string][] = [
@@ -53,14 +54,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   };
 
   return (
-    <div className="flex min-h-dvh" style={{ zoom: "var(--app-zoom, 1)" }}>
+    <div className="flex min-h-dvh">
       <Sidebar items={navItems} create={create} me={me} showAdmin={showAdmin} extras={extras} />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
         {impersonator && impersonator.id !== user.id && <ImpersonationBar as={name} admin={impersonator.name} />}
         <TopBar me={me} />
         <NavHistory />
         <UsageBeacon />
         <PaletteSync palette={user.palette} />
+        <AppTextSize />
         <ForgottenWarning items={warnings} />
         <ModuleTabsBar items={navItems} />
         {/* pb-28 keeps content clear of the mobile bottom bar and its + button */}
