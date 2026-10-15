@@ -12,6 +12,7 @@ import { ForgottenWarning } from "@/components/field-day/forgotten-warning";
 import { loadMyWarnings } from "@/lib/field-day/warnings";
 import { readImpersonator } from "@/lib/admin/impersonate";
 import { ImpersonationBar } from "@/components/shell/impersonation-bar";
+import { UsageBeacon } from "@/components/shell/usage-beacon";
 // What the Create button offers, most used first (only tables the person may add to).
 // Names are our own: WebAuthor's item labels are vague here ("Record", "Item").
 const CREATE: [table: string, label: string][] = [
@@ -57,6 +58,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         {impersonator && impersonator.id !== user.id && <ImpersonationBar as={name} admin={impersonator.name} />}
         <TopBar me={me} />
         <NavHistory />
+        <UsageBeacon />
         <ForgottenWarning items={warnings} />
         <ModuleTabsBar items={navItems} />
         {/* pb-28 keeps content clear of the mobile bottom bar and its + button */}

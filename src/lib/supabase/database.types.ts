@@ -5244,6 +5244,44 @@ export type Database = {
           },
         ]
       }
+      usage_days: {
+        Row: {
+          active_seconds: number
+          day: string
+          first_at: string
+          last_at: string
+          pages: number
+          sessions: number
+          user_id: string
+        }
+        Insert: {
+          active_seconds?: number
+          day: string
+          first_at: string
+          last_at: string
+          pages?: number
+          sessions?: number
+          user_id: string
+        }
+        Update: {
+          active_seconds?: number
+          day?: string
+          first_at?: string
+          last_at?: string
+          pages?: number
+          sessions?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_days_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           created_at: string

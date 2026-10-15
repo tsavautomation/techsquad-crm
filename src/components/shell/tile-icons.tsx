@@ -1,4 +1,5 @@
 import {
+  Activity,
   Award,
   Sparkles,
   Briefcase,
@@ -92,6 +93,7 @@ export const TILE_ICONS: Record<string, { icon: LucideIcon; tint: string }> = {
   automations: { icon: Zap, tint: "#8b5cf6" },
   catalogue: { icon: BookOpen, tint: "#64748b" },
   backups: { icon: DatabaseBackup, tint: "#0e76ad" },
+  usage: { icon: Activity, tint: "#16a34a" },
   "field-day": { icon: Truck, tint: "#0891b2" },
   messages: { icon: MessageSquareText, tint: "#16a34a" },
   // Modules and other pages (sheets)

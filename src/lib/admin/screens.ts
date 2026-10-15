@@ -14,6 +14,7 @@ export const ADMIN_SCREENS: AdminScreen[] = [
   { href: "/admin/messages", title: "Messages", description: "Texts sent to clients (follow-ups, visit confirmations…) in English, Português and Español", anyOf: ["projects.module.design_design"] },
   { href: "/admin/automations", title: "Automations", description: "What runs when records change, the run log and sent emails", anyOf: ["projects.module.design_triggers"] },
   { href: "/admin/catalogue", title: "Field catalogue", description: "Every table, field and rule, read-only", anyOf: ["projects.module.design_design"] },
+  { href: "/admin/usage", title: "Usage", description: "Who uses the CRM, how often, how long, and when they were last here", anyOf: ["site.admin.members"] },
   { href: "/admin/backups", title: "Backups", description: "Nightly copies of every table in OneDrive, kept 30 days; restore a table from any night", anyOf: ["backups.page.view"] },
 ];
 
