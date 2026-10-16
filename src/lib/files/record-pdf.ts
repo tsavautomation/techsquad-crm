@@ -5,6 +5,7 @@ import { adminDb } from "@/lib/supabase/admin";
 import { getTable, REGISTRY } from "@/registry";
 import type { TableDef } from "@/registry/types";
 import { deleteItem, ensureFolder, folderFor, listChildren, oneDriveReady, renameItem, replaceContent, uploadBytes } from "./onedrive";
+import { safeName } from "./paths";
 import { dateField, fileDate, pdfFileName, technicianField, wantsPdf } from "./pdf-name";
 
 // PDF copies in OneDrive (SPEC §9.1 OD-c): the text of every form that can carry files is written as
@@ -145,6 +146,18 @@ export async function removePrivatePdfs(): Promise<number> {
     if (r.folder && (await listChildren(r.folder)).length === 0) {
       await deleteItem(await ensureFolder(r.folder));
       await db.from("onedrive_folders").delete().eq("path", r.folder);
+    }
+  }
+  // The table's own folder (TechSquad CRM / Payroll, / Transactions…) goes too once nothing is left in it.
+  if (rows.length < 200) {
+    for (const t of REGISTRY.filter((x) => x.privateFiles)) {
+      const path = `TechSquad CRM/${safeName(t.label)}`;
+      const { data: f } = await db.from("onedrive_folders").select("item_id").eq("path", path).maybeSingle();
+      if (!f) continue;
+      if ((await listChildren(path)).length === 0) {
+        await deleteItem((f as { item_id: string }).item_id);
+        await db.from("onedrive_folders").delete().eq("path", path);
+      }
     }
   }
   return removed;

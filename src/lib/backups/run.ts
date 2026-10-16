@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { gzipSync, strToU8 } from "fflate";
 import { etSlot } from "@/lib/engine/schedule";
+import { confidentialTables } from "@/lib/files/confidential";
 import { deleteItem, listChildren, oneDriveReady, uploadBytes } from "@/lib/files/onedrive";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { BACKUPS_ROOT, PAGE, backupFolder, columnsOf, expiredFolders, pkColumns, toCsv, type BackupKind, type BackupTable } from "./format";
@@ -68,7 +69,8 @@ export async function runBackup(opts: { kind: BackupKind; budgetMs: number; now?
 
   const { data: list, error: le } = await db.rpc("backup_tables");
   if (le) throw new Error(`backup_tables: ${le.message}`);
-  let tables = (list ?? []) as { table_name: string; pk: string }[];
+  const confidential = confidentialTables();
+  let tables = ((list ?? []) as { table_name: string; pk: string }[]).filter((t) => !confidential.has(t.table_name)); // OD-e
   if (opts.only) tables = tables.filter((t) => opts.only!.includes(t.table_name));
   const done = new Map(row.tables.map((t) => [t.name, t]));
 
@@ -128,10 +130,33 @@ async function sweep(db: SupabaseClient, today: string) {
   }
 }
 
+/**
+ * OD-e: remove confidential tables from copies already in OneDrive (written before a table was marked private).
+ * Idempotent; runs at every tick and before a manual copy. Returns how many files were removed.
+ */
+export async function purgeConfidentialCopies(db: SupabaseClient): Promise<number> {
+  const confidential = confidentialTables();
+  const { data } = await db.from("backups").select("id, tables").neq("status", "expired");
+  let removed = 0;
+  for (const b of (data ?? []) as { id: number; tables: BackupTable[] }[]) {
+    const bad = b.tables.filter((t) => confidential.has(t.name));
+    if (!bad.length) continue;
+    for (const t of bad) {
+      await deleteItem(t.json_id);
+      if (t.csv_id) await deleteItem(t.csv_id);
+      removed++;
+    }
+    const tables = b.tables.filter((t) => !confidential.has(t.name));
+    await db.from("backups").update({ tables, bytes: tables.reduce((s, x) => s + x.bytes, 0), rows_total: tables.reduce((s, x) => s + x.rows, 0) }).eq("id", b.id);
+  }
+  return removed;
+}
+
 /** The tick's step: from the configured hour on, run (or continue) tonight's copy within the budget. */
 export async function nightlyBackupStep(now: Date, budgetMs: number): Promise<RunResult | { skipped: string }> {
   if (!hasAdminKey()) return { skipped: "no admin key" };
   const db = adminDb();
+  if (await oneDriveReady()) await purgeConfidentialCopies(db).catch(() => undefined);
   const settings = await loadBackupSettings(db);
   const slot = etSlot(now);
   // A manual copy that outlived its request (240 s) is finished here first, then tonight's copy.

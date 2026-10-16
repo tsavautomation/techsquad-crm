@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { recordsDb } from "@/lib/records/data";
 import { restoreTable, type RestoreResult } from "./restore";
-import { runBackup, type RunResult } from "./run";
+import { purgeConfidentialCopies, runBackup, type RunResult } from "./run";
+import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { loadBackupSettings, mayRestore } from "./settings";
 
 // BK-a Admin › Backups. Viewers (backups.page.view) may start a copy now; only the restore list may restore.
@@ -15,6 +16,7 @@ export async function runBackupNowAction(): Promise<{ ok: true; result: RunResul
   const user = await requireUser();
   if (!canSee(user)) return { ok: false, message: "You don't have permission to do that." };
   try {
+    if (hasAdminKey()) await purgeConfidentialCopies(adminDb()).catch(() => undefined);
     const result = await runBackup({ kind: "manual", budgetMs: 240_000, startedBy: user.id });
     revalidatePath("/admin/backups");
     return { ok: true, result };

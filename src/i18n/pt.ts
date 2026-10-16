@@ -1753,7 +1753,7 @@ export const PT: Record<string, string> = {
   "Backups": "Backups",
   "Nightly copies of every table in OneDrive, kept 30 days; restore a table from any night": "Cópias noturnas de todas as tabelas no OneDrive, guardadas 30 dias; restaure uma tabela de qualquer noite",
   "Backups (the nightly copies in OneDrive)": "Backups (as cópias noturnas no OneDrive)",
-  "Every night at {hour} (Eastern) the CRM copies every table to OneDrive, in {folder}, as .json.gz (exact) and .csv (for Excel). Copies are kept {days} days.": "Toda noite às {hour} (horário do Leste) o CRM copia todas as tabelas para o OneDrive, em {folder}, como .json.gz (exato) e .csv (para o Excel). As cópias ficam guardadas {days} dias.",
+  "Every night at {hour} (Eastern) the CRM copies every table to OneDrive, in {folder}, as .json.gz (exact) and .csv (for Excel). Copies are kept {days} days. Payroll, Transactions, pay rates and Staff Performance are never copied there.": "Toda noite às {hour} (horário do Leste) o CRM copia todas as tabelas para o OneDrive, em {folder}, como .json.gz (exato) e .csv (para o Excel). As cópias ficam guardadas {days} dias. Folha de pagamento, Transações, taxas de pagamento e Staff Performance nunca são copiadas para lá.",
   "OneDrive is not connected (Admin › OneDrive), so no copy can be written.": "O OneDrive não está conectado (Admin › OneDrive), então nenhuma cópia pode ser gravada.",
   "Backup written: {n} tables, {rows} rows, {size}.": "Backup gravado: {n} tabelas, {rows} linhas, {size}.",
   "The backup did not finish: {error}": "O backup não terminou: {error}",

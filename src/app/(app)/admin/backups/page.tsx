@@ -33,7 +33,7 @@ export default async function BackupsPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("Backups")}</h1>
       <p className="mb-4 text-xs text-muted-foreground">
-        {t("Every night at {hour} (Eastern) the CRM copies every table to OneDrive, in {folder}, as .json.gz (exact) and .csv (for Excel). Copies are kept {days} days.", {
+        {t("Every night at {hour} (Eastern) the CRM copies every table to OneDrive, in {folder}, as .json.gz (exact) and .csv (for Excel). Copies are kept {days} days. Payroll, Transactions, pay rates and Staff Performance are never copied there.", {
           hour: `${settings.hour}:00`,
           folder: BACKUPS_ROOT.replace(/\//g, " › "),
           days: settings.retention_days,

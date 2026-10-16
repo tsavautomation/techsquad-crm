@@ -7,6 +7,8 @@ export const transactions: TableDef = {
   "label": "Transactions",
   "module": "administrative",
   "tab": "transactions",
+  // Confidential: no PDF copy, no uploads, no backup file in OneDrive (Fred 2026-10-13, SPEC §9.1 OD-e).
+  "privateFiles": true,
   "itemLabel": "Transaction",
   "newRecordLabel": "New Transaction",
   "titleFormula": "{payment_type} – {description}",

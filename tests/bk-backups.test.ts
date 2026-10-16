@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { backupFolder, columnsOf, expiredFolders, pkColumns, RESTORE_BLOCKED, toCsv } from "@/lib/backups/format";
 import { BackupSettingsSchema, mayRestore } from "@/lib/backups/settings";
+import { confidentialTables } from "@/lib/files/confidential";
 
 // BK-a Backups (SPEC §9.1 BK-a): file format, folder names, the 30-day sweep and who may restore.
 describe("toCsv", () => {
@@ -49,6 +50,11 @@ describe("settings", () => {
     const s = BackupSettingsSchema.parse({});
     expect(mayRestore(s, "Fred@tsav.net")).toBe(true);
     expect(mayRestore(s, "jessica@tsav.net")).toBe(false);
+  });
+  it("keeps Payroll, Transactions, pay rates and Staff Performance out of OneDrive (OD-e)", () => {
+    const c = confidentialTables();
+    for (const t of ["payouts", "transactions", "employee_pay_rates", "staff_performance"]) expect(c.has(t), t).toBe(true);
+    expect(c.has("projects")).toBe(false);
   });
   it("never restores the engine's own tables", () => {
     for (const t of ["backups", "backup_restores", "scheduled_runs"]) expect(RESTORE_BLOCKED.has(t)).toBe(true);
