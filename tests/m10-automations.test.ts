@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { AutomationSchema, check } from "@/lib/engine/automation-schema";
-import { describeConditions, describeEvents, type Conditions } from "@/lib/engine/conditions";
+import { conditionsMatch, describeConditions, describeEvents, type Conditions } from "@/lib/engine/conditions";
 import { REGISTRY } from "@/registry";
 
 type Seed = { id: number; table: string; active: boolean; events: string[]; conditions: Conditions; actions: Record<string, unknown>[] };
@@ -81,5 +81,35 @@ describe("seeded automations", () => {
     expect(describeConditions({ match: "all", rules: [{ field: "coi_expiration", days: true, op: ">=", value: 0 }] }, label)).toBe("days since COI Expiration >= 0");
     expect(describeConditions({ match: "all", rules: [{ field: "invoiced_amount", op: "<=", field2: "paid_amount" }] }, label)).toBe("Invoiced <= Paid");
     expect(describeConditions({ match: "all", rules: [] }, label)).toBe("always");
+  });
+});
+
+// PER-a (SPEC §9.1): a permit that passed its final inspection is archived and never reads Expired.
+describe("permits passed final (PER-a)", () => {
+  const t = tables.get("permits")!;
+  const sql = readFileSync("supabase/migrations/20261019010000_permits_passed_final_archived.sql", "utf8");
+  const m = sql.match(/\((\d+), '(\w+)', '(?:[^']|'')*', (true|false), '\{([^}]*)\}',\s*'([^']*)',\s*'([^']*)'/)!;
+  const auto = { events: m[4].split(","), conditions: JSON.parse(m[5]) as Conditions, actions: JSON.parse(m[6]) as Record<string, unknown>[] };
+  const PASSED = "Passed Final Done";
+  const guard = { field: "status", op: "!=" as const, value: PASSED };
+
+  it("is a valid automation on Permits that clears the expiration and archives", () => {
+    expect(m[2]).toBe("permits");
+    expect(t.fields.find((f) => f.name === "status")?.options?.map((o) => o.value)).toContain(PASSED);
+    const parsed = AutomationSchema.parse({ title: "PER-a", active: true, ...auto });
+    expect(check(t, parsed)).toEqual([]);
+    expect(auto.events).toContain("field:status");
+    expect(auto.actions).toEqual([{ type: "update", set: { expiration_status: null } }, { type: "archive" }]);
+  });
+
+  it("fires only for Passed Final, Done; the expiry rules then leave the permit alone", () => {
+    const expired: Conditions = { match: "all", rules: [{ field: "expiration_date", days: true, op: ">=", value: 0 }, guard] };
+    const old = { expiration_date: "2020-01-01" };
+    expect(conditionsMatch(auto.conditions, { ...old, status: PASSED })).toBe(true);
+    expect(conditionsMatch(auto.conditions, { ...old, status: "Passed Rough" })).toBe(false);
+    expect(conditionsMatch(auto.conditions, { ...old, status: null })).toBe(false);
+    expect(conditionsMatch(expired, { ...old, status: "Passed Rough" })).toBe(true);
+    expect(conditionsMatch(expired, { ...old, status: null })).toBe(true);
+    expect(conditionsMatch(expired, { ...old, status: PASSED })).toBe(false);
   });
 });
