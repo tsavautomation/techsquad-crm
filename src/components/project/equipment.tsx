@@ -29,6 +29,11 @@ export async function ProjectEquipment({ projectId, user }: { projectId: number;
     .order("model");
   const units = (data ?? []) as unknown as Unit[];
   if (!units.length) return null;
+  // When each unit last moved (installed / picked): the newest ledger row per serial.
+  const serials = [...new Set(units.map((u) => u.serial).filter((x): x is string => Boolean(x)))];
+  const { data: moves } = serials.length ? await db.from("stock_movements").select("serial, moved_at").in("serial", serials).order("moved_at", { ascending: false }).limit(5000) : { data: [] };
+  const lastMove = new Map<string, string>();
+  for (const m of (moves ?? []) as { serial: string; moved_at: string }[]) if (!lastMove.has(m.serial)) lastMove.set(m.serial, m.moved_at);
   const groups = [
     { key: "On Project", title: tr("Installed on this job"), items: units.filter((u) => u.status === "On Project") },
     { key: "Separated", title: tr("Staged at the warehouse for this job"), items: units.filter((u) => u.status === "Separated") },
@@ -54,7 +59,7 @@ export async function ProjectEquipment({ projectId, user }: { projectId: number;
                 </Link>
                 {u.serial && <span className="font-mono text-xs text-muted-foreground">{u.serial}</span>}
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {[u.employees?.title, formatDate(u.updated_at)].filter(Boolean).join(" · ")}
+                  {[u.employees?.title, formatDate((u.serial && lastMove.get(u.serial)) || u.updated_at)].filter(Boolean).join(" · ")}
                 </span>
               </li>
             ))}
