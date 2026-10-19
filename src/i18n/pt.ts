@@ -1824,4 +1824,7 @@ export const PT: Record<string, string> = {
   "Time": "Tempo",
   "No users.": "Nenhum usuário.",
   "Theme colors": "Cores do tema",
+  "Installed on this job": "Instalado neste trabalho",
+  "Staged at the warehouse for this job": "Separado no depósito para este trabalho",
+  "Equipment": "Equipamento",
 };
