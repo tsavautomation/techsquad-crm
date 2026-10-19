@@ -52,9 +52,19 @@ async function readRows(): Promise<Row[]> {
     const product = S(g(C.product)), serial = S(g(C.serial));
     if (!product && !serial) return;
     const d = g(C.date);
-    rows.push({ row: n, date: d ? S(d).slice(0, 10) : null, serial, product, move: S(g(C.move)), status: S(g(C.status)), client: S(g(C.client)), staff: S(g(C.staff)), po: S(g(C.po)), note: S(g(C.note)), prevStatus: S(g(C.prev)) });
+    rows.push({ row: n, date: isoDate(d), serial, product, move: S(g(C.move)), status: S(g(C.status)), client: S(g(C.client)), staff: S(g(C.staff)), po: S(g(C.po)), note: S(g(C.note)), prevStatus: S(g(C.prev)) });
   });
   return rows;
+}
+
+/** Dates come as cells (ISO already), "dd/mm/yyyy" text, or "yyyy-mm-dd"; anything else is dropped. */
+function isoDate(v: unknown): string | null {
+  const t = S(v);
+  if (!t) return null;
+  const br = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (br) return `${br[3]}-${br[2].padStart(2, "0")}-${br[1].padStart(2, "0")}`;
+  const iso = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return iso ? iso[0] : null;
 }
 
 const STATUS: Record<string, StockStatus> = { "EM ESTOQUE": "In Stock", SEPARADO: "Separated", INSTALADO: "On Project", "EM MANUTENÇÃO": "RMA", "EM MANUTENCAO": "RMA" };
@@ -73,15 +83,31 @@ function productFinder(products: Product[]) {
   };
 }
 
+/** Words of a name without accents, case or punctuation: "Miras. Eduardo - Miami" → miras eduardo miami. */
+const tokens = (v: unknown) => S(v).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/[^a-z0-9#]+/).filter(Boolean);
+
 function projectFinder(projects: Named[], decisions: Map<string, string>) {
   const byTitle = new Map(projects.map((p) => [norm(p.title), p]));
-  return (client: string): { project: Named | null; how: string; candidates: Named[] } => {
+  return (client: string): { project: Named | null; how: string; candidates: Named[]; create?: boolean } => {
     const n = norm(client);
     const decided = decisions.get(n);
     if (decided !== undefined) {
       if (!decided || /^(skip|none|-|nenhum|pular)$/i.test(decided)) return { project: null, how: "skipped by decision", candidates: [] };
-      const p = byTitle.get(norm(decided)) ?? projects.find((x) => norm(x.title).includes(norm(decided)) || /^\d+$/.test(decided) && x.id === Number(decided));
-      return p ? { project: p, how: "decision", candidates: [] } : { project: null, how: `decision "${decided}" not found`, candidates: [] };
+      if (/^\*?\s*create/i.test(decided)) {
+        const existing = byTitle.get(n);
+        return existing ? { project: existing, how: "created earlier", candidates: [] } : { project: null, how: "to be created", candidates: [], create: true };
+      }
+      if (/^\d+$/.test(decided)) {
+        const p = projects.find((x) => x.id === Number(decided));
+        return p ? { project: p, how: "decision (id)", candidates: [] } : { project: null, how: `decision id ${decided} not found`, candidates: [] };
+      }
+      const exactDecision = byTitle.get(norm(decided));
+      if (exactDecision) return { project: exactDecision, how: "decision", candidates: [] };
+      const want = tokens(decided);
+      const hits = projects.filter((x) => { const have = new Set(tokens(x.title)); return want.every((w) => have.has(w)); });
+      if (hits.length === 1) return { project: hits[0], how: "decision (words)", candidates: [] };
+      if (hits.length > 1 && hits.every((h) => norm(h.title) === norm(hits[0].title))) return { project: [...hits].sort((a, b) => a.id - b.id)[0], how: "decision (same title twice: oldest)", candidates: hits };
+      return { project: null, how: `decision "${decided}" ${hits.length ? "ambiguous" : "not found"}`, candidates: hits.slice(0, 4) };
     }
     const exact = byTitle.get(n);
     if (exact) return { project: exact, how: "exact", candidates: [] };
@@ -108,7 +134,8 @@ async function readDecisions(): Promise<Map<string, string>> {
   const ws = wb.worksheets[0];
   ws.eachRow((r, n) => {
     if (n === 1) return;
-    const client = S(r.getCell(1).value), decided = S((r.getCell(4).value as { result?: unknown })?.result ?? r.getCell(4).value);
+    const text = (v: unknown): string => { if (v && typeof v === "object") { const o = v as Record<string, unknown>; if ("richText" in o) return (o.richText as { text: string }[]).map((t) => t.text).join(""); if ("result" in o) return S(o.result); if ("text" in o) return S(o.text); return ""; } return S(v); };
+    const client = text(r.getCell(1).value), decided = text(r.getCell(4).value);
     if (client && decided) out.set(norm(client), decided);
   });
   return out;
@@ -191,7 +218,19 @@ async function main() {
   for (const u of units.values()) if (u.client && u.status !== "In Stock") clientUnits.set(u.client, (clientUnits.get(u.client) ?? 0) + 1);
   const resolved = new Map<string, ReturnType<typeof findProject>>();
   for (const c of clientUnits.keys()) resolved.set(c, findProject(c));
-  const open = [...clientUnits].filter(([c]) => !resolved.get(c)!.project && !resolved.get(c)!.how.startsWith("skipped"));
+  for (const [c, r] of resolved) if (r.how.startsWith("decision")) console.log(`  = ${c} -> ${r.project?.title} (#${r.project?.id}) [${r.how}]`);
+  const toCreate = [...clientUnits.keys()].filter((c) => resolved.get(c)!.create);
+  if (toCreate.length) console.log(`projects to create (decision "create"): ${toCreate.join(" | ")}`);
+  if (APPLY) {
+    for (const c of toCreate) {
+      const { data, error } = await db.from("projects").insert({ title: c }).select("id, title").single();
+      if (error) throw new Error(`create project ${c}: ${error.message}`);
+      projects.push(data as Named);
+      resolved.set(c, { project: data as Named, how: "created", candidates: [] });
+      console.log(`  created project "${c}" (#${(data as Named).id})`);
+    }
+  }
+  const open = [...clientUnits].filter(([c]) => !resolved.get(c)!.project && !resolved.get(c)!.how.startsWith("skipped") && !resolved.get(c)!.create);
   console.log(`clients: ${clientUnits.size}; matched ${[...resolved.values()].filter((r) => r.project).length}, skipped ${[...resolved.values()].filter((r) => r.how.startsWith("skipped")).length}, open ${open.length}`);
   for (const [c, n] of open) console.log(`  ? ${c} (${n} units) ${resolved.get(c)!.how}${resolved.get(c)!.candidates.length ? ": " + resolved.get(c)!.candidates.map((p) => p.title).join(" | ") : ""}`);
   if (!APPLY && open.length && !existsSync(DECISIONS)) {
@@ -216,8 +255,12 @@ async function main() {
   // ---------------------------------------------------------------- apply
   const now = new Date().toISOString();
   // 1. New products.
+  const existingProducts = new Map((await all<Product>(() => db.from("products").select("id, title, model, sku, brand_id, product_type, sell_price, cost, source_ref").like("source_ref", "ctrl:product:%"))).map((p) => [p.source_ref!, p]));
   for (const [n, p] of newProducts) {
-    const { data, error } = await db.from("products").upsert({ source_ref: `ctrl:product:${n}`, model: p.model, brand_id: p.brand?.id ?? null, title: [p.brand?.name, p.model].filter(Boolean).join(" ") }, { onConflict: "source_ref" }).select("id, title, model, sku, brand_id, product_type, sell_price, cost, source_ref").single();
+    const ref = `ctrl:product:${n}`;
+    const found = existingProducts.get(ref);
+    if (found) { productOf.set(n, found); continue; }
+    const { data, error } = await db.from("products").insert({ source_ref: ref, model: p.model, brand_id: p.brand?.id ?? null, title: [p.brand?.name, p.model].filter(Boolean).join(" ") }).select("id, title, model, sku, brand_id, product_type, sell_price, cost, source_ref").single();
     if (error) throw new Error(`product ${n}: ${error.message}`);
     productOf.set(n, data as Product);
   }
@@ -241,8 +284,17 @@ async function main() {
     return { source_ref: `ctrl:${u.key}`, product_id: p.id, serial: u.serial, model: p.model, brand_id: p.brand_id, product_type: p.product_type, sell_price: p.sell_price, cost: p.cost, status: u.status, location: warehouse.name, location_id: warehouse.id, destination_project_id: proj?.id ?? null, staff_id: emp?.id ?? null, po_number: u.po || null, received_on: u.receivedOn, deleted_at: null };
   });
   const ids = new Map<string, number>();
-  for (let i = 0; i < unitRows.length; i += 300) {
-    const { data, error } = await db.from("stock_items").upsert(unitRows.slice(i, i + 300), { onConflict: "source_ref" }).select("id, source_ref");
+  const existingUnits = new Map((await all<{ id: number; source_ref: string }>(() => db.from("stock_items").select("id, source_ref").like("source_ref", "ctrl:%"))).map((u) => [u.source_ref, u.id]));
+  const toInsert = unitRows.filter((u) => !existingUnits.has(u.source_ref));
+  for (const u of unitRows.filter((x) => existingUnits.has(x.source_ref))) {
+    const id = existingUnits.get(u.source_ref)!;
+    const { error } = await db.from("stock_items").update(u).eq("id", id);
+    if (error) throw new Error(`unit update: ${error.message}`);
+    ids.set(u.source_ref, id);
+    written++;
+  }
+  for (let i = 0; i < toInsert.length; i += 300) {
+    const { data, error } = await db.from("stock_items").insert(toInsert.slice(i, i + 300)).select("id, source_ref");
     if (error) throw new Error(`units: ${error.message}`);
     for (const r of data as { id: number; source_ref: string }[]) ids.set(r.source_ref, r.id);
     written += data.length;
