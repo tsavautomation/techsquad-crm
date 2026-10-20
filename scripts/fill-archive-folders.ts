@@ -16,13 +16,14 @@
  * database.
  */
 import ExcelJS from "exceljs";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, { auth: { persistSession: false } });
 const args = process.argv.slice(2);
 const SHEET_IN = args.includes("--sheet") ? args[args.indexOf("--sheet") + 1] : null;
 const PORTAL = "docs/portal-people.txt";
+const PROPOSALS = "docs/portal-proposals.json";
 const OUT = "docs/report-archive-folders-filled.xlsx";
 
 type Pageable = { range(from: number, to: number): PromiseLike<{ data: unknown; error: { message: string } | null }> };
@@ -138,7 +139,14 @@ function placeIn(address: string, places: string[], unit: string | null) {
   const number = places.some((p) => { const n = p.match(/^(\d{2,6})\s/)?.[1]; return Boolean(n && aw[0] === n); });
   const units = unitsOf(address);
   const unitHit = Boolean(unit && (units.includes(unit) || units.some((u) => /^\d+$/.test(u) && u === unit.replace(/[A-Z]$/, ""))));
+  // The folder names a unit and the address names a different one: not this address.
+  if (unit && units.length && !unitHit) return false;
   return phrase || number || unitHit;
+}
+// True when the only thing in common is the unit number (the building words differ).
+function unitOnly(address: string, places: string[], unit: string | null) {
+  const specific = places.flatMap((p) => p.split(" ")).filter((w) => w.length >= 4 && !GENERIC.has(w) && !/^\d+$/.test(w));
+  return Boolean(unit) && specific.length > 0 && !placeIn(address, places, null);
 }
 // Units in a Portal address: "…, 3401, …", "#2103", "Apt 4N" (never the street number or the zip).
 function unitsOf(address: string) {
@@ -191,6 +199,54 @@ function portalMatch(folder: string, people: Person[]) {
   if (strong.length > 1 && emails.size === 1 && strong.every((h) => h.person.email) && !placeParts.length) return pick(strong, "Portal: same client, several records (check address)");
   const why = hits.every((h) => h.unitConflict) ? "Portal: has the name but the unit differs, check" : strong.length === 1 ? "Portal: surname only and the address does not name that place, check" : "Portal: several people, pick one";
   return { sure: null, why, candidates: hits };
+}
+
+// ---- Portal.io proposals (docs/portal-proposals.json, pulled from api.portal.io) ----
+// The end client often only appears in the proposal name ("Guimar Urbina - Lazarus Residence"),
+// with the designer as the customer; the proposal's location is the job address.
+type Proposal = { id: number; n: string; name: string | null; st: string; cust: string; email: string; phone: string; addr: string; created: string | null; tokens: string[]; nameOnly: string };
+function loadProposals(): Proposal[] {
+  if (!existsSync(PROPOSALS)) return [];
+  const raw = JSON.parse(readFileSync(PROPOSALS, "utf8")) as Omit<Proposal, "tokens" | "nameOnly">[];
+  return raw.filter((p) => p.name || p.cust).map((p) => {
+    const cust = words(p.cust);
+    // The place is looked for in the proposal name without the customer's own words, so a
+    // designer called "Avant" does not place every Avant proposal at the folder "… - AVANT".
+    return { ...p, tokens: [...new Set([...words(p.name), ...cust])], nameOnly: words(p.name).filter((w) => !cust.includes(w)).join(" ") };
+  });
+}
+type ProposalHit = { p: Proposal; placed: boolean; first: boolean; named: boolean; unitOnly: boolean };
+function proposalMatch(folder: string, proposals: Proposal[]) {
+  const f = parseFolder(folder);
+  const none = { sure: null as Proposal | null, why: "", hits: [] as ProposalHit[] };
+  if (!f.surnames.length) return none;
+  const placeParts = f.placeText.split(/\s[-–]\s/).map((p) => norm(p.replace(/#\s*[0-9]{1,5}\s?[A-Za-z]?\b/g, " "))).filter(Boolean);
+  const hits: ProposalHit[] = [];
+  for (const p of proposals) {
+    if (!f.surnames.every((s) => p.tokens.some((t) => same(s, t)))) continue;
+    const first = f.firsts.length > 0 && anyMatch(f.firsts, p.tokens);
+    if (f.firsts.length && !first) continue;
+    // Only the job address can place a proposal; a place in the proposal's name alone is a hint
+    // (the address is often the designer's office).
+    const placed = p.addr !== "" && placeIn(p.addr, placeParts, f.unit);
+    const named = !placed && placeParts.length > 0 && placeIn(p.nameOnly, placeParts, f.unit);
+    hits.push({ p, placed, first, named, unitOnly: placed && unitOnly(p.addr, placeParts, f.unit) });
+  }
+  if (!hits.length) return none;
+  const withAddr = hits.filter((h) => h.p.addr);
+  const pool = (placeParts.length || f.unit) ? withAddr.filter((h) => h.placed) : withAddr;
+  const addrs = new Map<string, ProposalHit[]>();
+  for (const h of pool) addrs.set(h.p.addr, [...(addrs.get(h.p.addr) ?? []), h]);
+  const label = (h: ProposalHit) => `Portal proposal #${h.p.n} "${h.p.name ?? h.p.cust}"`;
+  if (addrs.size === 1) {
+    const best = pool.sort((a, b) => (b.p.created ?? "").localeCompare(a.p.created ?? ""))[0];
+    const note = placeParts.length || f.unit ? (best.unitOnly ? " (same unit, building words differ, check)" : "") : " (folder names no place, check)";
+    return { sure: best.p, why: label(best) + (pool.length > 1 ? ` (+${pool.length - 1} more, same address)` : "") + note, hits };
+  }
+  if (addrs.size > 1) return { sure: null, why: `Portal proposals: ${addrs.size} different addresses, pick one`, hits };
+  const named = hits.find((h) => h.named);
+  if (named) return { sure: null, why: label(named) + " names that place, but its job address does not match, check", hits };
+  return { sure: null, why: withAddr.length ? "Portal proposals: none names that place / unit, check" : "Portal proposals found, but without an address", hits };
 }
 
 type Ev = { summary: string; location: string | null; starts_at: string };
@@ -269,6 +325,8 @@ async function main() {
   });
   const byId = new Map(projects.map((p) => [p.id, p]));
   const people = loadPortal();
+  const proposals = loadProposals();
+  const showP = (h: ProposalHit) => `#${h.p.n} ${h.p.name ?? ""} [${h.p.cust}]${h.p.addr ? ": " + h.p.addr : ""}`;
   // Calendar events (the company calendar, synced).
   const events = (await all<Ev>(() => db.from("calendar_events").select("summary, location, starts_at").not("summary", "is", null).order("starts_at"))).filter((e) => e.summary);
   console.log(`${folders.size} folders with unmatched files, ${decided.size} decided on the page, ${moved.size} folders moved in OneDrive, ${projects.length} projects, ${people.length} Portal people, ${events.length} calendar events, ${answers.size} answers from Fred's sheet.`);
@@ -290,6 +348,7 @@ async function main() {
     { header: "Portal: phone", key: "pphone", width: 15 },
     { header: "Portal: address (for the new project)", key: "paddr", width: 50 },
     { header: "Portal: other people found", key: "pothers", width: 50 },
+    { header: "Portal: proposals found (#, name, address)", key: "props", width: 60 },
     { header: "Calendar events", key: "events", width: 9 },
     { header: "Calendar address (most used)", key: "address", width: 46 },
     { header: "Calendar first", key: "cfirst", width: 11 },
@@ -307,8 +366,13 @@ async function main() {
     const cal = calendarMatch(f.folder, events);
     Object.assign(row, { events: cal.events || "", address: cal.address ?? "", cfirst: cal.first ?? "", clast: cal.last ?? "", ctechs: cal.techs, sample: cal.sample });
     const po = portalMatch(f.folder, people);
+    const pp = proposalMatch(f.folder, proposals);
     if (po.sure) Object.assign(row, { pname: po.sure.person.name, pemail: po.sure.person.email, pphone: po.sure.person.phone, paddr: po.sure.address ?? "", pothers: po.candidates.filter((c) => c !== po.sure).map(show).join(" | ") });
     else if (po.candidates.length) Object.assign(row, { pothers: po.candidates.map(show).join(" | ") });
+    // A proposal that names the folder's place or unit beats a person whose address does not.
+    const useProposal = pp.sure && (!po.sure || !po.sure.placed);
+    if (useProposal) Object.assign(row, { pname: pp.sure!.cust, pemail: pp.sure!.email, pphone: pp.sure!.phone, paddr: pp.sure!.addr });
+    if (pp.hits.length) Object.assign(row, { props: pp.hits.slice(0, 6).map(showP).join(" | ") + (pp.hits.length > 6 ? ` | … ${pp.hits.length} proposals` : "") });
     const fred = answers.get(k);
     if (fred) Object.assign(row, { decision: fred.decision, other: fred.other, why: "your answer (sheet)" });
     else if (moved.has(k) && byId.has(moved.get(k)!)) Object.assign(row, { decision: "Other", other: byId.get(moved.get(k)!)!.title, why: "folder already moved into this project in OneDrive" });
@@ -316,8 +380,9 @@ async function main() {
       const m = crmMatch(f.folder, projects, cities);
       if (m.sure) {
         Object.assign(row, { decision: "Other", other: m.sure.title, why: `CRM: ${m.why}` });
-      } else if (po.sure) Object.assign(row, { decision: "New", why: po.why });
-      else if (po.candidates.length) Object.assign(row, { decision: "", why: po.why });
+      } else if (useProposal) Object.assign(row, { decision: "New", why: pp.why });
+      else if (po.sure) Object.assign(row, { decision: "New", why: po.why });
+      else if (po.candidates.length || pp.hits.length) Object.assign(row, { decision: "", why: [po.candidates.length ? po.why : "", pp.hits.length ? pp.why : ""].filter(Boolean).join("; ") });
       else if (cal.events && parseFolder(f.folder).firsts.length && cal.addresses === 1) Object.assign(row, { decision: "", why: "not in Portal; calendar has the person (check address)" });
       else Object.assign(row, { decision: "", why: m.candidates.length ? `not in Portal; CRM maybe: ${m.candidates.map((c) => c.p.title).join(" | ")}` : "not in Portal" });
     }
