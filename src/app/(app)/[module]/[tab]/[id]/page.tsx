@@ -26,6 +26,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getLang, getT } from "@/i18n/server";
 import { ReturnCardPanel, VisitFieldPanel } from "@/components/field-day/record-panels";
+import { localizeReturnCard } from "@/lib/field-day/return-card-text";
 import { localized } from "@/i18n/registry";
 import { MessagePanel } from "@/components/contact/message-panel";
 import { PartnerStats } from "@/components/contact/partner-stats";
@@ -72,6 +73,8 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
   const rec = await loadRecord(t, recordId, user.permissions);
   if (!rec) notFound();
   const { row, values, labels } = rec;
+  // Return cards keep their Details in English; the page shows them in the viewer's language (SPEC §9.1 J-i).
+  if (t.name === "tasks" && typeof values.details === "string") values.details = localizeReturnCard(values.details, tr);
   const { visible } = evaluateRules(t, values);
   const [names, computed] = await Promise.all([userNames([row], ["created_by", "updated_by"]), computedValues(t, recordId)]);
 

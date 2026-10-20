@@ -67,7 +67,8 @@ export const tasks: TableDef = {
     },
     {
       "name": "details",
-      "label": "Details",
+      // Jessica 2026-10-20 (SPEC §9.1 J-c): WebAuthor's "Details" is the request; the result goes in Response to the request.
+      "label": "Request",
       "type": "textarea",
       "legacy": {
         "column": "deatils",
@@ -75,6 +76,7 @@ export const tasks: TableDef = {
       },
       "maxLength": 1000
     },
+    { name: "response", label: "Response to the request", type: "textarea", maxLength: 4000, placeholder: "What was done", legacy: NEW },
     {
       "name": "due_date",
       "label": "Due Date",

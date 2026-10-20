@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Lock, MessageSquare, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dates";
+import { localizeReturnCard } from "@/lib/field-day/return-card-text";
 import { saveRecordAction } from "@/lib/records/actions";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
@@ -152,7 +153,7 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
                         )}
                         <span className={cn("block text-sm", col.value === "Completed" && "text-muted-foreground line-through")}>
                           {c.private && <Lock className="mr-1 inline size-3.5 align-[-2px] text-muted-foreground" aria-label={t("Private")} />}
-                          {c.details || t("(no details)")}
+                          {localizeReturnCard(c.details, t) || t("(no details)")}
                         </span>
                         {c.project && <span className="mt-0.5 block truncate text-xs text-text-2">{c.project}</span>}
                         <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">

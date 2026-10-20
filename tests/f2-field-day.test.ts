@@ -117,3 +117,24 @@ describe("automation actions", () => {
     expect(check(getTable("projects"), { ...base, actions: [{ type: "return_card" }] })).toEqual(["A return card can only come from a Job Report."]);
   });
 });
+
+describe("return card shown in Portuguese (SPEC §9.1 J-i)", () => {
+  it("translates every line the card builder writes and leaves other lines alone", async () => {
+    const { localizeReturnCard } = await import("@/lib/field-day/return-card-text");
+    const { makeT } = await import("@/i18n/core");
+    const t = makeT("pt");
+    const en = ["2nd visit in a row that wasn't finished on this project.", "Return visit needed: Partial (Missing material).", "Waiting on: GC", "Missing:", "- 2 keystones", "Bring: Tall ladder", "Needs: time 1 h 30 min, 2 people", "Access: Gate 1234", "Free text stays"].join("\n");
+    expect(localizeReturnCard(en, t).split("\n")).toEqual([
+      "2ª visita seguida não concluída neste projeto.",
+      "Precisa de visita de retorno: Parcial (Pendência) (Falta de material).",
+      "Aguardando: GC",
+      "Qual a pendência:",
+      "- 2 keystones",
+      "Levar: Tall ladder",
+      "Precisa de: tempo 1 h 30 min, 2 pessoas",
+      "Acesso: Gate 1234",
+      "Free text stays",
+    ]);
+    expect(localizeReturnCard(null, t)).toBe("");
+  });
+});

@@ -144,22 +144,28 @@ export function applyReview(input: ReviewInput, answer: ReviewAnswer): ReviewOut
     if (answer.grammar_changed || squash(report.replace(MOVED_MARKER, "")) !== squash(original)) notes.push("Grammar and clarity corrected; the original text is in History.");
   }
 
-  // 2. Pending work → What's missing (+ Result = Partial when blank).
+  // 2. Pending work → What's missing (+ Result = Partial when blank or Completed).
+  // J-h (Jessica 2026-10-20, Fred's OK; replaces F17-b "never overruled"): a report the technician marked Completed
+  // whose text still lists pending work, or says someone has to come back, becomes Partial, and the note names why.
   const already = missingLines(input.missing_items).map((x) => x.toLowerCase());
   const pending = cleanLines(answer.pending).filter((x) => !already.includes(x.toLowerCase()));
+  const comeBack = Boolean(answer.return_visit?.needed);
   if (pending.length) {
+    patch.missing_items = [...missingLines(input.missing_items), ...pending].join("\n");
+    notes.push(`${pending.length} pending item${pending.length === 1 ? "" : "s"} added to What's missing.`);
     if (input.result === "Completed") {
-      notes.push(`The text mentions pending work (${pending.join("; ")}), but the report says Completed: nothing was changed.`);
-    } else {
-      patch.missing_items = [...missingLines(input.missing_items), ...pending].join("\n");
-      notes.push(`${pending.length} pending item${pending.length === 1 ? "" : "s"} added to What's missing.`);
-      if (!isNotFinished(input.result)) {
-        patch.result = "Partial";
-        notes.push("Result set to Partial.");
-      }
-      if (!input.partial_reason) patch.partial_reason = answer.reason && REASONS.includes(answer.reason) ? answer.reason : "Other";
+      patch.result = "Partial";
+      notes.push(`The technician marked the report Completed, but the text mentions pending work (${pending.join("; ")}): Result changed to Partial.`);
+    } else if (!isNotFinished(input.result)) {
+      patch.result = "Partial";
+      notes.push("Result set to Partial.");
     }
-  } else if (!input.result && answer.finished && !answer.return_visit?.needed) {
+    if (!input.partial_reason) patch.partial_reason = answer.reason && REASONS.includes(answer.reason) ? answer.reason : "Other";
+  } else if (input.result === "Completed" && comeBack) {
+    patch.result = "Partial";
+    if (!input.partial_reason) patch.partial_reason = answer.reason && REASONS.includes(answer.reason) ? answer.reason : "Other";
+    notes.push(`The technician marked the report Completed, but the text says someone has to come back (${answer.return_visit?.why?.trim() || "no reason given"}): Result changed to Partial.`);
+  } else if (!input.result && answer.finished && !comeBack) {
     // F17-e: a blank Result becomes Completed when the text says the work is done (Fred 2026-10-06).
     patch.result = "Completed";
     notes.push("Result set to Completed.");
@@ -187,8 +193,8 @@ export function applyReview(input: ReviewInput, answer: ReviewAnswer): ReviewOut
     notes.push("Login details moved to Login and Passwords and added to the project's System Credentials.");
   }
 
-  // 4. F19: return visit, parts, site facts, issue keys. A Completed report never gets a return visit.
-  const returnVisit = answer.return_visit?.needed && input.result !== "Completed" ? { why: answer.return_visit.why?.trim() || "The report says someone has to come back.", days: answer.return_visit.days } : null;
+  // 4. F19: return visit, parts, site facts, issue keys. (J-h: a Completed report that needs a return visit was just made Partial, so it gets one too.)
+  const returnVisit = answer.return_visit?.needed ? { why: answer.return_visit.why?.trim() || "The report says someone has to come back.", days: answer.return_visit.days } : null;
   const parts = cleanLines(answer.parts);
   const siteFacts = cleanLines(answer.site_facts).filter((f) => !SECRET.test(f));
   const issueKeys = [...new Set(answer.issue_keys.map((k) => k.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")).filter((k) => k.length >= 3 && k.length <= 60))];

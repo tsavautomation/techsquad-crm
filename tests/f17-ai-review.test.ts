@@ -57,21 +57,26 @@ describe("applyReview: pending work", () => {
     const r = applyReview(base, { report: base.report, grammar_changed: false, pending: ["x"], reason: "Rain", credentials: [] });
     expect(r.patch.partial_reason).toBe("Other");
   });
-  it("never overrules a Completed report, but says so", () => {
+  it("overrules a Completed report that still lists pending work, and says why (SPEC §9.1 J-h)", () => {
     const r = applyReview({ ...base, result: "Completed" }, { report: base.report, grammar_changed: false, pending: ["Program the remote"], reason: "Other", credentials: [] });
-    expect(r.patch).toEqual({});
-    expect(r.notes[0]).toMatch(/says Completed: nothing was changed/);
+    expect(r.patch).toEqual({ missing_items: "Program the remote", result: "Partial", partial_reason: "Other" });
+    expect(r.notes.join(" ")).toContain("marked the report Completed, but the text mentions pending work (Program the remote): Result changed to Partial");
+  });
+  it("overrules a Completed report when the text says someone has to come back", () => {
+    const r = applyReview({ ...base, result: "Completed" }, { report: base.report, return_visit: { needed: true, why: "GC must finish the drywall", days: 5 } });
+    expect(r.patch).toEqual({ result: "Partial", partial_reason: "Other" });
+    expect(r.notes[0]).toContain("someone has to come back (GC must finish the drywall)");
+    expect(r.returnVisit).toEqual({ why: "GC must finish the drywall", days: 5 });
   });
 });
 
 describe("applyReview: F19 return visit, parts, site facts, issue keys", () => {
-  it("passes them through, cleaned, and never a return visit for a Completed report", () => {
+  it("passes them through, cleaned", () => {
     const r = applyReview(base, { report: base.report, return_visit: { needed: true, why: "GC must finish the drywall", days: 5 }, parts: ["- HDMI 2.1 cable 25 ft"], site_facts: ["Rack is in the garage closet.", "Wi-Fi password is Casa1234"], issue_keys: ["WiFi Dropouts", "x"] });
     expect(r.returnVisit).toEqual({ why: "GC must finish the drywall", days: 5 });
     expect(r.parts).toEqual(["HDMI 2.1 cable 25 ft"]);
     expect(r.siteFacts).toEqual(["Rack is in the garage closet."]);
     expect(r.issueKeys).toEqual(["wifi-dropouts"]);
-    expect(applyReview({ ...base, result: "Completed" }, { report: base.report, return_visit: { needed: true, why: null, days: null } }).returnVisit).toBeNull();
   });
 });
 

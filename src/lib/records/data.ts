@@ -27,6 +27,7 @@ export type ListParams = { q?: string; sort?: string; dir?: "asc" | "desc"; page
 export function listFields(t: TableDef): FieldDef[] {
   const inTitle = new Set([...(t.titleFormula ?? "").matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
   const score = (f: FieldDef) =>
+    (f.listColumn ? 100 : 0) +
     (f.name.includes("status") ? 5 : 0) +
     (f.type === "select" || f.type === "radio" ? 3 : 0) +
     (f.required ? 2 : 0) +
@@ -49,9 +50,9 @@ export function listFields(t: TableDef): FieldDef[] {
     .map(({ f }) => f);
 }
 
-/** Dropdown fields offered as quick filters on the list. */
+/** Dropdown fields offered as quick filters on the list, plus Yes/No columns marked `listColumn` (Job Reports › Pending items). */
 export function filterFields(t: TableDef): FieldDef[] {
-  return listFields(t).filter((f) => f.type === "select" || f.type === "radio");
+  return listFields(t).filter((f) => f.type === "select" || f.type === "radio" || (f.type === "boolean" && f.listColumn));
 }
 
 export async function listRecords(t: TableDef, p: ListParams) {
@@ -70,8 +71,9 @@ export async function listRecords(t: TableDef, p: ListParams) {
   query = p.archived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
   if (p.q?.trim()) query = query.or(await searchClause(db, t, p.q.trim()));
   // Quick filters (dropdowns) and "records linked to X" filters from the Related panel.
-  const filterable = new Set(t.fields.filter((f) => ["select", "radio"].includes(f.type) || (f.type === "lookup" && !f.multiple)).map((f) => f.name));
-  for (const [k, v] of Object.entries(p.filter ?? {})) if (v && filterable.has(k)) query = query.eq(k, v);
+  const filterable = new Set(t.fields.filter((f) => ["select", "radio", "boolean"].includes(f.type) || (f.type === "lookup" && !f.multiple)).map((f) => f.name));
+  const booleans = new Set(t.fields.filter((f) => f.type === "boolean").map((f) => f.name));
+  for (const [k, v] of Object.entries(p.filter ?? {})) if (v && filterable.has(k)) query = query.eq(k, booleans.has(k) ? v === "true" : v);
 
   const { data, count, error } = await query;
   if (error) throw new Error(`${t.label}: ${error.message}`);

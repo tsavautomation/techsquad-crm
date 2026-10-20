@@ -209,6 +209,16 @@ export async function toggleChecklistItemAction(table: string, id: number, itemI
     .select("id");
   if (error) return { ok: false, message: error.message };
   if (!data?.length) return DENIED;
+  // Jessica 2026-10-20 (J-g): a task whose checklist is all ticked is Completed; unticking an item reopens it.
+  if (t.name === "tasks") {
+    const [{ count: open }, { data: task }] = await Promise.all([
+      db.from("record_checklist_items").select("id", { count: "exact", head: true }).eq("table_name", t.name).eq("record_id", id).is("completed_at", null),
+      db.from("tasks").select("status").eq("id", id).maybeSingle(),
+    ]);
+    const status = (task as { status: string | null } | null)?.status;
+    const next = done && open === 0 && status !== "Completed" ? "Completed" : !done && status === "Completed" ? "Working" : null;
+    if (next && canDo(user.permissions, t, "modify", getTable)) await saveRecord(t.name, id, { status: next });
+  }
   refresh(t, id);
   return { ok: true };
 }

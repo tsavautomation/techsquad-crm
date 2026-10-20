@@ -116,6 +116,7 @@ export const jobReports: TableDef = {
       label: "Result",
       type: "select",
       heading: "Visit result",
+      required: true, // Jessica 2026-10-20 (J-f): 111 reports in 30 days had no result.
       options: [
         { label: "Completed", value: "Completed", color: "#16a34a" },
         { label: "Partial", value: "Partial", color: "#d97706" },
@@ -123,6 +124,8 @@ export const jobReports: TableDef = {
       ],
       legacy: NEW,
     },
+    // J-e (Jessica 2026-10-20): Yes while the report's return card is open (or Partial / Not done with items and no card yet). Kept by a database trigger.
+    { name: "has_pending", label: "Pending items", type: "boolean", default: false, readOnly: true, formHidden: true, listColumn: true, legacy: NEW },
     // F17-e (Fred 2026-10-06): one line on how the visit ended, filled by the AI review when blank.
     { name: "outcome", label: "Outcome", type: "text", maxLength: 200, placeholder: "How the visit ended, in one line", legacy: NEW },
     { name: "partial_reason", label: "Reason", type: "select", startsHidden: true, options: REASONS.map((r) => ({ label: r, value: r })), legacy: NEW },

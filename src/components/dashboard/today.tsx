@@ -12,6 +12,7 @@ import { isOfficeUser } from "@/lib/auth/office";
 import { dayStatuses } from "@/lib/reports/rule-run";
 import { recordHref } from "@/registry/routes";
 import { QuickTask } from "./quick-task";
+import { localizeReturnCard } from "@/lib/field-day/return-card-text";
 import { getT } from "@/i18n/server";
 import type { T } from "@/i18n/core";
 
@@ -222,7 +223,7 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
           title: tr("Tasks due in 7 days"),
           rows: ((data ?? []) as unknown as { id: number; details: string | null; due_date: string; priority: string | null; employees: { title: string | null } | null }[]).map((r) => ({
             href: recordHref(tasksT, r.id),
-            title: (r.details ?? "").split("\n")[0].slice(0, 80) || tr("Task #{id}", { id: r.id }),
+            title: localizeReturnCard(r.details, tr).split("\n")[0].slice(0, 80) || tr("Task #{id}", { id: r.id }),
             meta: [r.employees?.title ?? tr("unassigned"), r.due_date < today ? tr("overdue since {date}", { date: formatDate(r.due_date) }) : r.due_date === today ? tr("due today") : tr("due {date}", { date: formatDate(r.due_date) })].join(" · "),
             tone: r.due_date < today || r.priority === "Urgent" ? ("bad" as const) : r.due_date === today ? ("warn" as const) : undefined,
           })),

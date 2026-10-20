@@ -87,6 +87,8 @@ export type FieldDef = {
   placeholder?: string;
   /** Not on new / edit forms: kept for old records or filled by the app (e.g. Job Report › Pending 1–5, Visit › Checked in). Shown on the record page when it has a value. */
   formHidden?: boolean;
+  /** Always one of the list's columns (and a quick filter when it is a dropdown or Yes/No), whatever its score. */
+  listColumn?: boolean;
   /** Only on the "new" form (e.g. Visit › Repeat): hidden when editing, ignored by later saves. */
   createOnly?: boolean;
   /** Help text under the field (Form settings, M12). */

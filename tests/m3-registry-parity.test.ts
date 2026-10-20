@@ -57,10 +57,11 @@ describe("registry ↔ WebAuthor export", () => {
 
   it("keeps labels identical (whitespace aside), except renames Fred asked for", () => {
     // SPEC §9.1 L-a: the size limit left the label when uploads moved to OneDrive (10 GB).
-    const RENAMED: Record<string, string> = { "Upload Files (25MB MAX)": "Upload Files" };
+    // SPEC §9.1 J-c: Tasks › Details became Request, next to the new Response to the request (Jessica 2026-10-20).
+    const RENAMED: Record<string, string> = { "Upload Files (25MB MAX)": "Upload Files", "fx_techsquad_employee_xmtasks:Details": "Request" };
     for (const { legacyTable, raw } of exported) {
       const label = normLabel(raw.label);
-      expect(findField(legacyTable, raw)!.label).toBe(RENAMED[label] ?? label);
+      expect(findField(legacyTable, raw)!.label).toBe(RENAMED[`${legacyTable}:${label}`] ?? RENAMED[label] ?? label);
     }
   });
 

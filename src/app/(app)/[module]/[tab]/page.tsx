@@ -122,7 +122,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
         </p>
       )}
 
-      <ListControls filters={filterFields(t).map((f) => ({ name: f.name, label: f.label, options: f.options ?? [] }))} />
+      <ListControls filters={filterFields(t).map((f) => ({ name: f.name, label: f.label, options: f.type === "boolean" ? [{ label: tr("Yes"), value: "true" }, { label: tr("No"), value: "false" }] : (f.options ?? []) }))} />
 
       {rows.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">{tr("No records found.")}</p>

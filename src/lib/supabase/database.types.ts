@@ -1568,6 +1568,7 @@ export type Database = {
           created_by: string | null
           date: string | null
           deleted_at: string | null
+          has_pending: boolean
           id: number
           issue_keys: string[]
           locked: boolean
@@ -1610,6 +1611,7 @@ export type Database = {
           created_by?: string | null
           date?: string | null
           deleted_at?: string | null
+          has_pending?: boolean
           id?: number
           issue_keys?: string[]
           locked?: boolean
@@ -1652,6 +1654,7 @@ export type Database = {
           created_by?: string | null
           date?: string | null
           deleted_at?: string | null
+          has_pending?: boolean
           id?: number
           issue_keys?: string[]
           locked?: boolean
@@ -4690,6 +4693,7 @@ export type Database = {
           priority: string | null
           private: boolean
           project_id: number | null
+          response: string | null
           source: string | null
           status: string | null
           submitted_at: string | null
@@ -4714,6 +4718,7 @@ export type Database = {
           priority?: string | null
           private?: boolean
           project_id?: number | null
+          response?: string | null
           source?: string | null
           status?: string | null
           submitted_at?: string | null
@@ -4738,6 +4743,7 @@ export type Database = {
           priority?: string | null
           private?: boolean
           project_id?: number | null
+          response?: string | null
           source?: string | null
           status?: string | null
           submitted_at?: string | null
@@ -6147,6 +6153,10 @@ export type Database = {
       google_mark_synced: {
         Args: { p_etags?: string[]; p_event_ids?: string[]; p_ids: number[] }
         Returns: undefined
+      }
+      job_report_has_pending: {
+        Args: { p_missing: string; p_report_id: number; p_result: string }
+        Returns: boolean
       }
       merge_records: {
         Args: { p_keep: number; p_merge: number[]; p_table: string }
