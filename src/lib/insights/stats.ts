@@ -115,3 +115,26 @@ export function findDuplicates(items: DupeInput[]): DupeGroup[] {
   }
   return [...groups.values()].filter((g) => g.ids.length > 1);
 }
+
+// ---------------------------------------------------------------- duplicate codes (Data page, Jessica 2026-10-20)
+
+/** A SKU / UPC as a comparison key: letters and digits only, lower-case, without leading zeros ("0041093931246" = "041093931246"). */
+export const codeKey = (s: string | null | undefined) => norm(s).replace(/^0+(?=.)/, "");
+
+/** A serial as a comparison key: letters and digits only, lower-case (leading zeros are part of a serial). */
+export const serialKey = (s: string | null | undefined) => norm(s);
+
+export type CodeGroup = { value: string; ids: number[] };
+
+/** Records whose code (SKU, serial…) is the same under `key`; each group once, with the first spelling seen. */
+export function findDuplicateCodes(items: { id: number; code: string | null }[], key: (s: string | null) => string): CodeGroup[] {
+  const groups = new Map<string, CodeGroup>();
+  for (const x of items) {
+    const k = key(x.code);
+    if (!k) continue;
+    const g = groups.get(k) ?? { value: x.code!.trim(), ids: [] };
+    if (!g.ids.includes(x.id)) g.ids.push(x.id);
+    groups.set(k, g);
+  }
+  return [...groups.values()].filter((g) => g.ids.length > 1);
+}

@@ -53,3 +53,12 @@ describe("productMatches", () => {
     expect(productMatches(p, "")).toBe(true);
   });
 });
+
+describe("installing twice (Jessica 2026-10-20)", () => {
+  const none = { projectId: null, staffId: null, location: null, note: "" };
+  it("refuses Installed on the project the unit is already on, but allows another project", () => {
+    expect(validateMovement("install", "On Project", { ...none, projectId: 5, fromProjectId: 5 })).toMatch(/already installed/);
+    expect(validateMovement("install", "On Project", { ...none, projectId: 6, fromProjectId: 5 })).toBeNull();
+    expect(validateMovement("install", "In Stock", { ...none, projectId: 5, fromProjectId: 5 })).toBeNull();
+  });
+});

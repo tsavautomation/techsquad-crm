@@ -38,7 +38,7 @@ export function MoveMany({ units, lists, onClose, onDone }: { units: StockUnit[]
   }, [onClose]);
   const mv = movement ? movementOf(movement) : undefined;
   const locationName = lists.locations.find((l) => l.id === locationId)?.name ?? null;
-  const problems = mv ? units.map((u) => ({ u, why: validateMovement(mv.key, u.status, { projectId, staffId, location: locationName, note }) })).filter((x) => x.why) : [];
+  const problems = mv ? units.map((u) => ({ u, why: validateMovement(mv.key, u.status, { projectId, staffId, location: locationName, note, fromProjectId: u.projectId }) })).filter((x) => x.why) : [];
   const okCount = mv ? units.length - problems.length : 0;
   const stageProblem = problems.find((p) => !canMove(mv!.key, p.u.status));
   const needs = mv && !stageProblem ? validateMovement(mv.key, units.find((u) => canMove(mv.key, u.status))?.status ?? null, { projectId, staffId, location: locationName, note }) : null;
@@ -63,7 +63,7 @@ export function MoveMany({ units, lists, onClose, onDone }: { units: StockUnit[]
         onClick={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
-          if (mv && okCount > 0 && !needs) submit();
+          if (mv && okCount > 0 && !needs && !pending) submit();
         }}
       >
         <div className="mb-3 flex items-start justify-between gap-2">

@@ -143,7 +143,11 @@ export const products: TableDef = {
       }
     }
   ],
-  "rules": [],
+  // Jessica 2026-10-20 (bug: an empty product could be saved): a product needs at least its Model or its SKU.
+  "rules": [
+    { id: 900301, title: "Model is required when there is no SKU", when: [{ field: "sku", op: "empty" }], then: [{ do: "require", field: "model" }] },
+    { id: 900302, title: "SKU is required when there is no Model", when: [{ field: "model", op: "empty" }], then: [{ do: "require", field: "sku" }] },
+  ],
   "legacy": {
     "table": "fx_techsquad_inventory"
   }

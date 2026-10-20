@@ -35,6 +35,8 @@ function matches(c: RuleCondition, fields: Map<string, FieldDef>, values: Values
       return sameValue(f, v, c.value);
     case "not_equal":
       return !sameValue(f, v, c.value);
+    case "empty":
+      return isEmpty(v);
     case "not_empty":
       return !isEmpty(v);
     case "date_before_today":

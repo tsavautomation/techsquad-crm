@@ -236,7 +236,9 @@ function UnitSheet({ unit, lists, canMove, onClose, onMove }: { unit: StockUnit;
   const [history, setHistory] = useState<HistoryRow[] | null>(null);
   useEffect(() => {
     let live = true;
-    void unitHistoryAction(unit.serial).then((h) => live && setHistory(h));
+    void unitHistoryAction(unit.serial)
+      .then((h) => live && setHistory(h))
+      .catch(() => live && setHistory([]));
     return () => {
       live = false;
     };
@@ -341,6 +343,8 @@ function RegisterForm({ units, lists, can, preset, onDone }: { units: StockUnit[
   const [purchase, setPurchase] = useState<Purchase>(EMPTY_PURCHASE);
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
+  // One id per submission: a double tap or a retry after a lost answer never saves the movement twice.
+  const [opId, setOpId] = useState(() => crypto.randomUUID());
   const matches = useMemo(() => {
     const n = serial.trim().toLowerCase();
     return n.length >= 2 && !picked ? units.filter((u) => (u.serial ?? "").toLowerCase().includes(n)).slice(0, 8) : [];
@@ -350,15 +354,16 @@ function RegisterForm({ units, lists, can, preset, onDone }: { units: StockUnit[
   const prev: StockStatus | null = exact ? exact.status : null;
   const mv = movement ? movementOf(movement) : undefined;
   const locationName = lists.locations.find((l) => l.id === locationId)?.name ?? null;
-  const why = mv ? validateMovement(mv.key, prev, { projectId, staffId, location: locationName, note }) : null;
+  const why = mv ? validateMovement(mv.key, prev, { projectId, staffId, location: locationName, note, fromProjectId: exact?.projectId ?? null }) : null;
   const canSave = Boolean(serial.trim() && mv && !why && (exact ? can.move : can.add && productId));
   const productItems = useMemo(() => products.map((p) => ({ ...p, label: p.title, hint: [p.brand, p.sku, p.description].filter(Boolean).join(" · ") || null })), [products]);
 
   const submit = () =>
     start(async () => {
       if (!mv) return;
-      const r = await registerMovementAction({ itemId: exact?.id ?? null, serial: serial.trim(), productId: exact ? null : productId, movement: mv.key, projectId, staffId, locationId, note, purchase: mv.key === "receive" ? purchase : undefined });
+      const r = await registerMovementAction({ itemId: exact?.id ?? null, serial: serial.trim(), productId: exact ? null : productId, movement: mv.key, projectId, staffId, locationId, note, purchase: mv.key === "receive" ? purchase : undefined, opId });
       if (!r.ok) return void toast.error(t(r.message));
+      setOpId(crypto.randomUUID());
       toast.success(exact ? t("Saved · {from} → {to}", { from: t(exact.status), to: t(r.status) }) : t("Registered · {to}", { to: t(r.status) }));
       router.refresh();
       onDone();
@@ -391,7 +396,7 @@ function RegisterForm({ units, lists, can, preset, onDone }: { units: StockUnit[
         className="flex flex-col gap-4 rounded-2xl border bg-card px-[18px] py-4 shadow-card"
         onSubmit={(e) => {
           e.preventDefault();
-          if (canSave) submit();
+          if (canSave && !pending) submit();
         }}
       >
         <div className="relative">

@@ -17,7 +17,7 @@ export const ALLOWED_FROM: Record<MovementKey, (StockStatus | null)[]> = {
 
 export const canMove = (key: MovementKey, prev: StockStatus | null) => ALLOWED_FROM[key].includes(prev);
 
-export type MovementNeeds = { projectId: number | null; staffId: number | null; location: string | null; note: string };
+export type MovementNeeds = { projectId: number | null; staffId: number | null; location: string | null; note: string; /** The project the unit is on now (On Project), to refuse installing it there twice. */ fromProjectId?: number | null };
 
 /** Why a movement cannot be saved, or null when it can (Fred 2026-10-13: Picked recommends a project but does not require it). */
 export function validateMovement(key: MovementKey, prev: StockStatus | null, n: MovementNeeds): string | null {
@@ -30,6 +30,8 @@ export function validateMovement(key: MovementKey, prev: StockStatus | null, n: 
     return "This movement is not possible from the unit's current stage.";
   }
   if (key === "install" && !n.projectId) return "Installed needs the project.";
+  // Jessica 2026-10-20: a second "Installed" on the same project was saved twice; moving to another project stays allowed.
+  if (key === "install" && prev === "On Project" && n.fromProjectId != null && n.fromProjectId === n.projectId) return "This unit is already installed on this project.";
   if (key === "pick" && !n.staffId) return "Picked at the warehouse needs the responsible person.";
   if ((key === "return" || key === "rma_back" || key === "receive") && !(n.location ?? "").trim()) return "Choose the location the unit goes to.";
   if (key === "rma_out" && !n.note.trim()) return "Sent for repair needs a note with the reason.";

@@ -8,6 +8,7 @@ import { canDo, canLockAction } from "@/registry/permissions";
 import type { TableDef } from "@/registry/types";
 import { getRecord, recordsDb, rowValues } from "./data";
 import { loadAttachments, loadJoins, syncAttachments, syncJoin } from "./relations";
+import { TABLE_CHECKS } from "./checks";
 import { AFTER_CREATE } from "./hooks";
 import { sanitizeRichText } from "./sanitize";
 import { buildTitle } from "./title";
@@ -62,6 +63,12 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
     if (picked.some((id) => !mine.includes(id))) errors[f.name] = "You can only file this under your own name";
   }
   if (Object.keys(errors).length) return { ok: false, errors };
+  // Checks that need the database (duplicate SKU, duplicate serial…), once the values themselves are fine.
+  const check = TABLE_CHECKS[t.name];
+  if (check) {
+    const more = await check(db, id, values);
+    if (Object.keys(more).length) return { ok: false, errors: more };
+  }
 
   const row: Record<string, unknown> = {};
   for (const f of t.fields) {

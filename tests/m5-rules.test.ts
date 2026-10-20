@@ -97,3 +97,16 @@ describe("value actions", () => {
     expect(r.visible.has("pending_4")).toBe(false);
   });
 });
+
+describe("Products (Jessica 2026-10-20: an empty product could be saved)", () => {
+  it("needs Model or SKU: both required while both are empty, neither once one is filled", () => {
+    const empty = run("products", fresh("products"));
+    expect(empty.required.has("model")).toBe(true);
+    expect(empty.required.has("sku")).toBe(true);
+    const withSku = run("products", { ...fresh("products"), sku: "12345" });
+    expect(withSku.required.has("model")).toBe(false);
+    const withModel = run("products", { ...fresh("products"), model: "HDMI 2.1" });
+    expect(withModel.required.has("sku")).toBe(false);
+    expect(withModel.required.has("model")).toBe(true); // the filled one stays marked required while the other is empty
+  });
+});

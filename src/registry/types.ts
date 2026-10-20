@@ -106,7 +106,7 @@ export type FieldDef = {
   legacy: { column: string; fieldId: number };
 };
 
-export type RuleOperator = "equal" | "not_equal" | "not_empty" | "date_before_today";
+export type RuleOperator = "equal" | "not_equal" | "empty" | "not_empty" | "date_before_today";
 export type RuleCondition = { field: string; op: RuleOperator; value?: string };
 export type RuleAction =
   | { do: "show" | "hide" | "clear" | "require"; field: string }

@@ -44,7 +44,7 @@ export function NewProductModal({ lists, initialModel, onClose, onCreated }: { l
         onClick={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
-          if (model.trim()) submit();
+          if (model.trim() && !pending) submit();
         }}
       >
         <div className="mb-3 flex items-start justify-between gap-2">

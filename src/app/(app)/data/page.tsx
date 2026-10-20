@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MergeGroup } from "@/components/data/merge-group";
 import { requireUser } from "@/lib/auth/session";
-import { findDuplicates } from "@/lib/insights/stats";
+import { codeKey, findDuplicateCodes, findDuplicates, serialKey } from "@/lib/insights/stats";
 import { recordsDb } from "@/lib/records/data";
 import type { Address } from "@/lib/records/values";
 import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
+import { recordHref } from "@/registry/routes";
 import { cn } from "@/lib/utils";
 import { getT } from "@/i18n/server";
 
@@ -20,6 +21,8 @@ export async function generateMetadata() {
 type Contact = { id: number; title: string | null; first_name: string | null; last_name: string | null; main_phone: string | null; email: string | null };
 type Org = { id: number; title: string | null; main_phone: string | null; main_email: string | null };
 type Project = { id: number; title: string | null; job_address: Address | null; job_status: string | null };
+type Product = { id: number; title: string | null; sku: string | null };
+type Unit = { id: number; serial: string | null; status: string | null; product_id: number | null };
 
 const norm = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -43,14 +46,28 @@ export default async function DataPage(props: PageProps<"/data">) {
   const canMergeT = (name: "contacts" | "organizations") => canDo(user.permissions, getTable(name), "modify", getTable) && canDo(user.permissions, getTable(name), "delete", getTable);
   const db = await recordsDb();
 
-  const [{ data: c }, { data: o }, { data: p }] = await Promise.all([
+  const seeProducts = canOpen(user.permissions, getTable("products"), getTable);
+  const seeStock = canOpen(user.permissions, getTable("stock_items"), getTable);
+  const [{ data: c }, { data: o }, { data: p }, { data: pr }, { data: st }] = await Promise.all([
     db.from("contacts").select("id, title, first_name, last_name, main_phone, email").is("deleted_at", null).is("archived_at", null),
     canOpen(user.permissions, getTable("organizations"), getTable) ? db.from("organizations").select("id, title, main_phone, main_email").is("deleted_at", null).is("archived_at", null) : Promise.resolve({ data: [] }),
     canOpen(user.permissions, getTable("projects"), getTable) ? db.from("projects").select("id, title, job_address, job_status").is("deleted_at", null).is("archived_at", null) : Promise.resolve({ data: [] }),
+    seeProducts ? db.from("products").select("id, title, sku").is("deleted_at", null).not("sku", "is", null).limit(5000) : Promise.resolve({ data: [] }),
+    seeStock ? db.from("stock_items").select("id, serial, status, product_id").is("deleted_at", null).not("serial", "is", null).limit(10000) : Promise.resolve({ data: [] }),
   ]);
   const contacts = (c ?? []) as Contact[];
   const orgs = (o ?? []) as Org[];
   const projects = ((p ?? []) as Project[]).filter((x) => !onlyActive || !["Complete", "Proposal Denied"].includes(x.job_status ?? ""));
+  const products = (pr ?? []) as Product[];
+  const units = (st ?? []) as Unit[];
+
+  // Stock (Jessica 2026-10-20): products whose SKU differs only in zeros or punctuation, and two Stock records for one serial.
+  const productById = new Map(products.map((x) => [x.id, x]));
+  const skuDupes = findDuplicateCodes(products.map((x) => ({ id: x.id, code: x.sku })), codeKey);
+  const unitById = new Map(units.map((x) => [x.id, x]));
+  const serialDupes = findDuplicateCodes(units.map((x) => ({ id: x.id, code: x.serial })), serialKey);
+  const productsT = getTable("products");
+  const stockT = getTable("stock_items");
 
   // Completeness.
   type Gap = { href: string; title: string; missing: string[] };
@@ -89,7 +106,7 @@ export default async function DataPage(props: PageProps<"/data">) {
       <div className="mb-[18px] grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi value={`${pct}%`} label={t("Complete overall")} />
         <Kpi value={String(gaps.length)} label={t("Incomplete records")} alert={gaps.length > 0} />
-        <Kpi value={String(dupes.length + orgDupes.length)} label={t("Possible duplicates")} alert={dupes.length + orgDupes.length > 0} />
+        <Kpi value={String(dupes.length + orgDupes.length + skuDupes.length + serialDupes.length)} label={t("Possible duplicates")} alert={dupes.length + orgDupes.length + skuDupes.length + serialDupes.length > 0} />
         <Kpi value={String(samePlace.length)} label={t("Projects at the same address")} />
       </div>
 
@@ -169,6 +186,56 @@ export default async function DataPage(props: PageProps<"/data">) {
         </section>
       )}
       </div>
+
+      {(seeProducts || seeStock) && (
+        <div className="xl:grid xl:grid-cols-2 xl:items-start xl:gap-3.5">
+          {seeProducts && (
+            <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+              <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Possible duplicate products")}</h2>
+              <p className="mb-2 text-xs text-text-2">{t("Same SKU / UPC apart from zeros or punctuation. Open them to compare; move the units of the wrong one and delete it.")}</p>
+              {skuDupes.length ? (
+                <ul className="flex flex-col gap-2">
+                  {skuDupes.map((g) => (
+                    <li key={g.value} className="rounded-xl border bg-muted px-3 py-2">
+                      <p className="mb-1 text-xs text-text-2">SKU {g.value}</p>
+                      {g.ids.map((id) => (
+                        <Link key={id} href={recordHref(productsT, id)} className="block text-sm text-primary hover:underline">
+                          {productById.get(id)?.title ?? `Product #${id}`} <span className="text-xs text-text-2">· {productById.get(id)?.sku}</span>
+                        </Link>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[13px] text-text-2">{t("No likely duplicates.")}</p>
+              )}
+            </section>
+          )}
+          {seeStock && (
+            <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+              <h2 className="mb-1 text-[15px] font-semibold tracking-tight">{t("Units with the same serial")}</h2>
+              <p className="mb-2 text-xs text-text-2">{t("Two Stock records share one serial, so the stock count is one too high. Keep the right one and delete the other.")}</p>
+              {serialDupes.length ? (
+                <ul className="flex flex-col gap-2">
+                  {serialDupes.map((g) => (
+                    <li key={g.value} className="rounded-xl border bg-muted px-3 py-2">
+                      <p className="mb-1 font-mono text-xs text-text-2">{g.value}</p>
+                      {g.ids.map((id) => (
+                        <Link key={id} href={recordHref(stockT, id)} className="block text-sm text-primary hover:underline">
+                          {(unitById.get(id)?.product_id && productById.get(unitById.get(id)!.product_id!)?.title) || t("Product #{id}", { id: String(unitById.get(id)?.product_id ?? "?") })}{" "}
+                          <span className="text-xs text-text-2">· {t(unitById.get(id)?.status ?? "In Stock")}</span>
+                        </Link>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[13px] text-text-2">{t("No likely duplicates.")}</p>
+              )}
+            </section>
+          )}
+        </div>
+      )}
 
       {samePlace.length > 0 && (
         <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">

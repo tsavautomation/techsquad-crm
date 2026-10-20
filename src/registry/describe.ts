@@ -75,6 +75,8 @@ function describeCondition(c: RuleCondition, t: TableDef): string {
       return `${name} is ${value}`;
     case "not_equal":
       return `${name} is not ${value}`;
+    case "empty":
+      return `${name} is empty`;
     case "not_empty":
       return `${name} is filled in`;
     case "date_before_today":

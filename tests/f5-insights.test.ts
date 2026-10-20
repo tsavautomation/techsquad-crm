@@ -1,6 +1,6 @@
 // F5: the Insights sums (planned vs real time, salespeople) and the Data page's duplicate finder.
 import { describe, expect, it } from "vitest";
-import { findDuplicates, onSiteByTech, realMinutes, realVsPlanned, reportResults, salespeople, type VisitTimes } from "@/lib/insights/stats";
+import { codeKey, findDuplicateCodes, findDuplicates, onSiteByTech, realMinutes, realVsPlanned, reportResults, salespeople, serialKey, type VisitTimes } from "@/lib/insights/stats";
 
 const V = (o: Partial<VisitTimes>): VisitTimes => ({ service_type: "Install", technician_id: 1, status: "Done", duration: "120", checked_in_at: null, checked_out_at: null, ...o });
 
@@ -86,5 +86,16 @@ describe("duplicates", () => {
 
   it("never pairs records on a short name or a partial phone", () => {
     expect(findDuplicates([{ id: 1, name: "Bo", phone: "555", email: null }, { id: 2, name: "Bo", phone: "555", email: null }])).toEqual([]);
+  });
+});
+
+describe("duplicate codes (Jessica 2026-10-20)", () => {
+  it("matches SKUs that differ only in leading zeros or punctuation, serials only in case", () => {
+    expect(codeKey("0041093931246")).toBe(codeKey("041093931246"));
+    expect(codeKey("ABC-001")).toBe("abc001");
+    expect(codeKey("0")).toBe("0");
+    expect(findDuplicateCodes([{ id: 1, code: "0041093931246" }, { id: 2, code: "041093931246" }, { id: 3, code: "999" }], codeKey)).toEqual([{ value: "0041093931246", ids: [1, 2] }]);
+    expect(findDuplicateCodes([{ id: 1, code: "000FFF1" }, { id: 2, code: "fff1" }, { id: 3, code: "000fff1" }], serialKey)).toEqual([{ value: "000FFF1", ids: [1, 3] }]);
+    expect(findDuplicateCodes([{ id: 1, code: null }, { id: 2, code: "" }], codeKey)).toEqual([]);
   });
 });
