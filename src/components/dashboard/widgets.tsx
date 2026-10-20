@@ -8,6 +8,7 @@ import { recordHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
 import { getT } from "@/i18n/server";
 import type { T } from "@/i18n/core";
+import { myWorkflowQueue } from "@/lib/workflow/queue";
 import { isOfficeUser } from "./today";
 
 // Dashboard widgets (PLAN M12): My Assigned (workflow stages I may act on), My Tasks (tasks whose
@@ -36,9 +37,7 @@ function inModule(table: string, module?: string) {
 }
 
 async function myAssigned(user: CurrentUser, tr: T, module?: string): Promise<Item[]> {
-  const db = await recordsDb();
-  const { data } = await db.rpc("my_workflow_queue");
-  const rows = ((data ?? []) as { table_name: string; record_id: number; level_title: string; level_color: string | null; entered_at: string }[]).filter(
+  const rows = (await myWorkflowQueue()).filter(
     (r) => inModule(r.table_name, module) && canOpen(user.permissions, getTable(r.table_name), getTable),
   );
   const titles = await titlesFor(rows.map((r) => ({ table: r.table_name, id: r.record_id })));

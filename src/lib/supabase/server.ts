@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "./database.types";
 import { supabaseEnv } from "./env";
+import { tracedFetch } from "./trace";
 
 /**
  * Supabase client for Server Components, Server Actions and Route Handlers.
@@ -13,6 +14,7 @@ export async function createClient() {
   const { url, key } = supabaseEnv();
 
   return createServerClient<Database>(url, key, {
+    global: tracedFetch ? { fetch: tracedFetch } : undefined,
     cookies: {
       getAll() {
         return cookieStore.getAll();

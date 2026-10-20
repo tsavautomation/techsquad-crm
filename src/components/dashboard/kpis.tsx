@@ -7,6 +7,7 @@ import { getTable } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { cn } from "@/lib/utils";
 import { getT } from "@/i18n/server";
+import { myWorkflowQueue } from "@/lib/workflow/queue";
 import { isOfficeUser } from "./today";
 
 // The number tiles at the top of the dashboard (Portal design, docs/portal-features-merge.md §I).
@@ -63,8 +64,7 @@ export async function DashboardKpis({ user, now }: { user: CurrentUser; now: num
   }
   tiles.push(
     (async () => {
-      const { data } = await db.rpc("my_workflow_queue");
-      return { href: "/#assigned", value: ((data ?? []) as unknown[]).length, label: "Waiting for me" };
+      return { href: "/#assigned", value: (await myWorkflowQueue()).length, label: "Waiting for me" };
     })(),
   );
   if (office && can("projects")) {
