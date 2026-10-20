@@ -53,7 +53,7 @@ function distance(a: string, b: string): number {
 const same = (a: string, b: string) => a === b || (Math.min(a.length, b.length) >= 6 && distance(a, b) <= 1);
 const anyMatch = (xs: string[], ys: string[], exact = false) => xs.some((x) => ys.some((y) => (exact ? x === y : same(x, y))));
 
-type Project = { id: number; title: string; titleTokens: string[]; ownerFirst: string[]; ownerLast: string[]; addrTokens: string[]; unit: string | null };
+type Project = { id: number; title: string; titleTokens: string[]; ownerFirst: string[]; ownerLast: string[]; addrTokens: string[]; addr: string; unit: string | null };
 const unitOf = (s: unknown) => (s ? norm(s).replace(/\b(apt|unit|suite|ste|ph)\b/g, " ").replace(/\s+/g, "").toUpperCase() || null : null);
 
 function parseFolder(name: string) {
@@ -70,16 +70,17 @@ function parseFolder(name: string) {
   return { surnames, firsts, places, unit, head, placeText };
 }
 
-function crmMatch(folder: string, projects: Project[], cities: Set<string>) {
+function crmMatch(folder: string, projects: Project[]) {
   const f = parseFolder(folder);
   if (!f.surnames.length) return { sure: null as Project | null, why: "", candidates: [] as { p: Project; score: number }[] };
-  const cityOnly = f.places.length > 0 && f.places.every((w) => cities.has(w)) && !f.unit;
+  const placeParts = f.placeText.split(/\s[-–]\s/).map((x) => norm(x.replace(/#\s*[0-9]{1,5}\s?[A-Za-z]?\b/g, " "))).filter(Boolean);
   const scored = projects
     .map((p) => {
       const surname = anyMatch(f.surnames, [...p.ownerLast, ...p.titleTokens]);
       if (!surname) return null;
       const first = f.firsts.length > 0 && anyMatch(f.firsts, [...p.ownerFirst, ...p.titleTokens.filter((t) => !GEO.has(t))]);
-      const place = f.places.length > 0 && anyMatch(f.places, [...p.titleTokens, ...p.addrTokens]);
+      // The folder place must be in the project address or title the strict way (known buildings, cities, units).
+      const place = placeParts.length > 0 && (placeIn(p.addr, placeParts, f.unit) || placeIn(p.title, placeParts, f.unit));
       const unitSame = Boolean(f.unit && p.unit && f.unit === p.unit);
       const unitConflict = Boolean(f.unit && p.unit && f.unit !== p.unit);
       let score = 50 + (first ? 30 : 0) + (place ? 15 : 0) + (unitSame ? 15 : 0) - (unitConflict ? 60 : 0);
@@ -91,7 +92,7 @@ function crmMatch(folder: string, projects: Project[], cities: Set<string>) {
     .filter((x): x is NonNullable<typeof x> => x !== null)
     .sort((a, b) => b.score - a.score);
   const persons = scored.filter((s) => s.person);
-  if (f.firsts.length && persons.length === 1 && !persons[0].unitConflict && (!f.places.length || persons[0].placed || cityOnly)) return { sure: persons[0].p, why: "same person, only project", candidates: scored.slice(0, 2) };
+  if (f.firsts.length && persons.length === 1 && !persons[0].unitConflict && (!f.placeText || persons[0].placed)) return { sure: persons[0].p, why: "same person, only project", candidates: scored.slice(0, 2) };
   const houses = scored.filter((s) => s.house);
   if (!f.firsts.length && houses.length === 1 && !houses[0].unitConflict) return { sure: houses[0].p, why: "same name and place, only project", candidates: scored.slice(0, 2) };
   return { sure: null, why: "", candidates: scored.slice(0, 2) };
@@ -265,7 +266,7 @@ function placeIn(address: string, places: string[], unit: string | null) {
     if (elsewhere) return false;
     if (here) return true;
   }
-  const phrase = places.some((p) => p.length >= 4 && a.includes(p)) || places.some((p) => p.split(" ").some((w) => w.length >= 4 && !GENERIC.has(w) && !/^\d+$/.test(w) && aw.includes(w)));
+  const phrase = places.some((p) => p.length >= 4 && !GENERIC.has(p) && a.includes(p)) || places.some((p) => p.split(" ").some((w) => w.length >= 4 && !GENERIC.has(w) && !/^\d+$/.test(w) && aw.includes(w)));
   // "364 OCEAN DR" and "364 South Ocean Boulevard": same street number.
   const number = places.some((p) => { const n = p.match(/^(\d{2,6})\s/)?.[1]; return Boolean(n && aw[0] === n); });
   return phrase || number || unitHit;
@@ -509,7 +510,7 @@ async function main() {
     if (id) moved.set(key(m.from.split("/").pop()!), Number(id));
   }
   // Projects, for the deep match.
-  type P = { id: number; title: string | null; job_address: { street?: string; city?: string } | null; apartment_or_unit: string | null; job_owner_id: number | null };
+  type P = { id: number; title: string | null; job_address: { street?: string; city?: string; zip?: string } | null; apartment_or_unit: string | null; job_owner_id: number | null };
   const pr = (await all<P>(() => db.from("projects").select("id, title, job_address, apartment_or_unit, job_owner_id").is("deleted_at", null))).filter((p) => p.title);
   const owners = new Map<number, { first: string | null; last: string | null }>();
   const ids = [...new Set(pr.map((p) => p.job_owner_id).filter((x): x is number => x !== null))];
@@ -517,10 +518,9 @@ async function main() {
     const { data } = await db.from("contacts").select("id, first_name, last_name").in("id", ids.slice(i, i + 500));
     for (const c of (data ?? []) as { id: number; first_name: string | null; last_name: string | null }[]) owners.set(c.id, { first: c.first_name, last: c.last_name });
   }
-  const cities = new Set(pr.flatMap((p) => words(p.job_address?.city)));
   const projects: Project[] = pr.map((p) => {
     const o = p.job_owner_id ? owners.get(p.job_owner_id) : null;
-    return { id: p.id, title: p.title!, titleTokens: words(p.title), ownerFirst: nameWords(o?.first), ownerLast: nameWords(o?.last), addrTokens: [...new Set([...words(p.job_address?.street), ...words(p.job_address?.city)])], unit: unitOf(p.apartment_or_unit) ?? unitOf(p.title!.match(/#\s*([0-9]{1,5}\s?[A-Za-z]?)\b/)?.[1]) };
+    return { id: p.id, title: p.title!, titleTokens: words(p.title), ownerFirst: nameWords(o?.first), ownerLast: nameWords(o?.last), addrTokens: [...new Set([...words(p.job_address?.street), ...words(p.job_address?.city)])], addr: [p.job_address?.street, p.job_address?.city, p.job_address?.zip].filter(Boolean).join(", "), unit: unitOf(p.apartment_or_unit) ?? unitOf(p.title!.match(/#\s*([0-9]{1,5}\s?[A-Za-z]?)\b/)?.[1]) };
   });
   const byId = new Map(projects.map((p) => [p.id, p]));
   const people = loadPortal();
@@ -601,7 +601,7 @@ async function main() {
     if (fred) Object.assign(row, { decision: fred.decision, other: fred.other, why: "your answer (sheet)" });
     else if (moved.has(k) && byId.has(moved.get(k)!)) Object.assign(row, { decision: "Other", other: byId.get(moved.get(k)!)!.title, why: "folder already moved into this project in OneDrive" });
     else {
-      const m = crmMatch(f.folder, projects, cities);
+      const m = crmMatch(f.folder, projects);
       if (m.sure) {
         Object.assign(row, { decision: "Other", other: m.sure.title, why: `CRM: ${m.why}` });
       } else if (useCalendar) Object.assign(row, { decision: "New", why: `Portal has the client (${po.sure || po.candidates.length ? "person" : "proposals"}); calendar: ${cal.placedCount} visit${cal.placedCount > 1 ? "s" : ""} at that place give the address` });
