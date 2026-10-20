@@ -32,6 +32,38 @@ export function linkify(text: string): React.ReactNode {
   );
 }
 
+const KEYED_LINE = /^([^:\n]{1,40}):\s*(.*)$/;
+
+/**
+ * Multi-line text written as "Label: value" lines (system credentials, access info) reads as a list,
+ * one line each with the label in bold (Fred 2026-10-20). Other text keeps its line breaks as typed.
+ */
+export function textareaValue(text: string): React.ReactNode {
+  const lines = text.split(/\r?\n/);
+  const keyed = lines.filter((l) => KEYED_LINE.test(l.trim())).length;
+  if (lines.length < 2 || keyed < 2) return linkify(text);
+  return (
+    <ul className="space-y-1">
+      {lines.map((line, i) => {
+        const t = line.trim();
+        if (!t) return null;
+        const m = t.match(KEYED_LINE);
+        return (
+          <li key={i} className="break-words">
+            {m ? (
+              <>
+                <strong className="font-semibold">{m[1]}:</strong> {m[2] ? linkify(m[2]) : null}
+              </>
+            ) : (
+              linkify(t)
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 /** A coloured option chip, as WebAuthor showed dropdown values. */
 export function OptionChip({ label, color }: { label: string; color?: string }) {
   return (
@@ -121,7 +153,7 @@ export async function FieldValue({ field: f, value, display, href, compact }: Pr
         <>{display}</>
       );
     case "textarea":
-      return <span className={compact ? "line-clamp-2 break-words" : "break-words whitespace-pre-wrap"}>{compact ? String(value) : linkify(String(value))}</span>;
+      return <span className={compact ? "line-clamp-2 break-words" : "break-words whitespace-pre-wrap"}>{compact ? String(value) : textareaValue(String(value))}</span>;
     default:
       return <span className="break-words">{compact ? String(value) : linkify(String(value))}</span>;
   }

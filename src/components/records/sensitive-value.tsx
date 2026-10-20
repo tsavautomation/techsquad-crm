@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useT } from "@/i18n/client";
+import { textareaValue } from "./field-value";
 
 /** Sensitive values (passwords, SSN, credentials) stay masked until the viewer asks to see them. */
 export function SensitiveValue({ value }: { value: string }) {
@@ -10,7 +11,7 @@ export function SensitiveValue({ value }: { value: string }) {
   const [shown, setShown] = useState(false);
   return (
     <span className="inline-flex items-start gap-2">
-      <span className={shown ? "break-all whitespace-pre-wrap" : "tracking-widest"}>{shown ? value : "••••••••"}</span>
+      <span className={shown ? "break-words whitespace-pre-wrap" : "tracking-widest"}>{shown ? textareaValue(value) : "••••••••"}</span>
       <button
         type="button"
         onClick={() => setShown((s) => !s)}

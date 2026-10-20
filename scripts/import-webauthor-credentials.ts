@@ -4,23 +4,25 @@
  * record pages into a JSON file, and written encrypted onto the existing CRM records. Only empty
  * CRM fields are filled, so anything typed into the CRM since the import stays.
  *
- *   npx tsx --env-file=.env.local scripts/import-webauthor-credentials.ts <file.json> [--apply]
+ *   npx tsx --conditions=react-server --env-file=.env.local scripts/import-webauthor-credentials.ts <file.json> [--apply] [--relines]
  *
  * File shape: { org: [{ id, name, login, password }], prj: [{ id, title, cred }] } (ids = WebAuthor record ids = CRM ids).
  */
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
-import { encrypt } from "../src/lib/crypto";
+import { decrypt, encrypt } from "../src/lib/crypto";
 
 const FILE = process.argv[2];
 const APPLY = process.argv.includes("--apply");
+/** --relines: only restore line breaks on credentials already loaded whose text is otherwise identical. */
+const RELINES = process.argv.includes("--relines");
 if (!FILE) throw new Error("pass the JSON file");
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, { auth: { persistSession: false } });
 type Org = { id: number; name: string | null; login: string | null; password: string | null };
 type Prj = { id: number; title: string | null; cred: string | null };
 
 async function main() {
-  const { org, prj } = JSON.parse(readFileSync(FILE, "utf8")) as { org: Org[]; prj: Prj[] };
+  const { org = [], prj = [] } = JSON.parse(readFileSync(FILE, "utf8")) as { org?: Org[]; prj?: Prj[] };
   const clean = (s: string | null | undefined) => (s ?? "").replace(/\s+$/g, "").trim();
   let orgLogins = 0, orgPw = 0, prjCred = 0, kept = 0, missing = 0;
   for (const o of org) {
@@ -42,7 +44,16 @@ async function main() {
     if (!cred) continue;
     const { data } = await db.from("projects").select("id, title, system_credentials").eq("id", p.id).maybeSingle();
     if (!data) { missing++; console.log(`  ! project #${p.id} ${p.title} not in the CRM`); continue; }
-    if (data.system_credentials) { kept++; continue; }
+    if (data.system_credentials) {
+      // --relines: the same text with its line breaks back (the first read had lost the <br>s).
+      const cur = decrypt(data.system_credentials);
+      const same = cur.replace(/\s+/g, "") === cred.replace(/\s+/g, "");
+      if (!(RELINES && same && !cur.includes("\n") && cred.includes("\n"))) { kept++; continue; }
+      console.log(`  project #${p.id} ${data.title}: line breaks restored (${cred.split("\n").length} lines)`);
+      if (APPLY) { const { error } = await db.from("projects").update({ system_credentials: encrypt(cred) }).eq("id", p.id); if (error) throw new Error(error.message); }
+      prjCred++;
+      continue;
+    }
     prjCred++;
     console.log(`  project #${p.id} ${data.title}: system credentials (${cred.length} chars)`);
     if (APPLY) { const { error } = await db.from("projects").update({ system_credentials: encrypt(cred) }).eq("id", p.id); if (error) throw new Error(error.message); }
