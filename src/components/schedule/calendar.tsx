@@ -47,7 +47,9 @@ export function Calendar({ weekStart, today, view, day, tech, visits, people, ca
     const p = new URLSearchParams();
     const vw = o.view ?? view;
     const t = o.tech === undefined ? tech : o.tech;
-    if (vw !== "week") p.set("view", vw);
+    // Since the Schedule opens on the Day view (F25-a), the Week view must say so in the link: an
+    // address with neither "view" nor "week" is the Day view (Fred 2026-10-20: Week button dead).
+    p.set("view", vw);
     if (vw === "day") p.set("day", o.day ?? (o.week ? o.week : dayOfWeekShown));
     else {
       const w = o.week ?? weekStart;
