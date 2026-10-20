@@ -22,12 +22,10 @@ export async function generateMetadata(props: PageProps<"/[module]/[tab]">) {
 }
 
 export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
-  const tr = await getT();
-  const { module, tab } = await props.params;
-  const sp = await props.searchParams;
-  const t0 = localized(tableFromRoute(module, tab), await getLang());
+  // Session, language and route params are independent: fetched together, not one after another.
+  const [tr, { module, tab }, sp, lang, user] = await Promise.all([getT(), props.params, props.searchParams, getLang(), requireUser()]);
+  const t0 = localized(tableFromRoute(module, tab), lang);
   if (!t0) notFound();
-  const user = await requireUser();
   const t = fieldsFor(t0, user.permissions, user.isSysadmin);
   if (!canOpen(user.permissions, t, getTable)) notFound();
 

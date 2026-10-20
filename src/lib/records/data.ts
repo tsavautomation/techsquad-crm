@@ -62,9 +62,13 @@ export async function listRecords(t: TableDef, p: ListParams) {
   const sort = p.sort && sortable.has(p.sort) ? p.sort : "updated_at";
   const cols = ["id", "title", "updated_at", "locked", "archived_at", ...listFields(t).map((f) => f.name)];
 
+  // The row count is exact while a list is filtered or searched (it decides the page count); an
+  // unfiltered big list (Visits: ~18,000 rows, 0.5 s to count under RLS) takes the planner's
+  // estimate once past PostgREST's exact limit, which may put the last page one off (Fred 2026-10-20).
+  const filtered = Boolean(p.q?.trim()) || Object.values(p.filter ?? {}).some(Boolean) || Boolean(p.archived);
   let query = db
     .from(t.name)
-    .select([...new Set(cols)].join(","), { count: "exact" })
+    .select([...new Set(cols)].join(","), { count: filtered ? "exact" : "estimated" })
     .is("deleted_at", null)
     .order(sort, { ascending: (p.dir ?? (sort === "title" ? "asc" : "desc")) === "asc", nullsFirst: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
