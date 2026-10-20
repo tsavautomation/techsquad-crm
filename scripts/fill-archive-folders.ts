@@ -133,22 +133,154 @@ type PortalHit = { person: Person; address: string | null; placed: boolean; firs
 // A folder place ("CORAL GABLES", "JADE SIGNATURE #903", "811 SOLAR ISLE") is in an address when the
 // whole phrase is, or one of its own words (not a city word like "miami") is, or the unit is.
 const GENERIC = new Set("beach miami north south east west bay island islands isle isles key keys park lake ocean grove point harbour harbor palm coral club estates estate tower towers village city county river creek shores springs sunny brickell collins biscayne pointe".split(" "));
+// ---- Buildings and cities Tech Squad works in ("ST REGIS 1404" = St Regis Bal Harbour, unit 1404) ----
+// A folder that names one of these only accepts an address in that building (its street numbers) or
+// that city. Towers that share a name list every street number; the sheet says "check tower".
+type Building = { names: string[]; streets: string[]; city: string; zip: string };
+const B = (names: string, streets: string, city: string, zip: string): Building => ({ names: names.split("|"), streets: streets.split("|"), city, zip });
+const BUILDINGS: Building[] = [
+  B("st regis|saint regis|st. regis", "9701 Collins Ave|9703 Collins Ave|9705 Collins Ave", "Bal Harbour", "33154"),
+  B("oceana key biscayne", "350 Ocean Dr", "Key Biscayne", "33149"),
+  B("oceana bal harbour|oceana bh|oceana", "10201 Collins Ave|10203 Collins Ave", "Bal Harbour", "33154"),
+  B("one bal harbour", "10295 Collins Ave", "Bal Harbour", "33154"),
+  B("fendi chateau|fendi", "9349 Collins Ave", "Surfside", "33154"),
+  B("estates at acqualina|estates acqualina|acqualina estates|aqualina estates|estates at aqualina", "17901 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("mansions at acqualina|acqualina mansion|acqualina mansions|aqualina mansion|mansion at aqualina", "17749 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("acqualina|aqualina", "17875 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("jade signature", "16901 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("jade ocean", "17121 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("jade beach", "17001 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("trump tower i|trump i|trump tower 1|trump 1|trump tower one", "16001 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("trump tower ii|trump ii|trump tower 2|trump 2|trump tower two", "15901 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("trump tower iii|trump iii|trump tower 3|trump 3|trump tower three", "15811 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("trump royale", "18201 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("trump palace", "18101 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("trump international", "18001 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("trump hollywood", "2711 S Ocean Dr", "Hollywood", "33019"),
+  B("porsche design tower|porsche tower|porsche", "18555 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("chateau beach|chateau ocean", "17475 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("muse", "17141 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("regalia", "19575 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("armani casa|armani", "18975 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("ritz carlton sunny isles|ritz carlton residences sunny isles", "15701 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("turnberry ocean club", "18501 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("turnberry ocean colony|turnberry", "16047 Collins Ave|16051 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("ocean one", "19333 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("ocean two|ocean ii", "19111 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("ocean three|ocean iii|ocean 3", "18911 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("ocean four|ocean iv|ocean 4", "17201 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("pinnacle", "17555 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("millennium|millenium", "18671 Collins Ave", "Sunny Isles Beach", "33160"),
+  B("st tropez|saint tropez", "150 Sunny Isles Blvd|250 Sunny Isles Blvd|350 Sunny Isles Blvd", "Sunny Isles Beach", "33160"),
+  B("continuum", "100 South Pointe Dr|50 South Pointe Dr", "Miami Beach", "33139"),
+  B("murano at portofino|murano portofino", "1000 South Pointe Dr", "Miami Beach", "33139"),
+  B("portofino tower|portofino", "300 South Pointe Dr", "Miami Beach", "33139"),
+  B("murano grande", "400 Alton Rd", "Miami Beach", "33139"),
+  B("murano", "1000 South Pointe Dr|400 Alton Rd", "Miami Beach", "33139"),
+  B("apogee", "800 South Pointe Dr", "Miami Beach", "33139"),
+  B("icon south beach", "450 Alton Rd", "Miami Beach", "33139"),
+  B("monad terrace|monad", "1300 Monad Terrace", "Miami Beach", "33139"),
+  B("palau sunset harbour|palau sunset harbor|palau", "1201 20th St", "Miami Beach", "33139"),
+  B("green diamond", "4775 Collins Ave", "Miami Beach", "33140"),
+  B("blue diamond", "4779 Collins Ave", "Miami Beach", "33140"),
+  B("caribbean", "3737 Collins Ave", "Miami Beach", "33140"),
+  B("w south beach", "2201 Collins Ave", "Miami Beach", "33139"),
+  B("setai", "101 20th St", "Miami Beach", "33139"),
+  B("eden house", "6700 Indian Creek Dr", "Miami Beach", "33141"),
+  B("marina palms", "17111 Biscayne Blvd|17201 Biscayne Blvd", "North Miami Beach", "33160"),
+  B("the harbour", "16385 Biscayne Blvd", "North Miami Beach", "33160"),
+  B("peninsula i|peninsula 1", "3301 NE 183rd St", "Aventura", "33160"),
+  B("peninsula ii|peninsula 2|peninsula", "3201 NE 183rd St", "Aventura", "33160"),
+  B("echo aventura", "3250 NE 188th St", "Aventura", "33160"),
+  B("prive|privé", "5000 Island Estates Dr|5500 Island Estates Dr", "Aventura", "33160"),
+  B("bellini", "4100 Island Blvd", "Aventura", "33160"),
+  B("williams island 7000", "7000 Island Blvd", "Aventura", "33160"),
+  B("hidden bay", "3370 Hidden Bay Dr", "Aventura", "33180"),
+  B("echo brickell", "1451 Brickell Ave", "Miami", "33131"),
+  B("asia brickell key|asia", "900 Brickell Key Blvd", "Miami", "33131"),
+  B("carbonell", "901 Brickell Key Blvd", "Miami", "33131"),
+  B("courts brickell key|courts", "801 Brickell Key Blvd", "Miami", "33131"),
+  B("one tequesta point|tequesta i|tequesta 1", "888 Brickell Key Dr", "Miami", "33131"),
+  B("two tequesta point|tequesta ii|tequesta 2|tequesta point", "808 Brickell Key Dr", "Miami", "33131"),
+  B("three tequesta point|tequesta iii|tequesta 3", "848 Brickell Key Dr", "Miami", "33131"),
+  B("jade brickell|jade residences|jade at brickell", "1331 Brickell Bay Dr", "Miami", "33131"),
+  B("epic residences|epic", "200 Biscayne Blvd Way", "Miami", "33131"),
+  B("aston martin", "300 Biscayne Blvd Way", "Miami", "33131"),
+  B("icon brickell", "465 Brickell Ave|475 Brickell Ave|495 Brickell Ave", "Miami", "33131"),
+  B("brickell city centre|brickell city center|reach brickell|rise brickell", "68 SW 7th St|88 SW 7th St", "Miami", "33130"),
+  B("cassa brickell", "201 SW 17th Rd", "Miami", "33129"),
+  B("bristol tower|bristol", "2127 Brickell Ave", "Miami", "33129"),
+  B("opera tower|opera", "1750 N Bayshore Dr", "Miami", "33132"),
+  B("paramount bay", "2020 N Bayshore Dr", "Miami", "33137"),
+  B("paramount miami worldcenter|paramount worldcenter", "851 NE 1st Ave", "Miami", "33132"),
+  B("one paraiso", "3131 NE 7th Ave", "Miami", "33137"),
+  B("paraiso bay", "650 NE 32nd St", "Miami", "33137"),
+  B("gran paraiso", "480 NE 31st St", "Miami", "33137"),
+  B("elysee", "788 NE 23rd St", "Miami", "33137"),
+  B("1000 museum|one thousand museum", "1000 Biscayne Blvd", "Miami", "33132"),
+  B("grovenor house|grovenor", "2627 S Bayshore Dr", "Miami", "33133"),
+  B("grove hill", "2645 S Bayshore Dr", "Miami", "33133"),
+  B("mr c|mr. c|mr.c", "2655 S Bayshore Dr", "Miami", "33133"),
+  B("park grove", "2811 S Bayshore Dr|2821 S Bayshore Dr|2831 S Bayshore Dr", "Miami", "33133"),
+  B("one village place", "4100 Salzedo St", "Coral Gables", "33146"),
+  B("mizner grand", "400 SE 5th Ave|500 SE 5th Ave", "Boca Raton", "33432"),
+  B("toscana", "3700 S Ocean Blvd|3720 S Ocean Blvd|3740 S Ocean Blvd", "Highland Beach", "33487"),
+  B("diplomat residences|diplomat", "3535 S Ocean Dr", "Hollywood", "33019"),
+  B("beach club hallandale|beach club", "1800 S Ocean Dr|1830 S Ocean Dr|1850 S Ocean Dr", "Hallandale Beach", "33009"),
+  B("hyde beach house", "4010 S Ocean Dr", "Hollywood", "33019"),
+];
+// City words that must agree: a "CORAL GABLES" folder rejects a Boca Raton address.
+const CITIES: Record<string, string[]> = {
+  "miami beach": ["miami beach", "33139", "33140", "33141", "33109"], "miami shores": ["miami shores", "33138"], "coral gables": ["coral gables", "33134", "33143", "33146", "33156"],
+  "boca raton": ["boca raton", "33427", "33428", "33431", "33432", "33433", "33434", "33486", "33487", "33496", "33498"], aventura: ["aventura", "33180", "33160"], hollywood: ["hollywood", "33019", "33020", "33021"],
+  "sunny isles": ["sunny isles", "sunny isle", "33160"], "bal harbour": ["bal harbour", "bal harbor", "33154"], "key biscayne": ["key biscayne", "33149"], "fort lauderdale": ["fort lauderdale", "ft lauderdale", "ft. lauderdale", "3330", "3331"],
+  "ft lauderdale": ["fort lauderdale", "ft lauderdale", "3330", "3331"], pompano: ["pompano", "33060", "33062", "33064", "33069"], delray: ["delray", "33444", "33445", "33446", "33483", "33484"], parkland: ["parkland", "33076", "33067"],
+  weston: ["weston", "33326", "33327", "33331", "33332"], pinecrest: ["pinecrest", "33156", "33157"], surfside: ["surfside", "33154"], "north miami beach": ["north miami beach", "33160", "33162"], "north miami": ["north miami", "33181", "33161", "33160"],
+  hallandale: ["hallandale", "33009"], doral: ["doral", "33122", "33166", "33172", "33178"], "coconut grove": ["coconut grove", "33133"], "lighthouse point": ["lighthouse point", "33064"], "gulf stream": ["gulf stream", "33483"],
+  "highland beach": ["highland beach", "33487"], boynton: ["boynton", "33426", "33435", "33436", "33437", "33472", "33473"], jupiter: ["jupiter", "33458", "33469", "33477", "33478"], deerfield: ["deerfield", "33441", "33442"], davie: ["davie", "33314", "33324", "33325", "33328", "33330", "33331"],
+  hialeah: ["hialeah", "33010", "33012", "33013", "33014", "33015", "33016", "33018"], "west palm beach": ["west palm beach", "3340", "3341"], medley: ["medley", "33166"], "miami": ["miami"], "design district": ["33137"], brickell: ["33129", "33130", "33131"], "fisher island": ["fisher island", "33109"],
+  "golden beach": ["golden beach", "33160"], "bay harbor": ["bay harbor", "33154"], "pembroke pines": ["pembroke pines", "33023", "33024", "33025", "33026", "33027", "33028", "33029"], "coral springs": ["coral springs", "33065", "33067", "33071", "33076", "33077"],
+};
+function knownPlace(places: string[]) {
+  const text = places.join(" ");
+  const building = BUILDINGS.find((b) => b.names.some((n) => new RegExp(`(^|\\s)${norm(n).replace(/\s+/g, "\\s+")}(\\s|$)`).test(text))) ?? null;
+  const city = Object.keys(CITIES).filter((c) => c !== "miami" && new RegExp(`(^|\\s)${c}(\\s|$)`).test(text)).sort((a, b) => b.length - a.length)[0] ?? null;
+  return { building, city };
+}
+const streetKey = (s: string) => norm(s).split(" ").slice(0, 2).join(" "); // "9701 collins"
 function placeIn(address: string, places: string[], unit: string | null) {
   const a = norm(address);
   const aw = a.split(" ");
-  const phrase = places.some((p) => p.length >= 4 && a.includes(p)) || places.some((p) => p.split(" ").some((w) => w.length >= 4 && !GENERIC.has(w) && !/^\d+$/.test(w) && aw.includes(w)));
-  // "364 OCEAN DR" and "364 South Ocean Boulevard": same street number.
-  const number = places.some((p) => { const n = p.match(/^(\d{2,6})\s/)?.[1]; return Boolean(n && aw[0] === n); });
   const units = unitsOf(address);
   const unitHit = Boolean(unit && (units.includes(unit) || units.some((u) => /^\d+$/.test(u) && u === unit.replace(/[A-Z]$/, ""))));
   // The folder names a unit and the address names a different one: not this address.
   if (unit && units.length && !unitHit) return false;
+  const { building, city } = knownPlace(places);
+  // A known building: only its own street numbers count ("ST REGIS 1404" is 9701–9705 Collins Ave).
+  if (building) return building.streets.some((s) => a.includes(streetKey(s)));
+  // A known city: an address in another known city is out, whatever else matches.
+  if (city) {
+    const here = CITIES[city].some((k) => a.includes(k));
+    const elsewhere = !here && Object.entries(CITIES).some(([c, ks]) => c !== city && c !== "miami" && ks.some((k) => /[a-z]/.test(k) && a.includes(k)));
+    if (elsewhere) return false;
+    if (here) return true;
+  }
+  const phrase = places.some((p) => p.length >= 4 && a.includes(p)) || places.some((p) => p.split(" ").some((w) => w.length >= 4 && !GENERIC.has(w) && !/^\d+$/.test(w) && aw.includes(w)));
+  // "364 OCEAN DR" and "364 South Ocean Boulevard": same street number.
+  const number = places.some((p) => { const n = p.match(/^(\d{2,6})\s/)?.[1]; return Boolean(n && aw[0] === n); });
   return phrase || number || unitHit;
 }
-// True when the only thing in common is the unit number (the building words differ).
+// True when the only thing in common is the unit number (the building words differ and the building is not a known one).
 function unitOnly(address: string, places: string[], unit: string | null) {
+  if (knownPlace(places).building) return false;
   const specific = places.flatMap((p) => p.split(" ")).filter((w) => w.length >= 4 && !GENERIC.has(w) && !/^\d+$/.test(w));
   return Boolean(unit) && specific.length > 0 && !placeIn(address, places, null);
+}
+/** The address a folder implies on its own: a known building (all its towers) plus the unit. */
+function buildingAddress(places: string[], unit: string | null) {
+  const { building } = knownPlace(places);
+  if (!building) return null;
+  return { text: `${building.streets.join(" / ")}${unit ? " #" + unit : ""}, ${building.city}, FL ${building.zip}`, towers: building.streets.length, name: building.names[0] };
 }
 // Units in a Portal address: "…, 3401, …", "#2103", "Apt 4N" (never the street number or the zip).
 function unitsOf(address: string) {
@@ -196,7 +328,8 @@ function portalMatch(folder: string, people: Person[]) {
   const several = (h: PortalHit) => (h.person.addresses.length > 1 ? " (several addresses, check)" : h.person.addresses.length ? "" : " (no address in Portal)");
   if (placed.length === 1) return pick(placed, (f.firsts.length ? "Portal: same person, address with that place" : "Portal: same surname, address with that place") + (placed[0].address && unitOnly(placed[0].address, placeParts, f.unit) ? " (same unit, building words differ, check)" : ""));
   if (placed.length > 1 && new Set(placed.map((h) => h.address)).size === 1) return pick(placed, "Portal: same client, several records, address with that place");
-  if (strong.length === 1 && f.firsts.length) return pick(strong, "Portal: same person" + (placeParts.length && strong[0].person.addresses.length ? " (Portal address does not name that place, check)" : several(strong[0])));
+  if (strong.length === 1 && f.firsts.length && placeParts.length && strong[0].person.addresses.length) return { sure: null, why: "Portal: same person, but the address there is another job (" + strong[0].person.addresses.join(" / ") + ")", candidates: hits };
+  if (strong.length === 1 && f.firsts.length) return pick(strong, "Portal: same person" + several(strong[0]));
   if (strong.length === 1 && !placeParts.length) return pick(strong, "Portal: only person with that surname" + several(strong[0]));
   // Several records with the same e-mail are the same client.
   const emails = new Set(strong.map((h) => h.person.email.toLowerCase()).filter(Boolean));
@@ -324,9 +457,12 @@ function calendarMatch(folder: string, events: Ev[]) {
   // "17901 Collins Ave" and "17901 Collins Ave, Sunny Isles Beach, FL 33160, USA" are one address:
   // group by the street line and keep the fullest spelling.
   const placedLocs = new Map<string, { n: number; best: string }>();
+  const { building } = knownPlace(f.places.length ? [f.places.join(" ")] : []);
   for (const e of placed) {
     if (!e.location) continue;
     const loc = e.location.trim();
+    // A visit logged at another known building than the folder names does not give the address.
+    if (building && !building.streets.some((st) => norm(loc).includes(streetKey(st)))) continue;
     const k = norm(loc.split(",")[0]).replace(/\b(ave|avenue|st|street|dr|drive|rd|road|blvd|boulevard|ct|court|ln|lane|ter|terrace|pl|place|hwy|highway)\b/g, "").replace(/\s+/g, " ").trim();
     const g = placedLocs.get(k) ?? { n: 0, best: loc };
     g.n++;
@@ -448,11 +584,16 @@ async function main() {
     const placedSure = Boolean(po.sure?.placed) || Boolean(useProposal && (fp.places.length || fp.unit));
     const useCalendar = !placedSure && cal.placedCount >= 1 && cal.placedAddresses === 1 && Boolean(cal.placedAddress) && Boolean(who || prop);
     if (useCalendar) Object.assign(row, { pname: who?.name ?? prop!.cust, pemail: who?.email ?? prop!.email, pphone: who?.phone ?? prop!.phone, paddr: cal.placedAddress });
+    // Portal knows the client and the folder names a known building: the building's address + unit.
+    const bld = buildingAddress(fp.placeText.split(/\s[-–]\s/).map((p) => norm(p.replace(/#\s*[0-9]{1,5}\s?[A-Za-z]?\b/g, " "))).filter(Boolean), fp.unit);
+    const useBuilding = !placedSure && !useCalendar && Boolean(bld) && Boolean(who || prop);
+    if (useBuilding) Object.assign(row, { pname: who?.name ?? prop!.cust, pemail: who?.email ?? prop!.email, pphone: who?.phone ?? prop!.phone, paddr: bld!.text });
+    else if (!placedSure && !useCalendar && bld && !row.paddr) Object.assign(row, { paddr: bld.text });
     // The old invoices only speak when Portal has nothing.
-    const useOld = Boolean(om.sure) && !po.sure && !pp.sure && !useCalendar;
+    const useOld = Boolean(om.sure) && !po.sure && !pp.sure && !useCalendar && !useBuilding;
     if (useOld) Object.assign(row, { pname: om.sure!.client, pemail: om.sure!.email, pphone: om.sure!.phone, paddr: om.sure!.address });
     // Calendar alone: at least 2 visits naming that place / unit, one location.
-    const calendarOnly = !useCalendar && !po.sure && !pp.sure && !useOld && cal.placedCount >= 2 && cal.placedAddresses === 1 && cal.placedAddress;
+    const calendarOnly = !useCalendar && !useBuilding && !po.sure && !pp.sure && !useOld && cal.placedCount >= 2 && cal.placedAddresses === 1 && cal.placedAddress;
     if (calendarOnly) Object.assign(row, { pname: "", paddr: cal.placedAddress });
     const fred = answers.get(k);
     if (fred) Object.assign(row, { decision: fred.decision, other: fred.other, why: "your answer (sheet)" });
@@ -462,6 +603,7 @@ async function main() {
       if (m.sure) {
         Object.assign(row, { decision: "Other", other: m.sure.title, why: `CRM: ${m.why}` });
       } else if (useCalendar) Object.assign(row, { decision: "New", why: `Portal has the client (${po.sure || po.candidates.length ? "person" : "proposals"}); calendar: ${cal.placedCount} visit${cal.placedCount > 1 ? "s" : ""} at that place give the address` });
+      else if (useBuilding) Object.assign(row, { decision: "New", why: `Portal has the client (${po.sure || po.candidates.length ? "person" : "proposals"}); folder names ${bld!.name} → building address${bld!.towers > 1 ? " (" + bld!.towers + " towers, check which)" : ""}` });
       else if (useProposal) Object.assign(row, { decision: "New", why: pp.why });
       else if (po.sure) Object.assign(row, { decision: "New", why: po.why });
       else if (useOld) Object.assign(row, { decision: "New", why: om.why });
