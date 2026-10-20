@@ -129,7 +129,7 @@ function loadPortal(): Person[] {
   }
   return [...seen.values()];
 }
-type PortalHit = { person: Person; address: string | null; placed: boolean; first: boolean; exact: boolean; unitConflict: boolean; company: boolean };
+type PortalHit = { person: Person; address: string | null; placed: boolean; first: boolean; exact: boolean; unitConflict: boolean; company: boolean; building: boolean };
 // A folder place ("CORAL GABLES", "JADE SIGNATURE #903", "811 SOLAR ISLE") is in an address when the
 // whole phrase is, or one of its own words (not a city word like "miami") is, or the unit is.
 const GENERIC = new Set("beach miami north south east west bay island islands isle isles key keys park lake ocean grove point harbour harbor palm coral club estates estate tower towers village city county river creek shores springs sunny brickell collins biscayne pointe".split(" "));
@@ -182,13 +182,15 @@ function portalMatch(folder: string, people: Person[]) {
     const units = p.addresses.flatMap(unitsOf);
     const unitConflict = Boolean(f.unit && !placedAddr && units.length > 0 && !units.includes(f.unit));
     const company = !first && p.tokens.length >= 3;
-    hits.push({ person: p, address: placedAddr ?? p.addresses[0] ?? null, placed: Boolean(placedAddr), first, exact: exact || byEmail, unitConflict, company });
+    // A record named exactly like the folder head ("Marina Palms" for "MARINA PALMS #310") is the building, not a client.
+    const building = !f.firsts.length && norm(p.name) === f.surnames.join(" ") && !p.email;
+    hits.push({ person: p, address: placedAddr ?? p.addresses[0] ?? null, placed: Boolean(placedAddr), first, exact: exact || byEmail, unitConflict, company, building });
   }
   if (!hits.length) return empty;
   // An exact surname beats a one-letter-off one ("Karina" is not "Marina").
   const exacts = hits.filter((h) => h.exact);
   if (exacts.length) hits.splice(0, hits.length, ...exacts);
-  const strong = hits.filter((h) => !h.unitConflict && (f.firsts.length ? h.first : (h.exact || h.placed) && !h.company));
+  const strong = hits.filter((h) => !h.unitConflict && (f.firsts.length ? h.first : (h.exact || h.placed) && !h.company && !(h.building && !h.placed)));
   const placed = strong.filter((h) => h.placed);
   const pick = (hs: PortalHit[], why: string) => ({ sure: hs[0], why, candidates: hits });
   const several = (h: PortalHit) => (h.person.addresses.length > 1 ? " (several addresses, check)" : h.person.addresses.length ? "" : " (no address in Portal)");
@@ -199,7 +201,7 @@ function portalMatch(folder: string, people: Person[]) {
   // Several records with the same e-mail are the same client.
   const emails = new Set(strong.map((h) => h.person.email.toLowerCase()).filter(Boolean));
   if (strong.length > 1 && emails.size === 1 && strong.every((h) => h.person.email) && !placeParts.length) return pick(strong, "Portal: same client, several records (check address)");
-  const why = hits.every((h) => h.unitConflict) ? "Portal: has the name but the unit differs, check" : strong.length === 1 ? "Portal: surname only and the address does not name that place, check" : "Portal: several people, pick one";
+  const why = hits.every((h) => h.unitConflict) ? "Portal: has the name but the unit differs, check" : hits.every((h) => h.building) ? "Portal: only a record named like the building, no client, check" : strong.length === 1 ? "Portal: surname only and the address does not name that place, check" : "Portal: several people, pick one";
   return { sure: null, why, candidates: hits };
 }
 
