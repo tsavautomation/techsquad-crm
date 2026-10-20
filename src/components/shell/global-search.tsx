@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Search, X } from "lucide-react";
+import { ArrowLeft, Loader2, Navigation, Search, X } from "lucide-react";
 import { globalSearchAction, type SearchGroup, type SearchHit } from "@/lib/search/actions";
 import { cn } from "@/lib/utils";
 import { TileIcon } from "./tile-icons";
@@ -76,13 +76,13 @@ function Results({ s, active, onPick, onHover }: { s: ReturnType<typeof useSearc
             {g.hits.map((h: SearchHit) => {
               const i = ++n;
               return (
-                <li key={h.href + h.title}>
+                <li key={h.href + h.title} className="relative">
                   <Link
                     href={h.href}
                     onClick={onPick}
                     onMouseEnter={() => onHover(i)}
                     data-hit={i}
-                    className={cn("mx-1 flex min-h-11 flex-col justify-center rounded-lg px-3 py-1.5 pl-[52px]", i === active ? "bg-secondary" : "hover:bg-muted")}
+                    className={cn("mx-1 flex min-h-11 flex-col justify-center rounded-lg px-3 py-1.5 pl-[52px]", h.address && "pr-28", i === active ? "bg-secondary" : "hover:bg-muted")}
                   >
                     <span className="flex items-center gap-2">
                       <span className="truncate text-sm font-medium">{h.title}</span>
@@ -90,6 +90,18 @@ function Results({ s, active, onPick, onHover }: { s: ReturnType<typeof useSearc
                     </span>
                     {h.line && <span className="truncate text-xs text-text-2">{h.line}</span>}
                   </Link>
+                  {/* F25-b (Fred 2026-10-20): on the road, one tap to Google Maps directions for a project. */}
+                  {h.address && (
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(h.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute top-1/2 right-2 inline-flex h-9 -translate-y-1/2 items-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:brightness-95"
+                    >
+                      <Navigation className="size-3.5" aria-hidden /> {t("Drive there")}
+                    </a>
+                  )}
                 </li>
               );
             })}

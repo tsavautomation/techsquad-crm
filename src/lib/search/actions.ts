@@ -6,6 +6,8 @@ import { getTable, REGISTRY } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { recordHref, tableHref } from "@/registry/routes";
 import type { TableDef } from "@/registry/types";
+import { mapAddress } from "@/lib/field-day/load";
+import type { Address } from "@/lib/records/values";
 import { matchLine, orFilters, searchColumns, searchWords, selectColumns } from "./query";
 import { getLang } from "@/i18n/server";
 import { localizeTable } from "@/i18n/registry";
@@ -15,6 +17,8 @@ export type SearchHit = {
   title: string;
   line?: string;
   archived: boolean;
+  /** F25-b: a project's job address, for the "Drive there" button (Google Maps directions). */
+  address?: string | null;
 };
 export type SearchGroup = {
   table: string;
@@ -47,7 +51,8 @@ export async function globalSearchAction(q: string): Promise<SearchGroup[]> {
   const groups = await Promise.all(
     tables.map(async (t): Promise<SearchGroup | null> => {
       const cols = searchColumns(localizeTable(t, lang));
-      let query = db.from(t.name).select(selectColumns(t, cols)).is("deleted_at", null);
+      // F25-b: projects also bring their job address for the "Drive there" button.
+      let query = db.from(t.name).select(t.name === "projects" ? `${selectColumns(t, cols)},job_address` : selectColumns(t, cols)).is("deleted_at", null);
       for (const f of orFilters(cols, words)) query = query.or(f);
       const { data, error } = await query.order("archived_at", { ascending: false, nullsFirst: true }).order("updated_at", { ascending: false }).limit(PER_TABLE);
       if (error || !data?.length) return null;
@@ -63,6 +68,7 @@ export async function globalSearchAction(q: string): Promise<SearchGroup[]> {
           title: String(r.title ?? "") || `${localizeTable(t, lang).itemLabel} ${r.id}`,
           line: matchLine(r, cols, words),
           archived: Boolean(r.archived_at),
+          address: t.name === "projects" ? mapAddress((r.job_address as Address | null) ?? null) : undefined,
         })),
       };
     }),

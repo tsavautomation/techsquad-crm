@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
 type View = "day" | "week" | "team" | "list";
-type Props = { weekStart: string; today: string; view: View; day: string; tech: number | null; visits: CalVisit[]; people: CalPerson[]; canEdit: boolean; canCreate: boolean; orphans?: number };
+type Props = { weekStart: string; today: string; view: View; day: string; tech: number | null; visits: CalVisit[]; people: CalPerson[]; canEdit: boolean; canCreate: boolean; orphans?: number; /** F25-a: why the Day view jumped ahead ("No visits today: showing …"). */ note?: string | null };
 
 const HS = 6; // first hour shown
 const HE = 21; // last hour shown (exclusive)
@@ -32,7 +32,7 @@ const endOf = (v: CalVisit) => fromMinutes(Math.min(24 * 60 - 1, toMinutes(v.sta
 const windowText = (v: CalVisit) => (v.window > 0 ? `${clock(v.start.slice(11))}–${clock(fromMinutes(toMinutes(v.start.slice(11)) + v.window))}` : clock(v.start.slice(11)));
 const visitHref = (v: CalVisit) => `/schedule/visits/${v.id}`;
 
-export function Calendar({ weekStart, today, view, day, tech, visits, people, canEdit, canCreate, orphans = 0 }: Props) {
+export function Calendar({ weekStart, today, view, day, tech, visits, people, canEdit, canCreate, orphans = 0, note = null }: Props) {
   const tr = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -131,6 +131,7 @@ export function Calendar({ weekStart, today, view, day, tech, visits, people, ca
         )}
       </div>
 
+      {note && <p className="mb-3 rounded-[10px] bg-info-bg px-3 py-2 text-sm text-info-fg">{note}</p>}
       {orphans > 0 && (
         <p className="mb-3 rounded-[10px] bg-warn-bg px-3 py-2 text-sm text-warn-fg">
           {tr("{n} visits from Google Calendar have no project yet.", { n: orphans })}{" "}

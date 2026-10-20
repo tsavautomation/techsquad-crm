@@ -1827,4 +1827,6 @@ export const PT: Record<string, string> = {
   "Installed on this job": "Instalado neste trabalho",
   "Staged at the warehouse for this job": "Separado no depósito para este trabalho",
   "Equipment": "Equipamento",
+  // ---------------------------------------------------------------- F25 (2026-10-20): calendar opens on the day
+  "No visits today: showing {date}, the next day with visits.": "Sem visitas hoje: mostrando {date}, o próximo dia com visitas.",
 };
