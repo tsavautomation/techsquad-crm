@@ -65,7 +65,8 @@ function parseFolder(name: string) {
   const firsts = comma ? nameWords(comma[2]) : [];
   const placeText = parts.slice(1).join(" ");
   const places = words(placeText).filter((w) => !/^\d+$/.test(w));
-  const unit = unitOf((placeText + " " + head).match(/#\s*([0-9]{1,5}\s?[A-Za-z]?)\b/)?.[1]);
+  // "#1405", or a bare number closing the place ("AQUALINA ESTATES 1405", "TRUMP II 4204").
+  const unit = unitOf((placeText + " " + head).match(/#\s*([0-9]{1,5}\s?[A-Za-z]?)\b/)?.[1]) ?? (placeText && !/#/.test(placeText) ? unitOf(placeText.match(/\s(\d{3,5}[A-Za-z]?)\s*$/)?.[1]) : null);
   return { surnames, firsts, places, unit, head, placeText };
 }
 
@@ -191,7 +192,7 @@ function portalMatch(folder: string, people: Person[]) {
   const placed = strong.filter((h) => h.placed);
   const pick = (hs: PortalHit[], why: string) => ({ sure: hs[0], why, candidates: hits });
   const several = (h: PortalHit) => (h.person.addresses.length > 1 ? " (several addresses, check)" : h.person.addresses.length ? "" : " (no address in Portal)");
-  if (placed.length === 1) return pick(placed, f.firsts.length ? "Portal: same person, address with that place" : "Portal: same surname, address with that place");
+  if (placed.length === 1) return pick(placed, (f.firsts.length ? "Portal: same person, address with that place" : "Portal: same surname, address with that place") + (placed[0].address && unitOnly(placed[0].address, placeParts, f.unit) ? " (same unit, building words differ, check)" : ""));
   if (placed.length > 1 && new Set(placed.map((h) => h.address)).size === 1) return pick(placed, "Portal: same client, several records, address with that place");
   if (strong.length === 1 && f.firsts.length) return pick(strong, "Portal: same person" + (placeParts.length && strong[0].person.addresses.length ? " (Portal address does not name that place, check)" : several(strong[0])));
   if (strong.length === 1 && !placeParts.length) return pick(strong, "Portal: only person with that surname" + several(strong[0]));
@@ -317,7 +318,21 @@ function calendarMatch(folder: string, events: Ev[]) {
     if (tech && tech.length < 25) techs.set(tech, (techs.get(tech) ?? 0) + 1);
   }
   const dates = hits.map((e) => e.starts_at.slice(0, 10)).sort();
-  return { events: hits.length, address: [...locs.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null, addresses: locs.size, first: dates[0] ?? null, last: dates.at(-1) ?? null, techs: [...techs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t]) => t).join(", "), sample: hits.slice(0, 2).map((e) => e.summary).join(" | ") };
+  // Visits whose title names the folder's place or unit: their location is the job address.
+  // "17901 Collins Ave" and "17901 Collins Ave, Sunny Isles Beach, FL 33160, USA" are one address:
+  // group by the street line and keep the fullest spelling.
+  const placedLocs = new Map<string, { n: number; best: string }>();
+  for (const e of placed) {
+    if (!e.location) continue;
+    const loc = e.location.trim();
+    const k = norm(loc.split(",")[0]).replace(/\b(ave|avenue|st|street|dr|drive|rd|road|blvd|boulevard|ct|court|ln|lane|ter|terrace|pl|place|hwy|highway)\b/g, "").replace(/\s+/g, " ").trim();
+    const g = placedLocs.get(k) ?? { n: 0, best: loc };
+    g.n++;
+    if (loc.length > g.best.length) g.best = loc;
+    placedLocs.set(k, g);
+  }
+  const placedAddress = [...placedLocs.values()].sort((a, b) => b.n - a.n)[0]?.best ?? null;
+  return { events: hits.length, address: [...locs.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null, addresses: locs.size, placedCount: placed.length, placedAddresses: placedLocs.size, placedAddress: placedAddress && f.unit && !placedAddress.replace(/[^A-Za-z0-9]/g, "").toUpperCase().includes(f.unit) ? `${placedAddress} #${f.unit}` : placedAddress, first: dates[0] ?? null, last: dates.at(-1) ?? null, techs: [...techs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t]) => t).join(", "), sample: hits.slice(0, 2).map((e) => e.summary).join(" | ") };
 }
 
 async function main() {
@@ -422,9 +437,21 @@ async function main() {
     if (pp.hits.length) Object.assign(row, { props: pp.hits.slice(0, 6).map(showP).join(" | ") + (pp.hits.length > 6 ? ` | … ${pp.hits.length} proposals` : "") });
     const om = oldMatch(f.folder, old);
     if (om.hits.length) Object.assign(row, { old: om.hits.slice(0, 5).map(showO).join(" | ") });
+    // Portal knows the client (person or proposals, even at the designer's office address) and the
+    // calendar has visits whose title names the folder's place or unit: the visits' location is the
+    // job address (Fred, Eskenazi - Acqualina 1405: Portal has 12 Navicon proposals, calendar 40 visits).
+    const who = po.sure?.person ?? po.candidates[0]?.person ?? null;
+    const prop = pp.sure ?? pp.hits.find((h) => h.p.cust)?.p ?? pp.hits[0]?.p ?? null;
+    const fp = parseFolder(f.folder);
+    const placedSure = Boolean(po.sure?.placed) || Boolean(useProposal && (fp.places.length || fp.unit));
+    const useCalendar = !placedSure && cal.placedCount >= 1 && cal.placedAddresses === 1 && Boolean(cal.placedAddress) && Boolean(who || prop);
+    if (useCalendar) Object.assign(row, { pname: who?.name ?? prop!.cust, pemail: who?.email ?? prop!.email, pphone: who?.phone ?? prop!.phone, paddr: cal.placedAddress });
     // The old invoices only speak when Portal has nothing.
-    const useOld = Boolean(om.sure) && !po.sure && !pp.sure;
+    const useOld = Boolean(om.sure) && !po.sure && !pp.sure && !useCalendar;
     if (useOld) Object.assign(row, { pname: om.sure!.client, pemail: om.sure!.email, pphone: om.sure!.phone, paddr: om.sure!.address });
+    // Calendar alone: at least 2 visits naming that place / unit, one location.
+    const calendarOnly = !useCalendar && !po.sure && !pp.sure && !useOld && cal.placedCount >= 2 && cal.placedAddresses === 1 && cal.placedAddress;
+    if (calendarOnly) Object.assign(row, { pname: "", paddr: cal.placedAddress });
     const fred = answers.get(k);
     if (fred) Object.assign(row, { decision: fred.decision, other: fred.other, why: "your answer (sheet)" });
     else if (moved.has(k) && byId.has(moved.get(k)!)) Object.assign(row, { decision: "Other", other: byId.get(moved.get(k)!)!.title, why: "folder already moved into this project in OneDrive" });
@@ -432,9 +459,11 @@ async function main() {
       const m = crmMatch(f.folder, projects, cities);
       if (m.sure) {
         Object.assign(row, { decision: "Other", other: m.sure.title, why: `CRM: ${m.why}` });
-      } else if (useProposal) Object.assign(row, { decision: "New", why: pp.why });
+      } else if (useCalendar) Object.assign(row, { decision: "New", why: `Portal has the client (${po.sure || po.candidates.length ? "person" : "proposals"}); calendar: ${cal.placedCount} visit${cal.placedCount > 1 ? "s" : ""} at that place give the address` });
+      else if (useProposal) Object.assign(row, { decision: "New", why: pp.why });
       else if (po.sure) Object.assign(row, { decision: "New", why: po.why });
       else if (useOld) Object.assign(row, { decision: "New", why: om.why });
+      else if (calendarOnly) Object.assign(row, { decision: "New", why: `calendar only: ${cal.placedCount} visits at that place, one address (not in Portal, check)` });
       else if (po.candidates.length || pp.hits.length || om.hits.length) Object.assign(row, { decision: "", why: [po.candidates.length ? po.why : "", pp.hits.length ? pp.why : "", om.hits.length ? om.why : ""].filter(Boolean).join("; ") });
       else if (cal.events && parseFolder(f.folder).firsts.length && cal.addresses === 1) Object.assign(row, { decision: "", why: "not in Portal; calendar has the person (check address)" });
       else Object.assign(row, { decision: "", why: m.candidates.length ? `not in Portal; CRM maybe: ${m.candidates.map((c) => c.p.title).join(" | ")}` : "not in Portal" });
