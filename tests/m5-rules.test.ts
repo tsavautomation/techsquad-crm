@@ -110,3 +110,20 @@ describe("Products (Jessica 2026-10-20: an empty product could be saved)", () =>
     expect(withModel.required.has("model")).toBe(true); // the filled one stays marked required while the other is empty
   });
 });
+
+describe("Visits (SPEC §9.1 J-k: internal events without a project)", () => {
+  it("a client visit needs its project; an internal event hides it and needs a subject", () => {
+    const client = run("visits", fresh("visits"));
+    expect(client.values.kind).toBe("Visit");
+    expect(client.required.has("project_id")).toBe(true);
+    expect(client.visible.has("subject")).toBe(false);
+    const internal = run("visits", { ...fresh("visits"), kind: "Internal", project_id: 12 });
+    expect(internal.visible.has("project_id")).toBe(false);
+    expect(internal.required.has("project_id")).toBe(false);
+    expect(internal.values.project_id).toBeNull();
+    expect(internal.visible.has("subject")).toBe(true);
+    expect(internal.required.has("subject")).toBe(true);
+    expect(internal.visible.has("billing")).toBe(false);
+    expect(internal.visible.has("maintenance_visit")).toBe(false);
+  });
+});

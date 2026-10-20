@@ -9,7 +9,7 @@ import { inPeriod, periods, scorecard, type Period, type Scorecard, type ScoreRe
 // F19-e Tech scorecards: the rows behind one person's (or everyone's) scorecard, read with the
 // viewer's client (RLS applies). One visit owed = one row; the Visit = Report rule gives its status.
 
-type VisitRow = { id: number; project_id: number | null; status: string | null; starts_at: string; technician_id: number | null; checked_in_at: string | null; checked_out_at: string | null; visits_team: { target_id: number }[]; projects: { title: string | null } | null };
+type VisitRow = { id: number; project_id: number | null; kind?: string | null; status: string | null; starts_at: string; technician_id: number | null; checked_in_at: string | null; checked_out_at: string | null; visits_team: { target_id: number }[]; projects: { title: string | null } | null };
 type ReportRow = { id: number; visit_id: number | null; project_id: number | null; date: string | null; created_at: string; report: string | null; result: string | null; materials_used: string | null; problems: string | null; reality_flags: { level: string }[] | null; team: { target_id: number }[] };
 
 export type PersonScorecards = { employeeId: number; week: Scorecard; month: Scorecard; lastMonth: Scorecard };
@@ -20,7 +20,7 @@ async function load(db: SupabaseClient, from: string, to: string, people: number
   const since = settings.report_rule.since;
   const { data: vs } = await db
     .from("visits")
-    .select("id, project_id, status, starts_at, technician_id, checked_in_at, checked_out_at, visits_team(target_id), projects(title)")
+    .select("id, project_id, kind, status, starts_at, technician_id, checked_in_at, checked_out_at, visits_team(target_id), projects(title)")
     .gte("starts_at", fromDateTimeLocalET(`${from}T00:00`))
     .lt("starts_at", fromDateTimeLocalET(`${addDays(to, 1)}T00:00`))
     .is("deleted_at", null)
@@ -33,7 +33,7 @@ async function load(db: SupabaseClient, from: string, to: string, people: number
       project: v.projects?.title ?? "",
       date: toDateTimeLocalET(v.starts_at).slice(0, 10),
       people: [...new Set([v.technician_id, ...v.visits_team.map((t) => t.target_id)].filter((x): x is number => x !== null))],
-      cancelled: v.status === "Cancelled",
+      cancelled: v.status === "Cancelled" || v.kind === "Internal", // J-k: internal events owe no report
       attended: Boolean(v.checked_in_at || v.checked_out_at || v.status === "Done"),
     }))
     .filter((v) => visitCounts(v, since) && (!people || v.people.some((p) => people.includes(p))));

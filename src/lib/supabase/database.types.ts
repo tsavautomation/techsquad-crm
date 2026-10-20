@@ -5433,6 +5433,7 @@ export type Database = {
           google_synced_at: string | null
           id: number
           instructions: string | null
+          kind: string
           locked: boolean
           maintenance_visit: boolean
           on_way_at: string | null
@@ -5446,6 +5447,7 @@ export type Database = {
           service_type: string | null
           starts_at: string | null
           status: string | null
+          subject: string | null
           submitted_at: string | null
           technician_id: number | null
           title: string | null
@@ -5472,6 +5474,7 @@ export type Database = {
           google_synced_at?: string | null
           id?: number
           instructions?: string | null
+          kind?: string
           locked?: boolean
           maintenance_visit?: boolean
           on_way_at?: string | null
@@ -5485,6 +5488,7 @@ export type Database = {
           service_type?: string | null
           starts_at?: string | null
           status?: string | null
+          subject?: string | null
           submitted_at?: string | null
           technician_id?: number | null
           title?: string | null
@@ -5511,6 +5515,7 @@ export type Database = {
           google_synced_at?: string | null
           id?: number
           instructions?: string | null
+          kind?: string
           locked?: boolean
           maintenance_visit?: boolean
           on_way_at?: string | null
@@ -5524,6 +5529,7 @@ export type Database = {
           service_type?: string | null
           starts_at?: string | null
           status?: string | null
+          subject?: string | null
           submitted_at?: string | null
           technician_id?: number | null
           title?: string | null
@@ -6231,6 +6237,7 @@ export type Database = {
           google_synced_at: string | null
           id: number
           instructions: string | null
+          kind: string
           locked: boolean
           maintenance_visit: boolean
           on_way_at: string | null
@@ -6244,6 +6251,57 @@ export type Database = {
           service_type: string | null
           starts_at: string | null
           status: string | null
+          subject: string | null
+          submitted_at: string | null
+          technician_id: number | null
+          title: string | null
+          updated_at: string
+          updated_by: string | null
+          vehicle_id: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "visits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      visit_undo_step: {
+        Args: { p_id: number }
+        Returns: {
+          access_notes: string | null
+          address: Json | null
+          archived_at: string | null
+          arrival_window: string | null
+          auto_closed_at: string | null
+          auto_closed_reason: string | null
+          billing: string | null
+          checked_in_at: string | null
+          checked_out_at: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          duration: string | null
+          google_etag: string | null
+          google_event_id: string | null
+          google_synced_at: string | null
+          id: number
+          instructions: string | null
+          kind: string
+          locked: boolean
+          maintenance_visit: boolean
+          on_way_at: string | null
+          project_id: number | null
+          proposed_from_report_id: number | null
+          reality_flags: Json | null
+          repeat: string | null
+          repeat_count: number | null
+          return_task_id: number | null
+          series_id: string | null
+          service_type: string | null
+          starts_at: string | null
+          status: string | null
+          subject: string | null
           submitted_at: string | null
           technician_id: number | null
           title: string | null

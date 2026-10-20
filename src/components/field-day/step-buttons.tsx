@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Car, Loader2, LogIn, LogOut } from "lucide-react";
+import { Car, Loader2, LogIn, LogOut, Undo2 } from "lucide-react";
 import { toast } from "sonner";
-import { visitStepAction } from "@/lib/field-day/actions";
+import { visitStepAction, visitUndoStepAction } from "@/lib/field-day/actions";
 import { clockAction } from "@/lib/time-clock/actions";
 import { currentPosition } from "@/lib/time-clock/geo-client";
 import { cn } from "@/lib/utils";
@@ -41,6 +41,17 @@ export function StepButtons({ id, status }: { id: number; status: string }) {
       setBusy(null);
     });
   };
+  const undo = () => {
+    setBusy("undo");
+    setError(null);
+    start(async () => {
+      const r = await visitUndoStepAction(id);
+      if (!r.ok) setError(t(r.message));
+      else toast.success(t(status === "On the way" ? "On my way undone." : "Check-in undone."));
+      router.refresh();
+      setBusy(null);
+    });
+  };
   const icon = (step: string, Icon: typeof Car) => (busy === step && pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Icon className="size-4" aria-hidden />);
 
   return (
@@ -62,6 +73,12 @@ export function StepButtons({ id, status }: { id: number; status: string }) {
           </button>
         )}
       </div>
+      {/* J-n (Jessica 2026-10-20): pressed the wrong visit? Take the last step back; its time and position go with it. */}
+      {(status === "On the way" || status === "On site") && (
+        <button type="button" className="inline-flex h-11 items-center gap-1.5 self-start text-sm text-muted-foreground underline-offset-2 hover:underline disabled:opacity-60" disabled={pending} onClick={undo}>
+          {busy === "undo" && pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Undo2 className="size-4" aria-hidden />} {t(status === "On the way" ? "Undo On my way" : "Undo check-in")}
+        </button>
+      )}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}

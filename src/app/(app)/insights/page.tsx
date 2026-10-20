@@ -402,6 +402,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
             <Stat label={tr("Active plans")} value={String(active.length)} />
             <Stat label={tr("Renewal due")} value={String(plans.filter((p) => p.maintenance_status === "Renewal Alert").length)} />
             <Stat label={tr("Expired")} value={String(plans.filter((p) => p.maintenance_status === "Expired").length)} />
+            <Stat label={tr("Renewal declined")} value={String(plans.filter((p) => p.maintenance_status === "Renewal Declined").length)} />
             {showMoney && <Stat label={tr("Yearly value of active plans")} value={money.format(active.reduce((n, p) => n + Number(p.maintenance_amount ?? 0), 0))} />}
           </div>
           {[...tiers.entries()].map(([t, v]) => (

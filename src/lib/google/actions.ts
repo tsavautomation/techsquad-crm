@@ -156,7 +156,7 @@ export async function importStatusAction(): Promise<Result<{ status: ImportStatu
     count("unmatched"),
     count("skipped"),
     count("new"),
-    db.from("visits").select("id", { count: "exact", head: true }).is("project_id", null).is("deleted_at", null).then((r) => r.count ?? 0),
+    db.from("visits").select("id", { count: "exact", head: true }).is("project_id", null).neq("kind", "Internal").is("deleted_at", null).then((r) => r.count ?? 0),
   ]);
   const st = s.import;
   const busy = importBusy(st);

@@ -34,6 +34,8 @@ import { PerformancePanel } from "@/components/performance/performance-panel";
 import { DeficiencyPanel } from "@/components/reports/deficiency-panel";
 import { EmployeeDeficiencies } from "@/components/reports/employee-deficiencies";
 import { PendingItems } from "@/components/project/pending-items";
+import { MaintenancePlan } from "@/components/project/maintenance-plan";
+import { FieldDataPanel } from "@/components/field-day/field-data-panel";
 import { PunchListPanel } from "@/components/project/punch-list-panel";
 import { SiteHistory } from "@/components/project/site-history";
 import { ProjectEquipment } from "@/components/project/equipment";
@@ -174,6 +176,8 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "project" && <SiteHistory projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <ProjectEquipment projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <PendingItems projectId={recordId} user={user} />}
+      {t.detailAddon === "project" && <MaintenancePlan projectId={recordId} user={user} />}
+      {t.detailAddon === "visit" && canModify && <FieldDataPanel visitId={recordId} />}
       {t.detailAddon === "project" && <PunchListPanel projectId={recordId} user={user} />}
       {t.name === "job_reports" && <RealityPanel table="job_reports" id={recordId} />}
       {t.detailAddon === "project" && <ProjectHours projectId={recordId} user={user} />}

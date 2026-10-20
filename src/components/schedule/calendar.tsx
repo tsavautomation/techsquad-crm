@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
@@ -291,6 +291,12 @@ function WeekGrid({ days, today, visits, name, dayHref, canEdit, canCreate, drag
 function DayGrid({ day, today, visits, people, canEdit, canCreate, drag, setDrag, move, newHref }: Omit<GridProps, "days"> & { day: string; people: CalPerson[] }) {
   const tr = useT();
   const router = useRouter();
+  // J-o: today's Day view opens on the current hour instead of 6 AM.
+  useEffect(() => {
+    if (day !== today) return;
+    const h = Math.max(HS, Math.min(HE - 1, new Date().getHours() - 1));
+    document.getElementById(`hour-${h}`)?.scrollIntoView({ block: "start" });
+  }, [day, today]);
   const hours = Array.from({ length: HE - HS }, (_, i) => HS + i);
   const columns: CalPerson[] = people.filter((p) => visits.some((v) => v.techId === p.id || v.team.includes(p.id)));
   if (visits.some((v) => v.techId === null)) columns.push({ id: 0, name: tr("Unassigned"), color: "#9ca3af" });
@@ -310,7 +316,7 @@ function DayGrid({ day, today, visits, people, canEdit, canCreate, drag, setDrag
         <div className="grid" style={{ gridTemplateColumns: `3.5rem repeat(${columns.length}, minmax(11rem, 1fr))`, height: (HE - HS) * PX }}>
           <div className="relative">
             {hours.map((h) => (
-              <div key={h} className="absolute right-1 -translate-y-1/2 text-[11px] text-muted-foreground" style={{ top: (h - HS) * PX }}>
+              <div key={h} id={`hour-${h}`} className="absolute right-1 -translate-y-1/2 scroll-mt-16 text-[11px] text-muted-foreground" style={{ top: (h - HS) * PX }}>
                 {h > HS ? clock(fromMinutes(h * 60)).replace(":00", "") : ""}
               </div>
             ))}
@@ -461,12 +467,16 @@ function TeamGrid({ days, today, visits, people, canEdit, canCreate, drag, setDr
 
 function DayList({ days, today, visits, name }: { days: string[]; today: string; visits: CalVisit[]; name: Map<number, string> }) {
   const tr = useT();
+  // J-o (Jessica 2026-10-20, item 4): the list still shows the whole week, but opens positioned on today.
+  useEffect(() => {
+    if (days.indexOf(today) > 0) document.getElementById(`day-${today}`)?.scrollIntoView({ block: "start" });
+  }, [days, today]);
   return (
     <div className="flex flex-col gap-4">
       {days.map((d) => {
         const items = visits.filter((v) => v.start.slice(0, 10) === d);
         return (
-          <section key={d}>
+          <section key={d} id={`day-${d}`} className="scroll-mt-20">
             <h2 className={cn("mb-1 text-sm font-semibold", d === today ? "text-primary" : "text-muted-foreground")}>
               {tr(dayLabel(d).dow)} {dayLabel(d).md}
               {d === today && ` · ${tr("Today")}`}

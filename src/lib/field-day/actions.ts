@@ -39,8 +39,9 @@ export async function visitStepAction(id: number, step: Step, geo: Geo | null = 
   revalidatePath("/schedule", "layout");
   if (step !== "check_out") return { ok: true };
 
-  // Check-out opens the Job Report, filled in from the visit.
-  const v = data as { project_id: number | null; technician_id: number | null };
+  // Check-out opens the Job Report, filled in from the visit (J-k: an internal event, warehouse or training, has none).
+  const v = data as { project_id: number | null; technician_id: number | null; kind: string | null };
+  if (v.kind === "Internal") return { ok: true, askClockOut: await lastVisitWhileClockedIn(db, user, id) };
   const { data: team } = await db.from("visits_team").select("target_id").eq("record_id", id);
   const people = [v.technician_id, ...((team ?? []) as { target_id: number }[]).map((x) => x.target_id)].filter((x): x is number => typeof x === "number");
   const q = new URLSearchParams({ visit_id: String(id), back: "/" });
@@ -95,5 +96,18 @@ export async function saveFieldDayAction(input: FieldDaySettings): Promise<{ ok:
   const { error } = await db.from("app_settings").upsert({ key: "field_day", value: clean });
   if (error) return { ok: false, message: /row-level security|permission/i.test(error.message) ? "You don't have permission to do that." : error.message };
   revalidatePath("/admin/field-day");
+  return { ok: true };
+}
+
+/** J-n (Jessica 2026-10-20): take the last step back — On the way → Scheduled, On site → the step before — and drop its time-clock entry. */
+export async function visitUndoStepAction(id: number): Promise<StepResult> {
+  await requireUser();
+  if (!Number.isInteger(id)) return { ok: false, message: "Unknown visit." };
+  const db = await recordsDb();
+  const { error } = await db.rpc("visit_undo_step", { p_id: id });
+  if (error) return { ok: false, message: error.code === "42501" || error.code === "P0002" || error.code === "22023" ? error.message : "Could not undo. Check your connection and try again." };
+  after(runAutomationsSafely);
+  revalidatePath("/");
+  revalidatePath("/schedule", "layout");
   return { ok: true };
 }

@@ -673,7 +673,9 @@ export const projects: TableDef = {
           "label": "Renewal Alert",
           "value": "Renewal Alert",
           "color": "#ff9800"
-        }
+        },
+        // J-l (Jessica 2026-10-20): the client said no to renewing; the plan leaves the renewal alerts.
+        { label: "Renewal Declined", value: "Renewal Declined", color: "#6b7280", added: true }
       ]
     },
     {

@@ -45,6 +45,8 @@ type Row = {
   instructions: string | null;
   technician_id: number | null;
   project_id: number | null;
+  kind: string | null;
+  subject: string | null;
   visits_team: { target_id: number }[];
   projects: { title: string | null; job_address: Address | null } | null;
   reality_flags: { level: string }[] | null;
@@ -60,7 +62,7 @@ export async function loadWeek(week: string | undefined): Promise<{ weekStart: s
   const [{ data }, { data: emp }] = await Promise.all([
     db
       .from("visits")
-      .select("id, title, starts_at, duration, arrival_window, status, service_type, instructions, technician_id, project_id, reality_flags, visits_team(target_id), projects(title, job_address)")
+      .select("id, title, starts_at, duration, arrival_window, status, service_type, instructions, technician_id, project_id, kind, subject, reality_flags, visits_team(target_id), projects(title, job_address)")
       .gte("starts_at", from)
       .lt("starts_at", to)
       .is("deleted_at", null)
@@ -78,8 +80,9 @@ export async function loadWeek(week: string | undefined): Promise<{ weekStart: s
   const visits: CalVisit[] = rows.map((v) => ({
     id: v.id,
     // F15: a visit from Google Calendar that found no project keeps Google's title and shows grey.
-    project: v.projects?.title ?? (v.project_id ? `Project #${v.project_id}` : v.title || "No project"),
-    noProject: !v.project_id,
+    // J-k: an internal event (warehouse, training…) shows its subject.
+    project: v.projects?.title ?? (v.project_id ? `Project #${v.project_id}` : v.kind === "Internal" ? v.subject || "Internal" : v.title || "No project"),
+    noProject: !v.project_id && v.kind !== "Internal",
     address: line(v.projects?.job_address ?? null),
     start: toDateTimeLocalET(v.starts_at),
     duration: Number(v.duration ?? 60),
@@ -87,7 +90,7 @@ export async function loadWeek(week: string | undefined): Promise<{ weekStart: s
     techId: v.technician_id,
     team: v.visits_team.map((t) => t.target_id),
     status: v.status ?? "Scheduled",
-    color: (v.technician_id && colors.get(v.technician_id)) || (!v.project_id && v.status !== "Cancelled" ? "#9ca3af" : statusField.options?.find((o) => o.value === v.status)?.color ?? "#2563eb"),
+    color: (v.technician_id && colors.get(v.technician_id)) || (!v.project_id && v.kind !== "Internal" && v.status !== "Cancelled" ? "#9ca3af" : statusField.options?.find((o) => o.value === v.status)?.color ?? "#2563eb"),
     statusColor: statusField.options?.find((o) => o.value === v.status)?.color ?? "#2563eb",
     service: v.service_type,
     instructions: v.instructions,

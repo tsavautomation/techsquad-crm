@@ -18,7 +18,7 @@ import { planLate, planMissing, planReminders, statusFor, visitCounts, type Late
 export const RULE_AUTOMATION_ID = 900601;
 export const LATE_AUTOMATION_ID = 900602;
 
-type VisitRow = { id: number; project_id: number | null; status: string | null; starts_at: string; technician_id: number | null; checked_in_at: string | null; checked_out_at: string | null; visits_team: { target_id: number }[]; projects: { title: string | null } | null };
+type VisitRow = { id: number; project_id: number | null; kind?: string | null; status: string | null; starts_at: string; technician_id: number | null; checked_in_at: string | null; checked_out_at: string | null; visits_team: { target_id: number }[]; projects: { title: string | null } | null };
 type ReportRow = { id: number; visit_id: number | null; project_id: number | null; date: string | null; created_at: string; team: { target_id: number }[] };
 
 const REPORT_TEAM = joinTable(getTable("job_reports"), getTable("job_reports").fields.find((f) => f.name === "team_ids")!);
@@ -30,12 +30,13 @@ function toRuleVisit(v: VisitRow): RuleVisit {
     project: v.projects?.title ?? (v.project_id ? `Project #${v.project_id}` : `Visit #${v.id}`),
     date: toDateTimeLocalET(v.starts_at).slice(0, 10),
     people: [...new Set([v.technician_id, ...v.visits_team.map((t) => t.target_id)].filter((x): x is number => x !== null))],
-    cancelled: v.status === "Cancelled",
+    // J-k: an internal event (warehouse, training…) owes no report, so it counts as cancelled for the rule.
+    cancelled: v.status === "Cancelled" || v.kind === "Internal",
     attended: Boolean(v.checked_in_at || v.checked_out_at || v.status === "Done"),
   };
 }
 
-const VISIT_COLS = "id, project_id, status, starts_at, technician_id, checked_in_at, checked_out_at, visits_team(target_id), projects(title)";
+const VISIT_COLS = "id, project_id, kind, status, starts_at, technician_id, checked_in_at, checked_out_at, visits_team(target_id), projects(title)";
 
 async function loadVisits(db: SupabaseClient, date: string): Promise<RuleVisit[]> {
   const { data } = await db.from("visits").select(VISIT_COLS).gte("starts_at", fromDateTimeLocalET(`${date}T00:00`)).lt("starts_at", fromDateTimeLocalET(`${addDays(date, 1)}T00:00`)).is("deleted_at", null).is("archived_at", null);

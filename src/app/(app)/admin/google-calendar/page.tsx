@@ -37,7 +37,7 @@ export default async function GoogleCalendarPage(props: PageProps<"/admin/google
     const db = await recordsDb();
     const [{ data: emp }, np] = await Promise.all([
       db.from("employees").select("id, title, status").is("deleted_at", null).neq("status", "Inactive").order("title"),
-      adminDb().from("visits").select("id", { count: "exact", head: true }).is("project_id", null).is("deleted_at", null),
+      adminDb().from("visits").select("id", { count: "exact", head: true }).is("project_id", null).neq("kind", "Internal").is("deleted_at", null),
     ]);
     employees = ((emp ?? []) as { id: number; title: string | null }[]).map((e) => ({ id: e.id, name: e.title ?? `#${e.id}` }));
     needsProject = np.count ?? 0;

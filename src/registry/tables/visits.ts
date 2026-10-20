@@ -25,13 +25,29 @@ export const visits: TableDef = {
   itemLabel: "Visit",
   newRecordLabel: "New Visit",
   // F24-c: the technician in the title tells two visits of the same project at the same hour apart (the Job Report's Visit list).
-  titleFormula: "{project_id} – {starts_at} – {technician_id}",
+  // J-k: an internal event has no project; its subject takes the project's place in the title.
+  titleFormula: "{project_id}{subject} – {starts_at} – {technician_id}",
   origin: "new",
   formAddon: "visit",
   detailAddon: "visit",
   fields: [
     { name: "title", label: "Title", type: "text", hidden: true, legacy: NEW },
-    { name: "project_id", label: "Project", type: "lookup", required: true, heading: "Visit", lookup: { table: "projects" }, legacy: NEW },
+    // J-k (Jessica 2026-10-20, SPEC §9.1): a client visit needs its project; an internal event (warehouse, training…) has a subject instead.
+    {
+      name: "kind",
+      label: "Type",
+      type: "select",
+      required: true,
+      default: "Visit",
+      heading: "Visit",
+      options: [
+        { label: "Client visit", value: "Visit", color: "#2563eb" },
+        { label: "Internal (warehouse, training…)", value: "Internal", color: "#6b7280" },
+      ],
+      legacy: NEW,
+    },
+    { name: "project_id", label: "Project", type: "lookup", lookup: { table: "projects" }, legacy: NEW },
+    { name: "subject", label: "What for", type: "text", startsHidden: true, maxLength: 80, placeholder: "Warehouse, training, meeting…", legacy: NEW },
     { name: "starts_at", label: "Date and start time", type: "datetime", required: true, legacy: NEW },
     {
       name: "duration",
@@ -123,6 +139,23 @@ export const visits: TableDef = {
     },
     { name: "repeat_count", label: "Number of visits in the series", type: "number", createOnly: true, startsHidden: true, default: "4", help: "Including this one (2 to 24).", legacy: NEW },
   ],
-  rules: [{ id: 900001, title: "Show series size when repeating", when: [{ field: "repeat", op: "not_empty" }], then: [{ do: "show", field: "repeat_count" }, { do: "require", field: "repeat_count" }] }],
+  rules: [
+    { id: 900001, title: "Show series size when repeating", when: [{ field: "repeat", op: "not_empty" }], then: [{ do: "show", field: "repeat_count" }, { do: "require", field: "repeat_count" }] },
+    // J-k: a client visit needs its project; an internal event hides the project and the client-only fields and needs a subject.
+    { id: 900002, title: "Client visit needs a project", when: [{ field: "kind", op: "equal", value: "Visit" }], then: [{ do: "require", field: "project_id" }, { do: "clear", field: "subject" }] },
+    {
+      id: 900003,
+      title: "Internal event has a subject instead of a project",
+      when: [{ field: "kind", op: "equal", value: "Internal" }],
+      then: [
+        { do: "hide", field: "project_id" },
+        { do: "clear", field: "project_id" },
+        { do: "show", field: "subject" },
+        { do: "require", field: "subject" },
+        { do: "hide", field: "billing" },
+        { do: "hide", field: "maintenance_visit" },
+      ],
+    },
+  ],
   legacy: { table: "" },
 };

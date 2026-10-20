@@ -27,6 +27,7 @@ export default async function NeedsProjectPage(props: PageProps<"/schedule/needs
     .from("visits")
     .select("id, title, starts_at, instructions, technician_id, status, google_event_id, employees:technician_id(title)", { count: "exact" })
     .is("project_id", null)
+    .neq("kind", "Internal") // J-k: internal events have no project by design
     .is("deleted_at", null)
     .order("starts_at", { ascending: false })
     .range((page - 1) * PAGE, page * PAGE - 1);

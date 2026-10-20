@@ -460,6 +460,8 @@ export async function pull(): Promise<PullResult | { skipped: string }> {
 
 type DirtyVisit = {
   id: number;
+  kind: string | null;
+  subject: string | null;
   starts_at: string | null;
   duration: string | null;
   arrival_window: string | null;
@@ -491,7 +493,7 @@ export async function push(limit = 300): Promise<PushResult | { skipped: string 
   if (!ids.length) return r;
   const { data } = await db
     .from("visits")
-    .select("id, starts_at, duration, arrival_window, status, service_type, instructions, access_notes, technician_id, vehicle_id, google_event_id, deleted_at, archived_at, projects(title, job_address), visits_team(target_id)")
+    .select("id, starts_at, duration, arrival_window, status, service_type, instructions, access_notes, technician_id, vehicle_id, kind, subject, google_event_id, deleted_at, archived_at, projects(title, job_address), visits_team(target_id)")
     .in("id", ids);
   const visits = (data ?? []) as unknown as DirtyVisit[];
   const people = [...new Set(visits.flatMap((v) => [v.technician_id, ...v.visits_team.map((t) => t.target_id)]).filter((x): x is number => x !== null))];
@@ -523,7 +525,7 @@ export async function push(limit = 300): Promise<PushResult | { skipped: string 
       const body = visitToEvent(
         {
           id: v.id,
-          projectTitle: v.projects?.title ?? null,
+          projectTitle: v.projects?.title ?? (v.kind === "Internal" ? v.subject : null) ?? null,
           address: oneLine(v.projects?.job_address ?? null),
           startsAt: v.starts_at,
           duration: Number(v.duration ?? 60),

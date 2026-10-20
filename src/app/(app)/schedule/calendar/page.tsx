@@ -43,7 +43,7 @@ export default async function CalendarPage(props: PageProps<"/schedule/calendar"
   const [{ weekStart, visits, people }, orphans] = await Promise.all([
     loadWeek(view === "day" ? weekStartOf(day) : sp.week),
     // F15: visits from Google Calendar still waiting for their project.
-    db.from("visits").select("id", { count: "exact", head: true }).is("project_id", null).is("deleted_at", null).not("google_event_id", "is", null).then((r) => r.count ?? 0),
+    db.from("visits").select("id", { count: "exact", head: true }).is("project_id", null).neq("kind", "Internal").is("deleted_at", null).not("google_event_id", "is", null).then((r) => r.count ?? 0),
   ]);
 
   return (
