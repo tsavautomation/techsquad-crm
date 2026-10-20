@@ -233,6 +233,60 @@ export async function uploadBytes(folderPath: string, name: string, bytes: Buffe
 
 export type DriveChild = { id: string; name: string; size?: number; lastModifiedDateTime?: string; folder?: { childCount: number }; file?: { mimeType?: string } };
 
+// ---------------------------------------------------------------- sharing links
+
+/** Graph "shares" id of a OneDrive sharing link (1drv.ms / sharepoint). */
+const shareId = (url: string) => "u!" + Buffer.from(url).toString("base64").replace(/=+$/, "").replace(/\//g, "_").replace(/\+/g, "-");
+type ItemRef = { driveId: string; id: string };
+const shareRoots = new Map<string, Promise<ItemRef>>();
+/** The drive item a sharing link points at (the connected account must be able to open the link). */
+function sharedRoot(shareUrl: string): Promise<ItemRef> {
+  let p = shareRoots.get(shareUrl);
+  if (!p) {
+    p = graph<{ id: string; parentReference: { driveId: string } }>(`/shares/${shareId(shareUrl)}/driveItem?$select=id,parentReference`).then((it) => ({ driveId: it.parentReference.driveId, id: it.id }));
+    shareRoots.set(shareUrl, p);
+  }
+  return p;
+}
+async function listItem(ref: ItemRef): Promise<DriveChild[]> {
+  const out: DriveChild[] = [];
+  let next: string | undefined = `/drives/${ref.driveId}/items/${ref.id}/children?$top=999&$select=id,name,size,lastModifiedDateTime,folder,file`;
+  while (next) {
+    const page: { value?: DriveChild[]; "@odata.nextLink"?: string } = await graph(next.startsWith("http") ? next.slice(GRAPH.length) : next);
+    out.push(...(page.value ?? []));
+    next = page["@odata.nextLink"];
+  }
+  return out;
+}
+/** Walk `subPath` ("Client/Sub") from the shared root by name (the shares endpoint takes no path segment). */
+const walkCache = new Map<string, Promise<DriveChild[]>>();
+async function sharedItem(shareUrl: string, subPath: string): Promise<ItemRef> {
+  let ref = await sharedRoot(shareUrl);
+  for (const name of subPath.split("/").filter(Boolean)) {
+    const key = `${ref.driveId}/${ref.id}`;
+    let kids = walkCache.get(key);
+    if (!kids) { kids = listItem(ref); walkCache.set(key, kids); }
+    const hit = (await kids).find((c) => c.name === name);
+    if (!hit) throw Object.assign(new Error(`OneDrive: "${name}" not found under the shared folder`), { status: 404 });
+    ref = { driveId: ref.driveId, id: hit.id };
+  }
+  return ref;
+}
+
+/** Children of a folder behind a sharing link; `subPath` walks into it. */
+export async function listShared(shareUrl: string, subPath = ""): Promise<DriveChild[]> {
+  return listItem(await sharedItem(shareUrl, subPath));
+}
+
+/** Bytes of a file behind a sharing link, by its path inside the shared folder. */
+export async function downloadShared(shareUrl: string, subPath: string): Promise<Buffer> {
+  const ref = await sharedItem(shareUrl, subPath);
+  // /content answers with a redirect to a pre-authenticated URL; fetch follows it (and drops the bearer header).
+  const res = await fetch(`${GRAPH}/drives/${ref.driveId}/items/${ref.id}/content`, { headers: { Authorization: `Bearer ${await accessToken()}` } });
+  if (!res.ok) throw new Error(`OneDrive download ${res.status} for ${subPath}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 /** Every child of a folder path (F16 Report archive reads PROJECTS TS this way). Empty when the folder is missing. */
 export async function listChildren(path: string): Promise<DriveChild[]> {
   const out: DriveChild[] = [];

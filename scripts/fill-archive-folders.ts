@@ -24,6 +24,7 @@ const args = process.argv.slice(2);
 const SHEET_IN = args.includes("--sheet") ? args[args.indexOf("--sheet") + 1] : null;
 const PORTAL = "docs/portal-people.txt";
 const PROPOSALS = "docs/portal-proposals.json";
+const OLD = "docs/old-invoices.json";
 const OUT = "docs/report-archive-folders-filled.xlsx";
 
 type Pageable = { range(from: number, to: number): PromiseLike<{ data: unknown; error: { message: string } | null }> };
@@ -249,6 +250,49 @@ function proposalMatch(folder: string, proposals: Proposal[]) {
   return { sure: null, why: withAddr.length ? "Portal proposals: none names that place / unit, check" : "Portal proposals found, but without an address", hits };
 }
 
+// ---- Old invoices 2011–2016 (docs/old-invoices.json, from scripts/list-old-invoices.ts) ----
+// One OneDrive folder per client under "DROPBOX OLD INVOICES / TECH SQUAD", with the QuickBooks
+// estimates and invoices: client name, address and project read out of the PDFs.
+type OldDoc = { name: string; client: string; clientAddress: string; project: string; addresses: string[]; emails: string[]; phones: string[] };
+type OldClient = { folder: string; client: string; address: string; project: string; email: string; phone: string; tokens: string[] };
+function loadOld(): OldClient[] {
+  if (!existsSync(OLD)) return [];
+  const raw = Object.values(JSON.parse(readFileSync(OLD, "utf8")) as Record<string, { folder: string; docs: OldDoc[] }>);
+  return raw.map((f) => {
+    const docs = f.docs.filter((d) => d.client || d.clientAddress || d.addresses.length);
+    const fl = (s: string) => /\bFL\b|Florida/i.test(s);
+    const best = docs.find((d) => fl(d.clientAddress)) ?? docs.find((d) => d.addresses.some(fl)) ?? docs[0];
+    const address = best ? (fl(best.clientAddress) ? best.clientAddress : best.addresses.find(fl) ?? best.clientAddress) : "";
+    const clients = [...new Set(docs.map((d) => d.client).filter(Boolean))];
+    return { folder: f.folder, client: clients.join(" / "), address, project: [...new Set(docs.map((d) => d.project).filter(Boolean))].join(" / "), email: docs.flatMap((d) => d.emails)[0] ?? "", phone: docs.flatMap((d) => d.phones)[0] ?? "", tokens: [...new Set([...words(f.folder), ...clients.flatMap(words)])] };
+  });
+}
+type OldHit = { c: OldClient; placed: boolean; named: boolean };
+function oldMatch(folder: string, old: OldClient[]) {
+  const f = parseFolder(folder);
+  const none = { sure: null as OldClient | null, why: "", hits: [] as OldHit[] };
+  if (!f.surnames.length) return none;
+  const placeParts = f.placeText.split(/\s[-–]\s/).map((p) => norm(p.replace(/#\s*[0-9]{1,5}\s?[A-Za-z]?\b/g, " "))).filter(Boolean);
+  const hits: OldHit[] = [];
+  for (const c of old) {
+    if (!f.surnames.every((s) => c.tokens.some((t) => same(s, t)))) continue;
+    if (f.firsts.length && !anyMatch(f.firsts, c.tokens)) continue;
+    // Only the address itself can place a client; the folder or project name alone is a hint.
+    const placed = Boolean(c.address) && placeIn(c.address, placeParts, f.unit);
+    const named = !placed && placeParts.length > 0 && (placeIn(c.project, placeParts, f.unit) || placeIn(c.folder, placeParts, f.unit));
+    hits.push({ c, placed, named });
+  }
+  if (!hits.length) return none;
+  const withAddr = hits.filter((h) => h.c.address);
+  const pool = placeParts.length || f.unit ? withAddr.filter((h) => h.placed) : withAddr;
+  const addrs = new Set(pool.map((h) => h.c.address));
+  if (addrs.size === 1) return { sure: pool[0].c, why: `old invoices 2011–2016: folder "${pool[0].c.folder}"` + (placeParts.length || f.unit ? "" : " (folder names no place)") + " (check)", hits };
+  if (addrs.size > 1) return { sure: null, why: `old invoices: ${addrs.size} different addresses, pick one`, hits };
+  const named = hits.find((h) => h.named);
+  if (named) return { sure: null, why: `old invoices: folder "${named.c.folder}" names that place, but its address does not match, check`, hits };
+  return { sure: null, why: withAddr.length ? "old invoices: none names that place / unit, check" : "old invoices found, but without an address", hits };
+}
+
 type Ev = { summary: string; location: string | null; starts_at: string };
 function calendarMatch(folder: string, events: Ev[]) {
   const f = parseFolder(folder);
@@ -326,6 +370,8 @@ async function main() {
   const byId = new Map(projects.map((p) => [p.id, p]));
   const people = loadPortal();
   const proposals = loadProposals();
+  const old = loadOld();
+  const showO = (h: OldHit) => `${h.c.folder} [${h.c.client}]${h.c.address ? ": " + h.c.address : ""}${h.c.project ? " (" + h.c.project.slice(0, 40) + ")" : ""}`;
   const showP = (h: ProposalHit) => `#${h.p.n} ${h.p.name ?? ""} [${h.p.cust}]${h.p.addr ? ": " + h.p.addr : ""}`;
   // Calendar events (the company calendar, synced).
   const events = (await all<Ev>(() => db.from("calendar_events").select("summary, location, starts_at").not("summary", "is", null).order("starts_at"))).filter((e) => e.summary);
@@ -349,6 +395,7 @@ async function main() {
     { header: "Portal: address (for the new project)", key: "paddr", width: 50 },
     { header: "Portal: other people found", key: "pothers", width: 50 },
     { header: "Portal: proposals found (#, name, address)", key: "props", width: 60 },
+    { header: "Old invoices 2011-2016: folder / client / address", key: "old", width: 60 },
     { header: "Calendar events", key: "events", width: 9 },
     { header: "Calendar address (most used)", key: "address", width: 46 },
     { header: "Calendar first", key: "cfirst", width: 11 },
@@ -373,6 +420,11 @@ async function main() {
     const useProposal = pp.sure && (!po.sure || !po.sure.placed);
     if (useProposal) Object.assign(row, { pname: pp.sure!.cust, pemail: pp.sure!.email, pphone: pp.sure!.phone, paddr: pp.sure!.addr });
     if (pp.hits.length) Object.assign(row, { props: pp.hits.slice(0, 6).map(showP).join(" | ") + (pp.hits.length > 6 ? ` | … ${pp.hits.length} proposals` : "") });
+    const om = oldMatch(f.folder, old);
+    if (om.hits.length) Object.assign(row, { old: om.hits.slice(0, 5).map(showO).join(" | ") });
+    // The old invoices only speak when Portal has nothing.
+    const useOld = Boolean(om.sure) && !po.sure && !pp.sure;
+    if (useOld) Object.assign(row, { pname: om.sure!.client, pemail: om.sure!.email, pphone: om.sure!.phone, paddr: om.sure!.address });
     const fred = answers.get(k);
     if (fred) Object.assign(row, { decision: fred.decision, other: fred.other, why: "your answer (sheet)" });
     else if (moved.has(k) && byId.has(moved.get(k)!)) Object.assign(row, { decision: "Other", other: byId.get(moved.get(k)!)!.title, why: "folder already moved into this project in OneDrive" });
@@ -382,7 +434,8 @@ async function main() {
         Object.assign(row, { decision: "Other", other: m.sure.title, why: `CRM: ${m.why}` });
       } else if (useProposal) Object.assign(row, { decision: "New", why: pp.why });
       else if (po.sure) Object.assign(row, { decision: "New", why: po.why });
-      else if (po.candidates.length || pp.hits.length) Object.assign(row, { decision: "", why: [po.candidates.length ? po.why : "", pp.hits.length ? pp.why : ""].filter(Boolean).join("; ") });
+      else if (useOld) Object.assign(row, { decision: "New", why: om.why });
+      else if (po.candidates.length || pp.hits.length || om.hits.length) Object.assign(row, { decision: "", why: [po.candidates.length ? po.why : "", pp.hits.length ? pp.why : "", om.hits.length ? om.why : ""].filter(Boolean).join("; ") });
       else if (cal.events && parseFolder(f.folder).firsts.length && cal.addresses === 1) Object.assign(row, { decision: "", why: "not in Portal; calendar has the person (check address)" });
       else Object.assign(row, { decision: "", why: m.candidates.length ? `not in Portal; CRM maybe: ${m.candidates.map((c) => c.p.title).join(" | ")}` : "not in Portal" });
     }
