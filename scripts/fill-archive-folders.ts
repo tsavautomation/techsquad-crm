@@ -469,7 +469,9 @@ function calendarMatch(folder: string, events: Ev[]) {
     if (loc.length > g.best.length) g.best = loc;
     placedLocs.set(k, g);
   }
-  const placedAddress = [...placedLocs.values()].sort((a, b) => b.n - a.n)[0]?.best ?? null;
+  let placedAddress = [...placedLocs.values()].sort((a, b) => b.n - a.n)[0]?.best ?? null;
+  // "17901 collins" with no city: the known building completes it.
+  if (placedAddress && building && !placedAddress.includes(",")) placedAddress = `${placedAddress}, ${building.city}, FL ${building.zip}`;
   return { events: hits.length, address: [...locs.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null, addresses: locs.size, placedCount: placed.length, placedAddresses: placedLocs.size, placedAddress: placedAddress && f.unit && !placedAddress.replace(/[^A-Za-z0-9]/g, "").toUpperCase().includes(f.unit) ? `${placedAddress} #${f.unit}` : placedAddress, first: dates[0] ?? null, last: dates.at(-1) ?? null, techs: [...techs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t]) => t).join(", "), sample: hits.slice(0, 2).map((e) => e.summary).join(" | ") };
 }
 
