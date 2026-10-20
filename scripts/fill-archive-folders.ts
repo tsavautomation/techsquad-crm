@@ -2,20 +2,27 @@
  * Fill the Report archive decisions sheet (F16-d) for the folders still without a project, using
  * what the CRM already knows: the projects (deep name match, as scripts/move-projects-ts.ts),
  * the folders already decided on Admin › Report archive, the PROJECTS TS → project moves (OD-f/g),
- * and the Google Calendar events synced into calendar_events (title "Tech - Client - Place" + location).
+ * the Portal.io people export (docs/portal-people.txt: the client's name, e-mail, phone and job
+ * addresses, the source of truth for client data) and the Google Calendar events synced into
+ * calendar_events (title "Tech - Client - Place" + location), used only as a second opinion.
  *
  *   npx tsx --env-file=.env.local scripts/fill-archive-folders.ts [--sheet <Fred's answers.xlsx>]
  *
  * Writes docs/report-archive-folders-filled.xlsx: Fred's own answers are kept; the rest get a
- * proposed decision (Project 1 / Project 2 / Other + name / New) with the evidence beside it.
- * Nothing is written to the database.
+ * proposed decision (Other + project name / New) with the evidence beside it.
+ * A "New" is proposed only when Portal.io has the person (surname and first name, or the only
+ * person with that surname); the address, e-mail and phone come from Portal. Folders Portal does
+ * not know are left blank with whatever the calendar says beside them. Nothing is written to the
+ * database.
  */
 import ExcelJS from "exceljs";
+import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, { auth: { persistSession: false } });
 const args = process.argv.slice(2);
 const SHEET_IN = args.includes("--sheet") ? args[args.indexOf("--sheet") + 1] : null;
+const PORTAL = "docs/portal-people.txt";
 const OUT = "docs/report-archive-folders-filled.xlsx";
 
 type Pageable = { range(from: number, to: number): PromiseLike<{ data: unknown; error: { message: string } | null }> };
@@ -30,7 +37,7 @@ async function all<T>(q: () => Pageable): Promise<T[]> {
 }
 const norm = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const key = (s: string) => s.trim().toUpperCase().replace(/\s+/g, " ");
-const STOP = new Set("the and of e y de da do dos das mr mrs ms dr res residence residencia project proj house home apt apartment unit suite ste ph old new fl florida usa ave av st street dr drive rd road blvd ct ln way n s w ne nw se sw tower towers condo condominium bldg building office inc llc".split(" "));
+const STOP = new Set("the and of e y de da do dos das mr mrs ms dr res residence residencia project proj house home apt apartment unit suite ste ph old new fl florida usa ave av st street dr drive rd road blvd ct ln way n s w ne nw se sw tower towers condo condominium bldg building office inc llc corp".split(" "));
 const GEO = new Set("beach miami north south east west bay island islands isle isles key keys park lake ocean grove point harbour harbor palm coral gables boca raton aventura hollywood brickell pinecrest surfside shores springs sunny delray pompano weston parkland jupiter york nassau estates estate club tower towers village city county river creek".split(" "));
 const words = (s: unknown) => norm(s).split(" ").filter((w) => w && !STOP.has(w));
 const nameWords = (s: unknown) => words(s).filter((w) => !GEO.has(w) && !/^\d+$/.test(w));
@@ -48,7 +55,7 @@ type Project = { id: number; title: string; titleTokens: string[]; ownerFirst: s
 const unitOf = (s: unknown) => (s ? norm(s).replace(/\b(apt|unit|suite|ste|ph)\b/g, " ").replace(/\s+/g, "").toUpperCase() || null : null);
 
 function parseFolder(name: string) {
-  const raw = name.replace(/\s[-–]\s*\d{4,6}$/, "").replace(/\([^)]*\)/g, " ").trim();
+  const raw = name.replace(/\s[-–]\s*\d{4,6}$/, "").replace(/^x+(?=[A-Z])/i, "").replace(/\([^)]*\)/g, " ").trim();
   const parts = raw.split(/\s[-–]\s/).map((s) => s.trim()).filter(Boolean);
   const head = parts[0] ?? raw;
   const comma = head.match(/^([^,]+),\s*(.+)$/);
@@ -87,6 +94,105 @@ function crmMatch(folder: string, projects: Project[], cities: Set<string>) {
   return { sure: null, why: "", candidates: scored.slice(0, 2) };
 }
 
+// ---- Portal.io people (docs/portal-people.txt) ----
+// One line per search term: "TERM : Name ; e-mail ; phone ; address / address || Name ; …".
+// E-mails were saved with " at " instead of "@" (the browser output filter); undone here.
+type Person = { name: string; email: string; phone: string; addresses: string[]; tokens: string[]; emailJoined: string };
+function splitAddresses(s: string): string[] {
+  const parts = s.split(" / ").map((x) => x.trim()).filter(Boolean);
+  const out: string[] = [];
+  for (const p of parts) {
+    const prev = out.at(-1);
+    // "3401 North Miami Avenue, 224 / 227, Miami, FL" is one address with two units.
+    if (prev && /,\s*\d{1,5}[A-Za-z]?$/.test(prev) && /^\d{1,5}[A-Za-z]?,/.test(p)) out[out.length - 1] = prev + " / " + p;
+    else out.push(p);
+  }
+  return out;
+}
+function loadPortal(): Person[] {
+  const seen = new Map<string, Person>();
+  for (const line of readFileSync(PORTAL, "utf8").split(/\r?\n/)) {
+    const m = line.match(/^(.+?) : (.*)$/);
+    if (!m || /^none$/i.test(m[2].trim())) continue;
+    for (const chunk of m[2].split(" || ")) {
+      const [name = "", em = "", phone = "", addr = ""] = chunk.split(" ; ").map((x) => x.trim());
+      if (!name) continue;
+      const email = em.replace(/ at /g, "@");
+      const id = norm(name) + "|" + email.toLowerCase();
+      if (seen.has(id)) continue;
+      const emailJoined = norm(email.split("@")[0] + " " + (email.split("@")[1]?.split(".")[0] ?? "")).replace(/ /g, "");
+      seen.set(id, { name, email, phone, addresses: splitAddresses(addr), tokens: words(name), emailJoined });
+    }
+  }
+  return [...seen.values()];
+}
+type PortalHit = { person: Person; address: string | null; placed: boolean; first: boolean; exact: boolean; unitConflict: boolean; company: boolean };
+// A folder place ("CORAL GABLES", "JADE SIGNATURE #903", "811 SOLAR ISLE") is in an address when the
+// whole phrase is, or one of its own words (not a city word like "miami") is, or the unit is.
+const GENERIC = new Set("beach miami north south east west bay island islands isle isles key keys park lake ocean grove point harbour harbor palm coral club estates estate tower towers village city county river creek shores springs sunny brickell collins biscayne pointe".split(" "));
+function placeIn(address: string, places: string[], unit: string | null) {
+  const a = norm(address);
+  const aw = a.split(" ");
+  const phrase = places.some((p) => p.length >= 4 && a.includes(p)) || places.some((p) => p.split(" ").some((w) => w.length >= 4 && !GENERIC.has(w) && !/^\d+$/.test(w) && aw.includes(w)));
+  // "364 OCEAN DR" and "364 South Ocean Boulevard": same street number.
+  const number = places.some((p) => { const n = p.match(/^(\d{2,6})\s/)?.[1]; return Boolean(n && aw[0] === n); });
+  const units = unitsOf(address);
+  const unitHit = Boolean(unit && (units.includes(unit) || units.some((u) => /^\d+$/.test(u) && u === unit.replace(/[A-Z]$/, ""))));
+  return phrase || number || unitHit;
+}
+// Units in a Portal address: "…, 3401, …", "#2103", "Apt 4N" (never the street number or the zip).
+function unitsOf(address: string) {
+  const parts = address.split(",").map((x) => x.trim());
+  const out: string[] = [];
+  for (const [i, p] of parts.entries()) {
+    const m = p.match(/^(?:#|apt|unit|suite|ste|ph)?\s*(\d{1,5}\s?[A-Za-z]?)$/i) ?? (i > 0 ? p.match(/(?:#|apt|unit|suite|ste|ph)\s*(\d{1,5}\s?[A-Za-z]?)\b/i) : null);
+    if (m && !(i === parts.length - 1 && /^\d{5}$/.test(m[1]))) out.push(unitOf(m[1])!);
+    else if (i === 0) { const h = p.match(/#\s*(\d{1,5}\s?[A-Za-z]?)\b/); if (h) out.push(unitOf(h[1])!); }
+  }
+  return out;
+}
+function portalMatch(folder: string, people: Person[]) {
+  const f = parseFolder(folder);
+  const empty = { sure: null as PortalHit | null, why: "", candidates: [] as PortalHit[] };
+  if (!f.surnames.length) return empty;
+  const placeParts = f.placeText.split(/\s[-–]\s/).map((p) => norm(p.replace(/#\s*[0-9]{1,5}\s?[A-Za-z]?\b/g, " "))).filter(Boolean);
+  const joined = f.surnames.join("");
+  const hits: PortalHit[] = [];
+  for (const p of people) {
+    // Every surname word must be in the person name (one typo allowed in long names); a company
+    // folder ("THE WALL PAPER COMPANY") may also sit in the e-mail domain.
+    const exact = f.surnames.every((s) => p.tokens.includes(s));
+    const byName = exact || f.surnames.every((s) => p.tokens.some((t) => same(s, t)));
+    const byEmail = !byName && f.surnames.length >= 2 && joined.length >= 6 && norm(p.email.split("@")[1] ?? "").replace(/ /g, "").includes(joined);
+    if (!byName && !byEmail) continue;
+    const first = f.firsts.length > 0 && anyMatch(f.firsts, p.tokens);
+    // Same surname, different first name: not this person (a one-word company name may still be).
+    if (f.firsts.length && !first && !byEmail && p.tokens.length > 1) continue;
+    const placedAddr = p.addresses.find((a) => placeIn(a, placeParts, f.unit));
+    const units = p.addresses.flatMap(unitsOf);
+    const unitConflict = Boolean(f.unit && !placedAddr && units.length > 0 && !units.includes(f.unit));
+    const company = !first && p.tokens.length >= 3;
+    hits.push({ person: p, address: placedAddr ?? p.addresses[0] ?? null, placed: Boolean(placedAddr), first, exact: exact || byEmail, unitConflict, company });
+  }
+  if (!hits.length) return empty;
+  // An exact surname beats a one-letter-off one ("Karina" is not "Marina").
+  const exacts = hits.filter((h) => h.exact);
+  if (exacts.length) hits.splice(0, hits.length, ...exacts);
+  const strong = hits.filter((h) => !h.unitConflict && (f.firsts.length ? h.first : (h.exact || h.placed) && !h.company));
+  const placed = strong.filter((h) => h.placed);
+  const pick = (hs: PortalHit[], why: string) => ({ sure: hs[0], why, candidates: hits });
+  const several = (h: PortalHit) => (h.person.addresses.length > 1 ? " (several addresses, check)" : h.person.addresses.length ? "" : " (no address in Portal)");
+  if (placed.length === 1) return pick(placed, f.firsts.length ? "Portal: same person, address with that place" : "Portal: same surname, address with that place");
+  if (placed.length > 1 && new Set(placed.map((h) => h.address)).size === 1) return pick(placed, "Portal: same client, several records, address with that place");
+  if (strong.length === 1 && f.firsts.length) return pick(strong, "Portal: same person" + (placeParts.length && strong[0].person.addresses.length ? " (Portal address does not name that place, check)" : several(strong[0])));
+  if (strong.length === 1 && !placeParts.length) return pick(strong, "Portal: only person with that surname" + several(strong[0]));
+  // Several records with the same e-mail are the same client.
+  const emails = new Set(strong.map((h) => h.person.email.toLowerCase()).filter(Boolean));
+  if (strong.length > 1 && emails.size === 1 && strong.every((h) => h.person.email) && !placeParts.length) return pick(strong, "Portal: same client, several records (check address)");
+  const why = hits.every((h) => h.unitConflict) ? "Portal: has the name but the unit differs, check" : strong.length === 1 ? "Portal: surname only and the address does not name that place, check" : "Portal: several people, pick one";
+  return { sure: null, why, candidates: hits };
+}
+
 type Ev = { summary: string; location: string | null; starts_at: string };
 function calendarMatch(folder: string, events: Ev[]) {
   const f = parseFolder(folder);
@@ -121,23 +227,22 @@ async function main() {
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.readFile(SHEET_IN);
     wb.worksheets[0].eachRow((r, i) => {
-      if (i <= 2) return;
+      if (i <= 1) return;
       const v = (n: number) => { const x = r.getCell(n).value as unknown; return x == null ? "" : typeof x === "object" ? String((x as { result?: unknown; text?: unknown }).result ?? (x as { text?: unknown }).text ?? "") : String(x); };
-      if (v(10).trim() && !/^your decision$/i.test(v(10))) answers.set(key(v(1)), { decision: v(10).trim(), other: v(11).trim() });
+      if (v(7).trim() && !/^your decision$/i.test(v(7))) answers.set(key(v(1)), { decision: v(7).trim(), other: v(8).trim() });
     });
   }
   // Open folders = unmatched files minus the page's decisions minus the OneDrive move.
-  type RF = { gc_folder: string; client_folder: string; candidates: { id: number; title: string; score: number }[] | null; parsed: { name: { date: string | null; technicians: string[]; job: string | null } } };
-  const files = await all<RF>(() => db.from("report_files").select("gc_folder, client_folder, candidates, parsed").eq("status", "unmatched").order("id"));
-  type Folder = { folder: string; gc: string; files: number; first: string; last: string; techs: Map<string, number>; cands: { id: number; title: string; score: number }[] };
+  type RF = { gc_folder: string; client_folder: string; parsed: { name: { date: string | null; technicians: string[]; job: string | null } } };
+  const files = await all<RF>(() => db.from("report_files").select("gc_folder, client_folder, parsed").eq("status", "unmatched").order("id"));
+  type Folder = { folder: string; gc: string; files: number; first: string; last: string; techs: Map<string, number> };
   const folders = new Map<string, Folder>();
   for (const r of files) {
-    const f = folders.get(r.client_folder) ?? { folder: r.client_folder, gc: r.gc_folder, files: 0, first: "9999", last: "0000", techs: new Map(), cands: [] };
+    const f = folders.get(r.client_folder) ?? { folder: r.client_folder, gc: r.gc_folder, files: 0, first: "9999", last: "0000", techs: new Map() };
     f.files++;
     const d = r.parsed?.name?.date;
     if (d) { if (d < f.first) f.first = d; if (d > f.last) f.last = d; }
     for (const t of r.parsed?.name?.technicians ?? []) f.techs.set(t, (f.techs.get(t) ?? 0) + 1);
-    if ((r.candidates?.[0]?.score ?? 0) > (f.cands[0]?.score ?? 0)) f.cands = r.candidates ?? [];
     folders.set(r.client_folder, f);
   }
   const { data: dec } = await db.from("app_integrations").select("data").eq("key", "report_archive_folders").maybeSingle();
@@ -163,9 +268,10 @@ async function main() {
     return { id: p.id, title: p.title!, titleTokens: words(p.title), ownerFirst: nameWords(o?.first), ownerLast: nameWords(o?.last), addrTokens: [...new Set([...words(p.job_address?.street), ...words(p.job_address?.city)])], unit: unitOf(p.apartment_or_unit) ?? unitOf(p.title!.match(/#\s*([0-9]{1,5}\s?[A-Za-z]?)\b/)?.[1]) };
   });
   const byId = new Map(projects.map((p) => [p.id, p]));
+  const people = loadPortal();
   // Calendar events (the company calendar, synced).
   const events = (await all<Ev>(() => db.from("calendar_events").select("summary, location, starts_at").not("summary", "is", null).order("starts_at"))).filter((e) => e.summary);
-  console.log(`${folders.size} folders with unmatched files, ${decided.size} decided on the page, ${moved.size} folders moved in OneDrive, ${projects.length} projects, ${events.length} calendar events, ${answers.size} answers from Fred's sheet.`);
+  console.log(`${folders.size} folders with unmatched files, ${decided.size} decided on the page, ${moved.size} folders moved in OneDrive, ${projects.length} projects, ${people.length} Portal people, ${events.length} calendar events, ${answers.size} answers from Fred's sheet.`);
 
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("Folders");
@@ -176,11 +282,14 @@ async function main() {
     { header: "From", key: "first", width: 11 },
     { header: "To", key: "last", width: 11 },
     { header: "Technicians (files)", key: "techs", width: 26 },
-    { header: "Likeliest project 1 (score)", key: "c1", width: 40 },
-    { header: "Likeliest project 2 (score)", key: "c2", width: 40 },
     { header: "YOUR DECISION", key: "decision", width: 14 },
     { header: "Project name, if Other", key: "other", width: 44 },
-    { header: "Proposed by", key: "why", width: 34 },
+    { header: "Proposed by", key: "why", width: 40 },
+    { header: "Portal: client", key: "pname", width: 28 },
+    { header: "Portal: e-mail", key: "pemail", width: 30 },
+    { header: "Portal: phone", key: "pphone", width: 15 },
+    { header: "Portal: address (for the new project)", key: "paddr", width: 50 },
+    { header: "Portal: other people found", key: "pothers", width: 50 },
     { header: "Calendar events", key: "events", width: 9 },
     { header: "Calendar address (most used)", key: "address", width: 46 },
     { header: "Calendar first", key: "cfirst", width: 11 },
@@ -190,24 +299,30 @@ async function main() {
   ];
   ws.getRow(1).font = { bold: true };
   const counts: Record<string, number> = {};
+  const show = (h: PortalHit) => `${h.person.name}${h.person.email ? " <" + h.person.email + ">" : ""}${h.person.addresses.length ? ": " + h.person.addresses.join(" / ") : ""}`;
   for (const f of [...folders.values()].sort((a, b) => b.files - a.files)) {
     const k = key(f.folder);
     if (decided.has(k)) continue;
-    const row: Record<string, unknown> = { folder: f.folder, gc: f.gc, files: f.files, first: f.first === "9999" ? "" : f.first, last: f.last === "0000" ? "" : f.last, techs: [...f.techs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t]) => t).join(", "), c1: f.cands[0] ? `${f.cands[0].title} (${f.cands[0].score})` : "", c2: f.cands[1] ? `${f.cands[1].title} (${f.cands[1].score})` : "" };
+    const row: Record<string, unknown> = { folder: f.folder, gc: f.gc, files: f.files, first: f.first === "9999" ? "" : f.first, last: f.last === "0000" ? "" : f.last, techs: [...f.techs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t]) => t).join(", ") };
     const cal = calendarMatch(f.folder, events);
     Object.assign(row, { events: cal.events || "", address: cal.address ?? "", cfirst: cal.first ?? "", clast: cal.last ?? "", ctechs: cal.techs, sample: cal.sample });
+    const po = portalMatch(f.folder, people);
+    if (po.sure) Object.assign(row, { pname: po.sure.person.name, pemail: po.sure.person.email, pphone: po.sure.person.phone, paddr: po.sure.address ?? "", pothers: po.candidates.filter((c) => c !== po.sure).map(show).join(" | ") });
+    else if (po.candidates.length) Object.assign(row, { pothers: po.candidates.map(show).join(" | ") });
     const fred = answers.get(k);
     if (fred) Object.assign(row, { decision: fred.decision, other: fred.other, why: "your answer (sheet)" });
     else if (moved.has(k) && byId.has(moved.get(k)!)) Object.assign(row, { decision: "Other", other: byId.get(moved.get(k)!)!.title, why: "folder already moved into this project in OneDrive" });
     else {
       const m = crmMatch(f.folder, projects, cities);
       if (m.sure) {
-        const n = f.cands.findIndex((c) => c.id === m.sure!.id);
-        Object.assign(row, { decision: n === 0 ? "Project 1" : n === 1 ? "Project 2" : "Other", other: n >= 0 ? "" : m.sure.title, why: `CRM: ${m.why}` });
-      } else if (cal.events) Object.assign(row, { decision: "New", why: cal.address ? (cal.addresses > 1 ? "calendar: address found (" + cal.addresses + " different addresses, check)" : "calendar: address found") : "calendar: events, no address" });
-      else Object.assign(row, { decision: "", why: m.candidates.length ? `maybe: ${m.candidates.map((c) => c.p.title).join(" | ")}` : "nothing found" });
+        Object.assign(row, { decision: "Other", other: m.sure.title, why: `CRM: ${m.why}` });
+      } else if (po.sure) Object.assign(row, { decision: "New", why: po.why });
+      else if (po.candidates.length) Object.assign(row, { decision: "", why: po.why });
+      else if (cal.events && parseFolder(f.folder).firsts.length && cal.addresses === 1) Object.assign(row, { decision: "", why: "not in Portal; calendar has the person (check address)" });
+      else Object.assign(row, { decision: "", why: m.candidates.length ? `not in Portal; CRM maybe: ${m.candidates.map((c) => c.p.title).join(" | ")}` : "not in Portal" });
     }
-    counts[String(row.why).split(":")[0]] = (counts[String(row.why).split(":")[0]] ?? 0) + 1;
+    const bucket = String(row.why).split(/[:;(]/)[0].trim();
+    counts[bucket] = (counts[bucket] ?? 0) + 1;
     const r = ws.addRow(row);
     r.getCell("decision").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF2B3" } };
   }
