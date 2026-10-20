@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useT } from "@/i18n/client";
-import { textareaValue } from "./field-value";
+import { textareaValue } from "./text-lines";
 
 /** Sensitive values (passwords, SSN, credentials) stay masked until the viewer asks to see them. */
 export function SensitiveValue({ value }: { value: string }) {
