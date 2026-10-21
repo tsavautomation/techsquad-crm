@@ -6228,6 +6228,7 @@ export type Database = {
       employee_names: {
         Row: {
           archived_at: string | null
+          birthday_md: string | null
           clock_group: string | null
           deleted_at: string | null
           departments: string[] | null
@@ -6240,6 +6241,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          birthday_md?: never
           clock_group?: string | null
           deleted_at?: string | null
           departments?: string[] | null
@@ -6252,6 +6254,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          birthday_md?: never
           clock_group?: string | null
           deleted_at?: string | null
           departments?: string[] | null

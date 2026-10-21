@@ -1,6 +1,7 @@
 import { visibleModules } from "@/config/modules";
 import { requireUser } from "@/lib/auth/session";
 import { TIME_ZONE } from "@/lib/dates";
+import { Birthdays } from "@/components/dashboard/birthdays";
 import { DashboardKpis } from "@/components/dashboard/kpis";
 import { TodaySections } from "@/components/dashboard/today";
 import { AssignMail } from "@/components/dashboard/assign-mail";
@@ -30,6 +31,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-[1500px]">
+      {/* BD-a: whose birthday it is today, or in the next 7 days (nothing otherwise). */}
+      <Birthdays now={now.getTime()} />
       <h1 className="text-[21px] leading-tight font-semibold tracking-tight md:text-2xl">
         {t(greeting(now))}
         {user.firstName ? `, ${user.firstName}` : ""}
