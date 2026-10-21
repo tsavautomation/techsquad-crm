@@ -48,7 +48,7 @@ export async function sendTestPushAction(): Promise<Result & { sent?: number }> 
   if (!subs?.length) return { ok: false, message: "No device of yours has notifications on." };
   const kinds = [...user.pushEvents];
   if (!kinds.length || !isPushKind(kinds[0])) return { ok: false, message: "No events are turned on for your login." };
-  const r = await notifyPush(kinds[0], { title: "Tech Squad test", body: "Notifications are working on this device.", url: "/" });
+  const r = await notifyPush(kinds[0], { title: "Tech Squad test", body: "Notifications are working on this device.", url: "/" }, user.id);
   return r.sent ? { ok: true, sent: r.sent } : { ok: false, message: "Could not send: check the keys on the server." };
 }
 

@@ -19,12 +19,12 @@ function configure() {
 
 type Sub = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string };
 
-/** Sends `message` for `kind` to its recipients. Never throws: failures land in push_log.error. */
-export async function notifyPush(kind: PushKind, message: PushMessage, exceptUserId?: string): Promise<{ sent: number; failed: number }> {
+/** Sends `message` for `kind` to its recipients, or to `onlyUserId` alone (the test button). Never throws: failures land in push_log.error. */
+export async function notifyPush(kind: PushKind, message: PushMessage, onlyUserId?: string): Promise<{ sent: number; failed: number }> {
   if (!configure()) return { sent: 0, failed: 0 };
   const db = adminDb();
   const { data: profiles } = await db.from("profiles").select("id, active, push_events").not("push_events", "eq", "{}");
-  const people = recipientsFor(kind, (profiles ?? []) as { id: string; active: boolean; push_events: string[] | null }[]).filter((p) => p.id !== exceptUserId);
+  const people = recipientsFor(kind, (profiles ?? []) as { id: string; active: boolean; push_events: string[] | null }[]).filter((p) => !onlyUserId || p.id === onlyUserId);
   if (!people.length) return { sent: 0, failed: 0 };
   const { data: subs } = await db.from("push_subscriptions").select("id, user_id, endpoint, p256dh, auth").in("user_id", people.map((p) => p.id)).is("failed_at", null);
   let sent = 0, failed = 0;
