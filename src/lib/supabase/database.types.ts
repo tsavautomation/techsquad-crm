@@ -1627,6 +1627,8 @@ export type Database = {
           report: string | null
           result: string | null
           submitted_at: string | null
+          tech_checked_in_at: string | null
+          tech_checked_out_at: string | null
           time_needed: string | null
           title: string | null
           updated_at: string
@@ -1670,6 +1672,8 @@ export type Database = {
           report?: string | null
           result?: string | null
           submitted_at?: string | null
+          tech_checked_in_at?: string | null
+          tech_checked_out_at?: string | null
           time_needed?: string | null
           title?: string | null
           updated_at?: string
@@ -1713,6 +1717,8 @@ export type Database = {
           report?: string | null
           result?: string | null
           submitted_at?: string | null
+          tech_checked_in_at?: string | null
+          tech_checked_out_at?: string | null
           time_needed?: string | null
           title?: string | null
           updated_at?: string

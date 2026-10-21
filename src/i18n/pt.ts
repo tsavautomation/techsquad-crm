@@ -1996,5 +1996,12 @@ export const PT: Record<string, string> = {
   "This event no longer exists.": "Este evento não existe mais.",
   "Wrong project?": "Projeto errado?",
   "Moved to {project}": "Movido para {project}",
+  // J-p list filters, INV-i register form (2026-10-21)
+  "Filters": "Filtros",
+  "Clear all": "Limpar tudo",
+  "to {date}": "até {date}",
+  "Enter the serial first": "Digite o serial primeiro",
+  "Yes": "Sim",
+  "No": "Não",
   "This event is not an email.": "Este evento não é um e-mail.",
 };

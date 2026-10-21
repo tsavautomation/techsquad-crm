@@ -2,12 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowDown, ArrowUp, Lock, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { filterFields, listFields, listRecords, lookupTitles, userNames } from "@/lib/records/data";
+import { filterFields, listFields, listFilterFields, listRecords, lookupTitles, userNames } from "@/lib/records/data";
 import { getTable } from "@/registry";
 import { canDo, canOpen, fieldsFor } from "@/registry/permissions";
 import { recordHref, tableFromRoute, tableHref } from "@/registry/routes";
 import { FieldValue } from "@/components/records/field-value";
-import { ListControls } from "@/components/records/list-controls";
+import { ListControls, type ListFilter } from "@/components/records/list-controls";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/dates";
@@ -48,15 +48,22 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
   const [titles, names] = await Promise.all([lookupTitles(t, rows, cols), userNames(rows, cols.filter((c) => c.type === "user").map((c) => c.name))]);
   const base = tableHref(t);
 
-  // "Records linked to X" filters coming from a record's Related panel.
-  const linkFilters = await Promise.all(
-    t.fields
-      .filter((f) => f.type === "lookup" && !f.multiple && filter[f.name])
-      .map(async (f) => {
-        const t2 = await lookupTitles(t, [{ [f.name]: Number(filter[f.name]) }], [f]);
-        return { label: f.label, title: t2[f.name]?.get(Number(filter[f.name])) ?? `#${filter[f.name]}` };
-      }),
-  );
+  // The filters (J-p) and the names of the linked records picked in them (also "records linked to X" from a Related panel).
+  const quick = new Set(filterFields(t).map((f) => f.name));
+  const filterDefs: ListFilter[] = listFilterFields(t).map((f) => ({
+    name: f.name,
+    label: f.label,
+    kind: f.type === "boolean" ? "boolean" : f.type === "lookup" ? "lookup" : f.type === "date" || f.type === "datetime" ? "date" : "select",
+    options: f.options?.filter((o) => !o.retired).map(({ label, value }) => ({ label, value })),
+    field: f.type === "lookup" ? f : undefined,
+    quick: quick.has(f.name),
+  }));
+  const pickedLookups = listFilterFields(t).filter((f) => f.type === "lookup" && /^d+$/.test(filter[f.name] ?? ""));
+  const pickedTitles = await Promise.all(pickedLookups.map((f) => lookupTitles(t, [{ [f.name]: f.multiple ? [Number(filter[f.name])] : Number(filter[f.name]) }], [f])));
+  const labels: Record<string, Record<string, string>> = {};
+  pickedLookups.forEach((f, i) => {
+    labels[f.name] = { [filter[f.name]]: pickedTitles[i][f.name]?.get(Number(filter[f.name])) ?? `#${filter[f.name]}` };
+  });
   const showDeletedLink = await canModule(user.permissions, t, "deleted_items");
   const dir = one("dir") ?? (sort === "title" ? "asc" : "desc");
 
@@ -107,20 +114,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
         )}
       </div>
 
-      {linkFilters.length > 0 && (
-        <p className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm">
-          {linkFilters.map((lf) => (
-            <span key={lf.label}>
-              {lf.label}: <strong>{lf.title}</strong>
-            </span>
-          ))}
-          <Link href={base} className="ml-auto underline underline-offset-4">
-            {tr("Show all")}
-          </Link>
-        </p>
-      )}
-
-      <ListControls filters={filterFields(t).map((f) => ({ name: f.name, label: f.label, options: f.type === "boolean" ? [{ label: tr("Yes"), value: "true" }, { label: tr("No"), value: "false" }] : (f.options ?? []) }))} />
+      <ListControls table={t.name} filters={filterDefs} labels={labels} />
 
       {rows.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">{tr("No records found.")}</p>

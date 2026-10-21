@@ -55,6 +55,9 @@ export const jobReports: TableDef = {
       "required": true,
       "default": "today"
     },
+    // J-q (Jessica 2026-10-21, item 2): the technician's own times, typed by hand; the visit's check-in / check-out and the time clock are separate records.
+    { name: "tech_checked_in_at", label: "Check-in", type: "datetime", help: "The time you arrived, as you record it. It does not change the visit's check-in.", legacy: NEW },
+    { name: "tech_checked_out_at", label: "Check-out", type: "datetime", help: "The time you left.", legacy: NEW },
     {
       "name": "team_ids",
       "label": "Team",

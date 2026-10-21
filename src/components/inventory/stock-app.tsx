@@ -444,21 +444,26 @@ function RegisterForm({ units, lists, can, preset, onDone }: { units: StockUnit[
           )}
           {isNew && <p className="mt-1 text-xs text-warn-fg">{t("New serial: a Stock record will be created.")}</p>}
         </div>
-        {isNew && (
-          <label className="block text-sm font-medium">
-            {t("Product")}
+        {/* INV-i (Fred 2026-10-21, item 4): the Product field is always on screen; it only opens once a new serial is typed. */}
+        <label className="block text-sm font-medium">
+          {t("Product")}
+          {exact ? (
+            <input readOnly disabled value={exact.product} className="mt-1 h-11 w-full rounded-lg border border-input bg-muted px-3 text-base" />
+          ) : (
             <Combobox
               className="mt-1"
               items={productItems}
               value={productId}
               onChange={(id) => setProductId(id)}
               matches={(p, q) => productMatches(p, q)}
-              placeholder={t("Search by name, brand, model, SKU…")}
-              onCreate={can.addProduct ? (q) => setCreating(q) : undefined}
+              disabled={!isNew}
+              placeholder={isNew ? t("Search by name, brand, model, SKU…") : t("Enter the serial first")}
+              onCreate={can.addProduct && isNew ? (q) => setCreating(q) : undefined}
               createLabel={t("Create product")}
             />
-          </label>
-        )}
+          )}
+          {!serial.trim() && <span className="mt-1 block text-xs font-normal text-muted-foreground">{t("Enter the serial first")}</span>}
+        </label>
         <fieldset>
           <legend className="mb-1 text-sm font-medium">{t("Movement")}</legend>
           <div className="grid gap-2 sm:grid-cols-2">

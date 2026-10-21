@@ -7,6 +7,7 @@ import { getTable } from "@/registry";
 import { canDo } from "@/registry/permissions";
 import type { FieldDef, TableDef } from "@/registry/types";
 import { isRowField } from "./values";
+import { fromDateTimeLocalET } from "@/lib/dates";
 
 import { readableTable } from "@/lib/auth/office";
 export type Row = Record<string, unknown> & { id: number; title: string | null };
@@ -55,6 +56,27 @@ export function filterFields(t: TableDef): FieldDef[] {
   return listFields(t).filter((f) => f.type === "select" || f.type === "radio" || (f.type === "boolean" && f.listColumn));
 }
 
+/** A lookup whose picker depends on another field of the form ("same project as this report") cannot stand alone as a list filter. */
+const dependsOnForm = (f: FieldDef) => Object.values(f.lookup?.filter ?? {}).some((v) => typeof v === "object" && !Array.isArray(v) && "sameAs" in v);
+
+/**
+ * Every field a list can be filtered by (SPEC §9.1 J-p, Jessica 2026-10-21): the quick filters first, then the
+ * table's other dropdowns, Yes/No fields, linked records (single, and multi-links such as a report's Team) and
+ * dates as a from / to range. Fields that only a rule shows, or that are kept off the form, stay out.
+ */
+export function listFilterFields(t: TableDef): FieldDef[] {
+  const quick = filterFields(t);
+  const taken = new Set(quick.map((f) => f.name));
+  const ok = (f: FieldDef) =>
+    !f.hidden && !f.sensitive && !f.startsHidden && !f.createOnly && (!f.formHidden || f.listColumn) && f.name !== "title" && !(t.parent && f.name === t.parent.field) &&
+    ((isRowField(f) && (["select", "radio", "boolean", "date", "datetime"].includes(f.type) || (f.type === "lookup" && !!f.lookup && !dependsOnForm(f)))) ||
+      (f.type === "lookup" && !!f.multiple && !!f.lookup && !dependsOnForm(f)));
+  return [...quick, ...t.fields.filter((f) => ok(f) && !taken.has(f.name))];
+}
+
+/** The day after a yyyy-mm-dd date. */
+const nextDay = (d: string) => new Date(new Date(`${d}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
+
 export async function listRecords(t: TableDef, p: ListParams) {
   const db = await recordsDb();
   const page = Math.max(1, p.page ?? 1);
@@ -74,10 +96,29 @@ export async function listRecords(t: TableDef, p: ListParams) {
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   query = p.archived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
   if (p.q?.trim()) query = query.or(await searchClause(db, t, p.q.trim()));
-  // Quick filters (dropdowns) and "records linked to X" filters from the Related panel.
-  const filterable = new Set(t.fields.filter((f) => ["select", "radio", "boolean"].includes(f.type) || (f.type === "lookup" && !f.multiple)).map((f) => f.name));
-  const booleans = new Set(t.fields.filter((f) => f.type === "boolean").map((f) => f.name));
-  for (const [k, v] of Object.entries(p.filter ?? {})) if (v && filterable.has(k)) query = query.eq(k, booleans.has(k) ? v === "true" : v);
+  // Filters (J-p): dropdowns, Yes/No and linked records as equals; dates as "<field>.from" / "<field>.to" (Eastern
+  // days); a multi-link (Team) through its join table. "Records linked to X" from the Related panel use the same keys.
+  const byName = new Map(t.fields.map((f) => [f.name, f]));
+  let nothingLinked = false;
+  for (const [k, v] of Object.entries(p.filter ?? {})) {
+    if (!v) continue;
+    const range = /^(.+).(from|to)$/.exec(k);
+    const f = byName.get(range ? range[1] : k);
+    if (!f) continue;
+    if (range) {
+      if (!["date", "datetime"].includes(f.type) || !/^d{4}-d{2}-d{2}$/.test(v)) continue;
+      if (range[2] === "from") query = query.gte(f.name, f.type === "date" ? v : fromDateTimeLocalET(`${v}T00:00`));
+      else query = f.type === "date" ? query.lte(f.name, v) : query.lt(f.name, fromDateTimeLocalET(`${nextDay(v)}T00:00`));
+    } else if (["select", "radio"].includes(f.type) || (f.type === "lookup" && !f.multiple)) query = query.eq(k, v);
+    else if (f.type === "boolean") query = query.eq(k, v === "true");
+    else if (f.type === "lookup" && f.multiple && /^d+$/.test(v)) {
+      const { data: links } = await db.from(`${t.name}_${f.name.replace(/_ids$/, "")}`).select("record_id").eq("target_id", Number(v)).limit(2000);
+      const ids = ((links ?? []) as { record_id: number }[]).map((r) => r.record_id);
+      if (ids.length) query = query.in("id", ids);
+      else nothingLinked = true;
+    }
+  }
+  if (nothingLinked) return { rows: [] as Row[], count: 0, page, sort, pages: 1 };
 
   const { data, count, error } = await query;
   if (error) throw new Error(`${t.label}: ${error.message}`);

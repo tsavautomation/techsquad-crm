@@ -69,6 +69,8 @@ describe("registry ↔ WebAuthor export", () => {
     for (const { legacyTable, raw } of exported) {
       const f = findField(legacyTable, raw)!;
       if (!f.options) continue;
+      // SPEC §9.1 INV-i (Fred 2026-10-21): the Product Type list was replaced outright (36 types for WebAuthor's 4).
+      if (raw.column_name === "product_type") continue;
       const rawOpts = (JSON.parse(String(raw.options || "[]")) as { label: string; value: string }[])
         .filter((o) => o.value !== "")
         .map((o) => ({ label: String(o.label).trim(), value: String(o.value).trim() }));

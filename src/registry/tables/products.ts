@@ -2,6 +2,47 @@
 // Now maintained by hand: edit freely, but keep labels and options identical to SPEC.md.
 import type { TableDef } from "../types";
 
+// INV-i (Fred 2026-10-21): the Product Type list, replacing WebAuthor's four (Amplifier, Dimmer, Speaker, Television);
+// Dimmer became "Dimmer / Switch" and Television "TV" (migration 20261021090000). Shared with Stock and Sale, which copy it.
+export const PRODUCT_TYPES = [
+  "TV",
+  "TV Mount",
+  "TV Lift / Furniture",
+  "Projector / Screen",
+  "Video/Audio Distribution",
+  "Streaming / Media Source",
+  "Speaker",
+  "Soundbar",
+  "Subwoofer",
+  "Amplifier",
+  "AV Receiver / Processor",
+  "Control Processor",
+  "Keypad",
+  "Dimmer / Switch",
+  "Touch Panel / Remote",
+  "Shade / Motor / Drapery",
+  "Sensor / I/O Module",
+  "Thermostat / HVAC",
+  "Lighting",
+  "Network Switch",
+  "Router / Gateway",
+  "Wireless Access Point",
+  "Camera",
+  "NVR / DVR / Hard Drive",
+  "Camera Mount / Accessory",
+  "Intercom / Doorbell",
+  "Lock / Access Control",
+  "Power / UPS / Surge Protection",
+  "Rack & Enclosures",
+  "Wall Plate / Trim",
+  "Electrical / Wiring Device",
+  "Cable / Connector",
+  "Ventilation / Fan",
+  "Phone / Telephony",
+  "Smart Home Assistant",
+  "Supplies / Misc",
+].map((v) => ({ label: v, value: v, added: true as const }));
+
 export const products: TableDef = {
   "name": "products",
   "label": "Products",
@@ -31,28 +72,7 @@ export const products: TableDef = {
         "column": "product_type",
         "fieldId": 88231
       },
-      "options": [
-        {
-          "label": "Amplifier",
-          "value": "Amplifier",
-          "color": "#ffc107"
-        },
-        {
-          "label": "Dimmer",
-          "value": "Dimmer",
-          "color": "#bcefef"
-        },
-        {
-          "label": "Speaker",
-          "value": "Speaker",
-          "color": "#f44336"
-        },
-        {
-          "label": "Television",
-          "value": "Television",
-          "color": "#3f51b5"
-        }
-      ]
+      "options": PRODUCT_TYPES
     },
     {
       "name": "supplier_id",

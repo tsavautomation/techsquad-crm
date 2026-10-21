@@ -1,6 +1,7 @@
 // Generated from techsquad_crm_spec.json (WebAuthor table fx_techsquad_inventory_xmstock) by scripts/generate-registry.ts.
 // Now maintained by hand: edit freely, but keep labels and options identical to SPEC.md.
 import type { TableDef } from "../types";
+import { PRODUCT_TYPES } from "./products";
 
 export const stockItems: TableDef = {
   "name": "stock_items",
@@ -95,28 +96,7 @@ export const stockItems: TableDef = {
         "fieldId": 88273
       },
       "readOnly": true,
-      "options": [
-        {
-          "label": "Amplifier",
-          "value": "Amplifier",
-          "color": "#ffc107"
-        },
-        {
-          "label": "Dimmer",
-          "value": "Dimmer",
-          "color": "#bcefef"
-        },
-        {
-          "label": "Speaker",
-          "value": "Speaker",
-          "color": "#f44336"
-        },
-        {
-          "label": "Television",
-          "value": "Television",
-          "color": "#3f51b5"
-        }
-      ]
+      "options": PRODUCT_TYPES
     },
     {
       "name": "brand_id",
