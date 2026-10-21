@@ -60,3 +60,21 @@ export async function removeEntryAction(id: number): Promise<{ ok: true } | { ok
   revalidatePath("/");
   return { ok: true };
 }
+
+/** TC-b: the office looked at a flagged shift (its clock-in entry) and accepts it as it is, or takes that back. */
+export async function reviewShiftAction(entryId: number, reviewed: boolean): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireUser();
+  if (!user.permissions.has("administrative.employees.modify")) return { ok: false, message: "You don't have permission to do that." };
+  const db = await recordsDb();
+  const { data, error } = await db
+    .from("time_entries")
+    .update(reviewed ? { reviewed_at: new Date().toISOString(), reviewed_by: user.id } : { reviewed_at: null, reviewed_by: null })
+    .eq("id", entryId)
+    .eq("kind", "clock_in")
+    .select("id");
+  if (error) return { ok: false, message: error.message };
+  if (!data?.length) return { ok: false, message: "Entry not found." };
+  revalidatePath("/time-clock");
+  revalidatePath("/time-clock/timesheets");
+  return { ok: true };
+}

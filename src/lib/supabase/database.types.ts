@@ -5320,6 +5320,8 @@ export type Database = {
           note: string | null
           original_at: string | null
           place: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           user_id: string
           visit_id: number | null
         }
@@ -5339,6 +5341,8 @@ export type Database = {
           note?: string | null
           original_at?: string | null
           place?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           user_id: string
           visit_id?: number | null
         }
@@ -5358,6 +5362,8 @@ export type Database = {
           note?: string | null
           original_at?: string | null
           place?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           user_id?: string
           visit_id?: number | null
         }
@@ -5381,6 +5387,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
