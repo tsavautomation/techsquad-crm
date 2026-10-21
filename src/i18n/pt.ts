@@ -924,7 +924,6 @@ export const PT: Record<string, string> = {
   "Open the day to correct the times or mark the shift as reviewed. These shifts stay listed until then.": "Abra o dia para corrigir os horários ou marcar o turno como revisado. Esses turnos ficam na lista até lá.",
   "Nobody in this group.": "Ninguém neste grupo.",
   "Person": "Pessoa",
-  "Open this day": "Abrir este dia",
   "Only {name}": "Só {name}",
   "This week's timesheet": "Folha de ponto desta semana",
   "Reviewed": "Revisado",
@@ -1996,6 +1995,7 @@ export const PT: Record<string, string> = {
   "This event no longer exists.": "Este evento não existe mais.",
   "Wrong project?": "Projeto errado?",
   "Moved to {project}": "Movido para {project}",
+  "This event is not an email.": "Este evento não é um e-mail.",
   // J-p list filters, INV-i register form (2026-10-21)
   "Filters": "Filtros",
   "Clear all": "Limpar tudo",
@@ -2003,5 +2003,4 @@ export const PT: Record<string, string> = {
   "Enter the serial first": "Digite o serial primeiro",
   "Yes": "Sim",
   "No": "Não",
-  "This event is not an email.": "Este evento não é um e-mail.",
 };
