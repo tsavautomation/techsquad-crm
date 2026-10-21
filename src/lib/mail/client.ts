@@ -137,13 +137,16 @@ export const parseRaw = (source: Buffer): Promise<MailparserMail> => simpleParse
 
 // ---------------------------------------------------------------- labels (Gmail folders)
 
-/** Creates the label when it does not exist yet (nested with "/"). */
+/** Creates the label when it does not exist yet, parents first, so Gmail nests Projects › <project>. */
 export async function ensureLabel(client: ImapFlow, path: string): Promise<void> {
-  try {
-    await client.mailboxCreate(path);
-  } catch (e) {
-    // Already there: Gmail answers "[ALREADYEXISTS]".
-    if (!/exist/i.test(e instanceof Error ? e.message : String(e))) throw e;
+  const parts = path.split("/");
+  for (let i = 1; i <= parts.length; i++) {
+    try {
+      await client.mailboxCreate(parts.slice(0, i).join("/"));
+    } catch (e) {
+      // Already there: Gmail answers "[ALREADYEXISTS]".
+      if (!/exist/i.test(e instanceof Error ? e.message : String(e))) throw e;
+    }
   }
 }
 
