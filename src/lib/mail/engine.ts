@@ -63,6 +63,9 @@ export function innerSenders(text: string | null | undefined): string[] {
   return out;
 }
 
+/** Google's own notices to the mailbox (security alerts, welcome mails): never project emails, ignored on arrival. */
+export const isSystemMail = (fromEmail: string | null | undefined) => /^(no-?reply|noreply)@(accounts.|mail.)?google.com$/i.test((fromEmail ?? "").trim());
+
 // ---------------------------------------------------------------- matching
 
 export type MatchBy = "id" | "thread" | "subject" | "sender";

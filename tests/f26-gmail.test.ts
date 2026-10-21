@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attachmentsOf, cleanSubject, emailFolderName, htmlToText, innerSenders, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject } from "@/lib/mail/engine";
+import { attachmentsOf, cleanSubject, emailFolderName, htmlToText, innerSenders, isSystemMail, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject } from "@/lib/mail/engine";
 
 // F26-2 Gmail intake (SPEC §9.1 F26-a): reading a parsed email and matching it to a project.
 
@@ -21,6 +21,13 @@ describe("addresses and subjects", () => {
     expect(projectIdInSubject("Fwd: O'Reilly - Miami #1249 TV sizes")).toBe(1249);
     expect(projectIdInSubject("Invoice #12345678 (too long)")).toBeNull();
     expect(projectIdInSubject("no id here")).toBeNull();
+  });
+
+  it("knows Google's own notices from the mailbox", () => {
+    expect(isSystemMail("no-reply@accounts.google.com")).toBe(true);
+    expect(isSystemMail("no-reply@google.com")).toBe(true);
+    expect(isSystemMail("jessica@tsav.net")).toBe(false);
+    expect(isSystemMail("noreply@client-google.com")).toBe(false);
   });
 
   it("finds the original senders in a forwarded body", () => {

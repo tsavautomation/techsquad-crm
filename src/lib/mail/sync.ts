@@ -4,7 +4,7 @@ import { oneDriveReady, ROOT, uploadBytes } from "@/lib/files/onedrive";
 import { safeName } from "@/lib/files/paths";
 import { adminDb } from "@/lib/supabase/admin";
 import { fetchRaw, loadSettings, parseRaw, newUids, saveSettings, withInbox, type GmailSettings, type Inbox } from "./client";
-import { actorLabel, emailFolderName, matchProject, parseMessage, type MailAttachment, type ParsedMail, type ProjectForMatch } from "./engine";
+import { actorLabel, emailFolderName, isSystemMail, matchProject, parseMessage, type MailAttachment, type ParsedMail, type ProjectForMatch } from "./engine";
 
 // F26-2 Gmail intake: every five minutes (pg_cron 'crm-mail' → /api/cron/mail) the mailbox is read over IMAP.
 // New emails become mail_messages rows; the ones that match a project are filed at once (a project_events
@@ -68,7 +68,8 @@ export async function syncMail(): Promise<SyncSummary> {
           lastUid = uid;
           if (!one) continue;
           const { parsed } = one;
-          const match = matchProject({ subject: parsed.subject, senders: [parsed.from.email, ...parsed.innerSenders], threadId: parsed.threadId }, catalog!.projects, catalog!.threads);
+          const system = isSystemMail(parsed.from.email);
+          const match = system ? null : matchProject({ subject: parsed.subject, senders: [parsed.from.email, ...parsed.innerSenders], threadId: parsed.threadId }, catalog!.projects, catalog!.threads);
           const { data: row, error } = await db
             .from("mail_messages")
             .insert({
@@ -87,7 +88,7 @@ export async function syncMail(): Promise<SyncSummary> {
               attachments: parsed.attachments,
               project_id: match?.projectId ?? null,
               matched_by: match?.by ?? null,
-              status: "unassigned",
+              status: system ? "ignored" : "unassigned",
             })
             .select("id")
             .single();
@@ -102,7 +103,7 @@ export async function syncMail(): Promise<SyncSummary> {
               out.filed++;
               if (parsed.threadId) catalog!.threads.set(parsed.threadId, match.projectId);
             } else out.errors.push(`${parsed.cleanSubject}: ${filed.message}`);
-          } else out.waiting++;
+          } else if (!system) out.waiting++;
         } catch (e) {
           out.errors.push(`UID ${uid}: ${e instanceof Error ? e.message : String(e)}`);
         }
