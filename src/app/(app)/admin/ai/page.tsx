@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AiPanel } from "@/components/admin/ai-panel";
 import { AiReviewSwitch } from "@/components/admin/ai-review-switch";
+import { AiRouteSwitch } from "@/components/admin/ai-route-switch";
+import { AI_ROUTE_AUTOMATION_ID, ROUTE_MODEL } from "@/lib/ai/route-email";
+import { KIND_LABEL, type EmailKind } from "@/lib/ai/route-engine";
 import { aiConfigured, DEFAULT_MODEL } from "@/lib/ai/claude";
 import { REVIEW_MODEL } from "@/lib/ai/review-apply";
 import { AI_REVIEW_AUTOMATION_ID, loadAiSettings } from "@/lib/ai/review-queue";
@@ -25,10 +28,12 @@ export default async function AiPage() {
   if (!me.isSysadmin) notFound();
   const configured = aiConfigured();
   const db = await recordsDb();
-  const [settings, { data: runs }] = await Promise.all([
+  const [settings, { data: runs }, { data: routeRuns }] = await Promise.all([
     loadAiSettings(db),
     db.from("automation_runs").select("id, record_id, status, at, detail").eq("automation_id", AI_REVIEW_AUTOMATION_ID).eq("event", "ai_review").order("at", { ascending: false }).limit(10),
+    db.from("automation_runs").select("id, record_id, status, at, detail").eq("automation_id", AI_ROUTE_AUTOMATION_ID).eq("event", "ai_route").order("at", { ascending: false }).limit(10),
   ]);
+  type RouteRun = { id: number; record_id: number; status: string; at: string; detail: { kind?: EmailKind; actions?: string[]; error?: string; by?: string; step?: string } };
   const reportsT = getTable("job_reports");
 
   const step = (n: number, text: string) => (
@@ -89,10 +94,41 @@ export default async function AiPage() {
       </section>
 
       <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+        <h2 className="mb-2 text-[15px] font-semibold tracking-tight">{t("Reading of project emails")}</h2>
+        <p className="mb-3 text-sm text-text-2">
+          {t("When an email lands on a project timeline (Gmail intake), Claude ({model}) says what it is: an RFI, a change order, an answer, a scheduling request, a document or information. An RFI or change order becomes a Project request line with the shared alert; an answer closes the open request it settles; a scheduling request becomes a task for the office. Then the project brief at the top of the project card is rewritten. The office can correct the kind on the timeline.", { model: ROUTE_MODEL })}
+        </p>
+        <AiRouteSwitch on={settings.route_emails} />
+        <h3 className="mt-4 mb-1 text-[13px] font-semibold">{t("Last emails read")}</h3>
+        {!routeRuns?.length ? (
+          <p className="text-sm text-muted-foreground">{t("No email has been read yet.")}</p>
+        ) : (
+          <ul className="divide-y rounded-lg border text-sm">
+            {(routeRuns as RouteRun[]).map((r) => (
+              <li key={r.id} className="p-3">
+                <div className="flex flex-wrap justify-between gap-x-3">
+                  <span className="font-medium">
+                    {t("Email event #{id}", { id: r.record_id })}
+                    {r.detail.kind ? ` · ${t(KIND_LABEL[r.detail.kind])}` : ""}
+                    {r.detail.by === "hand" ? ` · ${t("set by hand")}` : ""}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{formatDateTime(r.at)}</span>
+                </div>
+                <p className={r.status === "error" ? "text-bad-fg" : "text-muted-foreground"}>{r.status === "error" ? `${r.detail.step === "brief" ? t("Brief: ") : ""}${r.detail.error}` : (r.detail.actions?.join(" · ") ?? t("Filed"))}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
         <h2 className="mb-2 text-[15px] font-semibold tracking-tight">{t("What the AI does")}</h2>
         <ul className="flex flex-col gap-2 text-sm">
           <li>
             <b>{t("Job Reports")}</b> · {t("Reviews every new report as above (switch on this page).")}
+          </li>
+          <li>
+            <b>{t("Project emails")}</b> · {t("Reads each email on a project timeline, makes the request line or the task, and keeps the project brief (switch on this page).")}
           </li>
           <li>
             <b>{t("Employees")}</b> · {t("Reads the expiry date from a driver's licence photo and pre-fills it. The person checks it before saving.")}

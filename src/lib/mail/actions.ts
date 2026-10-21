@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { routeBacklog } from "@/lib/ai/route-email";
 import { requireUser } from "@/lib/auth/session";
 import { recordsDb } from "@/lib/records/data";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
@@ -67,6 +69,7 @@ export async function assignMailAction(mailId: number, projectId: number): Promi
   if (!a.ok) return a;
   const r = await fileMessage(adminDb(), mailId, projectId, "manual", a.id);
   if (!r.ok) return r;
+  after(() => routeBacklog(adminDb(), 50_000, 3).catch(() => undefined));
   revalidatePath("/");
   revalidatePath(recordHref(getTable("projects"), projectId));
   return { ok: true };

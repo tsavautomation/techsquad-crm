@@ -7,6 +7,8 @@ import { formatDate, formatDateTime } from "@/lib/dates";
 import type { TimelineItem, TimelineKind } from "@/lib/records/timeline";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
+import { KIND_COLOR, KIND_LABEL, type EmailKind } from "@/lib/ai/route-engine";
+import { EventKindPicker } from "./event-kind-picker";
 
 // F4 client timeline (SPEC §9.1 F4-c): calls / messages, notes, stage changes, visits, reports, tasks.
 // F26-1 (SPEC §9.1 F26-a): Job Status changes, check-in / check-out times, tasks done, request lines,
@@ -25,7 +27,7 @@ const FILTERS: { key: string; label: string; kinds: TimelineKind[] }[] = [
 ];
 const SHOW = 25;
 
-export function Timeline({ items }: { items: TimelineItem[] }) {
+export function Timeline({ items, canEdit = false }: { items: TimelineItem[]; canEdit?: boolean }) {
   const t = useT();
   const [filter, setFilter] = useState("all");
   const [more, setMore] = useState(false);
@@ -65,6 +67,26 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
                 )}
               </p>
               {i.project && <p className="text-xs text-text-2">{i.project}</p>}
+              {i.ai && (
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                  {i.ai.kind ? (
+                    <span className="rounded-full px-2 py-0.5 font-semibold text-white" style={{ backgroundColor: KIND_COLOR[i.ai.kind as EmailKind] ?? "#64748b" }}>
+                      {t(KIND_LABEL[i.ai.kind as EmailKind] ?? i.ai.kind)}
+                    </span>
+                  ) : (
+                    <span className="rounded-full border px-2 py-0.5 text-text-2">{i.ai.pending ? t("AI reading…") : t("Not read yet")}</span>
+                  )}
+                  {i.ai.summary && <span className="text-foreground/90">{i.ai.summary}</span>}
+                  {i.ai.askedBy && <span className="text-text-2">{t("Asked by {who}", { who: i.ai.askedBy })}</span>}
+                  {i.ai.deadline && <span className="text-warn-fg">{t("Needed by {date}", { date: formatDate(i.ai.deadline) })}</span>}
+                  {i.ai.requestId && (
+                    <Link href="#requests" className="underline underline-offset-2">
+                      {t("Request line")}
+                    </Link>
+                  )}
+                  {canEdit && <EventKindPicker eventId={i.ai.eventId} kind={(i.ai.kind as EmailKind) ?? null} />}
+                </div>
+              )}
               {i.detail && <p className="mt-0.5 line-clamp-4 text-sm whitespace-pre-line text-foreground/90">{i.detail}</p>}
               {times.length > 0 && <p className="mt-0.5 text-xs text-text-2">{times.join(" · ")}</p>}
               {i.files && i.files.length > 0 && (

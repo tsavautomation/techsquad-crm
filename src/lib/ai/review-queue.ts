@@ -11,6 +11,8 @@ export const AI_REVIEW_AUTOMATION_ID = 900501;
 export const AiSettingsSchema = z.object({
   /** Admin › AI: review new Job Reports with Claude (F17-d). */
   review_reports: z.boolean().default(true),
+  /** Admin › AI: read the emails that land on project timelines with Claude (F26-3). */
+  route_emails: z.boolean().default(true),
 });
 export type AiSettings = z.infer<typeof AiSettingsSchema>;
 

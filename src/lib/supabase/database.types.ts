@@ -2867,6 +2867,13 @@ export type Database = {
         Row: {
           actor: string | null
           actor_user: string | null
+          ai_asked_by: string | null
+          ai_at: string | null
+          ai_deadline: string | null
+          ai_error: string | null
+          ai_kind: string | null
+          ai_status: string | null
+          ai_summary: string | null
           attachments: Json
           body: string | null
           channel: string
@@ -2874,16 +2881,26 @@ export type Database = {
           created_by: string | null
           deleted_at: string | null
           id: number
+          kind_set_by: string | null
           occurred_at: string
           project_id: number
+          request_id: number | null
           source_id: number | null
           source_ref: string | null
           source_table: string | null
+          task_id: number | null
           title: string
         }
         Insert: {
           actor?: string | null
           actor_user?: string | null
+          ai_asked_by?: string | null
+          ai_at?: string | null
+          ai_deadline?: string | null
+          ai_error?: string | null
+          ai_kind?: string | null
+          ai_status?: string | null
+          ai_summary?: string | null
           attachments?: Json
           body?: string | null
           channel: string
@@ -2891,16 +2908,26 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           id?: number
+          kind_set_by?: string | null
           occurred_at?: string
           project_id: number
+          request_id?: number | null
           source_id?: number | null
           source_ref?: string | null
           source_table?: string | null
+          task_id?: number | null
           title: string
         }
         Update: {
           actor?: string | null
           actor_user?: string | null
+          ai_asked_by?: string | null
+          ai_at?: string | null
+          ai_deadline?: string | null
+          ai_error?: string | null
+          ai_kind?: string | null
+          ai_status?: string | null
+          ai_summary?: string | null
           attachments?: Json
           body?: string | null
           channel?: string
@@ -2908,11 +2935,14 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           id?: number
+          kind_set_by?: string | null
           occurred_at?: string
           project_id?: number
+          request_id?: number | null
           source_id?: number | null
           source_ref?: string | null
           source_table?: string | null
+          task_id?: number | null
           title?: string
         }
         Relationships: [
@@ -2931,6 +2961,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_events_kind_set_by_fkey"
+            columns: ["kind_set_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_events_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -2942,6 +2979,20 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_events_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "project_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -3056,6 +3107,8 @@ export type Database = {
         Row: {
           apartment_or_unit: string | null
           archived_at: string | null
+          brief: string | null
+          brief_at: string | null
           builder_developer_id: number | null
           builder_developer_notes: string | null
           building_id: number | null
@@ -3119,6 +3172,8 @@ export type Database = {
         Insert: {
           apartment_or_unit?: string | null
           archived_at?: string | null
+          brief?: string | null
+          brief_at?: string | null
           builder_developer_id?: number | null
           builder_developer_notes?: string | null
           building_id?: number | null
@@ -3182,6 +3237,8 @@ export type Database = {
         Update: {
           apartment_or_unit?: string | null
           archived_at?: string | null
+          brief?: string | null
+          brief_at?: string | null
           builder_developer_id?: number | null
           builder_developer_notes?: string | null
           building_id?: number | null

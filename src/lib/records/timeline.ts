@@ -40,6 +40,8 @@ export type TimelineItem = {
   times?: { onWay?: string; in?: string; out?: string };
   /** Files linked from the event (OneDrive, F26-2). */
   files?: { name: string; url: string; itemId?: string }[];
+  /** F26-3: what the AI read in an email event, and the request line it made. */
+  ai?: { eventId: number; kind: string | null; summary?: string; askedBy?: string; deadline?: string; requestId?: number; taskId?: number; pending?: boolean };
 };
 
 const timeOf = (iso: string | null) => (iso ? clock(toDateTimeLocalET(iso).slice(11, 16)) : undefined);
@@ -252,14 +254,15 @@ export async function loadTimeline(db: SupabaseClient, perms: ReadonlySet<string
     jobs.push(
       db
         .from("project_events")
-        .select("id, project_id, channel, occurred_at, actor, actor_user, title, body, attachments")
+        .select("id, project_id, channel, occurred_at, actor, actor_user, title, body, attachments, ai_status, ai_kind, ai_summary, ai_asked_by, ai_deadline, request_id, task_id")
         .in("project_id", projectIds)
         .is("deleted_at", null)
         .order("occurred_at", { ascending: false })
         .limit(LIMIT)
         .then(({ data }) => {
-          for (const e of (data ?? []) as { id: number; project_id: number; channel: string; occurred_at: string; actor: string | null; actor_user: string | null; title: string; body: string | null; attachments: { name: string; url?: string; item_id?: string | null }[] | null }[]) {
+          for (const e of (data ?? []) as { id: number; project_id: number; channel: string; occurred_at: string; actor: string | null; actor_user: string | null; title: string; body: string | null; attachments: { name: string; url?: string; item_id?: string | null }[] | null; ai_status: string | null; ai_kind: string | null; ai_summary: string | null; ai_asked_by: string | null; ai_deadline: string | null; request_id: number | null; task_id: number | null }[]) {
             const item: TimelineItem = { key: `e${e.id}`, at: e.occurred_at, kind: e.channel === "email" ? "email" : "event", title: [e.title], detail: e.body ?? undefined, project: onProject(e.project_id), files: (e.attachments ?? []).filter((f) => f?.name).map((f) => ({ name: f.name, url: f.url ?? "", itemId: f.item_id ?? undefined })) };
+            if (e.channel === "email") item.ai = { eventId: e.id, kind: e.ai_kind, summary: e.ai_summary ?? undefined, askedBy: e.ai_asked_by ?? undefined, deadline: e.ai_deadline ?? undefined, requestId: e.request_id ?? undefined, taskId: e.task_id ?? undefined, pending: e.ai_status === "pending" || e.ai_status === "running" };
             if (e.actor && !e.actor_user) item.who = e.actor;
             push(item, e.actor_user);
           }

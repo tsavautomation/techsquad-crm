@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { oneDriveReady, ROOT, uploadBytes } from "@/lib/files/onedrive";
 import { safeName } from "@/lib/files/paths";
+import { queueEmailEvent, routeBacklog } from "@/lib/ai/route-email";
 import { adminDb } from "@/lib/supabase/admin";
 import { fetchAnywhere, fetchRaw, findUid, IGNORED_LABEL, INBOX, loadSettings, moveToLabel, newUids, parseRaw, saveSettings, withMailbox, type GmailSettings, type Session } from "./client";
 import { actorLabel, emailFolderName, isSystemMail, matchProject, parseMessage, projectLabel, type MailAttachment, type ParsedMail, type ProjectForMatch } from "./engine";
@@ -12,7 +13,7 @@ import { actorLabel, emailFolderName, isSystemMail, matchProject, parseMessage, 
 // OneDrive folder's name (Fred 2026-10-21: an email still in the inbox was not processed). Google's own
 // notices go to the label Ignored. The rest wait in the inbox and in the Assign list on Today.
 
-export type SyncSummary = { read: number; filed: number; waiting: number; moved: number; errors: string[]; skipped?: string };
+export type SyncSummary = { read: number; filed: number; waiting: number; moved: number; routed: number; errors: string[]; skipped?: string };
 export type StoredAttachment = MailAttachment & { item_id?: string; error?: string };
 
 const FIRST_LOOKBACK_MS = 30 * 24 * 3600_000;
@@ -60,9 +61,9 @@ async function fileInGmail(db: SupabaseClient, box: Session, mailId: number, gma
 /** Reads the new emails since the last check (never throws: the outcome is kept in the settings). */
 export async function syncMail(): Promise<SyncSummary> {
   const s = await loadSettings();
-  if (!s) return { read: 0, filed: 0, waiting: 0, moved: 0, errors: [], skipped: "Gmail is not connected" };
+  if (!s) return { read: 0, filed: 0, waiting: 0, moved: 0, routed: 0, errors: [], skipped: "Gmail is not connected" };
   const db = adminDb();
-  const out: SyncSummary = { read: 0, filed: 0, waiting: 0, moved: 0, errors: [] };
+  const out: SyncSummary = { read: 0, filed: 0, waiting: 0, moved: 0, routed: 0, errors: [] };
   const started = Date.now();
   let lastUid = s.last_uid;
   let uidValidity = s.uid_validity;
@@ -127,6 +128,10 @@ export async function syncMail(): Promise<SyncSummary> {
       out.moved += await labelBacklog(db, box);
     });
     await save({ last_uid: lastUid, uid_validity: uidValidity, last_sync_at: new Date().toISOString(), last_sync_error: out.errors.length ? out.errors.slice(0, 3).join(" · ") : null, read_total: s.read_total + out.read });
+    // F26-3: Claude reads the emails filed just now (and any left from before), within what is left of the budget.
+    const ai = await routeBacklog(db, Math.max(20_000, BUDGET_MS - (Date.now() - started)));
+    out.routed = ai.routed;
+    if (ai.errors) out.errors.push(`${ai.errors} email(s) the AI could not read (see Admin › AI)`);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     out.errors.push(message);
@@ -230,6 +235,7 @@ export async function fileMessage(db: SupabaseClient, mailId: number, projectId:
     if (error || !ev) return { ok: false, message: error?.message ?? "Could not create the timeline event" };
     eventId = (ev as { id: number }).id;
   }
+  await queueEmailEvent(db, eventId).catch(() => false);
   const errors = attachments.filter((a) => a.error).map((a) => `${a.name}: ${a.error}`);
   await db
     .from("mail_messages")

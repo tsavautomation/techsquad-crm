@@ -39,6 +39,7 @@ import { MaintenancePlan } from "@/components/project/maintenance-plan";
 import { FieldDataPanel } from "@/components/field-day/field-data-panel";
 import { PunchListPanel } from "@/components/project/punch-list-panel";
 import { SiteHistory } from "@/components/project/site-history";
+import { ProjectBrief } from "@/components/project/project-brief";
 import { ProjectEquipment } from "@/components/project/equipment";
 import { ProposedVisitPanel } from "@/components/schedule/proposed-visit-panel";
 import { RealityPanel } from "@/components/reports/reality-panel";
@@ -174,6 +175,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "employee" && <ScorecardPanel employeeId={recordId} user={user} />}
       {t.detailAddon === "employee" && <EmployeeDeficiencies employeeId={recordId} user={user} />}
       {t.detailAddon === "deficiency" && <DeficiencyPanel id={recordId} status={String(row.status ?? "")} canExcuse={canModify} />}
+      {t.detailAddon === "project" && <ProjectBrief projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <SiteHistory projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <ProjectEquipment projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <RequestsPanel projectId={recordId} user={user} />}
@@ -199,7 +201,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
         )}
         {timeline && (
           <Section id="timeline" title={tr("Timeline")} count={timeline.length} open={timeline.length > 0}>
-            <Timeline items={timeline} />
+            <Timeline items={timeline} canEdit={client === "projects" && canModify} />
           </Section>
         )}
         {subLists.filter((s) => s.table.name !== "project_requests").map((s) => (
