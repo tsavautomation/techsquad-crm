@@ -20,6 +20,8 @@ export const TimeClockSchema = z.object({
   start_time: z.string().regex(/^\d{2}:\d{2}$/).default("08:00"),
   /** When the "still clocked in" reminder fires, per group (HH:MM, Eastern). */
   reminder: z.object({ Field: z.string().regex(/^\d{2}:\d{2}$/).default("17:00"), Office: z.string().regex(/^\d{2}:\d{2}$/).default("18:00") }).default({ Field: "17:00", Office: "18:00" }),
+  /** TC-c: past this time (HH:MM, Eastern) a still-open day alerts the person and the office (the time-clock approvers). */
+  cutoff: z.string().regex(/^\d{2}:\d{2}$/).default("20:00"),
   /** F20: after midnight, forgotten check-outs / clock-outs are closed at this time (late_time for the people in the late list). */
   auto_checkout: z
     .object({

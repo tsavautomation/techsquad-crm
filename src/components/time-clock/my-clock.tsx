@@ -29,6 +29,7 @@ export async function MyClock({ user, now }: { user: CurrentUser; now: number })
       clockedText={formatMinutes(day.clockedMin)}
       onSiteText={day.onSiteMin ? formatMinutes(day.onSiteMin) : ""}
       reminderPassed={pastTime(localNow, settings.time_clock.reminder[mine.group])}
+      cutoffText={pastTime(localNow, settings.time_clock.cutoff) ? clock(settings.time_clock.cutoff) : null}
       entries={day.entries.map((e) => ({ id: e.id, kind: e.kind, time: time(e.at), label: tr(KIND_LABEL[e.kind]), place: e.place, distance_m: e.distance_m, hasGeo: e.lat !== null }))}
     />
   );

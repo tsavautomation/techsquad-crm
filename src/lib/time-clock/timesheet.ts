@@ -5,10 +5,11 @@
 // never change the total (they describe the day, they do not pay it). A shift belongs to the day of its
 // clock-in (Eastern), even when it ends after midnight.
 import { toDateTimeLocalET } from "@/lib/dates";
+import { autoCloseAt } from "@/lib/field-day/day";
 import { addDays } from "@/lib/schedule/dates";
 import type { EntryKind } from "./clock";
 
-export type SheetEntry = { id: number; kind: EntryKind; at: string; note?: string | null; reviewed_at?: string | null };
+export type SheetEntry = { id: number; kind: EntryKind; at: string; note?: string | null; reviewed_at?: string | null; auto_closed?: boolean | null };
 
 /** Why a shift is flagged for review. */
 export type ShiftFlag = "short" | "same_minute" | "long" | "open" | "auto";
@@ -33,7 +34,7 @@ export const FLAG_TEXT: Record<ShiftFlag, string> = {
   same_minute: "Clock-in and clock-out in the same minute",
   long: "Shift over 14 hours",
   open: "Never clocked out",
-  auto: "Clocked out by the system",
+  auto: "Auto clock-out",
 };
 
 export const SHORT_SHIFT_MIN = 5;
@@ -96,7 +97,7 @@ function makeShift(inE: SheetEntry, outE: SheetEntry | null, now: number, today:
     if (minutes < SHORT_SHIFT_MIN) flags.push("short");
     if (minuteOf(inE.at) === minuteOf(outE.at)) flags.push("same_minute");
     if (minutes > LONG_SHIFT_HOURS * 60) flags.push("long");
-    if (outE.note?.startsWith(AUTO_NOTE_PREFIX)) flags.push("auto");
+    if (outE.auto_closed || outE.note?.startsWith(AUTO_NOTE_PREFIX)) flags.push("auto");
   } else if (day >= today) {
     // Still clocked in today: runs until now, nothing to review yet.
     minutes = Math.max(0, Math.round((now - ms(inE.at)) / 60_000));
@@ -119,6 +120,29 @@ export function weekSheet(entries: SheetEntry[], monday: string, now: number = D
     return { date, minutes: mine.reduce((n, s) => n + s.minutes, 0), shifts: mine, toReview: mine.filter((s) => s.needsReview).length };
   });
   return { monday, days, totalMinutes: days.reduce((n, d) => n + d.minutes, 0), toReview: days.reduce((n, d) => n + d.toReview, 0) };
+}
+
+// ---------------------------------------------------------------- forgotten clock-outs (TC-c / TC-d)
+
+/** Per employee, the clock-in still open (the last clock entry of the day is a clock-in). Entries in time order. */
+export function openClockIns<T extends { id: number; employee_id: number; kind: EntryKind; at: string }>(entries: T[]): Map<number, T> {
+  const open = new Map<number, T>();
+  for (const e of [...entries].sort((a, b) => ms(a.at) - ms(b.at) || a.id - b.id)) {
+    if (e.kind === "clock_in") open.set(e.employee_id, e);
+    else if (e.kind === "clock_out") open.delete(e.employee_id);
+  }
+  return open;
+}
+
+/**
+ * When the system clocks a forgotten day out (TC-d): at the person's last recorded activity after the clock-in
+ * (a job arrival, leaving a job, On my way), or, with no activity after it, at the day's cut-off (F20-b's
+ * automatic check-out time; a minute after the clock-in when that came later).
+ */
+export function forgottenClockOutAt(clockInIso: string, activityIsos: string[], day: string, cutoff: string): { at: string; reason: "last_activity" | "cutoff" } {
+  const after = activityIsos.filter((a) => ms(a) > ms(clockInIso));
+  if (after.length) return { at: new Date(Math.max(...after.map(ms))).toISOString(), reason: "last_activity" };
+  return { at: autoCloseAt(clockInIso, day, cutoff), reason: "cutoff" };
 }
 
 /** 525 → "8:45"; 0 → "0:00". Timesheet cells, where "8 h 45 min" would not fit. */

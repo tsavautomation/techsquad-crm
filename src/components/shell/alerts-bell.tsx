@@ -8,6 +8,7 @@ import { AtSign, Bell, CheckSquare, Clock, IdCard, MessageSquarePlus, MessageSqu
 import { toast } from "sonner";
 import { alertsAction, markTagsSeenAction, type Alerts, type AlertItem, type AlertSection } from "@/lib/alerts/actions";
 import { ackRequestAction } from "@/lib/requests/actions";
+import { ackClockAlertAction } from "@/lib/time-clock/actions";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
@@ -32,7 +33,7 @@ function AckButtons({ item, onDone }: { item: AlertItem; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const run = async (action: "acknowledged" | "cleared") => {
     setBusy(true);
-    const r = await ackRequestAction(item.ack!, action);
+    const r = item.ackKind === "clock_open" ? await ackClockAlertAction(item.ack!, action) : await ackRequestAction(item.ack!, action);
     setBusy(false);
     if (!r.ok) toast.error(t(r.message));
     else onDone();

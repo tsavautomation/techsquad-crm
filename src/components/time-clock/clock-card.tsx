@@ -23,11 +23,13 @@ type Props = {
   clockedText: string;
   onSiteText: string;
   reminderPassed: boolean;
+  /** TC-c: past the office cut-off (e.g. 8:00 PM) the warning says the day will be closed for review at midnight. */
+  cutoffText?: string | null;
 };
 
 const PLACE_TONE: Record<Place, string> = { Office: "text-info-fg", "On site": "text-ok-fg", Elsewhere: "text-warn-fg", Unknown: "text-muted-foreground" };
 
-export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSiteText, reminderPassed }: Props) {
+export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSiteText, reminderPassed, cutoffText }: Props) {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -56,7 +58,11 @@ export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSi
             {openSince ? t("Clocked in since {time} · {clocked} today", { time: openSinceTime ?? "", clocked: clockedText }) : entries.length ? t("Clocked out · {clocked} today", { clocked: clockedText }) : t("Not clocked in yet")}
             {onSiteText && ` · ${t("on site {time}", { time: onSiteText })}`}
           </p>
-          {reminderPassed && openSince && <p className="mt-0.5 text-xs font-medium text-warn-fg">{t("Still clocked in — don't forget to clock out.")}</p>}
+          {reminderPassed && openSince && (
+            <p className={cn("mt-0.5 text-xs font-medium", cutoffText ? "text-bad-fg" : "text-warn-fg")}>
+              {cutoffText ? t("Past the {time} cut-off — clock out now, or the day is closed for review at midnight.", { time: cutoffText }) : t("Still clocked in — don't forget to clock out.")}
+            </p>
+          )}
         </div>
         <button
           type="button"

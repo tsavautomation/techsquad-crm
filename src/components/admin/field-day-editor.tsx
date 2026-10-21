@@ -113,8 +113,13 @@ export function FieldDayEditor({ initial, people, reasons, services }: { initial
         </div>
         <p className="mt-2 text-xs text-muted-foreground">{t("Each employee's group (Field / Office) is on their Employee record.")}</p>
         <h3 className="mt-4 text-sm font-semibold">{t("Forgotten check-outs")}</h3>
-        <p className="mb-2 text-xs text-muted-foreground">{t("After midnight, anyone still on site or clocked in is checked out at this time and sees a red warning the next morning.")}</p>
+        <p className="mb-2 text-xs text-muted-foreground">{t("After midnight, anyone still on site is checked out at this time. A forgotten clock-out is closed at the person's last recorded activity, or at this time when nothing came after the clock-in; it shows on the timesheet as Auto clock-out until the office reviews it. The person sees a red warning the next morning.")}</p>
         <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-medium">
+            {t("Still clocked in: alert the office after")}
+            <input type="time" className={`${BOX} mt-1 h-11`} value={tc.cutoff} onChange={(e) => setTc({ ...tc, cutoff: e.target.value || "20:00" })} />
+            <span className="mt-1 block text-xs font-normal text-muted-foreground">{t("Past this time the person and the time-clock approvers (below) get an alert on the bell.")}</span>
+          </label>
           <label className="block text-sm font-medium">
             {t("Automatic check-out time")}
             <input type="time" className={`${BOX} mt-1 h-11`} value={tc.auto_checkout.time} onChange={(e) => setTc({ ...tc, auto_checkout: { ...tc.auto_checkout, time: e.target.value || "16:00" } })} />

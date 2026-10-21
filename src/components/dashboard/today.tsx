@@ -118,7 +118,11 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
           title: tr("Still clocked in"),
           rows: [...open.entries()]
             .filter(([, o]) => pastTime(localNow, settings.time_clock.reminder[o.group === "Office" ? "Office" : "Field"]))
-            .map(([id, o]) => ({ href: recordHref(employeesT, id), title: o.title, meta: tr("Since {when}", { when: when(o.since) }), tone: "warn" as const })),
+            // TC-c: past the cut-off the row turns red; the day is closed for review at midnight.
+            .map(([id, o]) => {
+              const late = pastTime(localNow, settings.time_clock.cutoff);
+              return { href: recordHref(employeesT, id), title: o.title, meta: late ? tr("Since {when} · past the {cutoff} cut-off", { when: when(o.since), cutoff: clock(settings.time_clock.cutoff) }) : tr("Since {when}", { when: when(o.since) }), tone: late ? ("bad" as const) : ("warn" as const) };
+            }),
         };
       })(),
     );

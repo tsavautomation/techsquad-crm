@@ -41,7 +41,7 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
     db.from("employee_names").select("id, title, clock_group, status").is("deleted_at", null).order("title"),
     db
       .from("time_entries")
-      .select("id, employee_id, kind, at, note, reviewed_at")
+      .select("id, employee_id, kind, at, note, reviewed_at, auto_closed")
       .in("kind", ["clock_in", "clock_out"])
       .gte("at", fromDateTimeLocalET(`${monday}T00:00`))
       .lt("at", fromDateTimeLocalET(`${addDays(monday, 7)}T00:00`))

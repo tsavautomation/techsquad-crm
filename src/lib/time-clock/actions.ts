@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { fromDateTimeLocalET, toDateTimeLocalET } from "@/lib/dates";
+import { isApprover } from "@/lib/field-day/corrections";
 import { recordsDb } from "@/lib/records/data";
 import type { Geo } from "./clock";
 import { myClockToday, recordEntry } from "./record";
@@ -76,5 +77,15 @@ export async function reviewShiftAction(entryId: number, reviewed: boolean): Pro
   if (!data?.length) return { ok: false, message: "Entry not found." };
   revalidatePath("/time-clock");
   revalidatePath("/time-clock/timesheets");
+  return { ok: true };
+}
+
+/** TC-c: "Got it" (hides the still-clocked-in alert for me) or "Clear for everyone" (for every approver), logged in my name. */
+export async function ackClockAlertAction(entryId: number, action: "acknowledged" | "cleared"): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireUser();
+  const db = await recordsDb();
+  if (!(await isApprover(db, user))) return { ok: false, message: "Only the time-clock approvers can do this (Admin › Field day)." };
+  const { error } = await db.from("alert_acks").upsert({ kind: "clock_open", ref_id: entryId, user_id: user.id, action }, { onConflict: "kind,ref_id,user_id,action", ignoreDuplicates: true });
+  if (error) return { ok: false, message: error.message };
   return { ok: true };
 }

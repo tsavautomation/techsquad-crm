@@ -1,13 +1,15 @@
 "use server";
 
 import { requireUser } from "@/lib/auth/session";
-import { formatDate, formatDateTime, toDateTimeLocalET, todayET } from "@/lib/dates";
+import { formatDate, formatDateTime, fromDateTimeLocalET, toDateTimeLocalET, todayET } from "@/lib/dates";
 import { FIELD_LABEL, isApprover, pendingCorrections } from "@/lib/field-day/corrections";
 import { loadFieldDay } from "@/lib/field-day/return-card";
 import { recordsDb } from "@/lib/records/data";
 import { addDays, clock as clockTime } from "@/lib/schedule/dates";
 import { pastTime } from "@/lib/time-clock/clock";
 import { myClockToday } from "@/lib/time-clock/record";
+import { openClockIns } from "@/lib/time-clock/timesheet";
+import type { Ack } from "@/lib/requests/engine";
 import { getTable, REGISTRY } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
@@ -23,8 +25,8 @@ import { isRecipient, loadAcks } from "@/lib/requests/load";
 // to approve), report reminders the office must follow up, portal requests, and driver's licences expiring.
 // Workflow stages, today's visits and client follow-ups live on Today and the calendar, not in the bell.
 
-/** `ack`: a shared alert (F26-c) with "Got it" / "Clear for everyone" buttons; the request id. */
-export type AlertItem = { key: string; href: string; title: string; meta: string; urgent?: boolean; ack?: number };
+/** `ack`: a shared alert (F26-c) with "Got it" / "Clear for everyone" buttons; the request id, or (TC-c, `ackKind` clock_open) the open clock-in's id. */
+export type AlertItem = { key: string; href: string; title: string; meta: string; urgent?: boolean; ack?: number; ackKind?: "clock_open" };
 export type AlertSection = { key: "clock" | "phones" | "tags" | "tasks" | "checklist" | "requests" | "project_requests" | "licence"; title: string; items: AlertItem[] };
 export type Alerts = { count: number; urgent: boolean; sections: AlertSection[] };
 
@@ -179,14 +181,53 @@ export async function alertsAction(): Promise<Alerts> {
   })();
 
   // Follow-up dates on my own notes, from a week ago up to today.
-  // P2: still clocked in past the reminder time for my group.
+  // P2: still clocked in past the reminder time for my group; TC-c: past the cut-off the warning is firmer.
   const clock = (async (): Promise<AlertItem[]> => {
     const mine = await myClockToday(db, user);
     if (!mine?.day.openSince) return [];
     const settings = await loadFieldDay(db);
     const localNow = toDateTimeLocalET(new Date().toISOString()).slice(11, 16);
     if (!pastTime(localNow, settings.time_clock.reminder[mine.group])) return [];
-    return [{ key: "clock:open", href: "/#clock", title: tr("Still clocked in"), meta: tr("Since {time} — clock out when you're done.", { time: clockTime(toDateTimeLocalET(mine.day.openSince).slice(11)) }), urgent: true }];
+    const since = clockTime(toDateTimeLocalET(mine.day.openSince).slice(11));
+    const pastCutoff = pastTime(localNow, settings.time_clock.cutoff);
+    return [
+      {
+        key: "clock:open",
+        href: "/#clock",
+        title: pastCutoff ? tr("Still clocked in past {time}", { time: clockTime(settings.time_clock.cutoff) }) : tr("Still clocked in"),
+        meta: pastCutoff ? tr("Since {time} — clock out now, or the day is closed for review at midnight.", { time: since }) : tr("Since {time} — clock out when you're done.", { time: since }),
+        urgent: true,
+      },
+    ];
+  })();
+
+  // TC-c: the office (the time-clock approvers, Admin › Field day) hears who is still clocked in past the cut-off.
+  // A shared alert: "Got it" hides it for me, "Clear for everyone" for every approver (alert_acks kind clock_open).
+  const clockOffice = (async (): Promise<AlertItem[]> => {
+    if (!(await isApprover(db, user))) return [];
+    const settings = await loadFieldDay(db);
+    const localNow = toDateTimeLocalET(new Date().toISOString()).slice(11, 16);
+    if (!pastTime(localNow, settings.time_clock.cutoff)) return [];
+    const { data } = await db
+      .from("time_entries")
+      .select("id, employee_id, kind, at, employees:employee_id(title)")
+      .in("kind", ["clock_in", "clock_out"])
+      .gte("at", fromDateTimeLocalET(`${today}T00:00`))
+      .is("deleted_at", null)
+      .order("at");
+    const rows = (data ?? []) as unknown as { id: number; employee_id: number; kind: "clock_in" | "clock_out"; at: string; employees: { title: string | null } | null }[];
+    const open = [...openClockIns(rows).values()];
+    if (!open.length) return [];
+    const { data: acks } = await db.from("alert_acks").select("ref_id, user_id, action, at").eq("kind", "clock_open").in("ref_id", open.map((e) => e.id));
+    return pendingForMe(open, (acks ?? []) as Ack[], user.id).map((e) => ({
+      key: `clock:office:${e.id}`,
+      href: `/time-clock?day=${today}&employee=${e.employee_id}`,
+      title: tr("{name} still clocked in", { name: e.employees?.title ?? `#${e.employee_id}` }),
+      meta: tr("Since {time} · past the {cutoff} cut-off; closed for review at midnight if nobody clocks out", { time: clockTime(toDateTimeLocalET(e.at).slice(11)), cutoff: clockTime(settings.time_clock.cutoff) }),
+      urgent: true,
+      ack: e.id,
+      ackKind: "clock_open",
+    }));
   })();
 
   // F18-c: administrators hear about technicians the 9 PM reminder could not reach (no usable phone).
@@ -244,9 +285,9 @@ export async function alertsAction(): Promise<Alerts> {
     }));
   })();
 
-  const [a, b, d, e, g, h, i, l, pr] = await Promise.all([tags, corrections, tasks, checklist, clock, phones, requests, licence, projectRequests]);
+  const [a, b, d, e, g, h, i, l, pr, go] = await Promise.all([tags, corrections, tasks, checklist, clock, phones, requests, licence, projectRequests, clockOffice]);
   const sections: AlertSection[] = [
-    { key: "clock" as const, title: tr("Time clock"), items: [...g, ...b] },
+    { key: "clock" as const, title: tr("Time clock"), items: [...g, ...go, ...b] },
     { key: "licence" as const, title: tr("Driver's licences"), items: l },
     { key: "phones" as const, title: tr("Report reminders"), items: h },
     { key: "project_requests" as const, title: tr("Project requests"), items: pr },

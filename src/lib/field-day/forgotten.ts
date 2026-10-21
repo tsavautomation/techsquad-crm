@@ -5,6 +5,8 @@ import { loadFieldDay } from "@/lib/field-day/return-card";
 import { missingReportsFor } from "@/lib/reports/rule-run";
 import { addDays } from "@/lib/schedule/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
+import type { EntryKind } from "@/lib/time-clock/clock";
+import { forgottenClockOutAt, openClockIns } from "@/lib/time-clock/timesheet";
 import { autoCloseAt } from "./day";
 
 // F20 Forgotten check-outs (SPEC §9.1 F20): after midnight, whoever is still "On site" is checked out at the
@@ -50,19 +52,21 @@ export async function closeForgottenDay(date: string): Promise<Record<string, un
     if (v.technician_id !== null) warnings.push({ employee_id: v.technician_id, user_id: null, kind: "forgot_checkout", day, visit_id: v.id, project: v.projects?.title ?? null, closed_at: closedAt });
   }
 
-  // 2. Time clock: a day whose last entry is a clock-in gets its clock-out at the cut-off.
+  // 2. Time clock (TC-d): a day whose last clock entry is a clock-in is clocked out at the person's last recorded
+  //    activity after it (job arrival, leaving a job, On my way), else at the cut-off; marked auto_closed so the
+  //    timesheet shows "Auto clock-out · Needs review" until the office reviews it.
   const from = fromDateTimeLocalET(`${date}T00:00`);
-  const { data: entries } = await db.from("time_entries").select("id, employee_id, user_id, kind, at").in("kind", ["clock_in", "clock_out"]).gte("at", from).lt("at", to).order("at");
-  const last = new Map<number, { user_id: string; kind: string; at: string }>();
-  for (const e of (entries ?? []) as { employee_id: number; user_id: string; kind: string; at: string }[]) last.set(e.employee_id, e);
+  const { data: entries } = await db.from("time_entries").select("id, employee_id, user_id, kind, at").gte("at", from).lt("at", to).is("deleted_at", null).order("at");
+  const all = (entries ?? []) as { id: number; employee_id: number; user_id: string; kind: EntryKind; at: string }[];
   let clockOuts = 0;
-  for (const [employeeId, e] of last) {
-    if (e.kind !== "clock_in") continue;
-    const closedAt = autoCloseAt(e.at, date, cutoffFor(employeeId));
-    const { error } = await db.from("time_entries").insert({ employee_id: employeeId, user_id: e.user_id, kind: "clock_out", at: closedAt, place: "Unknown", note: "Automatic clock-out: the day was never closed (F20)" });
+  for (const [employeeId, e] of openClockIns(all)) {
+    const activity = all.filter((x) => x.employee_id === employeeId && x.kind !== "clock_in" && x.kind !== "clock_out").map((x) => x.at);
+    const closed = forgottenClockOutAt(e.at, activity, date, cutoffFor(employeeId));
+    const note = closed.reason === "last_activity" ? "Auto clock-out – needs review: the day was never closed, clocked out at the last recorded activity (TC-d)" : "Auto clock-out – needs review: the day was never closed and nothing was recorded after the clock-in, clocked out at the cut-off (TC-d)";
+    const { error } = await db.from("time_entries").insert({ employee_id: employeeId, user_id: e.user_id, kind: "clock_out", at: closed.at, place: "Unknown", note, auto_closed: true });
     if (error) throw new Error(`clock-out for employee #${employeeId}: ${error.message}`);
     clockOuts++;
-    warnings.push({ employee_id: employeeId, user_id: e.user_id, kind: "forgot_clock_out", day: date, visit_id: null, project: null, closed_at: closedAt });
+    warnings.push({ employee_id: employeeId, user_id: e.user_id, kind: "forgot_clock_out", day: date, visit_id: null, project: null, closed_at: closed.at });
   }
 
   // 3. Job Reports still missing for the day (the F18 rule decides who owed one; nothing when the rule is off).

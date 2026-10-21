@@ -123,3 +123,42 @@ describe("the week sheet", () => {
     expect(sheet.days[1].shifts).toHaveLength(2);
   });
 });
+
+// TC-c / TC-d: forgotten clock-outs.
+import { forgottenClockOutAt, openClockIns } from "@/lib/time-clock/timesheet";
+
+describe("forgotten clock-outs", () => {
+  it("finds who is still clocked in today", () => {
+    const rows = [
+      { id: 1, employee_id: 7, kind: "clock_in" as const, at: at("2026-10-14T07:00") },
+      { id: 2, employee_id: 8, kind: "clock_in" as const, at: at("2026-10-14T07:05") },
+      { id: 3, employee_id: 7, kind: "clock_out" as const, at: at("2026-10-14T16:00") },
+      { id: 4, employee_id: 7, kind: "clock_in" as const, at: at("2026-10-14T17:00") },
+      { id: 5, employee_id: 9, kind: "visit_in" as const, at: at("2026-10-14T09:00") },
+    ];
+    const open = openClockIns(rows);
+    expect([...open.keys()].sort()).toEqual([7, 8]);
+    expect(open.get(7)!.id).toBe(4);
+    expect(open.get(8)!.id).toBe(2);
+  });
+
+  it("closes a forgotten day at the last recorded activity after the clock-in", () => {
+    const r = forgottenClockOutAt(at("2026-10-14T06:54"), [at("2026-10-14T06:30"), at("2026-10-14T09:10"), at("2026-10-14T15:42")], "2026-10-14", "16:00");
+    expect(r.reason).toBe("last_activity");
+    expect(r.at).toBe(new Date(at("2026-10-14T15:42")).toISOString());
+  });
+
+  it("falls back to the day's cut-off when nothing came after the clock-in", () => {
+    const r = forgottenClockOutAt(at("2026-10-14T06:54"), [at("2026-10-14T06:30")], "2026-10-14", "16:00");
+    expect(r.reason).toBe("cutoff");
+    expect(r.at).toBe(new Date(at("2026-10-14T16:00")).toISOString());
+    const late = forgottenClockOutAt(at("2026-10-14T18:40"), [], "2026-10-14", "16:00");
+    expect(late.at).toBe(new Date(Date.parse(at("2026-10-14T18:40")) + 60_000).toISOString());
+  });
+
+  it("the system's clock-out is flagged by its mark, not only by its note", () => {
+    const [a] = shiftsOf([e("clock_in", "2026-10-14T06:54"), e("clock_out", "2026-10-14T15:42", { auto_closed: true, note: "Auto clock-out – needs review: … (TC-d)" })], NOW, TODAY);
+    expect(a.flags).toEqual(["auto"]);
+    expect(a.needsReview).toBe(true);
+  });
+});

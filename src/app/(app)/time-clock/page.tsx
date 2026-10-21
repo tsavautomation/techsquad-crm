@@ -26,7 +26,7 @@ export async function generateMetadata() {
 const KIND_LABEL: Record<EntryKind, string> = { clock_in: "Clocked in", clock_out: "Clocked out", on_way: "On my way", visit_in: "Arrived at the job", visit_out: "Left the job" };
 const PLACE_TONE: Record<Place, string> = { Office: "text-info-fg", "On site": "text-ok-fg", Elsewhere: "text-warn-fg", Unknown: "text-muted-foreground" };
 
-type Row = TimeEntry & { employee_id: number; note: string | null; reviewed_at: string | null; corrected_at: string | null; original_at: string | null; employees: { title: string | null } | null; visits: { projects: { title: string | null } | null } | null };
+type Row = TimeEntry & { employee_id: number; note: string | null; reviewed_at: string | null; auto_closed: boolean; corrected_at: string | null; original_at: string | null; employees: { title: string | null } | null; visits: { projects: { title: string | null } | null } | null };
 
 export default async function TimeClockPage(props: PageProps<"/time-clock">) {
   const tr = await getT();
@@ -40,7 +40,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
   const db = await recordsDb();
   let q = db
     .from("time_entries")
-    .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, corrected_at, original_at, employees:employee_id(title), visits:visit_id(projects(title))")
+    .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, auto_closed, corrected_at, original_at, employees:employee_id(title), visits:visit_id(projects(title))")
     .gte("at", fromDateTimeLocalET(`${day}T00:00`))
     .lt("at", fromDateTimeLocalET(`${addDays(day, 1)}T00:00`))
     .is("deleted_at", null);
@@ -123,7 +123,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                           </span>
                           {" · "}
                           {s.flags.map((f) => tr(FLAG_TEXT[f])).join(" · ")}
-                          {!s.needsReview && ` · ${tr("Reviewed")}`}
+                          {` · ${s.needsReview ? tr("Needs review") : tr("Reviewed")}`}
                         </span>
                         {canFix && <ReviewButton entryId={s.inId} reviewed={!s.needsReview} />}
                       </li>
@@ -140,6 +140,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                         <p>
                           {tr(KIND_LABEL[e.kind])}
                           {e.visits?.projects?.title && <span className="text-text-2"> · {e.visits.projects.title}</span>}
+                          {e.auto_closed && <span className="ml-1 rounded bg-warn-bg px-1.5 text-[11px] text-warn-fg">{tr("by the system")}</span>}
                           {e.corrected_at && e.original_at && <span className="ml-1 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">{tr("corrected from {time}", { time: time(e.original_at) })}</span>}
                         </p>
                         <span className={cn("mt-0.5 flex items-center gap-1 text-xs", PLACE_TONE[e.place])}>
