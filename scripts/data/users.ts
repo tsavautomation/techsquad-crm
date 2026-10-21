@@ -24,6 +24,7 @@ export const USERS: SeedUser[] = [
   { email: "kleider@tsav.net", firstName: "Kleider", lastName: "Loregian Junior", employeeId: 1028 },
   { email: "marcelo@tsav.net", firstName: "Marcelo", lastName: "Opazo", employeeId: 1009 },
   { email: "quintana@tsav.net", firstName: "Rodolfo", lastName: "Quintana", employeeId: 1018 },
+  { email: "daniel.a@tsav.net", firstName: "Daniel", lastName: "Andrade" },
   // Test login
   { email: "info@tsav.net", firstName: "Technician", lastName: "Test" },
 ];

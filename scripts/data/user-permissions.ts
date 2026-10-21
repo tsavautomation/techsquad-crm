@@ -10,6 +10,10 @@ export type SeedPermissions = { admin: boolean; permissions: Record<string, stri
 export const TECHNICIAN: SeedPermissions = {
   admin: false,
   permissions: {
+    // F22 Documents board (insurance, licenses) and the portal pages: read-only.
+    "administrative.documents": ["view_all", "view_page"],
+    "administrative.portal-apps": ["view_all", "view_page"],
+    "administrative.portal-documents": ["view_all", "view_page"],
     "administrative.tasks": ["modify", "view_page"],
     "forms.job-reports": ["create", "modify", "view_page"],
     "forms.notes": ["create", "modify", "view_page"],
@@ -142,36 +146,15 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "workflow.stock_status": ["act"],
     },
   },
+  // Roberto Pizini: the technician profile plus Inventory, the one technician who keeps it (Fred 2026-10-04, 2026-10-20).
   "roberto@tsav.net": {
     admin: false,
     permissions: {
-      "administrative.employees": ["create", "delete", "modify", "view_all", "view_page"],
+      ...TECHNICIAN.permissions,
       "inventory.inventory-checkout": ["create", "delete", "modify", "view_all", "view_page"],
-      "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes"],
-      "administrative.records": ["delete_locked", "modify_locked"],
-      "administrative.rma": ["create", "delete", "modify", "view_all", "view_page"],
-      "administrative.tasks": ["create", "delete", "modify", "view_all", "view_page"],
-      "administrative.vehicles": ["create", "delete", "modify", "view_all", "view_page"],
-      "forms.job-reports": ["archive", "create", "delete", "modify", "view_all", "view_page"],
-      "forms.module": ["deleted_items", "files_allow_delete"],
-      "forms.notes": ["archive", "create", "delete", "modify", "view_all", "view_page"],
-      "forms.records": ["delete_locked", "lock_unlock"],
-      "forms.staff-performance": ["archive", "create", "delete", "modify", "view_all", "view_page"],
-      "forms.survey-and-proposals": ["archive", "create", "delete", "modify", "view_all", "view_page"],
-      "forms.tv-installations": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.module": ["activity_history_add", "activity_history_view", "files_add_new"],
       "inventory.products": ["create", "modify", "view_all", "view_page"],
       "inventory.stock": ["create", "modify", "view_all", "view_page"],
-      "projects.buildings": ["create", "delete", "modify", "view_all", "view_page"],
-      "projects.contacts": ["create", "delete", "modify", "view_all", "view_page"],
-      "projects.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "design_design", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes"],
-      "projects.organizations": ["create", "delete", "modify", "view_all", "view_page"],
-      "projects.permits": ["create", "delete", "modify", "view_all", "view_page"],
-      "projects.projects": ["create", "delete", "delete_locked", "modify", "modify_locked", "view_all", "view_page"],
-      "projects.punch-list": ["create", "delete", "modify", "view_all", "view_page"],
-      "schedule.visits": ["archive", "create", "delete", "modify", "view_all", "view_page"],
-      "workflow.project_proposal": ["act"],
-      "workflow.punch_list": ["act"],
     },
   },
   "saulo@tsav.net": {
@@ -316,7 +299,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
   "info@tsav.net": TECHNICIAN,
   // Technicians (Fred 2026-10-04, SPEC §9.1 P1-e): make reports (not Staff Performance), see projects and
   // visits read-only, their own tasks and alerts; nothing financial, no Administrative, no Inventory, no editing.
-  ...Object.fromEntries(["rodolfo@tsav.net", "carlos@tsav.net", "daniel@tsav.net", "fabio@tsav.net", "hugo@tsav.net", "jeferson@tsav.net", "joao@tsav.net", "kleider@tsav.net", "marcelo@tsav.net", "quintana@tsav.net"].map((email) => [email, TECHNICIAN])),
+  ...Object.fromEntries(["rodolfo@tsav.net", "carlos@tsav.net", "daniel@tsav.net", "fabio@tsav.net", "hugo@tsav.net", "jeferson@tsav.net", "joao@tsav.net", "kleider@tsav.net", "marcelo@tsav.net", "quintana@tsav.net", "daniel.a@tsav.net"].map((email) => [email, TECHNICIAN])),
 };
 
 /** Flat permission keys for one person. */

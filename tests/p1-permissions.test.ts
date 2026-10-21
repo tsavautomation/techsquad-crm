@@ -81,8 +81,14 @@ describe("seed (scripts/data/user-permissions.ts)", () => {
   it("keeps what the old groups gave: Fred administrator, Jessica the office, the technician the field", () => {
     expect(USER_PERMISSIONS["fred@tsav.net"].admin).toBe(true);
     const menu = (email: string) => visibleModules(new Set(seedKeys(USER_PERMISSIONS[email]))).flatMap((m) => m.tabs.map((t) => `${m.slug}/${t.slug}`));
-    expect(menu("info@tsav.net")).toEqual(["schedule/calendar", "schedule/map", "schedule/visits", "projects/projects", "projects/buildings", "projects/permits", "projects/punch-list", "administrative/rma", "administrative/tasks", "inventory/inventory-checkout", "forms/job-reports", "forms/notes", "forms/survey-and-proposals", "forms/tv-installations"]);
-    expect(menu("jessica@tsav.net")).toContain("administrative/transactions");
+    // P1-e (Fred 2026-10-04, confirmed 2026-10-20): no Inventory, no RMA for technicians; the Documents board (F22) is read-only.
+    expect(menu("info@tsav.net")).toEqual(["schedule/calendar", "schedule/map", "schedule/visits", "projects/projects", "projects/buildings", "projects/permits", "projects/punch-list", "administrative/tasks", "administrative/documents", "administrative/portal-documents", "administrative/portal-apps", "forms/job-reports", "forms/notes", "forms/survey-and-proposals", "forms/tv-installations"]);
+    // Roberto Pizini is the one technician who keeps Inventory.
+    expect(menu("roberto@tsav.net")).toContain("inventory/inventory-checkout");
+    expect(menu("roberto@tsav.net")).not.toContain("administrative/transactions");
+    // Transactions: Fred, Karina, Luana and Saulo only (Fred 2026-10-13).
+    expect(menu("jessica@tsav.net")).not.toContain("administrative/transactions");
+    expect(menu("luana@tsav.net")).toContain("administrative/transactions");
     expect(menu("lucas@tsav.net")).not.toContain("administrative/transactions");
     const jessica = new Set(seedKeys(USER_PERMISSIONS["jessica@tsav.net"]));
     expect(jessica.has("workflow.project_proposal.act")).toBe(true);
