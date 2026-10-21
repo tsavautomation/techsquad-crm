@@ -37,14 +37,14 @@ export async function visitStepAction(id: number, step: Step, geo: Geo | null = 
   const here = geo && Number.isFinite(geo.lat) && Number.isFinite(geo.lng) ? { lat: geo.lat, lng: geo.lng, accuracy_m: geo.accuracy_m != null && Number.isFinite(geo.accuracy_m) ? Math.round(geo.accuracy_m) : null } : null;
   await recordEntry(db, user, ENTRY_KIND[step], here, id).catch(() => undefined);
   after(runAutomationsSafely);
-  // F27: the office is told at once (push), except the person pressing the button.
+  // F27: the office is told at once (push); the person pressing the button gets it too (Fred 2026-10-21, so a check-in can be tested from one login).
   if (step === "check_in" || step === "check_out") {
     const row = data as { project_id: number | null };
     const at = new Date().toISOString();
     after(async () => {
       const { data: p } = row.project_id ? await db.from("projects").select("title").eq("id", row.project_id).maybeSingle() : { data: null };
       const person = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
-      await notifyPush(step === "check_in" ? "visit_check_in" : "visit_check_out", visitStepMessage(step === "check_in" ? "visit_check_in" : "visit_check_out", { person, project: (p as { title: string | null } | null)?.title ?? null, at, visitId: id }), user.id);
+      await notifyPush(step === "check_in" ? "visit_check_in" : "visit_check_out", visitStepMessage(step === "check_in" ? "visit_check_in" : "visit_check_out", { person, project: (p as { title: string | null } | null)?.title ?? null, at, visitId: id }));
     });
   }
   revalidatePath("/");
