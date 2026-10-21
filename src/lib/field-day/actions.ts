@@ -14,6 +14,8 @@ import { fromDateTimeLocalET, todayET } from "@/lib/dates";
 import { addDays } from "@/lib/schedule/dates";
 import { myEmployeeIds } from "./load";
 import { FieldDaySchema, type FieldDaySettings } from "./day";
+import { visitStepMessage } from "@/lib/push/engine";
+import { notifyPush } from "@/lib/push/send";
 
 // F2 Field day actions. Check-in steps go through public.visit_step (only the people going, or
 // whoever may change visits); settings through app_settings (Form designers, as Form settings).
@@ -35,6 +37,16 @@ export async function visitStepAction(id: number, step: Step, geo: Geo | null = 
   const here = geo && Number.isFinite(geo.lat) && Number.isFinite(geo.lng) ? { lat: geo.lat, lng: geo.lng, accuracy_m: geo.accuracy_m != null && Number.isFinite(geo.accuracy_m) ? Math.round(geo.accuracy_m) : null } : null;
   await recordEntry(db, user, ENTRY_KIND[step], here, id).catch(() => undefined);
   after(runAutomationsSafely);
+  // F27: the office is told at once (push), except the person pressing the button.
+  if (step === "check_in" || step === "check_out") {
+    const row = data as { project_id: number | null };
+    const at = new Date().toISOString();
+    after(async () => {
+      const { data: p } = row.project_id ? await db.from("projects").select("title").eq("id", row.project_id).maybeSingle() : { data: null };
+      const person = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
+      await notifyPush(step === "check_in" ? "visit_check_in" : "visit_check_out", visitStepMessage(step === "check_in" ? "visit_check_in" : "visit_check_out", { person, project: (p as { title: string | null } | null)?.title ?? null, at, visitId: id }), user.id);
+    });
+  }
   revalidatePath("/");
   revalidatePath("/schedule", "layout");
   if (step !== "check_out") return { ok: true };

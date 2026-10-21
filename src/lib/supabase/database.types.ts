@@ -2831,6 +2831,7 @@ export type Database = {
           language: string
           last_name: string | null
           palette: string
+          push_events: string[]
           updated_at: string
         }
         Insert: {
@@ -2844,6 +2845,7 @@ export type Database = {
           language?: string
           last_name?: string | null
           palette?: string
+          push_events?: string[]
           updated_at?: string
         }
         Update: {
@@ -2857,6 +2859,7 @@ export type Database = {
           language?: string
           last_name?: string | null
           palette?: string
+          push_events?: string[]
           updated_at?: string
         }
         Relationships: [
@@ -3517,6 +3520,94 @@ export type Database = {
           {
             foreignKeyName: "punch_list_items_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_log: {
+        Row: {
+          body: string | null
+          created_at: string
+          error: string | null
+          id: number
+          kind: string
+          sent_at: string | null
+          title: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          error?: string | null
+          id?: number
+          kind: string
+          sent_at?: string | null
+          title: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          error?: string | null
+          id?: number
+          kind?: string
+          sent_at?: string | null
+          title?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          failed_at: string | null
+          id: string
+          last_used_at: string | null
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          failed_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          failed_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -5307,6 +5398,7 @@ export type Database = {
         Row: {
           accuracy_m: number | null
           at: string
+          auto_closed: boolean
           corrected_at: string | null
           corrected_by: string | null
           created_at: string
@@ -5328,6 +5420,7 @@ export type Database = {
         Insert: {
           accuracy_m?: number | null
           at?: string
+          auto_closed?: boolean
           corrected_at?: string | null
           corrected_by?: string | null
           created_at?: string
@@ -5349,6 +5442,7 @@ export type Database = {
         Update: {
           accuracy_m?: number | null
           at?: string
+          auto_closed?: boolean
           corrected_at?: string | null
           corrected_by?: string | null
           created_at?: string

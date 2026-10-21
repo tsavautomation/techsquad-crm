@@ -18,6 +18,8 @@ export type CurrentUser = {
   permissions: ReadonlySet<string>;
   /** Administrator (profiles.is_admin): bypasses every permission check and may edit permissions. */
   isSysadmin: boolean;
+  /** F27: push notification events an administrator turned on for this login. */
+  pushEvents: ReadonlySet<string>;
   /** F6: set for a customer-portal login (the Contact it belongs to); null for staff. */
   contactId: number | null;
 };
@@ -37,7 +39,7 @@ export const getSession = cache(async (): Promise<SessionState> => {
   if (!userId) return { status: "signed-out" };
 
   const [{ data: profile }, { data: permissions, error }] = await Promise.all([
-    supabase.from("profiles").select("email, first_name, last_name, active, language, palette, is_admin, contact_id").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("email, first_name, last_name, active, language, palette, is_admin, contact_id, push_events").eq("id", userId).maybeSingle(),
     supabase.rpc("my_permissions"),
   ]);
   if (error) throw new Error(`Could not load permissions: ${error.message}`);
@@ -54,6 +56,7 @@ export const getSession = cache(async (): Promise<SessionState> => {
       palette: paletteOr(profile.palette),
       permissions: new Set((permissions as string[] | null) ?? []),
       isSysadmin: Boolean(profile.is_admin),
+      pushEvents: new Set((profile.push_events as string[] | null) ?? []),
       contactId: profile.contact_id ?? null,
     },
   };

@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { LANGS, type Lang } from "@/i18n/core";
 import { setLanguageAction } from "@/i18n/actions";
 import { setPaletteAction } from "@/lib/palette-actions";
+import { PushChoice } from "./push-choice";
 import { DEFAULT_PALETTE, PALETTES } from "@/lib/palettes";
 import { TextSizeChoice } from "@/components/portal/text-size";
 import { useLang, useT } from "@/i18n/client";
@@ -567,6 +568,7 @@ export function Sidebar({
       <Sheet open={menu} onClose={() => setMenu(false)} title={me.name}>
         <ThemeChoice />
         <PaletteChoice />
+        <PushChoice />
         <LanguageChoice />
         <TextSizeChoice />
         <ChangePassword />
@@ -609,6 +611,7 @@ export function TopBar({ me }: { me: Me }) {
         <p className="px-3 pb-1 text-sm text-muted-foreground">{me.email}</p>
         <ThemeChoice />
         <PaletteChoice />
+        <PushChoice />
         <LanguageChoice />
         <TextSizeChoice />
         <ChangePassword />
@@ -836,6 +839,7 @@ export function BottomNav({
         />
         <ThemeChoice />
         <PaletteChoice />
+        <PushChoice />
         <LanguageChoice />
         <TextSizeChoice />
       </Sheet>

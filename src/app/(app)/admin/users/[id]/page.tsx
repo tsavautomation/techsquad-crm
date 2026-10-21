@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PushEventsForm } from "@/components/admin/push-events-form";
 import { PermissionChecklist, type OtherPerson } from "@/components/admin/permission-checklist";
 import { ImpersonateButton } from "@/components/admin/impersonate-button";
 import { UserForm } from "@/components/admin/user-forms";
@@ -11,7 +12,7 @@ export async function generateMetadata() {
   return { title: (await getT())("User") };
 }
 
-type Profile = { id: string; email: string; first_name: string | null; last_name: string | null; active: boolean; is_admin: boolean };
+type Profile = { id: string; email: string; first_name: string | null; last_name: string | null; active: boolean; is_admin: boolean; push_events: string[] | null };
 
 export default async function UserPage(props: PageProps<"/admin/users/[id]">) {
   const t = await getT();
@@ -20,7 +21,7 @@ export default async function UserPage(props: PageProps<"/admin/users/[id]">) {
   const { id } = await props.params;
   const db = await recordsDb();
   const [{ data: p }, { data: catalogue }, { data: grants }, { data: people }, { data: signIns }] = await Promise.all([
-    db.from("profiles").select("id, email, first_name, last_name, active, is_admin").eq("id", id).maybeSingle(),
+    db.from("profiles").select("id, email, first_name, last_name, active, is_admin, push_events").eq("id", id).maybeSingle(),
     db.from("permissions").select("key"),
     db.from("user_permissions").select("user_id, permission_key"),
     db.from("profiles").select("id, email, first_name, last_name, is_admin").eq("active", true).is("contact_id", null).neq("id", id).order("first_name"),
@@ -54,6 +55,10 @@ export default async function UserPage(props: PageProps<"/admin/users/[id]">) {
           <ImpersonateButton userId={profile.id} name={name} />
         </section>
       )}
+      <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+        <h2 className="mb-3 text-[15px] font-semibold tracking-tight">{t("Push notifications")}</h2>
+        <PushEventsForm userId={profile.id} initial={profile.push_events ?? []} canEdit={me.isSysadmin} />
+      </section>
       <PermissionChecklist key={profile.id} userId={profile.id} initialAdmin={profile.is_admin} initialKeys={byUser.get(profile.id) ?? []} sections={sections} others={others} canEdit={me.isSysadmin} isMe={me.id === profile.id} />
     </div>
   );
