@@ -9,11 +9,15 @@ import { adminDb } from "@/lib/supabase/admin";
 // myaccount.google.com/apppasswords). No Google Cloud app, no verification review, no expiring tokens:
 // the Gmail API's read scope is "restricted" and a published app needs Google's security assessment,
 // while Testing mode expires its tokens every 7 days. The password is kept encrypted in
-// app_integrations under 'gmail'. The mailbox is opened read-only: nothing is ever moved or deleted.
+// app_integrations under 'gmail'. The CRM never deletes anything; a processed email is moved out of the
+// inbox into a label (Fred 2026-10-21: "an email on the root of the gmail means it was not processed").
 
 export const KEY = "gmail";
 export const MAILBOX = "tsavcrm@gmail.com";
 const HOST = "imap.gmail.com";
+export const INBOX = "INBOX";
+export const ALL_MAIL = "[Gmail]/All Mail";
+export const IGNORED_LABEL = "Ignored";
 
 export type GmailSettings = {
   account: string;
@@ -61,29 +65,34 @@ export async function disconnect() {
   await adminDb().from("app_integrations").delete().eq("key", KEY);
 }
 
-// ---------------------------------------------------------------- IMAP
+// ---------------------------------------------------------------- IMAP sessions
 
 function open(account: string, password: string) {
   return new ImapFlow({ host: HOST, port: 993, secure: true, auth: { user: account, pass: password }, logger: false, emitLogs: false });
 }
 
-export type Inbox = { client: ImapFlow; uidValidity: number; uidNext: number };
+export type Session = { client: ImapFlow; path: string; uidValidity: number; uidNext: number };
 
-/** Runs `fn` with INBOX open read-only, then logs out whatever happened. */
-export async function withInbox<T>(s: GmailSettings, fn: (inbox: Inbox) => Promise<T>): Promise<T> {
+/** Runs `fn` with a mailbox open (INBOX unless told otherwise), then logs out whatever happened. */
+export async function withMailbox<T>(s: GmailSettings, fn: (box: Session) => Promise<T>, o: { path?: string; readOnly?: boolean } = {}): Promise<T> {
   const client = open(s.account, s.app_password);
   await client.connect();
   try {
-    const box = await client.mailboxOpen("INBOX", { readOnly: true });
-    return await fn({ client, uidValidity: Number(box.uidValidity ?? 0), uidNext: Number(box.uidNext ?? 0) });
+    const box = await openPath(client, o.path ?? INBOX, o.readOnly ?? false);
+    return await fn(box);
   } finally {
     await client.logout().catch(() => undefined);
   }
 }
 
+export async function openPath(client: ImapFlow, path: string, readOnly: boolean): Promise<Session> {
+  const m = await client.mailboxOpen(path, { readOnly });
+  return { client, path, uidValidity: Number(m.uidValidity ?? 0), uidNext: Number(m.uidNext ?? 0) };
+}
+
 /** UIDs after `lastUid` (or everything since `since` on the first run), oldest first. */
-export async function newUids(inbox: Inbox, lastUid: number | null, since: Date): Promise<number[]> {
-  const r = lastUid ? await inbox.client.search({ uid: `${lastUid + 1}:*` }, { uid: true }) : await inbox.client.search({ since }, { uid: true });
+export async function newUids(box: Session, lastUid: number | null, since: Date): Promise<number[]> {
+  const r = lastUid ? await box.client.search({ uid: `${lastUid + 1}:*` }, { uid: true }) : await box.client.search({ since }, { uid: true });
   const uids = Array.isArray(r) ? r : [];
   // Gmail answers "<n>:*" with the last message when nothing is newer.
   return uids.filter((u) => !lastUid || u > lastUid).sort((a, b) => a - b);
@@ -92,10 +101,55 @@ export async function newUids(inbox: Inbox, lastUid: number | null, since: Date)
 export type RawMail = { uid: number; emailId: string | null; threadId: string | null; source: Buffer };
 
 /** One message's raw bytes plus Gmail's own message and thread ids. */
-export async function fetchRaw(inbox: Inbox, uid: number): Promise<RawMail | null> {
-  const m = await inbox.client.fetchOne(String(uid), { uid: true, source: true, emailId: true, threadId: true }, { uid: true });
+export async function fetchRaw(box: Session, uid: number): Promise<RawMail | null> {
+  const m = await box.client.fetchOne(String(uid), { uid: true, source: true, emailId: true, threadId: true }, { uid: true });
   if (!m || !m.source) return null;
   return { uid, emailId: m.emailId ?? null, threadId: m.threadId ?? null, source: m.source };
 }
 
+/** The UID of a message in the open mailbox by Gmail's message id (X-GM-MSGID), whatever label it is under. */
+export async function findUid(box: Session, gmailId: string): Promise<number | null> {
+  if (!/^\d+$/.test(gmailId)) return null;
+  const r = await box.client.search({ emailId: gmailId }, { uid: true });
+  return Array.isArray(r) && r.length ? r[r.length - 1] : null;
+}
+
+/**
+ * The raw message wherever it is now: by its UID in the open mailbox when it is still there, else through
+ * [Gmail]/All Mail by Gmail's message id. The mailbox that was open is opened again afterwards.
+ */
+export async function fetchAnywhere(box: Session, gmailId: string, uid: number | null, uidValidity: number | null): Promise<RawMail | null> {
+  if (uid !== null && (uidValidity === null || uidValidity === box.uidValidity)) {
+    const hit = await fetchRaw(box, uid).catch(() => null);
+    if (hit && (!hit.emailId || hit.emailId === gmailId)) return hit;
+  }
+  if (!/^\d+$/.test(gmailId)) return null;
+  const all = await openPath(box.client, ALL_MAIL, true);
+  try {
+    const found = await findUid(all, gmailId);
+    return found === null ? null : await fetchRaw(all, found);
+  } finally {
+    await openPath(box.client, box.path, false);
+  }
+}
+
 export const parseRaw = (source: Buffer): Promise<MailparserMail> => simpleParser(source);
+
+// ---------------------------------------------------------------- labels (Gmail folders)
+
+/** Creates the label when it does not exist yet (nested with "/"). */
+export async function ensureLabel(client: ImapFlow, path: string): Promise<void> {
+  try {
+    await client.mailboxCreate(path);
+  } catch (e) {
+    // Already there: Gmail answers "[ALREADYEXISTS]".
+    if (!/exist/i.test(e instanceof Error ? e.message : String(e))) throw e;
+  }
+}
+
+/** Moves one message of the open mailbox into a label (out of the inbox). */
+export async function moveToLabel(box: Session, uid: number, label: string): Promise<boolean> {
+  await ensureLabel(box.client, label);
+  const r = await box.client.messageMove(String(uid), label, { uid: true });
+  return Boolean(r);
+}

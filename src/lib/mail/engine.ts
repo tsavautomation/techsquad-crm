@@ -219,5 +219,8 @@ export function emailFolderName(receivedAt: string, subject: string): string {
   return safeName(`${toDateTimeLocalET(receivedAt).slice(0, 10)} ${cleanSubject(subject) || "(no subject)"}`.slice(0, 100));
 }
 
+/** The Gmail label a filed email moves to: Projects/<project> (<id>), the OneDrive folder's name (Fred 2026-10-21). */
+export const projectLabel = (title: string | null, projectId: number) => `Projects/${safeName(`${title ?? "Project"} (${projectId})`)}`;
+
 /** Who to show as the event's author: "Name <email>" or just the address. */
 export const actorLabel = (a: Address) => (a.name && a.name.toLowerCase() !== a.email ? `${a.name} <${a.email}>` : a.email);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attachmentsOf, cleanSubject, emailFolderName, htmlToText, innerSenders, isSystemMail, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject, subjectDiscipline } from "@/lib/mail/engine";
+import { attachmentsOf, cleanSubject, emailFolderName, htmlToText, innerSenders, isSystemMail, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject, projectLabel, subjectDiscipline } from "@/lib/mail/engine";
 
 // F26-2 Gmail intake (SPEC §9.1 F26-a): reading a parsed email and matching it to a project.
 
@@ -132,6 +132,12 @@ describe("parsed emails", () => {
     expect(parseMessage({ ...mail, text: "", html: "<div>Hello<br>there &amp; <b>you</b></div><p>Bye</p>" }, meta).text).toBe("Hello\nthere & you\nBye");
     expect(parseMessage({ subject: null, date: "not a date" }, meta).cleanSubject).toBe("(no subject)");
     expect(htmlToText("<style>p{}</style><p>a</p>\n\n\n<p>b</p>")).toBe("a\n\nb");
+  });
+
+  it("names the Gmail label like the OneDrive project folder", () => {
+    expect(projectLabel("Womack, Chloe - Miami Beach (Lv)", 1260)).toBe("Projects/Womack, Chloe - Miami Beach (Lv) (1260)");
+    expect(projectLabel("A/B: test?", 7)).toBe("Projects/A-B- test- (7)");
+    expect(projectLabel(null, 7)).toBe("Projects/Project (7)");
   });
 
   it("names the OneDrive folder with the Eastern date and a safe subject", () => {

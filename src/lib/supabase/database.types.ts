@@ -1909,6 +1909,7 @@ export type Database = {
           from_email: string | null
           from_name: string | null
           gmail_id: string
+          gmail_label: string | null
           id: number
           inner_senders: string[]
           matched_by: string | null
@@ -1933,6 +1934,7 @@ export type Database = {
           from_email?: string | null
           from_name?: string | null
           gmail_id: string
+          gmail_label?: string | null
           id?: number
           inner_senders?: string[]
           matched_by?: string | null
@@ -1957,6 +1959,7 @@ export type Database = {
           from_email?: string | null
           from_name?: string | null
           gmail_id?: string
+          gmail_label?: string | null
           id?: number
           inner_senders?: string[]
           matched_by?: string | null

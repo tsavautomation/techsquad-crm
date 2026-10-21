@@ -1913,7 +1913,7 @@ export const PT: Record<string, string> = {
   "{a} on project timelines · {b} waiting in the Assign list · {c} ignored": "{a} nas linhas do tempo · {b} esperando na lista Atribuir · {c} ignorados",
   "Not connected. Nothing is read from the mailbox.": "Não conectado. Nada é lido da caixa de e-mail.",
   "Connect the mailbox": "Conectar a caixa de e-mail",
-  "{read} new: {filed} on project timelines, {waiting} to assign{errors}": "{read} novos: {filed} nas linhas do tempo, {waiting} para atribuir{errors}",
+  "{read} new: {filed} on project timelines, {waiting} to assign, {moved} moved out of the inbox{errors}": "{read} novos: {filed} nas linhas do tempo, {waiting} para atribuir, {moved} tirados da caixa de entrada{errors}",
   "errors": "erros",
   "Disconnect the mailbox? Emails already on the timelines stay; nothing new is read until it is connected again.": "Desconectar a caixa de e-mail? Os e-mails já nas linhas do tempo ficam; nada novo é lido até conectar de novo.",
   "Check the mailbox now": "Verificar a caixa de e-mail agora",
@@ -1941,4 +1941,6 @@ export const PT: Record<string, string> = {
   "That is not an email address.": "Isso não é um endereço de e-mail.",
   "The app password is 16 letters (Google shows them in four groups).": "A senha de app tem 16 letras (o Google mostra em quatro grupos).",
   "Google refused the sign-in. Check the address, that 2-Step Verification is on, and that this is an app password (not the normal password).": "O Google recusou o login. Confira o endereço, se a Verificação em duas etapas está ativa e se esta é uma senha de app (não a senha normal).",
+  "A processed email leaves the Gmail inbox: filed ones go to the label Projects › the project, ignored ones to Ignored. Whatever is still in the inbox was not processed.": "Um e-mail processado sai da caixa de entrada do Gmail: os arquivados vão para o marcador Projects › o projeto, os ignorados para Ignored. O que ainda está na caixa de entrada não foi processado.",
+  "This email was already handled.": "Este e-mail já foi tratado.",
 };

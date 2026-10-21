@@ -23,7 +23,7 @@ export function GmailPanel() {
       const r = await checkMailNowAction();
       if (!r.ok) return void toast.error(t(r.message));
       const s = r.summary;
-      setLast(s.skipped ? t(s.skipped) : t("{read} new: {filed} on project timelines, {waiting} to assign{errors}", { read: s.read, filed: s.filed, waiting: s.waiting, errors: s.errors.length ? ` · ${s.errors.length} ${t("errors")}` : "" }));
+      setLast(s.skipped ? t(s.skipped) : t("{read} new: {filed} on project timelines, {waiting} to assign, {moved} moved out of the inbox{errors}", { read: s.read, filed: s.filed, waiting: s.waiting, moved: s.moved, errors: s.errors.length ? ` · ${s.errors.length} ${t("errors")}` : "" }));
       router.refresh();
     });
   const off = () =>

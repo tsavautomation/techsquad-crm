@@ -8,7 +8,7 @@ import { getTable } from "@/registry";
 import { canDo } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
 import { connectWithPassword, disconnect } from "./client";
-import { fileMessage, syncMail, type SyncSummary } from "./sync";
+import { fileMessage, ignoreMessage, syncMail, type SyncSummary } from "./sync";
 
 // F26-2: Admin › Gmail intake (connect, check now, disconnect) and the Assign list on Today (assign / ignore).
 
@@ -76,8 +76,8 @@ export async function assignMailAction(mailId: number, projectId: number): Promi
 export async function ignoreMailAction(mailId: number): Promise<Result> {
   const a = await office();
   if (!a.ok) return a;
-  const { error } = await adminDb().from("mail_messages").update({ status: "ignored", assigned_by: a.id }).eq("id", mailId).eq("status", "unassigned");
-  if (error) return { ok: false, message: error.message };
+  const r = await ignoreMessage(adminDb(), mailId, a.id);
+  if (!r.ok) return r;
   revalidatePath("/");
   return { ok: true };
 }
