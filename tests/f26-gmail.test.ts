@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attachmentsOf, cleanSubject, emailFolderName, htmlToText, innerSenders, isSystemMail, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject } from "@/lib/mail/engine";
+import { attachmentsOf, cleanSubject, emailFolderName, htmlToText, innerSenders, isSystemMail, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject, subjectDiscipline } from "@/lib/mail/engine";
 
 // F26-2 Gmail intake (SPEC §9.1 F26-a): reading a parsed email and matching it to a project.
 
@@ -62,6 +62,28 @@ describe("matching an email to a project", () => {
     expect(matchProject(mail({ subject: "O’Reilly – Miami: TV sizes" }), projects, threads)).toEqual({ projectId: 1249, by: "subject" });
     expect(matchProject(mail({ subject: "Rua Augusta" }), projects, threads)).toBeNull(); // too short a name
     expect(matchProject(mail({ subject: "Villa Serenata" }), projects, threads)).toBeNull(); // not whole words
+  });
+
+  it("LV or EL in the subject picks between a client's low-voltage and electrical projects (Fred 2026-10-21)", () => {
+    const womack = [
+      { id: 1260, title: "Womack, Chloe - Miami Beach (Lv)", emails: ["chloecromarty@gmail.com"], category: "Low Voltage" },
+      { id: 1265, title: "Womack, Chloe - Miami Beach (Elec)", emails: ["chloecromarty@gmail.com"], category: "Electrical" },
+    ];
+    const none = new Map<string, number>();
+    expect(subjectDiscipline("Fwd: LV - Womack Residence - window treatments")).toBe("Low Voltage");
+    expect(subjectDiscipline("EL: panel schedule")).toBe("Electrical");
+    expect(subjectDiscipline("Low voltage and electrical walk")).toBeNull();
+    expect(subjectDiscipline("Elevator keys")).toBeNull(); // "el" only as a whole word
+    expect(matchProject(mail({ subject: "Fwd: LV - Womack Residence", senders: ["fred@techsquadfl.com", "chloecromarty@gmail.com"] }), womack, none)).toEqual({ projectId: 1260, by: "sender" });
+    expect(matchProject(mail({ subject: "Fwd: Womack Residence EL", senders: ["chloecromarty@gmail.com"] }), womack, none)).toEqual({ projectId: 1265, by: "sender" });
+    expect(matchProject(mail({ subject: "Fwd: Womack Residence", senders: ["chloecromarty@gmail.com"] }), womack, none)).toBeNull();
+    // The same word settles two projects with the same name in the subject.
+    const twins = [
+      { id: 1, title: "Palm House", emails: [], category: "Low Voltage" },
+      { id: 2, title: "Palm House", emails: [], category: "Electrical" },
+    ];
+    expect(matchProject(mail({ subject: "Palm House LV doors" }), twins, none)).toEqual({ projectId: 1, by: "subject" });
+    expect(matchProject(mail({ subject: "Palm House doors" }), twins, none)).toBeNull();
   });
 
   it("then the sender, only when exactly one project has that contact", () => {

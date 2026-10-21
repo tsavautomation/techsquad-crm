@@ -22,14 +22,14 @@ type MailRow = { id: number; gmail_id: string; uid: number | null; uid_validity:
 /** Projects with their contacts' addresses, and the threads already filed, for the matching. */
 export async function loadCatalog(db: SupabaseClient): Promise<{ projects: ProjectForMatch[]; threads: Map<string, number> }> {
   const [{ data: projects }, { data: contacts }, { data: threads }] = await Promise.all([
-    db.from("projects").select("id, title, job_owner_id").is("deleted_at", null),
+    db.from("projects").select("id, title, category, job_owner_id").is("deleted_at", null),
     db.from("contacts").select("id, email, alternate_email").is("deleted_at", null).or("email.not.is.null,alternate_email.not.is.null"),
     db.from("mail_messages").select("thread_id, project_id").not("project_id", "is", null).not("thread_id", "is", null),
   ]);
   const emails = new Map<number, string[]>();
   for (const c of (contacts ?? []) as { id: number; email: string | null; alternate_email: string | null }[]) emails.set(c.id, [c.email, c.alternate_email].filter((e): e is string => Boolean(e)).map((e) => e.trim().toLowerCase()));
   return {
-    projects: ((projects ?? []) as { id: number; title: string | null; job_owner_id: number | null }[]).map((p) => ({ id: p.id, title: p.title, emails: p.job_owner_id ? (emails.get(p.job_owner_id) ?? []) : [] })),
+    projects: ((projects ?? []) as { id: number; title: string | null; category: string | null; job_owner_id: number | null }[]).map((p) => ({ id: p.id, title: p.title, category: p.category, emails: p.job_owner_id ? (emails.get(p.job_owner_id) ?? []) : [] })),
     threads: new Map(((threads ?? []) as { thread_id: string; project_id: number }[]).map((t) => [t.thread_id, t.project_id])),
   };
 }

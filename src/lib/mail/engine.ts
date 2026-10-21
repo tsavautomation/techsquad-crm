@@ -69,10 +69,33 @@ export const isSystemMail = (fromEmail: string | null | undefined) => /^(no-?rep
 // ---------------------------------------------------------------- matching
 
 export type MatchBy = "id" | "thread" | "subject" | "sender";
-export type ProjectForMatch = { id: number; title: string | null; emails: string[] };
+/** `category` is the project's Category (Low Voltage / Electrical …), used when a client has one project of each. */
+export type ProjectForMatch = { id: number; title: string | null; emails: string[]; category?: string | null };
 export type MailForMatch = { subject: string | null; senders: string[]; threadId: string | null };
 
 const MIN_TITLE = 5;
+
+/**
+ * Fred 2026-10-21: every forwarded email's subject says LV or EL, because most clients have a low-voltage
+ * and an electrical project. "LV", "L.V.", "Low Voltage" → Low Voltage; "EL", "ELEC", "Electrical" → Electrical.
+ */
+export function subjectDiscipline(subject: string | null | undefined): "Low Voltage" | "Electrical" | null {
+  const s = ` ${normalizeText(subject)} `;
+  const lv = / (lv|l v|low voltage|baixa tensao) /.test(s);
+  const el = / (el|elec|electrical|eletrica) /.test(s);
+  if (lv && !el) return "Low Voltage";
+  if (el && !lv) return "Electrical";
+  return null;
+}
+
+/** Several candidate projects: the LV / EL word in the subject picks one when exactly one has that Category. */
+function pickByDiscipline(candidates: ProjectForMatch[], subject: string | null | undefined): ProjectForMatch | null {
+  if (candidates.length === 1) return candidates[0];
+  const want = subjectDiscipline(subject);
+  if (!want) return null;
+  const hits = candidates.filter((p) => p.category === want);
+  return hits.length === 1 ? hits[0] : null;
+}
 
 /**
  * Which project an email belongs to, in this order: "#id" in the subject (a project that exists), the
@@ -86,21 +109,24 @@ export function matchProject(m: MailForMatch, projects: ProjectForMatch[], threa
   const byThread = m.threadId ? threads.get(m.threadId) : undefined;
   if (byThread) return { projectId: byThread, by: "thread" };
 
+  // The longest project name found in the subject; several of the same length → LV / EL decides.
   const subject = ` ${normalizeText(cleanSubject(m.subject))} `;
-  let best: { id: number; len: number; tie: boolean } | null = null;
+  let best: { len: number; list: ProjectForMatch[] } | null = null;
   for (const p of projects) {
     const title = normalizeText(p.title);
     if (title.length < MIN_TITLE || !subject.includes(` ${title} `)) continue;
-    if (!best || title.length > best.len) best = { id: p.id, len: title.length, tie: false };
-    else if (title.length === best.len && p.id !== best.id) best.tie = true;
+    if (!best || title.length > best.len) best = { len: title.length, list: [p] };
+    else if (title.length === best.len) best.list.push(p);
   }
-  if (best && !best.tie) return { projectId: best.id, by: "subject" };
+  const byName = best ? pickByDiscipline(best.list, m.subject) : null;
+  if (byName) return { projectId: byName.id, by: "subject" };
 
+  // The sender (or the forwarded "From:") is a project's owner contact; several projects → LV / EL decides.
   const senders = m.senders.map((s) => s.toLowerCase()).filter(Boolean);
   if (senders.length) {
-    const hits = new Set<number>();
-    for (const p of projects) if (p.emails.some((e) => senders.includes(e.toLowerCase()))) hits.add(p.id);
-    if (hits.size === 1) return { projectId: [...hits][0], by: "sender" };
+    const hits = projects.filter((p) => p.emails.some((e) => senders.includes(e.toLowerCase())));
+    const bySender = hits.length ? pickByDiscipline(hits, m.subject) : null;
+    if (bySender) return { projectId: bySender.id, by: "sender" };
   }
   return null;
 }
