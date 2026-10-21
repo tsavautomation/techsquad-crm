@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 import { KIND_COLOR, KIND_LABEL, type EmailKind } from "@/lib/ai/route-engine";
 import { EventKindPicker } from "./event-kind-picker";
+import { EventMovePicker } from "./event-move-picker";
 
 // F4 client timeline (SPEC §9.1 F4-c): calls / messages, notes, stage changes, visits, reports, tasks.
 // F26-1 (SPEC §9.1 F26-a): Job Status changes, check-in / check-out times, tasks done, request lines,
@@ -85,6 +86,7 @@ export function Timeline({ items, canEdit = false }: { items: TimelineItem[]; ca
                     </Link>
                   )}
                   {canEdit && <EventKindPicker eventId={i.ai.eventId} kind={(i.ai.kind as EmailKind) ?? null} />}
+                  {canEdit && <EventMovePicker eventId={i.ai.eventId} />}
                 </div>
               )}
               {i.detail && <p className="mt-0.5 line-clamp-4 text-sm whitespace-pre-line text-foreground/90">{i.detail}</p>}

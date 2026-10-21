@@ -68,9 +68,16 @@ export const isSystemMail = (fromEmail: string | null | undefined) => /^(no-?rep
 
 // ---------------------------------------------------------------- matching
 
-export type MatchBy = "id" | "thread" | "subject" | "sender";
-/** `category` is the project's Category (Low Voltage / Electrical …), used when a client has one project of each. */
-export type ProjectForMatch = { id: number; title: string | null; emails: string[]; category?: string | null };
+export type MatchBy = "id" | "thread" | "subject" | "surname" | "sender";
+/**
+ * `category` is the project's Category (Low Voltage / Electrical …), used when a client has one project of each.
+ * `emails` / `ownerType` / `ownerLastName` describe the owner contact: only an End Customer's address or last name
+ * may decide the project (Fred's partners — builders, designers, GCs — write about many projects).
+ */
+export type ProjectForMatch = { id: number; title: string | null; emails: string[]; category?: string | null; ownerType?: string | null; ownerLastName?: string | null };
+
+export const END_CUSTOMER = "End Customer";
+const MIN_SURNAME = 4;
 export type MailForMatch = { subject: string | null; senders: string[]; threadId: string | null };
 
 const MIN_TITLE = 5;
@@ -121,10 +128,24 @@ export function matchProject(m: MailForMatch, projects: ProjectForMatch[], threa
   const byName = best ? pickByDiscipline(best.list, m.subject) : null;
   if (byName) return { projectId: byName.id, by: "subject" };
 
-  // The sender (or the forwarded "From:") is a project's owner contact; several projects → LV / EL decides.
+  // The end customer's last name as a whole word in the subject ("Roth Residence"), when only that client has it.
+  const customers = projects.filter((p) => p.ownerType === END_CUSTOMER);
+  const surnames = new Map<string, ProjectForMatch[]>();
+  for (const p of customers) {
+    const name = normalizeText(p.ownerLastName);
+    if (name.length >= MIN_SURNAME && subject.includes(` ${name} `)) surnames.set(name, [...(surnames.get(name) ?? []), p]);
+  }
+  if (surnames.size === 1) {
+    const list = [...surnames.values()][0];
+    const owners = new Set(list.map((p) => p.emails.join("|") + "|" + normalizeText(p.title).split(" ").slice(0, 2).join(" ")));
+    const bySurname = owners.size === 1 || list.length === 1 ? pickByDiscipline(list, m.subject) : null;
+    if (bySurname) return { projectId: bySurname.id, by: "surname" };
+  }
+
+  // The sender (or the forwarded "From:") is a project's end-customer contact; several projects → LV / EL decides.
   const senders = m.senders.map((s) => s.toLowerCase()).filter(Boolean);
   if (senders.length) {
-    const hits = projects.filter((p) => p.emails.some((e) => senders.includes(e.toLowerCase())));
+    const hits = customers.filter((p) => p.emails.some((e) => senders.includes(e.toLowerCase())));
     const bySender = hits.length ? pickByDiscipline(hits, m.subject) : null;
     if (bySender) return { projectId: bySender.id, by: "sender" };
   }

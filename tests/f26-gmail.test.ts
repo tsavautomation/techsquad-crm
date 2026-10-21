@@ -39,10 +39,12 @@ describe("addresses and subjects", () => {
 
 describe("matching an email to a project", () => {
   const projects = [
-    { id: 1249, title: "O'Reilly - Miami", emails: ["oreilly@gmail.com"] },
-    { id: 1300, title: "Villa Serena", emails: ["serena@x.com", "shared@x.com"] },
-    { id: 1301, title: "Villa Serena Phase 2", emails: ["shared@x.com"] },
+    { id: 1249, title: "O'Reilly - Miami", emails: ["oreilly@gmail.com"], ownerType: "End Customer", ownerLastName: "O'Reilly" },
+    { id: 1300, title: "Villa Serena", emails: ["serena@x.com", "shared@x.com"], ownerType: "End Customer", ownerLastName: "Serena" },
+    { id: 1301, title: "Villa Serena Phase 2", emails: ["shared@x.com"], ownerType: "End Customer", ownerLastName: "Serena" },
     { id: 1302, title: "Rua", emails: [] },
+    { id: 1054, title: "Miguel Circelli - Coral Gables", emails: ["miguel@naviconus.com"], ownerType: "Developer Builder", ownerLastName: "Circelli" },
+    { id: 1278, title: "Roth, Michael - Miami Shores", emails: [], ownerType: "End Customer", ownerLastName: "Roth" },
   ];
   const threads = new Map([["t-1", 1300]]);
   const mail = (o: Partial<{ subject: string; senders: string[]; threadId: string }>) => ({ subject: o.subject ?? "", senders: o.senders ?? [], threadId: o.threadId ?? null });
@@ -66,16 +68,17 @@ describe("matching an email to a project", () => {
 
   it("LV or EL in the subject picks between a client's low-voltage and electrical projects (Fred 2026-10-21)", () => {
     const womack = [
-      { id: 1260, title: "Womack, Chloe - Miami Beach (Lv)", emails: ["chloecromarty@gmail.com"], category: "Low Voltage" },
-      { id: 1265, title: "Womack, Chloe - Miami Beach (Elec)", emails: ["chloecromarty@gmail.com"], category: "Electrical" },
+      { id: 1260, title: "Womack, Chloe - Miami Beach (Lv)", emails: ["chloecromarty@gmail.com"], category: "Low Voltage", ownerType: "End Customer", ownerLastName: "Womack" },
+      { id: 1265, title: "Womack, Chloe - Miami Beach (Elec)", emails: ["chloecromarty@gmail.com"], category: "Electrical", ownerType: "End Customer", ownerLastName: "Womack" },
     ];
     const none = new Map<string, number>();
     expect(subjectDiscipline("Fwd: LV - Womack Residence - window treatments")).toBe("Low Voltage");
     expect(subjectDiscipline("EL: panel schedule")).toBe("Electrical");
     expect(subjectDiscipline("Low voltage and electrical walk")).toBeNull();
     expect(subjectDiscipline("Elevator keys")).toBeNull(); // "el" only as a whole word
-    expect(matchProject(mail({ subject: "Fwd: LV - Womack Residence", senders: ["fred@techsquadfl.com", "chloecromarty@gmail.com"] }), womack, none)).toEqual({ projectId: 1260, by: "sender" });
-    expect(matchProject(mail({ subject: "Fwd: Womack Residence EL", senders: ["chloecromarty@gmail.com"] }), womack, none)).toEqual({ projectId: 1265, by: "sender" });
+    expect(matchProject(mail({ subject: "Fwd: LV - Womack Residence", senders: ["fred@techsquadfl.com", "chloecromarty@gmail.com"] }), womack, none)).toEqual({ projectId: 1260, by: "surname" });
+    expect(matchProject(mail({ subject: "Fwd: LV - details", senders: ["chloecromarty@gmail.com"] }), womack, none)).toEqual({ projectId: 1260, by: "sender" });
+    expect(matchProject(mail({ subject: "Fwd: Womack Residence EL", senders: ["chloecromarty@gmail.com"] }), womack, none)).toEqual({ projectId: 1265, by: "surname" });
     expect(matchProject(mail({ subject: "Fwd: Womack Residence", senders: ["chloecromarty@gmail.com"] }), womack, none)).toBeNull();
     // The same word settles two projects with the same name in the subject.
     const twins = [
@@ -84,6 +87,14 @@ describe("matching an email to a project", () => {
     ];
     expect(matchProject(mail({ subject: "Palm House LV doors" }), twins, none)).toEqual({ projectId: 1, by: "subject" });
     expect(matchProject(mail({ subject: "Palm House doors" }), twins, none)).toBeNull();
+  });
+
+  it("a partner's address never decides the project (Miguel Circelli writes about many sites), and the end customer's last name does", () => {
+    expect(matchProject(mail({ subject: "Fwd: Window Treatment RFP", senders: ["fred@techsquadfl.com", "miguel@naviconus.com"] }), projects, threads)).toBeNull();
+    expect(matchProject(mail({ subject: "Roth Residence | Window Treatment RFP", senders: ["miguel@naviconus.com"] }), projects, threads)).toEqual({ projectId: 1278, by: "surname" });
+    expect(matchProject(mail({ subject: "Rothschild bank" }), projects, threads)).toBeNull(); // whole word only
+    const two = [...projects, { id: 1279, title: "Roth, Anna - Doral", emails: [], ownerType: "End Customer", ownerLastName: "Roth" }];
+    expect(matchProject(mail({ subject: "Roth Residence" }), two, threads)).toBeNull(); // two different Roths
   });
 
   it("then the sender, only when exactly one project has that contact", () => {

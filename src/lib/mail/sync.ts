@@ -1,10 +1,10 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { oneDriveReady, ROOT, uploadBytes } from "@/lib/files/onedrive";
+import { moveIntoFolder, oneDriveReady, ROOT, uploadBytes } from "@/lib/files/onedrive";
 import { safeName } from "@/lib/files/paths";
 import { queueEmailEvent, routeBacklog } from "@/lib/ai/route-email";
 import { adminDb } from "@/lib/supabase/admin";
-import { fetchAnywhere, fetchRaw, findUid, IGNORED_LABEL, INBOX, loadSettings, moveToLabel, newUids, parseRaw, saveSettings, withMailbox, type GmailSettings, type Session } from "./client";
+import { fetchAnywhere, fetchRaw, findUid, IGNORED_LABEL, INBOX, loadSettings, moveToLabel, newUids, openPath, parseRaw, saveSettings, withMailbox, type GmailSettings, type Session } from "./client";
 import { actorLabel, emailFolderName, isSystemMail, matchProject, parseMessage, projectLabel, type MailAttachment, type ParsedMail, type ProjectForMatch } from "./engine";
 
 // F26-2 Gmail intake: every five minutes (pg_cron 'crm-mail' → /api/cron/mail) the mailbox is read over IMAP.
@@ -28,13 +28,17 @@ type MailRow = { id: number; gmail_id: string; uid: number | null; uid_validity:
 export async function loadCatalog(db: SupabaseClient): Promise<{ projects: ProjectForMatch[]; threads: Map<string, number> }> {
   const [{ data: projects }, { data: contacts }, { data: threads }] = await Promise.all([
     db.from("projects").select("id, title, category, job_owner_id").is("deleted_at", null),
-    db.from("contacts").select("id, email, alternate_email").is("deleted_at", null).or("email.not.is.null,alternate_email.not.is.null"),
+    db.from("contacts").select("id, type, last_name, email, alternate_email").is("deleted_at", null),
     db.from("mail_messages").select("thread_id, project_id").not("project_id", "is", null).not("thread_id", "is", null),
   ]);
-  const emails = new Map<number, string[]>();
-  for (const c of (contacts ?? []) as { id: number; email: string | null; alternate_email: string | null }[]) emails.set(c.id, [c.email, c.alternate_email].filter((e): e is string => Boolean(e)).map((e) => e.trim().toLowerCase()));
+  const owners = new Map<number, { emails: string[]; type: string | null; lastName: string | null }>();
+  for (const c of (contacts ?? []) as { id: number; type: string | null; last_name: string | null; email: string | null; alternate_email: string | null }[])
+    owners.set(c.id, { emails: [c.email, c.alternate_email].filter((e): e is string => Boolean(e)).map((e) => e.trim().toLowerCase()), type: c.type, lastName: c.last_name });
   return {
-    projects: ((projects ?? []) as { id: number; title: string | null; category: string | null; job_owner_id: number | null }[]).map((p) => ({ id: p.id, title: p.title, category: p.category, emails: p.job_owner_id ? (emails.get(p.job_owner_id) ?? []) : [] })),
+    projects: ((projects ?? []) as { id: number; title: string | null; category: string | null; job_owner_id: number | null }[]).map((p) => {
+      const o = p.job_owner_id ? owners.get(p.job_owner_id) : undefined;
+      return { id: p.id, title: p.title, category: p.category, emails: o?.emails ?? [], ownerType: o?.type ?? null, ownerLastName: o?.lastName ?? null };
+    }),
     threads: new Map(((threads ?? []) as { thread_id: string; project_id: number }[]).map((t) => [t.thread_id, t.project_id])),
   };
 }
@@ -244,6 +248,65 @@ export async function fileMessage(db: SupabaseClient, mailId: number, projectId:
   // Out of the inbox, into the project's label.
   const moved = await fileInGmail(db, box, mailId, row.gmail_id, row.uid, projectLabel(title, projectId)).catch(() => false);
   return { ok: true, eventId, moved };
+}
+
+/**
+ * A filed email was put under the wrong project: the timeline entry, the request line or task the AI made,
+ * the OneDrive files and the Gmail label all move to the right one. Returns both project ids for the briefs.
+ */
+export async function reassignMessage(db: SupabaseClient, mailId: number, projectId: number, userId: string): Promise<{ ok: true; from: number | null; eventId: number | null } | { ok: false; message: string }> {
+  const { data } = await db.from("mail_messages").select("id, gmail_id, uid, uid_validity, received_at, subject, attachments, event_id, project_id, gmail_label, status").eq("id", mailId).maybeSingle();
+  const row = data as (MailRow & { project_id: number | null; gmail_label: string | null; status: string }) | null;
+  if (!row) return { ok: false, message: "This email no longer exists." };
+  if (row.project_id === projectId) return { ok: true, from: projectId, eventId: row.event_id };
+  const { data: project } = await db.from("projects").select("id, title").eq("id", projectId).is("deleted_at", null).maybeSingle();
+  if (!project) return { ok: false, message: "This project no longer exists." };
+  const title = (project as { title: string | null }).title ?? `Project ${projectId}`;
+  const from = row.project_id;
+
+  // OneDrive: the files go to the new project's folder (a failure is kept on the file, like an upload failure).
+  const attachments: StoredAttachment[] = Array.isArray(row.attachments) ? row.attachments : [];
+  const folder = `${ROOT}/Projects/${safeName(`${title} (${projectId})`)}/Email/${emailFolderName(row.received_at, row.subject ?? "")}`;
+  for (const a of attachments) {
+    if (!a.item_id) continue;
+    try {
+      await moveIntoFolder(a.item_id, folder, a.name);
+      delete a.error;
+    } catch (e) {
+      a.error = `not moved: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  }
+  const errors = attachments.filter((a) => a.error).map((a) => `${a.name}: ${a.error}`);
+
+  // Gmail: out of the old label (or the inbox) into the new one.
+  const newLabel = projectLabel(title, projectId);
+  let moved = false;
+  const s = await loadSettings();
+  if (s) {
+    moved = await withMailbox(s, async (box) => {
+      for (const path of [...new Set([row.gmail_label && row.gmail_label !== "-" ? row.gmail_label : null, INBOX].filter((p): p is string => Boolean(p)))]) {
+        try {
+          const b = path === box.path ? box : await openPath(box.client, path, false);
+          const uid = await findUid(b, row.gmail_id);
+          if (uid !== null && (await moveToLabel(b, uid, newLabel))) return true;
+        } catch {
+          // try the next place
+        }
+      }
+      return false;
+    }).catch(() => false);
+  }
+
+  // The records.
+  await db.from("mail_messages").update({ project_id: projectId, matched_by: "manual", status: "assigned", assigned_by: userId, attachments, file_error: errors.length ? errors.join(" · ") : null, gmail_label: moved ? newLabel : row.gmail_label }).eq("id", mailId);
+  if (row.event_id) {
+    await db.from("project_events").update({ project_id: projectId, attachments: attachments.map((a) => ({ name: a.name, mime: a.mime, size: a.size, item_id: a.item_id ?? null, error: a.error ?? null })) }).eq("id", row.event_id);
+    await db.from("project_requests").update({ project_id: projectId }).eq("source_event_id", row.event_id).is("deleted_at", null);
+    const { data: ev } = await db.from("project_events").select("task_id").eq("id", row.event_id).maybeSingle();
+    const taskId = (ev as { task_id: number | null } | null)?.task_id;
+    if (taskId) await db.from("tasks").update({ project_id: projectId }).eq("id", taskId);
+  }
+  return { ok: true, from, eventId: row.event_id };
 }
 
 /** Not a project email: out of the Assign list and into the Ignored label. */

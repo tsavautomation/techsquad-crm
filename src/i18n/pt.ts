@@ -1973,4 +1973,7 @@ export const PT: Record<string, string> = {
   "Information": "Informação",
   "Unknown kind.": "Tipo desconhecido.",
   "This event no longer exists.": "Este evento não existe mais.",
+  "Wrong project?": "Projeto errado?",
+  "Moved to {project}": "Movido para {project}",
+  "This event is not an email.": "Este evento não é um e-mail.",
 };

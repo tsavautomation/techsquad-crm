@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { routeBacklog } from "@/lib/ai/route-email";
+import { rewriteBrief, routeBacklog } from "@/lib/ai/route-email";
 import { requireUser } from "@/lib/auth/session";
 import { recordsDb } from "@/lib/records/data";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
@@ -10,7 +10,7 @@ import { getTable } from "@/registry";
 import { canDo } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
 import { connectWithPassword, disconnect } from "./client";
-import { fileMessage, ignoreMessage, syncMail, type SyncSummary } from "./sync";
+import { fileMessage, ignoreMessage, reassignMessage, syncMail, type SyncSummary } from "./sync";
 
 // F26-2: Admin › Gmail intake (connect, check now, disconnect) and the Assign list on Today (assign / ignore).
 
@@ -72,6 +72,25 @@ export async function assignMailAction(mailId: number, projectId: number): Promi
   after(() => routeBacklog(adminDb(), 50_000, 3).catch(() => undefined));
   revalidatePath("/");
   revalidatePath(recordHref(getTable("projects"), projectId));
+  return { ok: true };
+}
+
+/** Timeline › Wrong project? — move a filed email (and what came of it) to another project. */
+export async function moveMailAction(eventId: number, projectId: number): Promise<Result> {
+  const a = await office();
+  if (!a.ok) return a;
+  const db = adminDb();
+  const { data } = await db.from("project_events").select("source_table, source_id").eq("id", eventId).maybeSingle();
+  const ev = data as { source_table: string | null; source_id: number | null } | null;
+  if (!ev || ev.source_table !== "mail_messages" || !ev.source_id) return { ok: false, message: "This event is not an email." };
+  const r = await reassignMessage(db, ev.source_id, projectId, a.id);
+  if (!r.ok) return r;
+  after(async () => {
+    await rewriteBrief(db, projectId).catch(() => undefined);
+    if (r.from && r.from !== projectId) await rewriteBrief(db, r.from).catch(() => undefined);
+  });
+  revalidatePath(recordHref(getTable("projects"), projectId));
+  if (r.from) revalidatePath(recordHref(getTable("projects"), r.from));
   return { ok: true };
 }
 
