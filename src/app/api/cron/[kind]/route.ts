@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { after } from "next/server";
 import { processPendingEvents, runScheduled, tick } from "@/lib/engine/automations";
 import { deliverQueued } from "@/lib/engine/email";
+import { retryFiling, syncMail } from "@/lib/mail/sync";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 
 // Scheduled automations (SPEC §5 'daily' / 'hourly', PLAN M11). Callers send
@@ -11,6 +12,7 @@ import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 //   /api/cron/daily   run the daily check now (manual; not slot-limited)
 //   /api/cron/hourly  run the hourly check now (manual)
 //   /api/cron/events  catch up on change history and retry queued email
+//   /api/cron/mail    read the CRM mailbox (F26-2; pg_cron every five minutes): answers at once, then works
 
 export const maxDuration = 300;
 
@@ -34,6 +36,19 @@ export async function GET(req: Request, ctx: RouteContext<"/api/cron/[kind]">) {
         console.log("cron tick:", JSON.stringify(await tick()));
       } catch (e) {
         console.error("cron tick failed:", e);
+      }
+    });
+    return Response.json({ kind, started: true }, { status: 202 });
+  }
+
+  if (kind === "mail") {
+    after(async () => {
+      try {
+        const r = await syncMail();
+        const retried = r.skipped ? 0 : await retryFiling(adminDb()).catch(() => 0);
+        console.log("cron mail:", JSON.stringify({ ...r, retried }));
+      } catch (e) {
+        console.error("cron mail failed:", e);
       }
     });
     return Response.json({ kind, started: true }, { status: 202 });

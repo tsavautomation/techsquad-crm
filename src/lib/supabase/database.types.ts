@@ -1897,6 +1897,104 @@ export type Database = {
           },
         ]
       }
+      mail_messages: {
+        Row: {
+          assigned_by: string | null
+          attachments: Json
+          body_text: string | null
+          created_at: string
+          event_id: number | null
+          file_error: string | null
+          filed_at: string | null
+          from_email: string | null
+          from_name: string | null
+          gmail_id: string
+          id: number
+          inner_senders: string[]
+          matched_by: string | null
+          project_id: number | null
+          received_at: string
+          snippet: string | null
+          status: string
+          subject: string | null
+          thread_id: string | null
+          to_text: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          attachments?: Json
+          body_text?: string | null
+          created_at?: string
+          event_id?: number | null
+          file_error?: string | null
+          filed_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          gmail_id: string
+          id?: number
+          inner_senders?: string[]
+          matched_by?: string | null
+          project_id?: number | null
+          received_at: string
+          snippet?: string | null
+          status?: string
+          subject?: string | null
+          thread_id?: string | null
+          to_text?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          attachments?: Json
+          body_text?: string | null
+          created_at?: string
+          event_id?: number | null
+          file_error?: string | null
+          filed_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          gmail_id?: string
+          id?: number
+          inner_senders?: string[]
+          matched_by?: string | null
+          project_id?: number | null
+          received_at?: string
+          snippet?: string | null
+          status?: string
+          subject?: string | null
+          thread_id?: string | null
+          to_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_messages_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mail_messages_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "project_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mail_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mail_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       onedrive_folders: {
         Row: {
           created_at: string

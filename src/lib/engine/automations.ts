@@ -24,6 +24,7 @@ import { etSlot, runKeys } from "./schedule";
 
 import { closeForgottenDay } from "@/lib/field-day/forgotten";
 import { nightlyBackupStep } from "@/lib/backups/run";
+import { syncMail } from "@/lib/mail/sync";
 // Automations engine (SPEC §5). Data-driven: every WebAuthor trigger is a row in public.automations.
 //
 // Event runs: after each request, pending change-history rows (audit_log.automation_status is null)
@@ -337,6 +338,12 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
     const g = await googleHourly();
     await finishRun(db, keys.hourly.replace("hourly:", "google:"), g);
     out.google = g;
+  }
+  // F26-2: the CRM mailbox, in case the five-minute job is not running (never throws).
+  try {
+    out.mail = await syncMail();
+  } catch (e) {
+    out.mail = { error: e instanceof Error ? e.message : String(e) };
   }
   // SPEC §9.1 OD-c: PDF copies for records that still lack one (two minutes per tick; never breaks the tick).
   try {

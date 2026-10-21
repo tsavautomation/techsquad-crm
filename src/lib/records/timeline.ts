@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fromDateTimeLocalET, toDateTimeLocalET } from "@/lib/dates";
+import { downloadUrls } from "@/lib/files/onedrive";
 import { fieldChanges, type AuditRow } from "@/lib/requests/engine";
 import { clock } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
@@ -38,7 +39,7 @@ export type TimelineItem = {
   /** Visits: the clock times (Eastern) of the day's steps. */
   times?: { onWay?: string; in?: string; out?: string };
   /** Files linked from the event (OneDrive, F26-2). */
-  files?: { name: string; url: string }[];
+  files?: { name: string; url: string; itemId?: string }[];
 };
 
 const timeOf = (iso: string | null) => (iso ? clock(toDateTimeLocalET(iso).slice(11, 16)) : undefined);
@@ -257,8 +258,8 @@ export async function loadTimeline(db: SupabaseClient, perms: ReadonlySet<string
         .order("occurred_at", { ascending: false })
         .limit(LIMIT)
         .then(({ data }) => {
-          for (const e of (data ?? []) as { id: number; project_id: number; channel: string; occurred_at: string; actor: string | null; actor_user: string | null; title: string; body: string | null; attachments: { name: string; url: string }[] | null }[]) {
-            const item: TimelineItem = { key: `e${e.id}`, at: e.occurred_at, kind: e.channel === "email" ? "email" : "event", title: [e.title], detail: e.body ?? undefined, project: onProject(e.project_id), files: (e.attachments ?? []).filter((f) => f?.url) };
+          for (const e of (data ?? []) as { id: number; project_id: number; channel: string; occurred_at: string; actor: string | null; actor_user: string | null; title: string; body: string | null; attachments: { name: string; url?: string; item_id?: string | null }[] | null }[]) {
+            const item: TimelineItem = { key: `e${e.id}`, at: e.occurred_at, kind: e.channel === "email" ? "email" : "event", title: [e.title], detail: e.body ?? undefined, project: onProject(e.project_id), files: (e.attachments ?? []).filter((f) => f?.name).map((f) => ({ name: f.name, url: f.url ?? "", itemId: f.item_id ?? undefined })) };
             if (e.actor && !e.actor_user) item.who = e.actor;
             push(item, e.actor_user);
           }
@@ -267,6 +268,12 @@ export async function loadTimeline(db: SupabaseClient, perms: ReadonlySet<string
   }
 
   await Promise.all(jobs);
+  // F26-2: OneDrive links for the emails' files (short-lived download links; none when OneDrive is off).
+  const itemIds = [...new Set(pending.flatMap((p) => (p.item.files ?? []).map((f) => f.itemId).filter((x): x is string => Boolean(x))))];
+  if (itemIds.length) {
+    const urls = await downloadUrls(itemIds).catch(() => new Map<string, string>());
+    for (const p of pending) for (const f of p.item.files ?? []) if (f.itemId && !f.url) f.url = urls.get(f.itemId) ?? "";
+  }
   const by = await names(db, who);
   for (const { item, by: uid } of pending) items.push({ ...item, at: new Date(item.at).toISOString(), ...(uid ? { who: by.get(uid) } : {}) });
   return items.sort((a, b) => b.at.localeCompare(a.at)).slice(0, LIMIT);

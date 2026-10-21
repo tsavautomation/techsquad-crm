@@ -60,6 +60,22 @@ const site = () => (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000")
 export const redirectUri = () => `${site()}/api/google/callback`;
 export const siteUrl = site;
 
+/** The Google sign-in page for any of the CRM's Google connections (the calendar, the Gmail mailbox: F26-2). */
+export function googleAuthorizeUrl(o: { scopes: string[]; redirectUri: string; state: string; loginHint?: string }) {
+  const p = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID!,
+    response_type: "code",
+    redirect_uri: o.redirectUri,
+    scope: o.scopes.join(" "),
+    access_type: "offline",
+    prompt: "consent",
+    include_granted_scopes: "true",
+    state: o.state,
+    ...(o.loginHint ? { login_hint: o.loginHint } : {}),
+  });
+  return `${AUTH}?${p}`;
+}
+
 export function authorizeUrl(state: string) {
   const p = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID!,
@@ -74,9 +90,9 @@ export function authorizeUrl(state: string) {
   return `${AUTH}?${p}`;
 }
 
-type TokenResponse = { access_token: string; refresh_token?: string; expires_in: number; id_token?: string };
+export type TokenResponse = { access_token: string; refresh_token?: string; expires_in: number; id_token?: string };
 
-async function tokenRequest(body: Record<string, string>): Promise<TokenResponse> {
+export async function tokenRequest(body: Record<string, string>): Promise<TokenResponse> {
   const res = await fetch(TOKEN, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -88,10 +104,10 @@ async function tokenRequest(body: Record<string, string>): Promise<TokenResponse
   return { access_token: json.access_token, refresh_token: json.refresh_token, expires_in: Number(json.expires_in) || 3600, id_token: json.id_token };
 }
 
-const expiresAt = (t: TokenResponse) => new Date(Date.now() + t.expires_in * 1000).toISOString();
+export const expiresAt = (t: TokenResponse) => new Date(Date.now() + t.expires_in * 1000).toISOString();
 
 /** The e-mail inside an OpenID id_token (no extra request). */
-function emailFromIdToken(idToken: string | undefined): string {
+export function emailFromIdToken(idToken: string | undefined): string {
   try {
     const payload = JSON.parse(Buffer.from((idToken ?? "").split(".")[1] ?? "", "base64url").toString("utf8")) as { email?: string };
     return payload.email ?? "";

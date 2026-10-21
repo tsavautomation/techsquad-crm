@@ -14,7 +14,7 @@ import type { TableDef } from "@/registry/types";
 const AUTH = "https://login.microsoftonline.com/consumers/oauth2/v2.0";
 const GRAPH = "https://graph.microsoft.com/v1.0";
 export const SCOPES = "offline_access Files.ReadWrite User.Read";
-const ROOT = "TechSquad CRM";
+export const ROOT = "TechSquad CRM";
 const STAGING = `${ROOT}/_Uploading`;
 
 export type OneDriveSettings = { refresh_token: string; account: string; name: string; drive_id: string; connected_at: string; connected_by: string };

@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth/session";
 import { TIME_ZONE } from "@/lib/dates";
 import { DashboardKpis } from "@/components/dashboard/kpis";
 import { TodaySections } from "@/components/dashboard/today";
+import { AssignMail } from "@/components/dashboard/assign-mail";
 import { DashboardWidgets } from "@/components/dashboard/widgets";
 import { MyDay } from "@/components/field-day/my-day";
 import { MySkills } from "@/components/performance/my-skills";
@@ -52,6 +53,7 @@ export default async function DashboardPage() {
           {/* Wide screens: what needs attention on the left, my assigned work on the right (same order on phones). */}
           <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start">
             <div className="grid grid-cols-1 gap-3.5">
+              <AssignMail user={user} />
               <TodaySections user={user} now={now.getTime()} />
             </div>
             <div id="assigned">

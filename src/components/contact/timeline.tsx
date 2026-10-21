@@ -71,9 +71,15 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
                 <ul className="mt-1 flex flex-wrap gap-1.5">
                   {i.files.map((f, n) => (
                     <li key={n}>
-                      <a href={f.url} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1 rounded-full border px-2.5 text-xs hover:bg-muted">
-                        <Paperclip className="size-3" aria-hidden /> {f.name}
-                      </a>
+                      {f.url ? (
+                        <a href={f.url} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1 rounded-full border px-2.5 text-xs hover:bg-muted">
+                          <Paperclip className="size-3" aria-hidden /> {f.name}
+                        </a>
+                      ) : (
+                        <span className="inline-flex min-h-8 items-center gap-1 rounded-full border border-dashed px-2.5 text-xs text-text-2">
+                          <Paperclip className="size-3" aria-hidden /> {f.name}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
