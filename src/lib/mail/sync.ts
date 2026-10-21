@@ -3,21 +3,21 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { oneDriveReady, ROOT, uploadBytes } from "@/lib/files/onedrive";
 import { safeName } from "@/lib/files/paths";
 import { adminDb } from "@/lib/supabase/admin";
-import { getAttachment, getMessage, listMessageIds, loadSettings, saveSettings } from "./client";
-import { actorLabel, emailFolderName, matchProject, parseMessage, type MailAttachment, type ProjectForMatch } from "./engine";
+import { fetchRaw, loadSettings, parseRaw, newUids, saveSettings, withInbox, type GmailSettings, type Inbox } from "./client";
+import { actorLabel, emailFolderName, matchProject, parseMessage, type MailAttachment, type ParsedMail, type ProjectForMatch } from "./engine";
 
-// F26-2 Gmail intake: every five minutes (pg_cron 'crm-mail' → /api/cron/mail) the mailbox is read.
+// F26-2 Gmail intake: every five minutes (pg_cron 'crm-mail' → /api/cron/mail) the mailbox is read over IMAP.
 // New emails become mail_messages rows; the ones that match a project are filed at once (a project_events
 // row, attachments in OneDrive); the rest wait in the Assign list on Today until the office picks a project.
 
 export type SyncSummary = { read: number; filed: number; waiting: number; errors: string[]; skipped?: string };
 export type StoredAttachment = MailAttachment & { item_id?: string; error?: string };
 
-const OVERLAP_MS = 6 * 3600_000;
 const FIRST_LOOKBACK_MS = 30 * 24 * 3600_000;
 const BUDGET_MS = 150_000;
+const MAX_PER_RUN = 100;
 
-type MailRow = { id: number; gmail_id: string; thread_id: string | null; received_at: string; from_name: string | null; from_email: string | null; subject: string | null; body_text: string | null; attachments: StoredAttachment[]; event_id: number | null };
+type MailRow = { id: number; gmail_id: string; uid: number | null; uid_validity: number | null; received_at: string; from_name: string | null; from_email: string | null; subject: string | null; body_text: string | null; attachments: StoredAttachment[]; event_id: number | null };
 
 /** Projects with their contacts' addresses, and the threads already filed, for the matching. */
 export async function loadCatalog(db: SupabaseClient): Promise<{ projects: ProjectForMatch[]; threads: Map<string, number> }> {
@@ -34,6 +34,17 @@ export async function loadCatalog(db: SupabaseClient): Promise<{ projects: Proje
   };
 }
 
+async function readOne(inbox: Inbox, uid: number): Promise<{ parsed: ParsedMail; raw: Awaited<ReturnType<typeof parseRaw>> } | null> {
+  const raw = await fetchRaw(inbox, uid);
+  if (!raw) return null;
+  const mail = await parseRaw(raw.source);
+  const parsed = parseMessage(
+    { from: mail.from?.text, to: Array.isArray(mail.to) ? mail.to.map((t) => t.text).join(", ") : mail.to?.text, subject: mail.subject, date: mail.date, messageId: mail.messageId, text: mail.text, html: mail.html, attachments: mail.attachments },
+    { uid, uidValidity: inbox.uidValidity, emailId: raw.emailId, threadId: raw.threadId },
+  );
+  return { parsed, raw: mail };
+}
+
 /** Reads the new emails since the last check (never throws: the outcome is kept in the settings). */
 export async function syncMail(): Promise<SyncSummary> {
   const s = await loadSettings();
@@ -41,25 +52,30 @@ export async function syncMail(): Promise<SyncSummary> {
   const db = adminDb();
   const out: SyncSummary = { read: 0, filed: 0, waiting: 0, errors: [] };
   const started = Date.now();
-  let newest = s.last_internal_date ?? 0;
+  let lastUid = s.last_uid;
+  let uidValidity = s.uid_validity;
   try {
-    const since = s.last_internal_date ? s.last_internal_date - OVERLAP_MS : Date.parse(s.connected_at) - FIRST_LOOKBACK_MS;
-    const ids = await listMessageIds(`after:${Math.floor(since / 1000)} -in:spam -in:trash -in:chats`);
-    if (ids.length) {
-      const { data: known } = await db.from("mail_messages").select("gmail_id").in("gmail_id", ids.map((m) => m.id));
-      const seen = new Set(((known ?? []) as { gmail_id: string }[]).map((k) => k.gmail_id));
-      const fresh = ids.filter((m) => !seen.has(m.id)).reverse(); // oldest first, so threads learn in order
-      const catalog = fresh.length ? await loadCatalog(db) : null;
-      for (const m of fresh) {
+    await withInbox(s, async (inbox) => {
+      // A new UIDVALIDITY means Gmail renumbered the mailbox: start again (known emails are skipped by their id).
+      if (uidValidity !== null && uidValidity !== inbox.uidValidity) lastUid = null;
+      uidValidity = inbox.uidValidity;
+      const uids = (await newUids(inbox, lastUid, new Date(Date.parse(s.connected_at) - FIRST_LOOKBACK_MS))).slice(0, MAX_PER_RUN);
+      const catalog = uids.length ? await loadCatalog(db) : null;
+      for (const uid of uids) {
         if (Date.now() - started > BUDGET_MS) break;
         try {
-          const parsed = parseMessage(await getMessage(m.id));
+          const one = await readOne(inbox, uid);
+          lastUid = uid;
+          if (!one) continue;
+          const { parsed } = one;
           const match = matchProject({ subject: parsed.subject, senders: [parsed.from.email, ...parsed.innerSenders], threadId: parsed.threadId }, catalog!.projects, catalog!.threads);
           const { data: row, error } = await db
             .from("mail_messages")
             .insert({
               gmail_id: parsed.gmailId,
               thread_id: parsed.threadId,
+              uid,
+              uid_validity: inbox.uidValidity,
               received_at: parsed.receivedAt,
               from_name: parsed.from.name || null,
               from_email: parsed.from.email || null,
@@ -76,40 +92,43 @@ export async function syncMail(): Promise<SyncSummary> {
             .select("id")
             .single();
           if (error) {
-            if (!/duplicate|unique/i.test(error.message)) out.errors.push(`${m.id}: ${error.message}`);
+            if (!/duplicate|unique/i.test(error.message)) out.errors.push(`${parsed.cleanSubject}: ${error.message}`);
             continue;
           }
           out.read++;
-          newest = Math.max(newest, Date.parse(parsed.receivedAt));
           if (match) {
-            const filed = await fileMessage(db, (row as { id: number }).id, match.projectId, match.by, null);
+            const filed = await fileMessage(db, (row as { id: number }).id, match.projectId, match.by, null, inbox);
             if (filed.ok) {
               out.filed++;
               if (parsed.threadId) catalog!.threads.set(parsed.threadId, match.projectId);
             } else out.errors.push(`${parsed.cleanSubject}: ${filed.message}`);
           } else out.waiting++;
         } catch (e) {
-          out.errors.push(`${m.id}: ${e instanceof Error ? e.message : String(e)}`);
+          out.errors.push(`UID ${uid}: ${e instanceof Error ? e.message : String(e)}`);
         }
       }
-    }
-    await saveSettings({ ...(await loadSettings())!, last_sync_at: new Date().toISOString(), last_sync_error: out.errors.length ? out.errors.slice(0, 3).join(" · ") : null, last_internal_date: newest || s.last_internal_date, read_total: s.read_total + out.read });
+    });
+    await save(s, { last_uid: lastUid, uid_validity: uidValidity, last_sync_at: new Date().toISOString(), last_sync_error: out.errors.length ? out.errors.slice(0, 3).join(" · ") : null, read_total: s.read_total + out.read });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     out.errors.push(message);
-    const cur = await loadSettings();
-    if (cur) await saveSettings({ ...cur, last_sync_at: new Date().toISOString(), last_sync_error: message });
+    await save(s, { last_uid: lastUid, uid_validity: uidValidity, last_sync_at: new Date().toISOString(), last_sync_error: message, read_total: s.read_total + out.read });
   }
   return out;
+}
+
+async function save(s: GmailSettings, patch: Partial<GmailSettings>) {
+  const cur = await loadSettings();
+  if (cur) await saveSettings({ ...cur, ...patch });
 }
 
 /**
  * Files one email under a project: its attachments go to OneDrive (<project> (<id>) › Email › <date> <subject>)
  * and a project_events row (channel 'email') joins the timeline. Running it again on the same email is safe:
- * files already in OneDrive stay, the event is reused.
+ * files already in OneDrive stay, the event is reused. The bytes are read from the mailbox again (by UID).
  */
-export async function fileMessage(db: SupabaseClient, mailId: number, projectId: number, by: string, userId: string | null): Promise<{ ok: true; eventId: number } | { ok: false; message: string }> {
-  const { data } = await db.from("mail_messages").select("id, gmail_id, thread_id, received_at, from_name, from_email, subject, body_text, attachments, event_id").eq("id", mailId).maybeSingle();
+export async function fileMessage(db: SupabaseClient, mailId: number, projectId: number, by: string, userId: string | null, inbox?: Inbox): Promise<{ ok: true; eventId: number } | { ok: false; message: string }> {
+  const { data } = await db.from("mail_messages").select("id, gmail_id, uid, uid_validity, received_at, from_name, from_email, subject, body_text, attachments, event_id").eq("id", mailId).maybeSingle();
   const row = data as MailRow | null;
   if (!row) return { ok: false, message: "This email no longer exists." };
   const { data: project } = await db.from("projects").select("id, title").eq("id", projectId).is("deleted_at", null).maybeSingle();
@@ -120,22 +139,42 @@ export async function fileMessage(db: SupabaseClient, mailId: number, projectId:
   const attachments: StoredAttachment[] = Array.isArray(row.attachments) ? row.attachments : [];
   const pending = attachments.filter((a) => !a.item_id);
   if (pending.length) {
-    if (await oneDriveReady().catch(() => false)) {
+    if (!(await oneDriveReady().catch(() => false))) for (const a of pending) a.error = "OneDrive is not connected";
+    else if (row.uid === null) for (const a of pending) a.error = "The email's place in the mailbox is unknown";
+    else {
       const folder = `${ROOT}/Projects/${safeName(`${title} (${projectId})`)}/Email/${emailFolderName(row.received_at, row.subject ?? "")}`;
-      for (const a of pending) {
-        try {
-          const item = await uploadBytes(folder, a.name, await getAttachment(row.gmail_id, a.attachment_id));
-          a.item_id = item.id;
-          a.size = item.size ?? a.size;
-          delete a.error;
-        } catch (e) {
-          a.error = e instanceof Error ? e.message : String(e);
+      const upload = async (box: Inbox) => {
+        if (row.uid_validity !== null && row.uid_validity !== box.uidValidity) throw new Error("The mailbox was renumbered; this email's files can't be found any more");
+        const raw = await fetchRaw(box, row.uid!);
+        if (!raw) throw new Error("The email is no longer in the mailbox");
+        const mail = await parseRaw(raw.source);
+        for (const a of pending) {
+          try {
+            const part = mail.attachments[a.index];
+            if (!part) throw new Error("attachment not found in the email");
+            const item = await uploadBytes(folder, a.name, part.content);
+            a.item_id = item.id;
+            a.size = item.size ?? a.size;
+            delete a.error;
+          } catch (e) {
+            a.error = e instanceof Error ? e.message : String(e);
+          }
         }
+      };
+      try {
+        if (inbox) await upload(inbox);
+        else {
+          const s = await loadSettings();
+          if (!s) throw new Error("Gmail is not connected");
+          await withInbox(s, upload);
+        }
+      } catch (e) {
+        for (const a of pending) if (!a.item_id) a.error = e instanceof Error ? e.message : String(e);
       }
-    } else for (const a of pending) a.error = "OneDrive is not connected";
+    }
   }
 
-  // The timeline event (one per Gmail message).
+  // The timeline event (one per email).
   let eventId = row.event_id;
   const eventAttachments = attachments.map((a) => ({ name: a.name, mime: a.mime, size: a.size, item_id: a.item_id ?? null, error: a.error ?? null }));
   if (!eventId) {
@@ -176,10 +215,16 @@ export async function fileMessage(db: SupabaseClient, mailId: number, projectId:
 /** Emails whose attachments could not be filed yet (OneDrive was off, a transient error): tried again by the sync. */
 export async function retryFiling(db: SupabaseClient, limit = 10): Promise<number> {
   const { data } = await db.from("mail_messages").select("id, project_id, matched_by").eq("status", "assigned").not("file_error", "is", null).not("project_id", "is", null).order("received_at", { ascending: false }).limit(limit);
+  const rows = (data ?? []) as { id: number; project_id: number; matched_by: string | null }[];
+  if (!rows.length) return 0;
+  const s = await loadSettings();
+  if (!s) return 0;
   let fixed = 0;
-  for (const r of (data ?? []) as { id: number; project_id: number; matched_by: string | null }[]) {
-    const res = await fileMessage(db, r.id, r.project_id, r.matched_by ?? "manual", null);
-    if (res.ok) fixed++;
-  }
+  await withInbox(s, async (inbox) => {
+    for (const r of rows) {
+      const res = await fileMessage(db, r.id, r.project_id, r.matched_by ?? "manual", null, inbox);
+      if (res.ok) fixed++;
+    }
+  });
   return fixed;
 }

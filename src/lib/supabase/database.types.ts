@@ -1919,6 +1919,8 @@ export type Database = {
           subject: string | null
           thread_id: string | null
           to_text: string | null
+          uid: number | null
+          uid_validity: number | null
         }
         Insert: {
           assigned_by?: string | null
@@ -1941,6 +1943,8 @@ export type Database = {
           subject?: string | null
           thread_id?: string | null
           to_text?: string | null
+          uid?: number | null
+          uid_validity?: number | null
         }
         Update: {
           assigned_by?: string | null
@@ -1963,6 +1967,8 @@ export type Database = {
           subject?: string | null
           thread_id?: string | null
           to_text?: string | null
+          uid?: number | null
+          uid_validity?: number | null
         }
         Relationships: [
           {

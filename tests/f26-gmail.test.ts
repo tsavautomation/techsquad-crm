@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { attachmentsOf, bodyText, cleanSubject, emailFolderName, htmlToText, innerSenders, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject, type GmailMessage } from "@/lib/mail/engine";
+import { attachmentsOf, cleanSubject, emailFolderName, htmlToText, innerSenders, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject } from "@/lib/mail/engine";
 
-// F26-2 Gmail intake (SPEC §9.1 F26-a): reading a Gmail message and matching it to a project.
-
-const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64url");
+// F26-2 Gmail intake (SPEC §9.1 F26-a): reading a parsed email and matching it to a project.
 
 describe("addresses and subjects", () => {
   it("reads names and addresses in the usual shapes", () => {
@@ -66,47 +64,44 @@ describe("matching an email to a project", () => {
   });
 });
 
-describe("Gmail payloads", () => {
-  const msg: GmailMessage = {
-    id: "m1",
-    threadId: "t1",
-    internalDate: "1792591200000", // 2026-10-21 14:00 UTC
-    snippet: "Hi there",
-    payload: {
-      mimeType: "multipart/mixed",
-      headers: [
-        { name: "From", value: "Jessica Villegas <jessica@tsav.net>" },
-        { name: "To", value: "tsavcrm@gmail.com" },
-        { name: "Subject", value: "Fwd: Villa Serena – RFI doors" },
-      ],
-      parts: [
-        {
-          mimeType: "multipart/alternative",
-          parts: [
-            { mimeType: "text/plain", body: { data: b64("See below.\r\n\r\nFrom: Client <client@x.com>\r\nWhich doors?") } },
-            { mimeType: "text/html", body: { data: b64("<p>See below.</p>") } },
-          ],
-        },
-        { mimeType: "application/pdf", filename: "plan.pdf", body: { attachmentId: "att-1", size: 1234 } },
-        { mimeType: "image/png", body: { attachmentId: "att-inline", size: 10 } },
-      ],
-    },
+describe("parsed emails", () => {
+  const meta = { uid: 42, uidValidity: 7, emailId: "gm-1", threadId: "thr-1" };
+  const mail = {
+    from: "Jessica Villegas <jessica@tsav.net>",
+    to: "tsavcrm@gmail.com",
+    subject: "Fwd: Villa Serena – RFI doors",
+    date: new Date("2026-10-21T14:00:00Z"),
+    messageId: "<abc@mail.gmail.com>",
+    text: "See below.\r\n\r\nFrom: Client <client@x.com>\r\nWhich doors?",
+    html: "<p>See below.</p>",
+    attachments: [
+      { filename: "plan.pdf", contentType: "application/pdf", size: 1234 },
+      { filename: "image001.png", contentType: "image/png", size: 10, contentId: "<img1>", contentDisposition: "inline" },
+      { contentType: "application/octet-stream", size: 5 },
+    ],
   };
 
-  it("prefers the plain text, lists the named attachments, finds the inner sender", () => {
-    const p = parseMessage(msg);
+  it("prefers the plain text, lists the named attachments with their place, finds the inner sender", () => {
+    const p = parseMessage(mail, meta);
+    expect(p.gmailId).toBe("gm-1");
+    expect(p.threadId).toBe("thr-1");
+    expect(p.uid).toBe(42);
     expect(p.from).toEqual({ name: "Jessica Villegas", email: "jessica@tsav.net" });
     expect(p.subject).toBe("Fwd: Villa Serena – RFI doors");
     expect(p.cleanSubject).toBe("Villa Serena – RFI doors");
     expect(p.text).toBe("See below.\n\nFrom: Client <client@x.com>\nWhich doors?");
+    expect(p.snippet).toBe("See below. From: Client <client@x.com> Which doors?");
     expect(p.innerSenders).toEqual(["client@x.com"]);
-    expect(p.attachments).toEqual([{ name: "plan.pdf", mime: "application/pdf", size: 1234, attachment_id: "att-1" }]);
+    expect(p.attachments).toEqual([{ name: "plan.pdf", mime: "application/pdf", size: 1234, index: 0 }]);
     expect(p.receivedAt).toBe("2026-10-21T14:00:00.000Z");
     expect(attachmentsOf(undefined)).toEqual([]);
   });
 
-  it("falls back to the HTML made readable", () => {
-    expect(bodyText({ mimeType: "text/html", body: { data: b64("<div>Hello<br>there &amp; <b>you</b></div><p>Bye</p>") } })).toBe("Hello\nthere & you\nBye");
+  it("falls back to the Message-ID, then the UID, and to the HTML made readable", () => {
+    expect(parseMessage({ ...mail, text: "" }, { ...meta, emailId: null }).gmailId).toBe("<abc@mail.gmail.com>");
+    expect(parseMessage({ ...mail, messageId: null }, { ...meta, emailId: null }).gmailId).toBe("uid:7:42");
+    expect(parseMessage({ ...mail, text: "", html: "<div>Hello<br>there &amp; <b>you</b></div><p>Bye</p>" }, meta).text).toBe("Hello\nthere & you\nBye");
+    expect(parseMessage({ subject: null, date: "not a date" }, meta).cleanSubject).toBe("(no subject)");
     expect(htmlToText("<style>p{}</style><p>a</p>\n\n\n<p>b</p>")).toBe("a\n\nb");
   });
 

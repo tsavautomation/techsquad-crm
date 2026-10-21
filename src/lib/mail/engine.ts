@@ -1,4 +1,4 @@
-// F26-2 Gmail intake (SPEC §9.1 F26-a): pure helpers — reading a Gmail message, matching it to a project,
+// F26-2 Gmail intake (SPEC §9.1 F26-a): pure helpers — reading a parsed email, matching it to a project,
 // naming its OneDrive folder. No database or network here; tests/f26-gmail.test.ts covers them.
 import { toDateTimeLocalET } from "@/lib/dates";
 import { safeName } from "@/lib/files/paths";
@@ -102,17 +102,7 @@ export function matchProject(m: MailForMatch, projects: ProjectForMatch[], threa
   return null;
 }
 
-// ---------------------------------------------------------------- Gmail payloads
-
-export type GmailPart = { mimeType?: string; filename?: string; headers?: { name: string; value: string }[]; body?: { data?: string; attachmentId?: string; size?: number }; parts?: GmailPart[] };
-export type GmailMessage = { id: string; threadId?: string; internalDate?: string; snippet?: string; labelIds?: string[]; payload?: GmailPart };
-
-export const decodeBase64Url = (s: string | undefined) => (s ? Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8") : "");
-
-export function header(payload: GmailPart | undefined, name: string): string {
-  const h = payload?.headers?.find((x) => x.name.toLowerCase() === name.toLowerCase());
-  return h?.value ?? "";
-}
+// ---------------------------------------------------------------- parsed emails
 
 /** A readable text from an HTML part: blocks become line breaks, tags and entities go. */
 export function htmlToText(html: string): string {
@@ -132,39 +122,25 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
-function walk(part: GmailPart | undefined, visit: (p: GmailPart) => void) {
-  if (!part) return;
-  visit(part);
-  for (const p of part.parts ?? []) walk(p, visit);
-}
+/** What the engine needs from a parsed email (the shape mailparser gives, kept small so tests stay plain). */
+export type MailInput = {
+  from?: string | null;
+  to?: string | null;
+  subject?: string | null;
+  date?: Date | string | null;
+  messageId?: string | null;
+  text?: string | null;
+  html?: string | false | null;
+  attachments?: { filename?: string | null; contentType?: string | null; size?: number | null; contentId?: string | null; contentDisposition?: string | null }[];
+};
 
-/** The message text: the text/plain part when there is one, otherwise the HTML made readable. */
-export function bodyText(payload: GmailPart | undefined): string {
-  let plain = "";
-  let html = "";
-  walk(payload, (p) => {
-    if (p.filename || !p.body?.data) return;
-    const mime = (p.mimeType ?? "").toLowerCase();
-    if (mime === "text/plain" && !plain) plain = decodeBase64Url(p.body.data);
-    else if (mime === "text/html" && !html) html = decodeBase64Url(p.body.data);
-  });
-  return (plain.trim() || htmlToText(html)).replace(/\r\n/g, "\n").trim();
-}
-
-export type MailAttachment = { name: string; mime: string; size: number; attachment_id: string };
-
-/** The real attachments (parts with a file name and an attachment id); inline images without a name are skipped. */
-export function attachmentsOf(payload: GmailPart | undefined): MailAttachment[] {
-  const out: MailAttachment[] = [];
-  walk(payload, (p) => {
-    if (p.filename && p.body?.attachmentId) out.push({ name: p.filename, mime: p.mimeType ?? "application/octet-stream", size: p.body.size ?? 0, attachment_id: p.body.attachmentId });
-  });
-  return out;
-}
+export type MailAttachment = { name: string; mime: string; size: number; index: number };
 
 export type ParsedMail = {
+  /** Gmail's message id (X-GM-MSGID) when the server gave one, else the Message-ID header, else the UID. */
   gmailId: string;
   threadId: string | null;
+  uid: number;
   receivedAt: string;
   from: Address;
   to: string;
@@ -178,22 +154,34 @@ export type ParsedMail = {
 
 const TEXT_CAP = 20_000;
 
-export function parseMessage(msg: GmailMessage): ParsedMail {
-  const subject = header(msg.payload, "Subject");
-  const text = bodyText(msg.payload).slice(0, TEXT_CAP);
-  const received = msg.internalDate ? new Date(Number(msg.internalDate)) : new Date(header(msg.payload, "Date") || Date.now());
+/** The real attachments: parts with a file name that are not inline images of the HTML. `index` is their position in the parsed list. */
+export function attachmentsOf(list: MailInput["attachments"]): MailAttachment[] {
+  const out: MailAttachment[] = [];
+  (list ?? []).forEach((a, index) => {
+    if (!a.filename) return;
+    if (a.contentId && a.contentDisposition === "inline") return;
+    out.push({ name: a.filename, mime: a.contentType ?? "application/octet-stream", size: a.size ?? 0, index });
+  });
+  return out;
+}
+
+export function parseMessage(mail: MailInput, meta: { uid: number; uidValidity: number; emailId: string | null; threadId: string | null }): ParsedMail {
+  const subject = (mail.subject ?? "").trim();
+  const text = ((mail.text ?? "").trim() || (typeof mail.html === "string" ? htmlToText(mail.html) : "")).replace(/\r\n/g, "\n").trim().slice(0, TEXT_CAP);
+  const received = mail.date ? new Date(mail.date) : new Date();
   return {
-    gmailId: msg.id,
-    threadId: msg.threadId ?? null,
+    gmailId: meta.emailId || (mail.messageId ?? "").trim() || `uid:${meta.uidValidity}:${meta.uid}`,
+    threadId: meta.threadId,
+    uid: meta.uid,
     receivedAt: (Number.isNaN(received.getTime()) ? new Date() : received).toISOString(),
-    from: parseAddress(header(msg.payload, "From")),
-    to: header(msg.payload, "To"),
+    from: parseAddress(mail.from),
+    to: mail.to ?? "",
     subject,
     cleanSubject: cleanSubject(subject) || "(no subject)",
-    snippet: msg.snippet ?? "",
+    snippet: text.replace(/\s+/g, " ").slice(0, 200),
     text,
     innerSenders: innerSenders(text),
-    attachments: attachmentsOf(msg.payload),
+    attachments: attachmentsOf(mail.attachments),
   };
 }
 

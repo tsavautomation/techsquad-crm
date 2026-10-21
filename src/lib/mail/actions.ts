@@ -7,25 +7,47 @@ import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { getTable } from "@/registry";
 import { canDo } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
-import { disconnect } from "./client";
+import { connectWithPassword, disconnect } from "./client";
 import { fileMessage, syncMail, type SyncSummary } from "./sync";
 
-// F26-2: Admin › Gmail intake (check now, disconnect) and the Assign list on Today (assign / ignore).
+// F26-2: Admin › Gmail intake (connect, check now, disconnect) and the Assign list on Today (assign / ignore).
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; message: string };
 
-export async function disconnectGmailAction(): Promise<Result> {
+async function sysadmin(): Promise<Result<{ id: string }>> {
   const me = await requireUser();
   if (!me.isSysadmin) return { ok: false, message: "Only an administrator can change the Gmail connection." };
+  if (!hasAdminKey()) return { ok: false, message: "The server has no admin key." };
+  return { ok: true, id: me.id };
+}
+
+/** Connect with the mailbox address and its Gmail app password: one IMAP sign-in proves it, then it is kept encrypted. */
+export async function connectGmailAction(account: string, password: string): Promise<Result> {
+  const a = await sysadmin();
+  if (!a.ok) return a;
+  if (!/^[^\s@]+@[^\s@]+$/.test(account.trim())) return { ok: false, message: "That is not an email address." };
+  if (password.replace(/\s+/g, "").length < 12) return { ok: false, message: "The app password is 16 letters (Google shows them in four groups)." };
+  try {
+    await connectWithPassword(account, password, a.id);
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e);
+    return { ok: false, message: /auth|credentials|invalid|AUTHENTICATIONFAILED/i.test(m) ? "Google refused the sign-in. Check the address, that 2-Step Verification is on, and that this is an app password (not the normal password)." : m };
+  }
+  revalidatePath("/admin/gmail");
+  return { ok: true };
+}
+
+export async function disconnectGmailAction(): Promise<Result> {
+  const a = await sysadmin();
+  if (!a.ok) return a;
   await disconnect();
   revalidatePath("/admin/gmail");
   return { ok: true };
 }
 
 export async function checkMailNowAction(): Promise<Result<{ summary: SyncSummary }>> {
-  const me = await requireUser();
-  if (!me.isSysadmin) return { ok: false, message: "Only an administrator can run the mailbox check." };
-  if (!hasAdminKey()) return { ok: false, message: "The server has no admin key." };
+  const a = await sysadmin();
+  if (!a.ok) return a;
   const summary = await syncMail();
   revalidatePath("/admin/gmail");
   revalidatePath("/");
