@@ -1,6 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fromDateTimeLocalET, toDateTimeLocalET } from "@/lib/dates";
+import { fieldChanges, type AuditRow } from "@/lib/requests/engine";
+import { clock } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
@@ -8,6 +10,9 @@ import { recordHref } from "@/registry/routes";
 // F4 client timeline (docs/portal-features-merge.md §G, SPEC §9.1 F4-c): one list of everything that
 // happened with a client or project — calls / texts / emails logged, notes, stage changes, visits,
 // job reports and tasks. Each source is read with the user's own permissions (RLS).
+// F26-1 (SPEC §9.1 F26-a): the project Timeline also shows check-in / check-out times on visits, Job Status
+// changes from the audit log, tasks done, the project's request lines and the project_events stream
+// (emails from F26-2 land there).
 
 /** Names for the people on visits and reports, from the view every signed-in person may read. */
 async function employeeNames(db: SupabaseClient, ids: (number | null)[]): Promise<Map<number, string>> {
@@ -17,9 +22,26 @@ async function employeeNames(db: SupabaseClient, ids: (number | null)[]): Promis
   return new Map(((data ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
 }
 
-export type TimelineKind = "contact" | "note" | "stage" | "visit" | "report" | "task";
+export type TimelineKind = "contact" | "note" | "stage" | "status" | "visit" | "report" | "task" | "request" | "email" | "event";
 /** `title` parts are joined on screen, each through the screen language (stored values translate as options). */
-export type TimelineItem = { key: string; at: string; kind: TimelineKind; title: string[]; detail?: string; followUp?: string; who?: string; href?: string; project?: string; color?: string };
+export type TimelineItem = {
+  key: string;
+  at: string;
+  kind: TimelineKind;
+  title: string[];
+  detail?: string;
+  followUp?: string;
+  who?: string;
+  href?: string;
+  project?: string;
+  color?: string;
+  /** Visits: the clock times (Eastern) of the day's steps. */
+  times?: { onWay?: string; in?: string; out?: string };
+  /** Files linked from the event (OneDrive, F26-2). */
+  files?: { name: string; url: string }[];
+};
+
+const timeOf = (iso: string | null) => (iso ? clock(toDateTimeLocalET(iso).slice(11, 16)) : undefined);
 
 const LIMIT = 150;
 // A date-only entry (an interaction's Date, a report's Date) keeps its real time when it was entered
@@ -119,20 +141,21 @@ export async function loadTimeline(db: SupabaseClient, perms: ReadonlySet<string
       jobs.push(
         db
           .from("visits")
-          .select("id, project_id, starts_at, status, service_type, technician_id, visits_team(target_id)")
+          .select("id, project_id, starts_at, status, service_type, technician_id, on_way_at, checked_in_at, checked_out_at, visits_team(target_id)")
           .in("project_id", projectIds)
           .is("deleted_at", null)
           .order("starts_at", { ascending: false })
           .limit(LIMIT)
           .then(async ({ data }) => {
             // Titled with the people who went and the date (Fred 2026-10-05: "Technician and Date as title, not Visit done").
-            const rows = (data ?? []) as unknown as { id: number; project_id: number; starts_at: string; status: string | null; service_type: string | null; technician_id: number | null; visits_team: { target_id: number }[] }[];
+            const rows = (data ?? []) as unknown as { id: number; project_id: number; starts_at: string; status: string | null; service_type: string | null; technician_id: number | null; on_way_at: string | null; checked_in_at: string | null; checked_out_at: string | null; visits_team: { target_id: number }[] }[];
             const names = await employeeNames(db, rows.flatMap((v) => [v.technician_id, ...v.visits_team.map((t) => t.target_id)]));
             for (const v of rows) {
               const people = [v.technician_id, ...v.visits_team.map((t) => t.target_id)].filter((x): x is number => x !== null).map((id) => names.get(id)).filter((x): x is string => Boolean(x));
               const title = people.length ? [people.join(", ")] : ["Visit"];
               if (v.status && v.status !== "Done") title.push(v.status);
-              push({ key: `v${v.id}`, at: v.starts_at, kind: "visit", title, detail: v.service_type ?? undefined, href: recordHref(vt, v.id), project: onProject(v.project_id) });
+              const times = v.on_way_at || v.checked_in_at || v.checked_out_at ? { onWay: timeOf(v.on_way_at), in: timeOf(v.checked_in_at), out: timeOf(v.checked_out_at) } : undefined;
+              push({ key: `v${v.id}`, at: v.starts_at, kind: "visit", title, detail: v.service_type ?? undefined, href: recordHref(vt, v.id), project: onProject(v.project_id), times });
             }
           }),
       );
@@ -170,12 +193,77 @@ export async function loadTimeline(db: SupabaseClient, perms: ReadonlySet<string
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
           .limit(LIMIT)
-          .then(({ data }) => {
-            for (const r of (data ?? []) as { id: number; project_id: number; details: string | null; status: string | null; created_at: string; created_by: string | null }[])
-              push({ key: `t${r.id}`, at: r.created_at, kind: "task", title: ["Task", r.status ?? "Pending"], detail: (r.details ?? "").split("\n")[0].slice(0, 160) || undefined, href: recordHref(tt, r.id), project: onProject(r.project_id) }, r.created_by);
+          .then(async ({ data }) => {
+            const rows = (data ?? []) as { id: number; project_id: number; details: string | null; status: string | null; created_at: string; created_by: string | null }[];
+            const firstLine = (r: { details: string | null }) => (r.details ?? "").split("\n")[0].slice(0, 160) || undefined;
+            for (const r of rows) push({ key: `t${r.id}`, at: r.created_at, kind: "task", title: ["Task", r.status ?? "Pending"], detail: firstLine(r), href: recordHref(tt, r.id), project: onProject(r.project_id) }, r.created_by);
+            // Tasks done: the moment the status became Completed, from the audit log (people without the History permission see none).
+            const done = rows.filter((r) => r.status === "Completed");
+            if (!done.length) return;
+            const byId = new Map(done.map((r) => [r.id, r]));
+            const { data: log } = await db.from("audit_log").select("id, record_id, action, at, actor, changes").eq("table_name", "tasks").in("record_id", done.map((r) => r.id)).order("at", { ascending: false }).limit(LIMIT);
+            for (const c of fieldChanges((log ?? []) as AuditRow[], "status").filter((c) => c.to === "Completed")) {
+              const r = byId.get(c.recordId)!;
+              push({ key: `td${c.auditId}`, at: c.at, kind: "task", title: ["Task done"], detail: firstLine(r), href: recordHref(tt, r.id), project: onProject(r.project_id), color: "#16a34a" }, c.actor);
+            }
           }),
       );
     }
+
+    // Job Status changes (and the project's creation), from the audit log.
+    const statusColor = new Map((getTable("projects").fields.find((f) => f.name === "job_status")?.options ?? []).map((o) => [o.value, o.color]));
+    jobs.push(
+      db
+        .from("audit_log")
+        .select("id, record_id, action, at, actor, changes")
+        .eq("table_name", "projects")
+        .in("record_id", projectIds)
+        .or('action.eq.create,changes.cs.{"job_status":[]}')
+        .order("at", { ascending: false })
+        .limit(LIMIT)
+        .then(({ data }) => {
+          const rows = (data ?? []) as AuditRow[];
+          for (const r of rows) if (r.action === "create") push({ key: `pc${r.id}`, at: r.at, kind: "status", title: ["Project created"], project: onProject(r.record_id) }, r.actor);
+          for (const c of fieldChanges(rows, "job_status")) push({ key: `ps${c.auditId}`, at: c.at, kind: "status", title: ["Job Status", c.to!], color: statusColor.get(c.to!), project: onProject(c.recordId) }, c.actor);
+        }),
+    );
+
+    // Request lines (F26-1): when they came in, and when they were closed.
+    const projectsT = getTable("projects");
+    jobs.push(
+      db
+        .from("project_requests")
+        .select("id, project_id, date, type, description, status, closed_by, closed_at, created_at, created_by")
+        .in("project_id", projectIds)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(LIMIT)
+        .then(({ data }) => {
+          for (const r of (data ?? []) as { id: number; project_id: number; date: string; type: string; description: string | null; status: string; closed_by: string | null; closed_at: string | null; created_at: string; created_by: string | null }[]) {
+            const href = `${recordHref(projectsT, r.project_id)}#requests`;
+            push({ key: `q${r.id}`, at: when(r.date, r.created_at), kind: "request", title: ["Request", r.type], detail: r.description ?? undefined, href, project: onProject(r.project_id), color: "#d97706" }, r.created_by);
+            if (r.status === "Done" && r.closed_at) push({ key: `qd${r.id}`, at: r.closed_at, kind: "request", title: ["Request done", r.type], href, project: onProject(r.project_id), color: "#16a34a" }, r.closed_by);
+          }
+        }),
+    );
+
+    // The events stream (emails and other messages that have no record of their own).
+    jobs.push(
+      db
+        .from("project_events")
+        .select("id, project_id, channel, occurred_at, actor, actor_user, title, body, attachments")
+        .in("project_id", projectIds)
+        .is("deleted_at", null)
+        .order("occurred_at", { ascending: false })
+        .limit(LIMIT)
+        .then(({ data }) => {
+          for (const e of (data ?? []) as { id: number; project_id: number; channel: string; occurred_at: string; actor: string | null; actor_user: string | null; title: string; body: string | null; attachments: { name: string; url: string }[] | null }[]) {
+            const item: TimelineItem = { key: `e${e.id}`, at: e.occurred_at, kind: e.channel === "email" ? "email" : "event", title: [e.title], detail: e.body ?? undefined, project: onProject(e.project_id), files: (e.attachments ?? []).filter((f) => f?.url) };
+            if (e.actor && !e.actor_user) item.who = e.actor;
+            push(item, e.actor_user);
+          }
+        }),
+    );
   }
 
   await Promise.all(jobs);

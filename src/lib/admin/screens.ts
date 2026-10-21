@@ -10,6 +10,7 @@ export const ADMIN_SCREENS: AdminScreen[] = [
   { href: "/admin/google-calendar", title: "Google Calendar", description: "The shared calendar: years of visits in, new visits out, hourly sync", anyOf: "sysadmin" },
   { href: "/admin/report-archive", title: "Report archive", description: "The old field reports in OneDrive (123FormBuilder, JotForm, notes) become Job Reports", anyOf: "sysadmin" },
   { href: "/admin/ai", title: "AI", description: "The Claude connection: reads licence photos today, proof-reads reports later", anyOf: "sysadmin" },
+  { href: "/admin/alerts", title: "Shared alerts", description: "Who gets the project request alerts; one clear clears it for everyone", anyOf: ["projects.module.design_design"] },
   { href: "/admin/field-day", title: "Field day", description: "Who gets return cards, when they're due, checklists and tools per service type", anyOf: ["projects.module.design_design"] },
   { href: "/admin/messages", title: "Messages", description: "Texts sent to clients (follow-ups, visit confirmations…) in English, Português and Español", anyOf: ["projects.module.design_design"] },
   { href: "/admin/automations", title: "Automations", description: "What runs when records change, the run log and sent emails", anyOf: ["projects.module.design_triggers"] },

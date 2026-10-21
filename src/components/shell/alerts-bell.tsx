@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AtSign, Bell, CheckSquare, Clock, IdCard, MessageSquarePlus, SquareKanban, X, type LucideIcon, Phone } from "lucide-react";
-import { alertsAction, markTagsSeenAction, type Alerts, type AlertSection } from "@/lib/alerts/actions";
+import { AtSign, Bell, CheckSquare, Clock, IdCard, MessageSquarePlus, MessageSquareWarning, SquareKanban, X, type LucideIcon, Phone } from "lucide-react";
+import { toast } from "sonner";
+import { alertsAction, markTagsSeenAction, type Alerts, type AlertItem, type AlertSection } from "@/lib/alerts/actions";
+import { ackRequestAction } from "@/lib/requests/actions";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
@@ -21,9 +23,33 @@ const ICONS: Record<AlertSection["key"], { icon: LucideIcon; tint: string }> = {
   tasks: { icon: SquareKanban, tint: "#f59e0b" },
   checklist: { icon: CheckSquare, tint: "#16a34a" },
   requests: { icon: MessageSquarePlus, tint: "#0e76ad" },
+  project_requests: { icon: MessageSquareWarning, tint: "#d97706" },
 };
 
-function List({ alerts, onPick, onTagsRead }: { alerts: Alerts | null; onPick: () => void; onTagsRead: () => void }) {
+/** F26-c shared alerts: "Got it" hides it for me, "Clear for everyone" for every recipient; both are logged. */
+function AckButtons({ item, onDone }: { item: AlertItem; onDone: () => void }) {
+  const t = useT();
+  const [busy, setBusy] = useState(false);
+  const run = async (action: "acknowledged" | "cleared") => {
+    setBusy(true);
+    const r = await ackRequestAction(item.ack!, action);
+    setBusy(false);
+    if (!r.ok) toast.error(t(r.message));
+    else onDone();
+  };
+  return (
+    <div className="mx-1 mb-1 flex gap-2 pl-[46px]">
+      <button type="button" disabled={busy} onClick={() => run("acknowledged")} className="h-8 rounded-md border px-2.5 text-xs font-medium hover:bg-muted disabled:opacity-60">
+        {t("Got it")}
+      </button>
+      <button type="button" disabled={busy} onClick={() => run("cleared")} className="h-8 rounded-md border px-2.5 text-xs font-medium hover:bg-muted disabled:opacity-60">
+        {t("Clear for everyone")}
+      </button>
+    </div>
+  );
+}
+
+function List({ alerts, onPick, onTagsRead, onChange }: { alerts: Alerts | null; onPick: () => void; onTagsRead: () => void; onChange: () => void }) {
   const t = useT();
   if (!alerts) return <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t("Loading…")}</p>;
   if (!alerts.sections.length) return <p className="px-4 py-8 text-center text-sm text-muted-foreground">{t("You're all caught up.")}</p>;
@@ -53,6 +79,7 @@ function List({ alerts, onPick, onTagsRead }: { alerts: Alerts | null; onPick: (
                     <span className="truncate text-sm font-medium">{i.title}</span>
                     <span className={cn("line-clamp-2 text-xs", i.urgent && s.key !== "tags" ? "text-bad-fg" : "text-text-2")}>{i.meta}</span>
                   </Link>
+                  {i.ack !== undefined && <AckButtons item={i} onDone={onChange} />}
                 </li>
               ))}
             </ul>
@@ -165,7 +192,7 @@ export function AlertsBell() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-1 pb-[env(safe-area-inset-bottom)]">
-              <List alerts={alerts} onPick={() => setOpen(false)} onTagsRead={tagsRead} />
+              <List alerts={alerts} onPick={() => setOpen(false)} onTagsRead={tagsRead} onChange={() => void load()} />
             </div>
           </div>,
           document.body,

@@ -12,6 +12,8 @@ import { getTable, REGISTRY } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
 import { getT } from "@/i18n/server";
+import { pendingForMe } from "@/lib/requests/engine";
+import { isRecipient, loadAcks } from "@/lib/requests/load";
 
 // The alerts bell in the top bar: what is waiting for the signed-in person, each linking to its record.
 // Tags in notes stay until the record is opened (or "Mark tags read"); the rest are live: they drop out
@@ -21,8 +23,9 @@ import { getT } from "@/i18n/server";
 // to approve), report reminders the office must follow up, portal requests, and driver's licences expiring.
 // Workflow stages, today's visits and client follow-ups live on Today and the calendar, not in the bell.
 
-export type AlertItem = { key: string; href: string; title: string; meta: string; urgent?: boolean };
-export type AlertSection = { key: "clock" | "phones" | "tags" | "tasks" | "checklist" | "requests" | "licence"; title: string; items: AlertItem[] };
+/** `ack`: a shared alert (F26-c) with "Got it" / "Clear for everyone" buttons; the request id. */
+export type AlertItem = { key: string; href: string; title: string; meta: string; urgent?: boolean; ack?: number };
+export type AlertSection = { key: "clock" | "phones" | "tags" | "tasks" | "checklist" | "requests" | "project_requests" | "licence"; title: string; items: AlertItem[] };
 export type Alerts = { count: number; urgent: boolean; sections: AlertSection[] };
 
 const MAX = 20;
@@ -218,11 +221,35 @@ export async function alertsAction(): Promise<Alerts> {
     }));
   })();
 
-  const [a, b, d, e, g, h, i, l] = await Promise.all([tags, corrections, tasks, checklist, clock, phones, requests, licence]);
+  // F26-c: open project requests, for the people on the shared-alert list (Admin › Shared alerts). One clear clears for all.
+  const projectRequests = (async (): Promise<AlertItem[]> => {
+    if (!can("projects") || !(user.isSysadmin || (await isRecipient(db, user)))) return [];
+    const { data } = await db
+      .from("project_requests")
+      .select("id, project_id, type, date, description, created_at, projects(title)")
+      .eq("status", "Open")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(MAX * 2);
+    const rows = (data ?? []) as unknown as { id: number; project_id: number; type: string; date: string; description: string | null; created_at: string; projects: { title: string | null } | null }[];
+    const mine = pendingForMe(rows, await loadAcks(db, rows.map((r) => r.id)), user.id).slice(0, MAX);
+    const projects = getTable("projects");
+    return mine.map((r) => ({
+      key: `preq:${r.id}`,
+      href: `${recordHref(projects, r.project_id)}#requests`,
+      title: `${tr(r.type)} · ${r.projects?.title ?? `#${r.project_id}`}`,
+      meta: `${formatDate(r.date)} · ${(r.description ?? "").length > 80 ? `${(r.description ?? "").slice(0, 80)}…` : (r.description ?? "")}`,
+      urgent: Date.now() - new Date(r.created_at).getTime() > 2 * 24 * 3600_000,
+      ack: r.id,
+    }));
+  })();
+
+  const [a, b, d, e, g, h, i, l, pr] = await Promise.all([tags, corrections, tasks, checklist, clock, phones, requests, licence, projectRequests]);
   const sections: AlertSection[] = [
     { key: "clock" as const, title: tr("Time clock"), items: [...g, ...b] },
     { key: "licence" as const, title: tr("Driver's licences"), items: l },
     { key: "phones" as const, title: tr("Report reminders"), items: h },
+    { key: "project_requests" as const, title: tr("Project requests"), items: pr },
     { key: "requests" as const, title: tr("Customer requests from the portal"), items: i },
     { key: "tags" as const, title: tr("Tagged you"), items: a },
     { key: "tasks" as const, title: tr("Your open tasks"), items: d },

@@ -34,6 +34,7 @@ import { PerformancePanel } from "@/components/performance/performance-panel";
 import { DeficiencyPanel } from "@/components/reports/deficiency-panel";
 import { EmployeeDeficiencies } from "@/components/reports/employee-deficiencies";
 import { PendingItems } from "@/components/project/pending-items";
+import { RequestsPanel } from "@/components/project/requests-panel";
 import { MaintenancePlan } from "@/components/project/maintenance-plan";
 import { FieldDataPanel } from "@/components/field-day/field-data-panel";
 import { PunchListPanel } from "@/components/project/punch-list-panel";
@@ -175,6 +176,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "deficiency" && <DeficiencyPanel id={recordId} status={String(row.status ?? "")} canExcuse={canModify} />}
       {t.detailAddon === "project" && <SiteHistory projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <ProjectEquipment projectId={recordId} user={user} />}
+      {t.detailAddon === "project" && <RequestsPanel projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <PendingItems projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <MaintenancePlan projectId={recordId} user={user} />}
       {t.detailAddon === "visit" && canModify && <FieldDataPanel visitId={recordId} />}
@@ -200,7 +202,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
             <Timeline items={timeline} />
           </Section>
         )}
-        {subLists.map((s) => (
+        {subLists.filter((s) => s.table.name !== "project_requests").map((s) => (
           <Section key={s.table.name} title={s.table.label} count={s.rows.length} open>
             <SubListTable list={s} baseHref={recordHref(t, recordId)} />
           </Section>

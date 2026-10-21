@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_acks: {
+        Row: {
+          action: string
+          at: string
+          id: number
+          kind: string
+          ref_id: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          at?: string
+          id?: number
+          kind: string
+          ref_id: number
+          user_id: string
+        }
+        Update: {
+          action?: string
+          at?: string
+          id?: number
+          kind?: string
+          ref_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_acks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_integrations: {
         Row: {
           data: Json
@@ -2717,6 +2752,195 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_events: {
+        Row: {
+          actor: string | null
+          actor_user: string | null
+          attachments: Json
+          body: string | null
+          channel: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: number
+          occurred_at: string
+          project_id: number
+          source_id: number | null
+          source_ref: string | null
+          source_table: string | null
+          title: string
+        }
+        Insert: {
+          actor?: string | null
+          actor_user?: string | null
+          attachments?: Json
+          body?: string | null
+          channel: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: number
+          occurred_at?: string
+          project_id: number
+          source_id?: number | null
+          source_ref?: string | null
+          source_table?: string | null
+          title: string
+        }
+        Update: {
+          actor?: string | null
+          actor_user?: string | null
+          attachments?: Json
+          body?: string | null
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: number
+          occurred_at?: string
+          project_id?: number
+          source_id?: number | null
+          source_ref?: string | null
+          source_table?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_events_actor_user_fkey"
+            columns: ["actor_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_requests: {
+        Row: {
+          archived_at: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          deleted_at: string | null
+          description: string | null
+          id: number
+          locked: boolean
+          project_id: number
+          source_event_id: number | null
+          status: string
+          submitted_at: string | null
+          title: string | null
+          type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: number
+          locked?: boolean
+          project_id: number
+          source_event_id?: number | null
+          status?: string
+          submitted_at?: string | null
+          title?: string | null
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: number
+          locked?: boolean
+          project_id?: number
+          source_event_id?: number | null
+          status?: string
+          submitted_at?: string | null
+          title?: string | null
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_requests_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_requests_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "project_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_requests_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
