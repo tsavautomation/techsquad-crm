@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { processPendingEvents, runScheduled, tick } from "@/lib/engine/automations";
 import { deliverQueued } from "@/lib/engine/email";
 import { retryFiling, syncMail } from "@/lib/mail/sync";
+import { runPushReminders } from "@/lib/push/reminders";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 
 // Scheduled automations (SPEC §5 'daily' / 'hourly', PLAN M11). Callers send
@@ -13,6 +14,7 @@ import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 //   /api/cron/hourly  run the hourly check now (manual)
 //   /api/cron/events  catch up on change history and retry queued email
 //   /api/cron/mail    read the CRM mailbox (F26-2; pg_cron every five minutes): answers at once, then works
+//   /api/cron/push    F27-b reminders (arrived without check-in, still clocked in, missing report); pg_cron every five minutes
 
 export const maxDuration = 300;
 
@@ -49,6 +51,17 @@ export async function GET(req: Request, ctx: RouteContext<"/api/cron/[kind]">) {
         console.log("cron mail:", JSON.stringify({ ...r, retried }));
       } catch (e) {
         console.error("cron mail failed:", e);
+      }
+    });
+    return Response.json({ kind, started: true }, { status: 202 });
+  }
+
+  if (kind === "push") {
+    after(async () => {
+      try {
+        console.log("cron push:", JSON.stringify(await runPushReminders()));
+      } catch (e) {
+        console.error("cron push failed:", e);
       }
     });
     return Response.json({ kind, started: true }, { status: 202 });

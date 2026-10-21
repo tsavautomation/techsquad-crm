@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPushKind, PUSH_EVENTS, recipientsFor, visitStepMessage } from "../src/lib/push/engine";
+import { isPushKind, missingReportMessage, PUSH_EVENTS, recipientsFor, reportReminderTime, visitStepMessage } from "../src/lib/push/engine";
 
 // F27 Push notifications (Fred 2026-10-21): check-ins / check-outs to the logins that asked for them.
 
@@ -32,9 +32,23 @@ describe("visitStepMessage", () => {
 });
 
 describe("event kinds", () => {
-  it("knows its two events and nothing else", () => {
-    expect(PUSH_EVENTS.map((e) => e.kind)).toEqual(["visit_check_in", "visit_check_out"]);
+  it("knows its five events and nothing else", () => {
+    expect(PUSH_EVENTS.map((e) => e.kind)).toEqual(["visit_check_in", "visit_check_out", "arrived_no_check_in", "forgot_clock_out", "missing_report"]);
     expect(isPushKind("visit_check_in")).toBe(true);
     expect(isPushKind("email")).toBe(false);
+  });
+});
+
+describe("reminders (F27-b)", () => {
+  it("picks a report-reminder minute between 7:00 and 7:30 PM that changes with the date", () => {
+    const times = ["2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25"].map(reportReminderTime);
+    for (const t of times) expect(t).toMatch(/^19:(0\d|1\d|2\d|30)$/);
+    expect(new Set(times).size).toBeGreaterThan(1);
+    expect(reportReminderTime("2026-10-21")).toBe(reportReminderTime("2026-10-21"));
+  });
+  it("names the projects still without a report", () => {
+    const m = missingReportMessage({ projects: ["826 Meridian House", "Oceana #1101N"] });
+    expect(m.title).toBe("2 job reports missing");
+    expect(m.body).toContain("826 Meridian House, Oceana #1101N");
   });
 });

@@ -17,7 +17,7 @@ const b64ToBytes = (s: string) => {
 };
 
 type State = "unsupported" | "needs-install" | "denied" | "off" | "on";
-const EVENT_LABEL: Record<string, string> = { visit_check_in: "technician check-ins", visit_check_out: "technician check-outs" };
+const EVENT_LABEL: Record<string, string> = { visit_check_in: "technician check-ins", visit_check_out: "technician check-outs", arrived_no_check_in: "arrival without check-in", forgot_clock_out: "clock-out reminder", missing_report: "missing report reminder" };
 
 /** What this browser can do right now (runs after the server answered, never during render). */
 async function detect(): Promise<State> {

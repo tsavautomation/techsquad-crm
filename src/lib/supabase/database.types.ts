@@ -107,6 +107,39 @@ export type Database = {
           },
         ]
       }
+      arrival_watch: {
+        Row: {
+          first_seen_at: string
+          notified_at: string | null
+          visit_id: number
+        }
+        Insert: {
+          first_seen_at: string
+          notified_at?: string | null
+          visit_id: number
+        }
+        Update: {
+          first_seen_at?: string
+          notified_at?: string | null
+          visit_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arrival_watch_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: true
+            referencedRelation: "portal_visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arrival_watch_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: true
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attachments: {
         Row: {
           created_at: string
@@ -1147,6 +1180,7 @@ export type Database = {
           id: number
           last_name: string | null
           locked: boolean
+          pay_frequency: string | null
           phone: string | null
           ssn: string | null
           start_date: string | null
@@ -1177,6 +1211,7 @@ export type Database = {
           id?: number
           last_name?: string | null
           locked?: boolean
+          pay_frequency?: string | null
           phone?: string | null
           ssn?: string | null
           start_date?: string | null
@@ -1207,6 +1242,7 @@ export type Database = {
           id?: number
           last_name?: string | null
           locked?: boolean
+          pay_frequency?: string | null
           phone?: string | null
           ssn?: string | null
           start_date?: string | null
@@ -2165,6 +2201,190 @@ export type Database = {
           {
             foreignKeyName: "organizations_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_period_adjustments: {
+        Row: {
+          applied_period_id: number | null
+          created_at: string
+          created_by: string | null
+          delta_amount: number | null
+          delta_minutes: number
+          employee_id: number
+          entry_id: number | null
+          id: number
+          period_id: number
+          reason: string
+        }
+        Insert: {
+          applied_period_id?: number | null
+          created_at?: string
+          created_by?: string | null
+          delta_amount?: number | null
+          delta_minutes?: number
+          employee_id: number
+          entry_id?: number | null
+          id?: number
+          period_id: number
+          reason: string
+        }
+        Update: {
+          applied_period_id?: number | null
+          created_at?: string
+          created_by?: string | null
+          delta_amount?: number | null
+          delta_minutes?: number
+          employee_id?: number
+          entry_id?: number | null
+          id?: number
+          period_id?: number
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_period_adjustments_applied_period_id_fkey"
+            columns: ["applied_period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_period_adjustments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_period_adjustments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_period_adjustments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_period_adjustments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_period_adjustments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_period_lines: {
+        Row: {
+          adjustments: number
+          amount: number | null
+          employee_id: number
+          flagged: number
+          id: number
+          minutes: number
+          period_id: number
+          pto_minutes: number
+          rate_text: string | null
+        }
+        Insert: {
+          adjustments?: number
+          amount?: number | null
+          employee_id: number
+          flagged?: number
+          id?: number
+          minutes?: number
+          period_id: number
+          pto_minutes?: number
+          rate_text?: string | null
+        }
+        Update: {
+          adjustments?: number
+          amount?: number | null
+          employee_id?: number
+          flagged?: number
+          id?: number
+          minutes?: number
+          period_id?: number
+          pto_minutes?: number
+          rate_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_period_lines_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_period_lines_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_period_lines_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_periods: {
+        Row: {
+          approved_at: string
+          approved_by: string | null
+          created_at: string
+          ends_on: string
+          frequency: string
+          id: number
+          note: string | null
+          pay_day: string
+          starts_on: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          ends_on: string
+          frequency: string
+          id?: number
+          note?: string | null
+          pay_day: string
+          starts_on: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          ends_on?: string
+          frequency?: string
+          id?: number
+          note?: string | null
+          pay_day?: string
+          starts_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_periods_approved_by_fkey"
+            columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -5411,6 +5631,7 @@ export type Database = {
           lng: number | null
           note: string | null
           original_at: string | null
+          pay_period_id: number | null
           place: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -5433,6 +5654,7 @@ export type Database = {
           lng?: number | null
           note?: string | null
           original_at?: string | null
+          pay_period_id?: number | null
           place?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -5455,6 +5677,7 @@ export type Database = {
           lng?: number | null
           note?: string | null
           original_at?: string | null
+          pay_period_id?: number | null
           place?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -5481,6 +5704,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_pay_period_id_fkey"
+            columns: ["pay_period_id"]
+            isOneToOne: false
+            referencedRelation: "pay_periods"
             referencedColumns: ["id"]
           },
           {

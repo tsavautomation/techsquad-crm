@@ -43,7 +43,7 @@ export type VehiclesResponse = { connected: boolean; vehicles: MapVehicle[]; fet
 
 /** VINs are compared without case, spaces or punctuation (people type them in many ways). */
 export const normalizeVin = (vin: string | null | undefined) => (vin ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-const digits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "");
+export const digits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "");
 
 /**
  * Pair each Bouncie vehicle with its Fleet record (by Bouncie device, else by VIN) and its driver: the
