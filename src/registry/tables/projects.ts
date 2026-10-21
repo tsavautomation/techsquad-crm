@@ -100,6 +100,8 @@ export const projects: TableDef = {
       "name": "type",
       "label": "Type",
       "type": "select",
+      // Always a list column and quick filter, with Category (Fred 2026-10-21: Luana and Saulo could not filter by Category because Financial Status took the slot).
+      "listColumn": true,
       "legacy": {
         "column": "type",
         "fieldId": 66841
@@ -122,6 +124,7 @@ export const projects: TableDef = {
       "name": "category",
       "label": "Category",
       "type": "select",
+      "listColumn": true,
       "legacy": {
         "column": "category_1",
         "fieldId": 68774
