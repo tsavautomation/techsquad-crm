@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { bouncieConfigured, fetchVehicles, isConnected } from "@/lib/bouncie/client";
-import { matchVehicles, VEHICLES_PERMISSION, type FleetVehicle, type VehiclesResponse } from "@/lib/bouncie/match";
+import { canSeeVehicles, matchVehicles, type FleetVehicle, type VehiclesResponse } from "@/lib/bouncie/match";
 import { fromDateTimeLocalET, todayET } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
 import { addDays } from "@/lib/schedule/dates";
@@ -14,7 +14,7 @@ import { addDays } from "@/lib/schedule/dates";
 export async function GET() {
   const s = await getSession();
   if (s.status !== "active") return NextResponse.json({ error: "Sign in first." }, { status: 401 });
-  if (!s.user.isSysadmin && !s.user.permissions.has(VEHICLES_PERMISSION)) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
+  if (!canSeeVehicles(s.user)) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
   const fetchedAt = new Date().toISOString();
   if (!bouncieConfigured() || !(await isConnected())) return NextResponse.json({ connected: false, vehicles: [], fetchedAt } satisfies VehiclesResponse);
   try {

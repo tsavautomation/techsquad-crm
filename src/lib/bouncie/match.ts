@@ -22,8 +22,14 @@ export type LiveVehicle = {
 
 export type FleetVehicle = { id: number; title: string | null; vin: string | null; bouncie_imei: string | null; driver_id: number | null };
 
-/** Who may see the vans on the map: people who can open the Fleet list (and administrators). */
-export const VEHICLES_PERMISSION = "administrative.vehicles.view_page";
+/**
+ * Who may see the vans on the map: everyone signed in (Fred 2026-10-20, "all the users"). Until then
+ * only people who could open the Fleet list saw them; the Fleet list itself keeps its permission.
+ */
+export function canSeeVehicles(user: { isSysadmin: boolean }): boolean {
+  void user; // one place to tighten again if a role should ever lose the map
+  return true;
+}
 
 export type MapVehicle = LiveVehicle & {
   vehicleId: number | null;

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { MapView } from "@/components/schedule/map-view";
 import { requireUser } from "@/lib/auth/session";
 import { bouncieConfigured, isConnected } from "@/lib/bouncie/client";
-import { VEHICLES_PERMISSION } from "@/lib/bouncie/match";
+import { canSeeVehicles } from "@/lib/bouncie/match";
 import { todayET } from "@/lib/dates";
 import { loadMapDay } from "@/lib/schedule/map";
 import { getTable } from "@/registry";
@@ -21,7 +21,7 @@ export default async function MapPage(props: PageProps<"/schedule/map">) {
   const sp = (await props.searchParams) as { date?: string; tech?: string };
   const tech = sp.tech && /^\d+$/.test(sp.tech) ? Number(sp.tech) : null;
   const { date, stops, people, office } = await loadMapDay(sp.date);
-  const canVehicles = user.isSysadmin || user.permissions.has(VEHICLES_PERMISSION);
+  const canVehicles = canSeeVehicles(user);
   const vehiclesMode = !canVehicles ? "hidden" : bouncieConfigured() && (await isConnected()) ? "on" : "off";
 
   return (
