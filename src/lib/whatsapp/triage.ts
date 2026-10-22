@@ -49,9 +49,10 @@ export async function askTriage(chat: string, messages: ThreadMessage[], previou
   if (!aiConfigured()) return { ok: false, message: "ANTHROPIC_API_KEY is not set" };
   const last = messages[messages.length - 1];
   try {
-    const res = await claude().messages.create({ model: TRIAGE_MODEL, max_tokens: 500, system: TRIAGE_SYSTEM, messages: [{ role: "user", content: threadPrompt(chat, messages, previous) }] });
-    const answer = parseTriage(res.content.find((b) => b.type === "text")?.text ?? "", { chat, sender: last?.sender ?? null, body: last?.body ?? "" });
-    return answer ? { ok: true, triage: answer } : { ok: false, message: "The AI answer could not be read" };
+    const res = await claude().messages.create({ model: TRIAGE_MODEL, max_tokens: 900, system: TRIAGE_SYSTEM, messages: [{ role: "user", content: threadPrompt(chat, messages, previous) }] });
+    const raw = res.content.find((b) => b.type === "text")?.text ?? "";
+    const answer = parseTriage(raw, { chat, sender: last?.sender ?? null, body: last?.body ?? "" });
+    return answer ? { ok: true, triage: answer } : { ok: false, message: `The AI answer could not be read (${res.stop_reason ?? "?"}): ${raw.slice(0, 300)}` };
   } catch (e) {
     return { ok: false, message: describeError(e) };
   }

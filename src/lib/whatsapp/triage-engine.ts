@@ -39,11 +39,13 @@ export function threadPrompt(chat: string, messages: ThreadMessage[], previous: 
 
 export type Triage = { category: Category; priority: Priority; customer: string | null; phone: string | null; system: string | null; summary: string; details: string | null; continues_previous: boolean };
 
+/** A text field the model may fill with anything: strings and numbers as they are, objects and lists flattened, blanks as null. */
 const text = (max: number) =>
-  z
-    .union([z.string(), z.number()])
-    .nullish()
-    .transform((v) => (v == null ? null : String(v).replace(/\s+/g, " ").trim().slice(0, max) || null));
+  z.unknown().transform((v) => {
+    if (v == null) return null;
+    const s = typeof v === "string" || typeof v === "number" ? String(v) : Array.isArray(v) ? v.map((x) => (typeof x === "object" ? JSON.stringify(x) : String(x))).join("; ") : JSON.stringify(v);
+    return s.replace(/\s+/g, " ").trim().slice(0, max) || null;
+  });
 
 const AnswerSchema = z.object({
   category: z.enum(CATEGORIES).catch("fyi"),
@@ -53,7 +55,9 @@ const AnswerSchema = z.object({
   system: text(80),
   summary: text(200),
   details: text(1000),
-  continues_previous: z.boolean().catch(true),
+  continues_previous: z
+    .unknown()
+    .transform((v) => (typeof v === "boolean" ? v : typeof v === "string" ? !/^(false|no|0)$/i.test(v.trim()) : true)),
 });
 
 /** Reads Claude's answer: a JSON object, with or without a code fence or chatter around it. Null when unreadable. */
