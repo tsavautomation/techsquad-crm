@@ -27,7 +27,7 @@ type MailRow = { id: number; gmail_id: string; uid: number | null; uid_validity:
 /** Projects with their contacts' addresses, and the threads already filed, for the matching. */
 export async function loadCatalog(db: SupabaseClient): Promise<{ projects: ProjectForMatch[]; threads: Map<string, number> }> {
   const [{ data: projects }, { data: contacts }, { data: threads }] = await Promise.all([
-    db.from("projects").select("id, title, category, job_owner_id").is("deleted_at", null),
+    db.from("projects").select("id, title, category, job_owner_id, job_address").is("deleted_at", null),
     db.from("contacts").select("id, type, last_name, email, alternate_email").is("deleted_at", null),
     db.from("mail_messages").select("thread_id, project_id").not("project_id", "is", null).not("thread_id", "is", null),
   ]);
@@ -35,9 +35,9 @@ export async function loadCatalog(db: SupabaseClient): Promise<{ projects: Proje
   for (const c of (contacts ?? []) as { id: number; type: string | null; last_name: string | null; email: string | null; alternate_email: string | null }[])
     owners.set(c.id, { emails: [c.email, c.alternate_email].filter((e): e is string => Boolean(e)).map((e) => e.trim().toLowerCase()), type: c.type, lastName: c.last_name });
   return {
-    projects: ((projects ?? []) as { id: number; title: string | null; category: string | null; job_owner_id: number | null }[]).map((p) => {
+    projects: ((projects ?? []) as { id: number; title: string | null; category: string | null; job_owner_id: number | null; job_address: { street?: string | null } | null }[]).map((p) => {
       const o = p.job_owner_id ? owners.get(p.job_owner_id) : undefined;
-      return { id: p.id, title: p.title, category: p.category, emails: o?.emails ?? [], ownerType: o?.type ?? null, ownerLastName: o?.lastName ?? null };
+      return { id: p.id, title: p.title, category: p.category, emails: o?.emails ?? [], ownerType: o?.type ?? null, ownerLastName: o?.lastName ?? null, street: p.job_address?.street ?? null };
     }),
     threads: new Map(((threads ?? []) as { thread_id: string; project_id: number }[]).map((t) => [t.thread_id, t.project_id])),
   };
@@ -128,6 +128,11 @@ export async function syncMail(): Promise<SyncSummary> {
           out.errors.push(`UID ${uid}: ${e instanceof Error ? e.message : String(e)}`);
         }
       }
+      // Emails still waiting get another try: a project added since, a thread filed since, a better rule.
+      const again = await rematchWaiting(db, box, catalog ?? (await loadCatalog(db)));
+      out.filed += again.filed;
+      out.moved += again.moved;
+      out.errors.push(...again.errors);
       // Emails processed earlier that are still in the inbox (assigned by hand before this, a move that failed).
       out.moved += await labelBacklog(db, box);
     });
@@ -147,6 +152,23 @@ export async function syncMail(): Promise<SyncSummary> {
 async function save(patch: Partial<GmailSettings>) {
   const cur = await loadSettings();
   if (cur) await saveSettings({ ...cur, ...patch });
+}
+
+/** The emails in the Assign list, matched again with today's projects, threads and rules (newest 30). */
+async function rematchWaiting(db: SupabaseClient, box: Session, catalog: { projects: ProjectForMatch[]; threads: Map<string, number> }): Promise<{ filed: number; moved: number; errors: string[] }> {
+  const out = { filed: 0, moved: 0, errors: [] as string[] };
+  const { data } = await db.from("mail_messages").select("id, subject, from_email, inner_senders, thread_id").eq("status", "unassigned").order("received_at", { ascending: false }).limit(30);
+  for (const r of (data ?? []) as { id: number; subject: string | null; from_email: string | null; inner_senders: string[] | null; thread_id: string | null }[]) {
+    const match = matchProject({ subject: r.subject, senders: [r.from_email ?? "", ...(r.inner_senders ?? [])], threadId: r.thread_id }, catalog.projects, catalog.threads);
+    if (!match) continue;
+    const filed = await fileMessage(db, r.id, match.projectId, match.by, null, box);
+    if (filed.ok) {
+      out.filed++;
+      if (filed.moved) out.moved++;
+      if (r.thread_id) catalog.threads.set(r.thread_id, match.projectId);
+    } else out.errors.push(`${r.subject ?? r.id}: ${filed.message}`);
+  }
+  return out;
 }
 
 /** Processed emails not yet moved out of the inbox: filed ones to their project's label, ignored ones to Ignored. */

@@ -68,16 +68,31 @@ export const isSystemMail = (fromEmail: string | null | undefined) => /^(no-?rep
 
 // ---------------------------------------------------------------- matching
 
-export type MatchBy = "id" | "thread" | "subject" | "surname" | "sender";
+export type MatchBy = "id" | "thread" | "subject" | "address" | "surname" | "sender";
 /**
  * `category` is the project's Category (Low Voltage / Electrical …), used when a client has one project of each.
  * `emails` / `ownerType` / `ownerLastName` describe the owner contact: only an End Customer's address or last name
  * may decide the project (Fred's partners — builders, designers, GCs — write about many projects).
  */
-export type ProjectForMatch = { id: number; title: string | null; emails: string[]; category?: string | null; ownerType?: string | null; ownerLastName?: string | null };
+export type ProjectForMatch = { id: number; title: string | null; emails: string[]; category?: string | null; ownerType?: string | null; ownerLastName?: string | null; street?: string | null };
 
 export const END_CUSTOMER = "End Customer";
 const MIN_SURNAME = 4;
+
+const DIRECTIONS = new Set(["n", "s", "e", "w", "ne", "nw", "se", "sw", "north", "south", "east", "west"]);
+const SUFFIXES = new Set(["st", "street", "ave", "avenue", "dr", "drive", "rd", "road", "blvd", "boulevard", "ct", "court", "ln", "lane", "way", "ter", "terrace", "pl", "place", "cir", "circle", "hwy", "highway", "cswy", "causeway", "pkwy", "parkway", "trl", "trail", "isl", "island", "pt", "point", "sq", "square", "aly", "alley"]);
+
+/**
+ * "441 E Rivo Alto Dr" → "441 rivo alto": the house number and the street's own words, without directions and
+ * suffixes, so "441 Rivo Alto" in a subject finds the project (2026-10-22). Null when there is no number.
+ */
+export function addressKey(street: string | null | undefined): string | null {
+  const words = normalizeText(street).split(" ").filter(Boolean);
+  if (!/^\d+[a-z]?$/.test(words[0] ?? "")) return null;
+  const rest = words.slice(1).filter((w) => !DIRECTIONS.has(w) && !SUFFIXES.has(w));
+  if (!rest.length) return null;
+  return [words[0], ...rest].join(" ");
+}
 export type MailForMatch = { subject: string | null; senders: string[]; threadId: string | null };
 
 const MIN_TITLE = 5;
@@ -127,6 +142,17 @@ export function matchProject(m: MailForMatch, projects: ProjectForMatch[], threa
   }
   const byName = best ? pickByDiscipline(best.list, m.subject) : null;
   if (byName) return { projectId: byName.id, by: "subject" };
+
+  // The job's street address, number and street, in the subject ("441 Rivo Alto"): LV / EL settles the same address.
+  const keys = new Map<string, ProjectForMatch[]>();
+  for (const p of projects) {
+    const k = addressKey(p.street) ?? addressKey(p.title);
+    if (k && subject.includes(` ${k} `)) keys.set(k, [...(keys.get(k) ?? []), p]);
+  }
+  if (keys.size === 1) {
+    const byAddress = pickByDiscipline([...keys.values()][0], m.subject);
+    if (byAddress) return { projectId: byAddress.id, by: "address" };
+  }
 
   // The end customer's last name as a whole word in the subject ("Roth Residence"), when only that client has it.
   const customers = projects.filter((p) => p.ownerType === END_CUSTOMER);

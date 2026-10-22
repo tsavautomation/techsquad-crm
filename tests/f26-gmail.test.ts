@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attachmentsOf, cleanSubject, emailFolderName, htmlToText, innerSenders, isSystemMail, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject, projectLabel, subjectDiscipline } from "@/lib/mail/engine";
+import { addressKey, attachmentsOf, cleanSubject, emailFolderName, htmlToText, innerSenders, isSystemMail, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject, projectLabel, subjectDiscipline } from "@/lib/mail/engine";
 
 // F26-2 Gmail intake (SPEC §9.1 F26-a): reading a parsed email and matching it to a project.
 
@@ -87,6 +87,22 @@ describe("matching an email to a project", () => {
     ];
     expect(matchProject(mail({ subject: "Palm House LV doors" }), twins, none)).toEqual({ projectId: 1, by: "subject" });
     expect(matchProject(mail({ subject: "Palm House doors" }), twins, none)).toBeNull();
+  });
+
+  it("the job's street address in the subject finds the project (441 Rivo Alto, 2026-10-22)", () => {
+    expect(addressKey("441 E Rivo Alto Dr")).toBe("441 rivo alto");
+    expect(addressKey("226 W Rivo Alto Dr")).toBe("226 rivo alto");
+    expect(addressKey("1666 John F Kennedy Cswy")).toBe("1666 john f kennedy");
+    expect(addressKey("Villa Serena")).toBeNull();
+    expect(addressKey("")).toBeNull();
+    const rivo = [
+      { id: 1198, title: "441 E Rivo Alto Dr", emails: [], ownerType: "End Customer", ownerLastName: "Dyke", street: "441 E Rivo Alto Dr", category: "Low Voltage" },
+      { id: 1014, title: "Edwin Verdezoto - Rivo Alto", emails: [], ownerType: "End Customer", ownerLastName: "Verdezoto", street: "226 W Rivo Alto Dr", category: "Low Voltage" },
+      { id: 1254, title: "Builcore Warehouse", emails: ["dany@builcore.com"], ownerType: "General Contractor", ownerLastName: "Sebaaly", street: "1091 NW 23rd St", category: "Low Voltage" },
+    ];
+    expect(matchProject(mail({ subject: "441 Rivo Alto - Builcore Meeting Notes from 10-22-26", senders: ["smiliansky@gmail.com"] }), rivo, new Map())).toEqual({ projectId: 1198, by: "address" });
+    expect(matchProject(mail({ subject: "Rivo Alto meeting notes" }), rivo, new Map())).toBeNull(); // no number: two projects on that street
+    expect(matchProject(mail({ subject: "4410 Rivo Alto" }), rivo, new Map())).toBeNull(); // another number
   });
 
   it("a partner's address never decides the project (Miguel Circelli writes about many sites), and the end customer's last name does", () => {
