@@ -68,7 +68,7 @@ export const isSystemMail = (fromEmail: string | null | undefined) => /^(no-?rep
 
 // ---------------------------------------------------------------- matching
 
-export type MatchBy = "id" | "thread" | "subject" | "address" | "surname" | "sender";
+export type MatchBy = "id" | "thread" | "subject" | "address" | "surname" | "sender" | "words" | "ai";
 /**
  * `category` is the project's Category (Low Voltage / Electrical …), used when a client has one project of each.
  * `emails` / `ownerType` / `ownerLastName` describe the owner contact: only an End Customer's address or last name
@@ -268,6 +268,73 @@ export function emailFolderName(receivedAt: string, subject: string): string {
 
 /** The Gmail label a filed email moves to: Projects/<project> (<id>), the OneDrive folder's name (Fred 2026-10-21). */
 export const projectLabel = (title: string | null, projectId: number) => `Projects/${safeName(`${title ?? "Project"} (${projectId})`)}`;
+
+// ---------------------------------------------------------------- tolerant matching (Fred 2026-10-22: "tem que haver uma folga")
+
+/** Words that say nothing about which project it is. */
+const NOISE = new Set([
+  "the", "and", "for", "from", "with", "this", "that", "your", "our", "you", "are", "was", "were", "has", "have", "had", "will", "can", "not", "but", "all", "any", "per", "via", "about", "into", "out", "new", "old",
+  "fwd", "fw", "re", "res", "enc", "email", "mail", "mensagem", "message", "notes", "note", "meeting", "summary", "update", "updates", "details", "detail", "question", "questions", "request", "rfp", "rfi", "quote", "proposal", "invoice", "order", "work", "job", "project", "projects", "site",
+  "residence", "residencia", "house", "home", "casa", "apt", "apto", "unit", "suite", "floor", "building", "condo", "office", "warehouse",
+  "miami", "beach", "florida", "fl", "usa", "shores", "gables", "coral", "bay", "harbor", "harbour", "island", "islands", "village", "lakes", "lake", "park", "point", "key", "north", "south", "east", "west",
+  "tech", "squad", "techsquad", "tsav", "llc", "inc", "corp", "group", "team", "para", "com", "uma", "dos", "das", "nos", "nas", "sobre",
+  "low", "voltage", "electrical", "elec", "lv", "el", "av", "audio", "video", "network", "automation", "lighting", "shades", "window", "treatment", "treatments", "installation", "install", "service", "visit", "schedule",
+  "mr", "mrs", "ms", "dr", "sr", "jr",
+]);
+/** Generic street words: a match on them alone means nothing. */
+const STREET_NOISE = new Set([...DIRECTIONS, ...SUFFIXES]);
+
+export const significantWords = (s: string | null | undefined): string[] => [...new Set(normalizeText(s).split(" ").filter((w) => w.length >= 3 && !NOISE.has(w) && !STREET_NOISE.has(w) && !/^\d{1,2}$/.test(w)))];
+
+export type Candidate = { project: ProjectForMatch; score: number; words: string[] };
+
+/**
+ * How much the email looks like each project: the project's name, street and client words found in the
+ * subject (full weight) or in the first lines of the body (half weight). A street number next to the street's
+ * own words counts double, a client's last name counts double. Sorted best first, at most `limit`.
+ */
+export function scoreCandidates(m: { subject: string | null; text?: string | null }, projects: ProjectForMatch[], limit = 8): Candidate[] {
+  const subject = new Set(normalizeText(cleanSubject(m.subject)).split(" ").filter(Boolean));
+  const body = new Set(normalizeText((m.text ?? "").slice(0, 1500)).split(" ").filter(Boolean));
+  const weightOf = (w: string) => (subject.has(w) ? 1 : body.has(w) ? 0.5 : 0);
+  const out: Candidate[] = [];
+  for (const p of projects) {
+    const words = new Map<string, number>();
+    for (const w of significantWords(p.title)) words.set(w, 1);
+    const key = addressKey(p.street);
+    if (key) {
+      const [num, ...rest] = key.split(" ");
+      for (const w of rest) if (w.length >= 3) words.set(w, Math.max(words.get(w) ?? 0, 1));
+      // The number only counts next to one of the street's words.
+      if (rest.some((w) => subject.has(w) || body.has(w)) && (subject.has(num) || body.has(num))) words.set(num, 2);
+    }
+    const surname = normalizeText(p.ownerLastName);
+    if (surname.length >= MIN_SURNAME) words.set(surname, 2);
+    let score = 0;
+    const hit: string[] = [];
+    for (const [w, weight] of words) {
+      const f = weightOf(w);
+      if (f > 0) {
+        score += weight * f;
+        hit.push(w);
+      }
+    }
+    if (score > 0) out.push({ project: p, score, words: hit });
+  }
+  return out.sort((a, b) => b.score - a.score || a.project.id - b.project.id).slice(0, limit);
+}
+
+/**
+ * A clear winner without asking anyone: at least three points (e.g. a street number + street word, or a
+ * surname + a name word) and twice the runner-up. LV / EL settles a client's own pair.
+ */
+export function strongPick(c: Candidate[], subject: string | null | undefined): ProjectForMatch | null {
+  if (!c.length || c[0].score < 3) return null;
+  const top = c.filter((x) => x.score === c[0].score).map((x) => x.project);
+  const runnerUp = c.find((x) => x.score < c[0].score)?.score ?? 0;
+  if (runnerUp * 2 > c[0].score) return null;
+  return pickByDiscipline(top, subject);
+}
 
 /** Who to show as the event's author: "Name <email>" or just the address. */
 export const actorLabel = (a: Address) => (a.name && a.name.toLowerCase() !== a.email ? `${a.name} <${a.email}>` : a.email);

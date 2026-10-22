@@ -2,10 +2,12 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { moveIntoFolder, oneDriveReady, ROOT, uploadBytes } from "@/lib/files/onedrive";
 import { safeName } from "@/lib/files/paths";
+import { aiPickProject, MIN_CONFIDENCE } from "@/lib/ai/pick-project";
 import { queueEmailEvent, routeBacklog } from "@/lib/ai/route-email";
+import { loadAiSettings } from "@/lib/ai/review-queue";
 import { adminDb } from "@/lib/supabase/admin";
 import { fetchAnywhere, fetchRaw, findUid, IGNORED_LABEL, INBOX, loadSettings, moveToLabel, newUids, openPath, parseRaw, saveSettings, withMailbox, type GmailSettings, type Session } from "./client";
-import { actorLabel, emailFolderName, isSystemMail, matchProject, parseMessage, projectLabel, type MailAttachment, type ParsedMail, type ProjectForMatch } from "./engine";
+import { actorLabel, emailFolderName, isSystemMail, matchProject, parseMessage, projectLabel, scoreCandidates, strongPick, type MailAttachment, type MatchBy, type ParsedMail, type ProjectForMatch } from "./engine";
 
 // F26-2 Gmail intake: every five minutes (pg_cron 'crm-mail' → /api/cron/mail) the mailbox is read over IMAP.
 // New emails become mail_messages rows; the ones that match a project are filed at once (a project_events
@@ -53,6 +55,27 @@ async function readOne(box: Session, uid: number): Promise<ParsedMail | null> {
   );
 }
 
+type Catalog = { projects: ProjectForMatch[]; threads: Map<string, number> };
+type Suggestion = { id: number; title: string | null; score: number };
+
+/**
+ * Which project, with the tolerance Fred asked for (2026-10-22): the exact rules first; then the words the email
+ * shares with each project, filed when one project clearly stands out; then Claude choosing among the best
+ * candidates, filed only when sure (once per email). What is left waits with its candidates as suggestions.
+ */
+async function decideProject(db: SupabaseClient, m: { subject: string | null; text: string | null; from: string; senders: string[]; threadId: string | null; attachments: string[] }, catalog: Catalog, askAi: boolean): Promise<{ match: { projectId: number; by: MatchBy } | null; suggestions: Suggestion[]; aiTried: boolean }> {
+  const exact = matchProject({ subject: m.subject, senders: m.senders, threadId: m.threadId }, catalog.projects, catalog.threads);
+  if (exact) return { match: exact, suggestions: [], aiTried: false };
+  const scored = scoreCandidates({ subject: m.subject, text: m.text }, catalog.projects);
+  const suggestions = scored.slice(0, 5).map((c) => ({ id: c.project.id, title: c.project.title, score: c.score }));
+  const strong = strongPick(scored, m.subject);
+  if (strong) return { match: { projectId: strong.id, by: "words" }, suggestions, aiTried: false };
+  if (!askAi || !scored.length) return { match: null, suggestions, aiTried: false };
+  const pick = await aiPickProject({ subject: m.subject ?? "", from: m.from, text: m.text ?? "", attachments: m.attachments }, scored);
+  if (pick.projectId && pick.confidence >= MIN_CONFIDENCE) return { match: { projectId: pick.projectId, by: "ai" }, suggestions, aiTried: true };
+  return { match: null, suggestions, aiTried: true };
+}
+
 /** Moves an inbox message into a label and remembers it on the row; false when it was no longer in the inbox. */
 async function fileInGmail(db: SupabaseClient, box: Session, mailId: number, gmailId: string, uid: number | null, label: string): Promise<boolean> {
   if (box.path !== INBOX) return false;
@@ -78,6 +101,7 @@ export async function syncMail(): Promise<SyncSummary> {
       uidValidity = box.uidValidity;
       const uids = (await newUids(box, lastUid, new Date(Date.parse(s.connected_at) - FIRST_LOOKBACK_MS))).slice(0, MAX_PER_RUN);
       const catalog = uids.length ? await loadCatalog(db) : null;
+      const askAi = (await loadAiSettings(db)).route_emails;
       for (const uid of uids) {
         if (Date.now() - started > BUDGET_MS) break;
         try {
@@ -85,7 +109,10 @@ export async function syncMail(): Promise<SyncSummary> {
           lastUid = uid;
           if (!parsed) continue;
           const system = isSystemMail(parsed.from.email);
-          const match = system ? null : matchProject({ subject: parsed.subject, senders: [parsed.from.email, ...parsed.innerSenders], threadId: parsed.threadId }, catalog!.projects, catalog!.threads);
+          const decided = system
+            ? { match: null, suggestions: [] as Suggestion[], aiTried: false }
+            : await decideProject(db, { subject: parsed.subject, text: parsed.text, from: actorLabel(parsed.from), senders: [parsed.from.email, ...parsed.innerSenders], threadId: parsed.threadId, attachments: parsed.attachments.map((a) => a.name) }, catalog!, askAi);
+          const match = decided.match;
           const { data: row, error } = await db
             .from("mail_messages")
             .insert({
@@ -105,6 +132,8 @@ export async function syncMail(): Promise<SyncSummary> {
               project_id: match?.projectId ?? null,
               matched_by: match?.by ?? null,
               status: system ? "ignored" : "unassigned",
+              suggestions: decided.suggestions,
+              match_tried_at: decided.aiTried ? new Date().toISOString() : null,
             })
             .select("id")
             .single();
@@ -129,7 +158,7 @@ export async function syncMail(): Promise<SyncSummary> {
         }
       }
       // Emails still waiting get another try: a project added since, a thread filed since, a better rule.
-      const again = await rematchWaiting(db, box, catalog ?? (await loadCatalog(db)));
+      const again = await rematchWaiting(db, box, catalog ?? (await loadCatalog(db)), askAi);
       out.filed += again.filed;
       out.moved += again.moved;
       out.errors.push(...again.errors);
@@ -155,11 +184,14 @@ async function save(patch: Partial<GmailSettings>) {
 }
 
 /** The emails in the Assign list, matched again with today's projects, threads and rules (newest 30). */
-async function rematchWaiting(db: SupabaseClient, box: Session, catalog: { projects: ProjectForMatch[]; threads: Map<string, number> }): Promise<{ filed: number; moved: number; errors: string[] }> {
+async function rematchWaiting(db: SupabaseClient, box: Session, catalog: Catalog, askAi: boolean): Promise<{ filed: number; moved: number; errors: string[] }> {
   const out = { filed: 0, moved: 0, errors: [] as string[] };
-  const { data } = await db.from("mail_messages").select("id, subject, from_email, inner_senders, thread_id").eq("status", "unassigned").order("received_at", { ascending: false }).limit(30);
-  for (const r of (data ?? []) as { id: number; subject: string | null; from_email: string | null; inner_senders: string[] | null; thread_id: string | null }[]) {
-    const match = matchProject({ subject: r.subject, senders: [r.from_email ?? "", ...(r.inner_senders ?? [])], threadId: r.thread_id }, catalog.projects, catalog.threads);
+  const { data } = await db.from("mail_messages").select("id, subject, body_text, from_name, from_email, inner_senders, thread_id, attachments, match_tried_at").eq("status", "unassigned").order("received_at", { ascending: false }).limit(30);
+  for (const r of (data ?? []) as { id: number; subject: string | null; body_text: string | null; from_name: string | null; from_email: string | null; inner_senders: string[] | null; thread_id: string | null; attachments: { name: string }[] | null; match_tried_at: string | null }[]) {
+    // Claude is asked once per email; the word rules run every time (a project or thread may be new).
+    const decided = await decideProject(db, { subject: r.subject, text: r.body_text, from: actorLabel({ name: r.from_name ?? "", email: r.from_email ?? "" }), senders: [r.from_email ?? "", ...(r.inner_senders ?? [])], threadId: r.thread_id, attachments: (r.attachments ?? []).map((a) => a.name) }, catalog, askAi && !r.match_tried_at);
+    if (decided.aiTried || decided.suggestions.length) await db.from("mail_messages").update({ suggestions: decided.suggestions, ...(decided.aiTried ? { match_tried_at: new Date().toISOString() } : {}) }).eq("id", r.id);
+    const match = decided.match;
     if (!match) continue;
     const filed = await fileMessage(db, r.id, match.projectId, match.by, null, box);
     if (filed.ok) {

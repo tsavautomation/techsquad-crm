@@ -13,11 +13,11 @@ export async function AssignMail({ user }: { user: CurrentUser }) {
   const db = await recordsDb();
   const { data, count } = await db
     .from("mail_messages")
-    .select("id, received_at, from_name, from_email, subject, snippet, attachments", { count: "exact" })
+    .select("id, received_at, from_name, from_email, subject, snippet, attachments, suggestions", { count: "exact" })
     .eq("status", "unassigned")
     .order("received_at", { ascending: false })
     .limit(15);
-  const rows = ((data ?? []) as (Omit<MailToAssign, "files"> & { attachments: { name: string }[] | null })[]).map((r) => ({ ...r, files: (r.attachments ?? []).map((a) => a.name) }));
+  const rows = ((data ?? []) as (Omit<MailToAssign, "files" | "suggestions"> & { attachments: { name: string }[] | null; suggestions: { id: number; title: string | null }[] | null })[]).map((r) => ({ ...r, files: (r.attachments ?? []).map((a) => a.name), suggestions: (r.suggestions ?? []).map((s) => ({ id: s.id, label: `${s.title ?? "Project"} (#${s.id})` })) }));
   if (!rows.length) return null;
   const tr = await getT();
 

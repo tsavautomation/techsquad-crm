@@ -1954,12 +1954,14 @@ export type Database = {
           gmail_label: string | null
           id: number
           inner_senders: string[]
+          match_tried_at: string | null
           matched_by: string | null
           project_id: number | null
           received_at: string
           snippet: string | null
           status: string
           subject: string | null
+          suggestions: Json
           thread_id: string | null
           to_text: string | null
           uid: number | null
@@ -1979,12 +1981,14 @@ export type Database = {
           gmail_label?: string | null
           id?: number
           inner_senders?: string[]
+          match_tried_at?: string | null
           matched_by?: string | null
           project_id?: number | null
           received_at: string
           snippet?: string | null
           status?: string
           subject?: string | null
+          suggestions?: Json
           thread_id?: string | null
           to_text?: string | null
           uid?: number | null
@@ -2004,12 +2008,14 @@ export type Database = {
           gmail_label?: string | null
           id?: number
           inner_senders?: string[]
+          match_tried_at?: string | null
           matched_by?: string | null
           project_id?: number | null
           received_at?: string
           snippet?: string | null
           status?: string
           subject?: string | null
+          suggestions?: Json
           thread_id?: string | null
           to_text?: string | null
           uid?: number | null

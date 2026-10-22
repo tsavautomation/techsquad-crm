@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addressKey, attachmentsOf, cleanSubject, emailFolderName, htmlToText, innerSenders, isSystemMail, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject, projectLabel, subjectDiscipline } from "@/lib/mail/engine";
+import { addressKey, attachmentsOf, cleanSubject, scoreCandidates, strongPick, emailFolderName, htmlToText, innerSenders, isSystemMail, matchProject, parseAddress, parseAddressList, parseMessage, projectIdInSubject, projectLabel, subjectDiscipline } from "@/lib/mail/engine";
 
 // F26-2 Gmail intake (SPEC §9.1 F26-a): reading a parsed email and matching it to a project.
 
@@ -103,6 +103,31 @@ describe("matching an email to a project", () => {
     expect(matchProject(mail({ subject: "441 Rivo Alto - Builcore Meeting Notes from 10-22-26", senders: ["smiliansky@gmail.com"] }), rivo, new Map())).toEqual({ projectId: 1198, by: "address" });
     expect(matchProject(mail({ subject: "Rivo Alto meeting notes" }), rivo, new Map())).toBeNull(); // no number: two projects on that street
     expect(matchProject(mail({ subject: "4410 Rivo Alto" }), rivo, new Map())).toBeNull(); // another number
+  });
+
+  it("scores projects by the words they share with the email, and picks a clear winner (folga, Fred 2026-10-22)", () => {
+    const list = [
+      { id: 1198, title: "441 E Rivo Alto Dr", emails: [], ownerType: "End Customer", ownerLastName: "Dyke", street: "441 E Rivo Alto Dr", category: "Low Voltage" },
+      { id: 1014, title: "Edwin Verdezoto - Rivo Alto", emails: [], ownerType: "End Customer", ownerLastName: "Verdezoto", street: "226 W Rivo Alto Dr", category: "Low Voltage" },
+      { id: 1260, title: "Womack, Chloe - Miami Beach (Lv)", emails: [], ownerType: "End Customer", ownerLastName: "Womack", street: "4567 Pine Tree Dr", category: "Low Voltage" },
+      { id: 1265, title: "Womack, Chloe - Miami Beach (Elec)", emails: [], ownerType: "End Customer", ownerLastName: "Womack", street: "4567 Pine Tree Dr", category: "Electrical" },
+      { id: 1278, title: "Roth, Michael - Miami Shores", emails: [], ownerType: "End Customer", ownerLastName: "Roth", street: "1200 NE 95th St", category: "Electrical" },
+    ];
+    const c = scoreCandidates({ subject: "Meeting notes 441 rivoalto", text: "Rivo Alto house: Andrew asked about the rack" }, list);
+    expect(c[0].project.id).toBe(1198); // "441" in the subject next to "rivo alto" in the body: 2 + 0.5 + 0.5
+    expect(c[0].score).toBe(3);
+    expect(strongPick(c, "Meeting notes 441 rivoalto")?.id).toBe(1198); // three points and twice the runner-up (1)
+    const d = scoreCandidates({ subject: "441 Rivo Alto - Builcore notes" }, list);
+    expect(d[0].project.id).toBe(1198);
+    expect(d[0].score).toBe(4); // rivo 1 + alto 1 + 441 (next to them) 2
+    expect(d[1].project.id).toBe(1014);
+    expect(strongPick(d, "441 Rivo Alto - Builcore notes")?.id).toBe(1198);
+    const w = scoreCandidates({ subject: "Chloe Womak blinds - LV" }, list);
+    expect(w.length).toBe(2); // "chloe" matches both Womack projects; "womak" is misspelt
+    expect(strongPick(w, "Chloe Womak blinds - LV")).toBeNull(); // one point only
+    const w2 = scoreCandidates({ subject: "LV - Womack pine tree shades" }, list);
+    expect(strongPick(w2, "LV - Womack pine tree shades")?.id).toBe(1260); // surname 2 + pine 1 + tree 1, LV picks the Lv project
+    expect(scoreCandidates({ subject: "Invoice for the meeting" }, list)).toEqual([]);
   });
 
   it("a partner's address never decides the project (Miguel Circelli writes about many sites), and the end customer's last name does", () => {

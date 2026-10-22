@@ -2147,4 +2147,5 @@ export const PT: Record<string, string> = {
   "Nobody is on this visit.": "Ninguém está nesta visita.",
   "Visit status: {status}": "Status da visita: {status}",
   "Correct times or positions": "Corrigir horários ou posições",
+  "Looks like:": "Parece ser:",
 };

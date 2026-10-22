@@ -9,7 +9,7 @@ import { assignMailAction, ignoreMailAction, searchProjectsAction } from "@/lib/
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
-export type MailToAssign = { id: number; received_at: string; from_name: string | null; from_email: string | null; subject: string | null; snippet: string | null; files: string[] };
+export type MailToAssign = { id: number; received_at: string; from_name: string | null; from_email: string | null; subject: string | null; snippet: string | null; files: string[]; suggestions: { id: number; label: string }[] };
 
 /** One email in Today › Emails to assign: who, subject, a line of text, the files, and the project picker. */
 export function AssignMailRow({ mail }: { mail: MailToAssign }) {
@@ -46,6 +46,16 @@ export function AssignMailRow({ mail }: { mail: MailToAssign }) {
         <p className="mt-0.5 flex items-center gap-1 text-xs text-text-2">
           <Paperclip className="size-3" aria-hidden /> {mail.files.join(", ")}
         </p>
+      )}
+      {mail.suggestions.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-text-2">{t("Looks like:")}</span>
+          {mail.suggestions.map((s) => (
+            <button key={s.id} type="button" onClick={() => setPicked(s)} className={cn("min-h-8 rounded-full border px-2.5 hover:bg-muted", picked?.id === s.id && "border-primary bg-primary text-primary-foreground")}>
+              {s.label}
+            </button>
+          ))}
+        </div>
       )}
       <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start">
         <div className="relative min-w-0 flex-1">
