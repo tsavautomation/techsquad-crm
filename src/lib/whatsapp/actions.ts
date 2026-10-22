@@ -62,6 +62,33 @@ export async function assignWaProjectAction(id: number, projectId: number | null
   return { ok: true };
 }
 
+/** F28-c: mutes a chat (its open cards are dismissed; new messages make no cards until Unmute). */
+export async function muteChatAction(chat: string): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!canSeeWhatsApp(user)) return { ok: false, message: "You don't have the WhatsApp permission." };
+  const name = chat.trim();
+  if (!name || name.length > 300) return { ok: false, message: "Bad request." };
+  const db = await recordsDb();
+  const { error } = await db.from("wa_muted_chats").upsert({ chat: name, muted_by: user.id }, { onConflict: "chat", ignoreDuplicates: true });
+  if (error) return { ok: false, message: error.message };
+  await db.from("wa_conversations").update({ status: "dismissed", ai_pending: false }).eq("chat", name).in("status", ["open", "in_progress"]);
+  revalidatePath("/whatsapp");
+  revalidatePath("/whatsapp/muted");
+  return { ok: true };
+}
+
+/** F28-c: the chat's messages make cards again. Messages that arrived while muted stay out. */
+export async function unmuteChatAction(chat: string): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!canSeeWhatsApp(user)) return { ok: false, message: "You don't have the WhatsApp permission." };
+  const db = await recordsDb();
+  const { error } = await db.from("wa_muted_chats").delete().eq("chat", chat.trim());
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/whatsapp");
+  revalidatePath("/whatsapp/muted");
+  return { ok: true };
+}
+
 export type SummaryResult = { ok: true; text: string } | { ok: false; message: string };
 
 /** Two or three sentences about the period, written by Claude from the cards (not from the raw messages). */

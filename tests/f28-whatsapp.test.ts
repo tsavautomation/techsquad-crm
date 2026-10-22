@@ -52,6 +52,10 @@ describe("reading the triage answer", () => {
     expect(again).toContain("New messages start at 3.");
     expect(TRIAGE_SYSTEM).toContain("continues_previous");
     expect(TRIAGE_SYSTEM).toContain("a greeting followed by a request is the request");
+    // F28-c (Fred 2026-10-22): no translation; the summary keeps the language of the messages.
+    expect(TRIAGE_SYSTEM).toContain("Portuguese messages get a Portuguese summary");
+    expect(TRIAGE_SYSTEM).toContain("never translate");
+    expect(TRIAGE_SYSTEM).not.toContain("in English");
   });
 });
 

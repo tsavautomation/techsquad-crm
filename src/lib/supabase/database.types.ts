@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -6568,6 +6568,7 @@ export type Database = {
           created_at: string
           device: string
           id: number
+          muted: boolean
           notif_id: number
           sender: string | null
           source: string
@@ -6580,6 +6581,7 @@ export type Database = {
           created_at?: string
           device: string
           id?: number
+          muted?: boolean
           notif_id: number
           sender?: string | null
           source?: string
@@ -6592,6 +6594,7 @@ export type Database = {
           created_at?: string
           device?: string
           id?: number
+          muted?: boolean
           notif_id?: number
           sender?: string | null
           source?: string
@@ -6602,6 +6605,32 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "wa_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_muted_chats: {
+        Row: {
+          chat: string
+          muted_at: string
+          muted_by: string | null
+        }
+        Insert: {
+          chat: string
+          muted_at?: string
+          muted_by?: string | null
+        }
+        Update: {
+          chat?: string
+          muted_at?: string
+          muted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_muted_chats_muted_by_fkey"
+            columns: ["muted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

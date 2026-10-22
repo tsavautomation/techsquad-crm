@@ -40,6 +40,7 @@ export type WaCard = {
 
 export type Board = {
   days: number;
+  finished: boolean;
   cards: WaCard[];
   counts: Record<Category, number>;
   urgentOpen: number;
@@ -49,10 +50,11 @@ export type Board = {
 
 type Row = Omit<WaCard, "messages" | "project_title">;
 
-export async function loadBoard(db: SupabaseClient, days: number): Promise<Board> {
+/** F28-c: finished cards (done / dismissed) leave the board; "Show finished" brings them back for the period. */
+export async function loadBoard(db: SupabaseClient, days: number, finished = false): Promise<Board> {
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const [{ data }, { data: profiles }] = await Promise.all([
-    db.from("wa_conversations").select("id, chat, project_id, started_at, last_message_at, message_count, ai_pending, customer, phone, category, priority, system, summary, details, status, assigned_to, triage, triage_error").gte("last_message_at", since).order("last_message_at", { ascending: false }).limit(300),
+    db.from("wa_conversations").select("id, chat, project_id, started_at, last_message_at, message_count, ai_pending, customer, phone, category, priority, system, summary, details, status, assigned_to, triage, triage_error").gte("last_message_at", since).in("status", finished ? ["done", "dismissed"] : ["open", "in_progress"]).order("last_message_at", { ascending: false }).limit(300),
     db.from("profiles").select("first_name, last_name, email").eq("active", true).is("contact_id", null).order("first_name"),
   ]);
   const rows = (data ?? []) as Row[];
@@ -78,5 +80,19 @@ export async function loadBoard(db: SupabaseClient, days: number): Promise<Board
   }
   const people = ((profiles ?? []) as { first_name: string | null; last_name: string | null; email: string }[]).map((p) => [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email);
   for (const c of cards) if (c.assigned_to && !people.includes(c.assigned_to)) people.push(c.assigned_to);
-  return { days, cards, counts, urgentOpen, people };
+  return { days, finished, cards, counts, urgentOpen, people };
 }
+
+export type MutedChat = { chat: string; muted_at: string; muted_by_name: string | null };
+
+/** F28-c: the chats whose messages make no cards. */
+export async function loadMuted(db: SupabaseClient): Promise<MutedChat[]> {
+  const { data } = await db.from("wa_muted_chats").select("chat, muted_at, muted_by").order("chat");
+  const rows = (data ?? []) as { chat: string; muted_at: string; muted_by: string | null }[];
+  const ids = [...new Set(rows.map((r) => r.muted_by).filter((x): x is string => Boolean(x)))];
+  const { data: profiles } = ids.length ? await db.from("profiles").select("id, first_name, last_name, email").in("id", ids) : { data: [] };
+  const names = new Map(((profiles ?? []) as { id: string; first_name: string | null; last_name: string | null; email: string }[]).map((p) => [p.id, [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email]));
+  return rows.map((r) => ({ chat: r.chat, muted_at: r.muted_at, muted_by_name: r.muted_by ? (names.get(r.muted_by) ?? null) : null }));
+}
+
+export const mutedCount = async (db: SupabaseClient): Promise<number> => (await db.from("wa_muted_chats").select("chat", { count: "exact", head: true })).count ?? 0;

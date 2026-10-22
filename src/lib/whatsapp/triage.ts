@@ -23,6 +23,12 @@ export async function fileMessage(db: SupabaseClient, messageId: number): Promis
   const m = data as (MessageRow & { conversation_id: number | null }) | null;
   if (!m) return null;
   if (m.conversation_id) return m.conversation_id;
+  // F28-c: a muted chat makes no card; the message is kept, flagged, for when the chat is unmuted.
+  const { data: muted } = await db.from("wa_muted_chats").select("chat").eq("chat", m.chat).maybeSingle();
+  if (muted) {
+    await db.from("wa_messages").update({ muted: true }).eq("id", m.id);
+    return null;
+  }
   const { data: open } = await db.from("wa_conversations").select(CONV_COLS).eq("chat", m.chat).in("status", ["open", "in_progress"]).order("last_message_at", { ascending: false }).limit(1).maybeSingle();
   let conv = open as ConvRow | null;
   if (conv && !joinsConversation(conv, Date.parse(m.captured_at))) conv = null;
@@ -119,7 +125,7 @@ export async function readPending(db: SupabaseClient, limit = 10, nowMs = Date.n
 
 /** Messages that never joined a conversation (the request died after the insert). */
 export async function fileMissing(db: SupabaseClient, limit = 20): Promise<number> {
-  const { data } = await db.from("wa_messages").select("id").is("conversation_id", null).order("id").limit(limit);
+  const { data } = await db.from("wa_messages").select("id").is("conversation_id", null).eq("muted", false).order("id").limit(limit);
   const ids = ((data ?? []) as { id: number }[]).map((r) => r.id);
   for (const id of ids) await fileMessage(db, id);
   return ids.length;

@@ -3,11 +3,11 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FolderKanban, Loader2, MessageCircle, Phone, X } from "lucide-react";
+import { BellOff, CalendarPlus, FolderKanban, Loader2, MessageCircle, Phone, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/dates";
 import { searchProjectsAction } from "@/lib/mail/actions";
-import { assignWaProjectAction, updateWaCardAction } from "@/lib/whatsapp/actions";
+import { assignWaProjectAction, muteChatAction, updateWaCardAction } from "@/lib/whatsapp/actions";
 import type { WaCard } from "@/lib/whatsapp/load";
 import { CATEGORIES, CATEGORY_ICON, CATEGORY_LABEL, PRIORITY_LABEL, STATUS_LABEL, STATUSES, telHref, tone, type Tone } from "@/lib/whatsapp/triage-engine";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,8 @@ import { useT } from "@/i18n/client";
 // coloured by what it needs from us (red urgent, yellow follow-up, green nothing, grey finished), carries the
 // status and the person on it, and can be tied to a project, which puts the thread on that project's timeline.
 // The page refreshes itself every 20 seconds while it is on screen, so the whole team sees the same board.
+// F28-c: a card set to done or dismissed leaves the board; Mute this chat silences a group; a service call tied
+// to a project offers Schedule a visit (the visit form opens with the project and the request filled in).
 
 const REFRESH_MS = 20_000;
 
@@ -28,7 +30,7 @@ const TONE: Record<Tone, string> = {
   muted: "border-l-border bg-muted/60 text-muted-foreground",
 };
 
-export function WaBoard({ cards, people }: { cards: WaCard[]; people: string[] }) {
+export function WaBoard({ cards, people, visitsNewHref }: { cards: WaCard[]; people: string[]; visitsNewHref: string }) {
   const t = useT();
   const router = useRouter();
 
@@ -47,7 +49,7 @@ export function WaBoard({ cards, people }: { cards: WaCard[]; people: string[] }
       <ul className="grid gap-3 md:hidden">
         {cards.map((card) => (
           <li key={card.id}>
-            <Card card={card} people={people} showCategory />
+            <Card card={card} people={people} visitsNewHref={visitsNewHref} showCategory />
           </li>
         ))}
       </ul>
@@ -65,7 +67,7 @@ export function WaBoard({ cards, people }: { cards: WaCard[]; people: string[] }
                 <span className="text-xs font-normal text-text-2 tabular-nums">{list.length}</span>
               </h2>
               {list.map((card) => (
-                <Card key={card.id} card={card} people={people} />
+                <Card key={card.id} card={card} people={people} visitsNewHref={visitsNewHref} />
               ))}
             </section>
           );
@@ -76,8 +78,9 @@ export function WaBoard({ cards, people }: { cards: WaCard[]; people: string[] }
   );
 }
 
-function Card({ card, people, showCategory }: { card: WaCard; people: string[]; showCategory?: boolean }) {
+function Card({ card, people, visitsNewHref, showCategory }: { card: WaCard; people: string[]; visitsNewHref: string; showCategory?: boolean }) {
   const t = useT();
+  const router = useRouter();
   const [pending, start] = useTransition();
   const [status, setStatus] = useState(card.status);
   const [who, setWho] = useState(card.assigned_to ?? "");
@@ -87,7 +90,19 @@ function Card({ card, people, showCategory }: { card: WaCard; people: string[]; 
     start(async () => {
       const r = await updateWaCardAction(card.id, patch);
       if (!r.ok) toast.error(r.message);
+      // Done or dismissed: the card leaves the board (Show finished has it).
+      else if (patch.status === "done" || patch.status === "dismissed") router.refresh();
     });
+  const mute = () =>
+    start(async () => {
+      const r = await muteChatAction(card.chat);
+      if (!r.ok) toast.error(r.message);
+      else {
+        toast.success(t("Chat muted. Undo under Muted chats."));
+        router.refresh();
+      }
+    });
+  const visitHref = `${visitsNewHref}?project_id=${card.project_id}&instructions=${encodeURIComponent([card.summary, card.details].filter(Boolean).join("\n").slice(0, 2000))}&back=${encodeURIComponent("/whatsapp")}`;
 
   const select = "h-11 min-w-0 flex-1 rounded-lg border bg-card px-2 text-[16px] md:h-9 md:text-[13px]";
   const name = card.customer ?? card.chat;
@@ -130,6 +145,11 @@ function Card({ card, people, showCategory }: { card: WaCard; people: string[]; 
       {card.triage === "fallback" && !card.ai_pending && <p className="mt-1 text-xs text-warn-fg">{t("AI could not read this conversation: {reason}", { reason: card.triage_error ?? "?" })}</p>}
 
       <ProjectPick card={card} />
+      {card.project_id && (card.category === "service_call" || card.category === "scheduling") && status !== "done" && status !== "dismissed" && (
+        <Link href={visitHref} className="mt-2 inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-primary px-3 text-sm font-semibold text-primary-foreground hover:brightness-95 md:h-9 md:text-[13px]">
+          <CalendarPlus className="size-4" aria-hidden /> {t("Schedule a visit")}
+        </Link>
+      )}
 
       <details className="mt-1.5 text-[13px]">
         <summary className="cursor-pointer text-text-2 hover:underline">{t("Details and the messages ({n})", { n: card.messages.length })}</summary>
@@ -144,6 +164,9 @@ function Card({ card, people, showCategory }: { card: WaCard; people: string[]; 
             </li>
           ))}
         </ol>
+        <button type="button" onClick={mute} disabled={pending} className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-text-2 hover:underline md:min-h-0">
+          <BellOff className="size-3.5" aria-hidden /> {t("Mute this chat")}
+        </button>
       </details>
 
       <div className="mt-2 flex gap-2">
