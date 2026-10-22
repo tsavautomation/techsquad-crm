@@ -55,8 +55,10 @@ export async function decideCorrectionAction(id: number, decision: "approve" | "
   if (!c) return { ok: false, message: "Request not found." };
   if (c.status !== "pending") return { ok: false, message: "This request was already decided." };
   if (decision === "approve") {
-    const { error } = await admin.from("visits").update({ [c.field]: c.requested_at }).eq("id", c.visit_id);
+    // F29: the time belongs to the person's attendance row; the visit's team summary follows from it.
+    const { error } = await admin.from("visit_attendance").upsert({ visit_id: c.visit_id, employee_id: c.employee_id, [c.field]: c.requested_at, updated_at: new Date().toISOString() }, { onConflict: "visit_id,employee_id" });
     if (error) return { ok: false, message: `Visit not updated: ${error.message}` };
+    await admin.rpc("visit_recompute", { p_id: c.visit_id });
     // The time-clock entry for the same step follows, keeping its original time and who corrected it.
     const { data: entries } = await admin.from("time_entries").select("id, at, original_at").eq("visit_id", c.visit_id).eq("employee_id", c.employee_id).eq("kind", KIND[c.field]).is("deleted_at", null);
     for (const e of (entries ?? []) as { id: number; at: string; original_at: string | null }[]) {

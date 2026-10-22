@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Clock, Loader2, LogIn, LogOut, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { clockAction } from "@/lib/time-clock/actions";
-import { formatDistance, type Place, type TimeEntry } from "@/lib/time-clock/clock";
+import { formatDistance, tooFar, type Geo, type Place, type TimeEntry } from "@/lib/time-clock/clock";
+import { FarAwayDialog } from "@/components/field-day/far-away-dialog";
 import { currentPosition } from "@/lib/time-clock/geo-client";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
@@ -25,21 +26,28 @@ type Props = {
   reminderPassed: boolean;
   /** TC-c: past the office cut-off (e.g. 8:00 PM) the warning says the day will be closed for review at midnight. */
   cutoffText?: string | null;
+  /** F29: the office position (Admin › Field day); a clock-in over 1000 ft from it first asks. */
+  office?: Geo | null;
 };
 
 const PLACE_TONE: Record<Place, string> = { Office: "text-info-fg", "On site": "text-ok-fg", Elsewhere: "text-warn-fg", Unknown: "text-muted-foreground" };
 
-export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSiteText, reminderPassed, cutoffText }: Props) {
+export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSiteText, reminderPassed, cutoffText, office = null }: Props) {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [locating, setLocating] = useState(false);
+  const [farAway, setFarAway] = useState<{ distanceM: number; geo: Geo | null } | null>(null);
 
-  const press = (kind: "clock_in" | "clock_out") =>
+  const press = (kind: "clock_in" | "clock_out", confirmed = false, known: Geo | null = null) =>
     start(async () => {
       setLocating(true);
-      const geo = await currentPosition();
+      const geo = known ?? (await currentPosition());
       setLocating(false);
+      if (kind === "clock_in" && !confirmed) {
+        const far = tooFar(geo, office);
+        if (far !== null) return void setFarAway({ distanceM: far, geo });
+      }
       const r = await clockAction(kind, geo);
       if (!r.ok) return void toast.error(t(r.message));
       const place = r.place as Place;
@@ -82,11 +90,24 @@ export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSi
               <span className="min-w-0 flex-1 truncate">{e.label}</span>
               <span className={cn("flex shrink-0 items-center gap-1 text-xs", PLACE_TONE[e.place])}>
                 <MapPin className="size-3.5" aria-hidden />
-                {e.hasGeo ? `${t(e.place)}${e.place !== "Office" && e.place !== "On site" && e.distance_m !== null ? ` · ${formatDistance(e.distance_m)}` : ""}` : t("no location")}
+                {e.hasGeo ? `${t(e.place)}${e.place !== "Office" && e.place !== "On site" && formatDistance(e.distance_m) ? ` · ${formatDistance(e.distance_m)}` : ""}` : t("no location")}
               </span>
             </li>
           ))}
         </ol>
+      )}
+      {farAway && (
+        <FarAwayDialog
+          distanceM={farAway.distanceM}
+          place={t("the office")}
+          action="clock_in"
+          onCancel={() => setFarAway(null)}
+          onContinue={() => {
+            const g = farAway.geo;
+            setFarAway(null);
+            press("clock_in", true, g);
+          }}
+        />
       )}
     </section>
   );

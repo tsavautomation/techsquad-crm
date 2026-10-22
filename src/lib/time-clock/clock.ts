@@ -67,10 +67,23 @@ export function placeFor(here: Geo | null, office: Geo | null, sites: Geo[], rad
   return { place: "Elsewhere", distance_m: nearest.length ? Math.min(...nearest) : null };
 }
 
-/** "1.2 km" / "350 m". */
+/** Within this many metres (500 ft) of a place, the person is simply there: no distance is shown (Fred 2026-10-22). */
+export const AT_PLACE_M = 152;
+/** Beyond this (1000 ft) a check-in or clock-in first asks "you are X away from <place>, continue?" (Fred 2026-10-22). */
+export const FAR_AWAY_M = 305;
+
+/** US units (Fred 2026-10-22): "" under 500 ft (at the place), "850 ft" under a mile, then "2.3 mi". */
 export function formatDistance(m: number | null): string {
-  if (m === null) return "";
-  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`;
+  if (m === null || m < AT_PLACE_M) return "";
+  const ft = m * 3.28084;
+  return ft < 5280 ? `${Math.round(ft / 10) * 10} ft` : `${(m / 1609.344).toFixed(1)} mi`;
+}
+
+/** The distance in metres when `here` is farther than FAR_AWAY_M from `there`; null when close enough or unknown. */
+export function tooFar(here: Geo | null, there: Geo | null): number | null {
+  if (!here || !there) return null;
+  const d = distanceM(here, there);
+  return d > FAR_AWAY_M ? d : null;
 }
 
 // ---------------------------------------------------------------- the day

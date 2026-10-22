@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -6144,6 +6144,77 @@ export type Database = {
           },
         ]
       }
+      visit_attendance: {
+        Row: {
+          auto_closed_at: string | null
+          auto_closed_reason: string | null
+          checked_in_at: string | null
+          checked_out_at: string | null
+          created_at: string
+          employee_id: number
+          id: number
+          on_way_at: string | null
+          updated_at: string
+          user_id: string | null
+          visit_id: number
+        }
+        Insert: {
+          auto_closed_at?: string | null
+          auto_closed_reason?: string | null
+          checked_in_at?: string | null
+          checked_out_at?: string | null
+          created_at?: string
+          employee_id: number
+          id?: number
+          on_way_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+          visit_id: number
+        }
+        Update: {
+          auto_closed_at?: string | null
+          auto_closed_reason?: string | null
+          checked_in_at?: string | null
+          checked_out_at?: string | null
+          created_at?: string
+          employee_id?: number
+          id?: number
+          on_way_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+          visit_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_attendance_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_attendance_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_attendance_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "portal_visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_attendance_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visits: {
         Row: {
           access_notes: string | null
@@ -7052,6 +7123,7 @@ export type Database = {
         Args: { p_keep: number; p_merge: number[]; p_table: string }
         Returns: number
       }
+      my_employee_on_visit: { Args: { p_id: number }; Returns: number }
       my_permissions: { Args: never; Returns: string[] }
       my_workflow_queue: {
         Args: never
@@ -7099,6 +7171,56 @@ export type Database = {
           id: string
           last_sign_in_at: string
         }[]
+      }
+      visit_recompute: {
+        Args: { p_id: number }
+        Returns: {
+          access_notes: string | null
+          address: Json | null
+          archived_at: string | null
+          arrival_window: string | null
+          auto_closed_at: string | null
+          auto_closed_reason: string | null
+          billing: string | null
+          checked_in_at: string | null
+          checked_out_at: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          duration: string | null
+          google_etag: string | null
+          google_event_id: string | null
+          google_synced_at: string | null
+          id: number
+          instructions: string | null
+          kind: string
+          locked: boolean
+          maintenance_visit: boolean
+          on_way_at: string | null
+          project_id: number | null
+          proposed_from_report_id: number | null
+          reality_flags: Json | null
+          repeat: string | null
+          repeat_count: number | null
+          return_task_id: number | null
+          series_id: string | null
+          service_type: string | null
+          starts_at: string | null
+          status: string | null
+          subject: string | null
+          submitted_at: string | null
+          technician_id: number | null
+          title: string | null
+          updated_at: string
+          updated_by: string | null
+          vehicle_id: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "visits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       visit_step: {
         Args: { p_id: number; p_step: string }

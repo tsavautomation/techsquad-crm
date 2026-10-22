@@ -148,7 +148,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                           {e.lat !== null && e.lng !== null ? (
                             <a href={`https://www.google.com/maps/search/?api=1&query=${e.lat},${e.lng}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
                               {tr(e.place)}
-                              {e.place !== "Office" && e.place !== "On site" && e.distance_m !== null && ` · ${formatDistance(e.distance_m)}`}
+                              {e.place !== "Office" && e.place !== "On site" && formatDistance(e.distance_m) !== "" && ` · ${formatDistance(e.distance_m)}`}
                             </a>
                           ) : (
                             tr("no location")

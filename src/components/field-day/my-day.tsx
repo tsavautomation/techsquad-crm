@@ -24,8 +24,9 @@ export async function MyDay({ user, now }: { user: CurrentUser; now: number }) {
   const day = await loadMyDay(user);
   if (!day || (!day.visits.length && !day.reportsDue.length)) return null;
   const tr = await getT();
-  const visits = [...day.visits].sort((a, b) => (ORDER[a.status] ?? 2) - (ORDER[b.status] ?? 2) || a.starts_at.localeCompare(b.starts_at));
-  const left = day.visits.filter((v) => v.status !== "Done");
+  // F29: each person sees their own state on a shared visit (myStatus), not the team's.
+  const visits = [...day.visits].sort((a, b) => (ORDER[a.myStatus] ?? 2) - (ORDER[b.myStatus] ?? 2) || a.starts_at.localeCompare(b.starts_at));
+  const left = day.visits.filter((v) => v.myStatus !== "Done");
   const route = routeUrl(left.map((v) => v.address ?? "").filter(Boolean));
   const sum = daySummary(day.visits, now);
   const reportsT = getTable("job_reports");
@@ -63,7 +64,7 @@ export async function MyDay({ user, now }: { user: CurrentUser; now: number }) {
 
       <ol className="flex flex-col gap-3">
         {visits.map((v, i) => (
-          <VisitCard key={v.id} v={v} next={i === 0 && v.status !== "Done"} tr={tr} />
+          <VisitCard key={v.id} v={v} next={i === 0 && v.myStatus !== "Done"} tr={tr} />
         ))}
       </ol>
 
@@ -112,8 +113,13 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
             {v.project}
           </Link>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[v.status] ?? STATUS_TONE.Scheduled}`}>{tr(v.status)}</span>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[v.myStatus] ?? STATUS_TONE.Scheduled}`}>{tr(v.myStatus)}</span>
       </div>
+      {v.others.length > 0 && (
+        <p className="mt-1 text-[13px] text-text-2">
+          {tr("Team")}: {v.others.map((o) => `${o.name} · ${tr(o.status).toLowerCase()}${o.at ? ` ${time(o.at)}` : ""}`).join(" · ")}
+        </p>
+      )}
 
       {v.address ? (
         <div className="mt-2">
@@ -191,7 +197,7 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
           )}
         </dl>
       )}
-      {v.pending > 0 && v.status !== "Done" && v.projectId && (
+      {v.pending > 0 && v.myStatus !== "Done" && v.projectId && (
         <Link href={`${recordHref(getTable("projects"), v.projectId)}#pending`} className="mt-2 flex items-start gap-1.5 rounded-lg bg-warn-bg px-3 py-2 text-[13px] text-warn-fg">
           <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
           <span>{tr(v.pending === 1 ? "1 open pending item from an earlier visit. See it on the project." : "{n} open pending items from earlier visits. See them on the project.", { n: v.pending })}</span>
@@ -222,8 +228,8 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <StepButtons id={v.id} status={v.status} />
-        {v.status === "Done" &&
+        <StepButtons id={v.id} status={v.myStatus} site={v.site_geo} place={v.project} />
+        {v.myStatus === "Done" &&
           (v.reportId ? (
             <Link href={recordHref(reportsT, v.reportId)} className={LINK}>
               <FileText className="mr-1 size-4" aria-hidden /> {tr("Report")}
@@ -233,7 +239,7 @@ function VisitCard({ v, next, tr }: { v: MyVisit; next: boolean; tr: T }) {
               <FileText className="size-4" aria-hidden /> {tr("Write the report")}
             </Link>
           ))}
-        {v.status !== "Done" && (
+        {v.myStatus !== "Done" && (
           <Link href={visitHref} className="text-[13px] text-text-2 underline underline-offset-2">
             {tr("Briefing and checklist")}
           </Link>

@@ -95,7 +95,7 @@ export function realityFlags(i: RealityInput): RealityFlag[] {
     if (!i.trips.length) out.push({ key: "van_position", level: "warn", text: "The van assigned to the visit made no trip that day (Bouncie)." });
     else if (!around) {
       const closest = i.trips.filter((t) => t.endLat !== null && t.endLng !== null).map((t) => distanceKm({ lat: t.endLat!, lng: t.endLng! }, v.site!)).sort((a, b) => a - b)[0];
-      out.push({ key: "van_position", level: "warn", text: closest !== undefined ? `No van trip ended at the site around the check-in (closest stop ${closest.toFixed(1)} km away).` : "No van trip ended at the site around the check-in (Bouncie)." });
+      out.push({ key: "van_position", level: "warn", text: closest !== undefined ? `No van trip ended at the site around the check-in (closest stop ${(closest / 1.609344).toFixed(1)} mi away).` : "No van trip ended at the site around the check-in (Bouncie)." });
     }
   }
   return out;

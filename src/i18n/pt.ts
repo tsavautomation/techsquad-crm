@@ -2112,4 +2112,17 @@ export const PT: Record<string, string> = {
   "Take off the project": "Tirar do projeto",
   "Change": "Trocar",
   "WhatsApp board (messages from the WhatsApp PC, read by AI)": "Quadro do WhatsApp (mensagens do PC do WhatsApp, lidas pela IA)",
+  // F29 per-person check-in, far-away question (2026-10-22)
+  "You are {distance} away from {place}": "Você está a {distance} de {place}",
+  "far": "longe",
+  "Continue the check-in anyway?": "Continuar o check-in mesmo assim?",
+  "Continue the clock-in anyway?": "Continuar o clock-in mesmo assim?",
+  "Continue": "Continuar",
+  "the job site": "o local do trabalho",
+  "the office": "o escritório",
+  "Per person: On my way, Checked in and Checked out. Clearing a time also removes that person's time-clock entry. Times are Eastern.": "Por pessoa: A caminho, Check-in e Check-out. Limpar um horário também remove o registro de ponto da pessoa. Horários no fuso de Nova York.",
+  "Save {name}": "Salvar {name}",
+  "Nobody is on this visit.": "Ninguém está nesta visita.",
+  "Visit status: {status}": "Status da visita: {status}",
+  "Correct times or positions": "Corrigir horários ou posições",
 };

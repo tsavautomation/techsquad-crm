@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { visitStepAction, visitUndoStepAction } from "@/lib/field-day/actions";
 import { clockAction } from "@/lib/time-clock/actions";
 import { currentPosition } from "@/lib/time-clock/geo-client";
+import { tooFar, type Geo } from "@/lib/time-clock/clock";
+import { FarAwayDialog } from "./far-away-dialog";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
@@ -14,23 +16,33 @@ import { useT } from "@/i18n/client";
 // P2: the phone's position goes with each step (time clock), asked only when the button is pressed.
 // F20-d: when the check-out was the last visit of the day and the person is still clocked in, a prompt asks
 // "Done for the day?" with Clock out / Stay clocked in, because "Left the job" was being mistaken for a clock-out.
+// F29: `status` is MY state on the visit (per person); a Check in pressed over 1000 ft from the job site first asks.
 
 const BTN = "inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-[10px] px-4 text-sm font-semibold disabled:opacity-60 sm:flex-none";
 
-export function StepButtons({ id, status }: { id: number; status: string }) {
+export function StepButtons({ id, status, site = null, place = "" }: { id: number; status: string; site?: Geo | null; place?: string }) {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneForDay, setDoneForDay] = useState<{ next: string } | null>(null);
+  const [farAway, setFarAway] = useState<{ distanceM: number; geo: Geo | null } | null>(null);
   if (status === "Done" || status === "Cancelled") return doneForDay ? <DoneForDay next={doneForDay.next} /> : null;
 
-  const run = (step: "on_way" | "check_in" | "check_out") => {
+  const run = (step: "on_way" | "check_in" | "check_out", confirmed = false, known: Geo | null = null) => {
     setBusy(step);
     setError(null);
     start(async () => {
-      const geo = await currentPosition();
+      const geo = known ?? (await currentPosition());
+      if (step === "check_in" && !confirmed) {
+        const far = tooFar(geo, site);
+        if (far !== null) {
+          setFarAway({ distanceM: far, geo });
+          setBusy(null);
+          return;
+        }
+      }
       const r = await visitStepAction(id, step, geo);
       if (!r.ok) setError(t(r.message));
       else if (r.next && r.askClockOut) {
@@ -85,6 +97,19 @@ export function StepButtons({ id, status }: { id: number; status: string }) {
         </p>
       )}
       {doneForDay && <DoneForDay next={doneForDay.next} />}
+      {farAway && (
+        <FarAwayDialog
+          distanceM={farAway.distanceM}
+          place={place || t("the job site")}
+          action="check_in"
+          onCancel={() => setFarAway(null)}
+          onContinue={() => {
+            const g = farAway.geo;
+            setFarAway(null);
+            run("check_in", true, g);
+          }}
+        />
+      )}
     </div>
   );
 }

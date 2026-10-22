@@ -10,6 +10,9 @@ import { joinTable } from "@/lib/records/relations";
 import type { Address } from "@/lib/records/values";
 import { getTable } from "@/registry";
 import { addDays } from "@/lib/schedule/dates";
+import { geocode } from "@/lib/time-clock/geocode";
+import type { Geo } from "@/lib/time-clock/clock";
+import { personStatus } from "./day";
 import { openPendingByProject } from "./pending";
 import { loadFieldDay } from "./return-card";
 
@@ -34,9 +37,16 @@ export type MyVisit = {
   instructions: string | null;
   access: string | null;
   tools: string[];
+  /** F29: MY times on this visit (my attendance row), not the team's. */
   on_way_at: string | null;
   checked_in_at: string | null;
   checked_out_at: string | null;
+  /** F29: my own state on the visit (per person); `status` above is the team summary. */
+  myStatus: string;
+  /** F29: the other people on the visit who have moved today, for the "Also here" line. */
+  others: { name: string; status: string; at: string | null }[];
+  /** The job site's position, for the "you are far away" question on Check in (F29). */
+  site_geo: Geo | null;
   reportId: number | null;
   /** F17-d: return cards still open on the project. */
   pending: number;
@@ -141,6 +151,16 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     loadFieldDay(db),
   ]);
   const ids = [...new Set([...rows, ...past].map((v) => v.id))];
+  // F29: who has done what on today's visits, per person.
+  type Att = { visit_id: number; employee_id: number; on_way_at: string | null; checked_in_at: string | null; checked_out_at: string | null };
+  const { data: attRows } = rows.length ? await db.from("visit_attendance").select("visit_id, employee_id, on_way_at, checked_in_at, checked_out_at").in("visit_id", rows.map((v) => v.id)) : { data: [] };
+  const attendance = (attRows ?? []) as Att[];
+  const otherIds = [...new Set(attendance.map((a) => a.employee_id).filter((id) => !people.includes(id)))];
+  const { data: otherNames } = otherIds.length ? await db.from("employee_names").select("id, title").in("id", otherIds) : { data: [] };
+  const nameOf = new Map(((otherNames ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
+  const addressOf = (v: VisitRow) => mapAddress(v.address?.street || v.address?.city ? v.address : (v.projects?.job_address ?? null));
+  const siteGeos = new Map<string, Geo | null>();
+  await Promise.all([...new Set(rows.map(addressOf).filter((a): a is string => Boolean(a)))].map(async (a) => siteGeos.set(a, await geocode(db, a).catch(() => null))));
   const projectIds = [...new Set([...rows, ...past].map((v) => v.project_id).filter((x): x is number => x !== null))];
   // F24-a (Fred 2026-10-07: "the report appears in Reports but the home screen still says it is missing"):
   // a report counts for a visit when it is linked to it, or when it is unlinked but on the same project
@@ -161,7 +181,13 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     if (r) reportOf.set(v.id, r.id);
   }
 
-  const visits = rows.map((v) => ({
+  const visits = rows.map((v) => {
+    const mine = attendance.find((a) => a.visit_id === v.id && people.includes(a.employee_id)) ?? null;
+    const others = attendance
+      .filter((a) => a.visit_id === v.id && !people.includes(a.employee_id) && (a.on_way_at || a.checked_in_at || a.checked_out_at))
+      .map((a) => ({ name: nameOf.get(a.employee_id) ?? `#${a.employee_id}`, status: personStatus(a, v.status ?? "Scheduled"), at: a.checked_out_at ?? a.checked_in_at ?? a.on_way_at }));
+    const address = addressOf(v);
+    return {
     id: v.id,
     starts_at: v.starts_at,
     duration: Number(v.duration ?? 60),
@@ -170,19 +196,23 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     project: v.projects?.title ?? (v.project_id ? `Project #${v.project_id}` : v.kind === "Internal" ? v.subject || "Internal" : "No project"),
     projectId: v.project_id,
     // F21-b: the visit's own address when it has one (a survey at a new client), else the project's.
-    address: mapAddress(v.address?.street || v.address?.city ? v.address : (v.projects?.job_address ?? null)),
+    address,
     service: v.service_type,
     vehicle: v.vehicles?.title ?? null,
     instructions: v.instructions,
     access: v.access_notes,
     tools: (v.service_type && settings.service_lists[v.service_type]?.tools) || [],
-    on_way_at: v.on_way_at,
-    checked_in_at: v.checked_in_at,
-    checked_out_at: v.checked_out_at,
+    on_way_at: mine?.on_way_at ?? null,
+    checked_in_at: mine?.checked_in_at ?? null,
+    checked_out_at: mine?.checked_out_at ?? null,
+    myStatus: personStatus(mine, v.status ?? "Scheduled"),
+    others,
+    site_geo: address ? (siteGeos.get(address) ?? null) : null,
     reportId: reportOf.get(v.id) ?? null,
     pending: v.project_id ? (pending.get(v.project_id)?.length ?? 0) : 0,
     site: v.project_id ? (sites.get(v.project_id) ?? null) : null,
-  }));
+    };
+  });
   const reportsDue = past
     .filter((v) => v.checked_out_at && v.kind !== "Internal" && !reportOf.has(v.id)) // J-k: no report for an internal event
     .map((v) => ({ id: v.id, project: v.projects?.title ?? `Visit #${v.id}`, projectId: v.project_id, checked_out_at: v.checked_out_at! }));

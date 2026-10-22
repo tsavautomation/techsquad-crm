@@ -35,22 +35,30 @@ export async function closeForgottenDay(date: string): Promise<Record<string, un
   const to = fromDateTimeLocalET(`${addDays(date, 1)}T00:00`);
   const warnings: WarningRow[] = [];
 
-  // 1. Visits still on site (checked in up to the end of the day, never checked out).
+  // 1. People still on site (F29, per person: checked in up to the end of the day, never checked out). Each open
+  //    attendance row is closed at that person's cut-off and the visit's team summary is recomputed.
   const { data: open } = await db
-    .from("visits")
-    .select("id, technician_id, checked_in_at, projects(title)")
+    .from("visit_attendance")
+    .select("id, visit_id, employee_id, checked_in_at, visits!inner(deleted_at, status, projects(title))")
     .lt("checked_in_at", to)
     .is("checked_out_at", null)
-    .is("deleted_at", null)
-    .neq("status", "Cancelled");
-  const visits = (open ?? []) as unknown as { id: number; technician_id: number | null; checked_in_at: string; projects: { title: string | null } | null }[];
-  for (const v of visits) {
-    const day = toDateTimeLocalET(v.checked_in_at).slice(0, 10);
-    const closedAt = autoCloseAt(v.checked_in_at, day, cutoffFor(v.technician_id));
-    const { error } = await db.from("visits").update({ status: "Done", checked_out_at: closedAt, auto_closed_at: new Date().toISOString(), auto_closed_reason: "end_of_day" }).eq("id", v.id);
-    if (error) throw new Error(`visit #${v.id}: ${error.message}`);
-    if (v.technician_id !== null) warnings.push({ employee_id: v.technician_id, user_id: null, kind: "forgot_checkout", day, visit_id: v.id, project: v.projects?.title ?? null, closed_at: closedAt });
+    .is("visits.deleted_at", null)
+    .neq("visits.status", "Cancelled");
+  const openRows = (open ?? []) as unknown as { id: number; visit_id: number; employee_id: number; checked_in_at: string; visits: { projects: { title: string | null } | null } | null }[];
+  const touched = new Set<number>();
+  for (const a of openRows) {
+    const day = toDateTimeLocalET(a.checked_in_at).slice(0, 10);
+    const closedAt = autoCloseAt(a.checked_in_at, day, cutoffFor(a.employee_id));
+    const { error } = await db.from("visit_attendance").update({ checked_out_at: closedAt, auto_closed_at: new Date().toISOString(), auto_closed_reason: "end_of_day", updated_at: new Date().toISOString() }).eq("id", a.id);
+    if (error) throw new Error(`attendance #${a.id}: ${error.message}`);
+    touched.add(a.visit_id);
+    warnings.push({ employee_id: a.employee_id, user_id: null, kind: "forgot_checkout", day, visit_id: a.visit_id, project: a.visits?.projects?.title ?? null, closed_at: closedAt });
   }
+  for (const id of touched) {
+    const { error } = await db.rpc("visit_recompute", { p_id: id });
+    if (error) throw new Error(`visit #${id}: ${error.message}`);
+  }
+  const visits = [...touched];
 
   // 2. Time clock (TC-d): a day whose last clock entry is a clock-in is clocked out at the person's last recorded
   //    activity after it (job arrival, leaving a job, On my way), else at the cut-off; marked auto_closed so the

@@ -41,6 +41,16 @@ export function parseFieldDay(value: unknown): FieldDaySettings {
 // ---------------------------------------------------------------- forgotten check-outs (F20)
 
 /** The check-out the system writes for a forgotten visit or day: the day's cut-off (HH:MM Eastern), or a minute after the check-in when that came later. */
+/** F29: one person's state on a visit, from their own attendance row; the visit's status only when it is Cancelled. */
+export function personStatus(a: Pick<FieldTimes, "on_way_at" | "checked_in_at" | "checked_out_at"> | null | undefined, visitStatus: string): "Scheduled" | "On the way" | "On site" | "Done" | "Cancelled" {
+  if (visitStatus === "Cancelled") return "Cancelled";
+  if (!a) return "Scheduled";
+  if (a.checked_out_at) return "Done";
+  if (a.checked_in_at) return "On site";
+  if (a.on_way_at) return "On the way";
+  return "Scheduled";
+}
+
 export function autoCloseAt(checkedInIso: string, day: string, cutoff: string): string {
   const cut = Date.parse(fromDateTimeLocalET(`${day}T${cutoff}`));
   const after = Date.parse(checkedInIso) + 60_000;
