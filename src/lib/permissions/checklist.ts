@@ -50,6 +50,8 @@ export const PAGE_ITEMS: ChecklistItem[] = [
   { key: "job_costing.view", label: "Job costing (costs, pay rates and margin)" },
   // BK-a: Fred 2026-10-14, "Jessica, Luana, Saulo and Lucas can see the backup versioning, only fred can click a file to recover".
   { key: "backups.page.view", label: "Backups (the nightly copies in OneDrive)" },
+  // F28: Fred 2026-10-21. Starts with the Job costing holders; administrators always see it.
+  { key: "whatsapp.page.view", label: "WhatsApp board (messages from the WhatsApp PC, read by AI)" },
 ];
 
 export const ADMIN_ITEMS: ChecklistItem[] = [

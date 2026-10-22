@@ -53,6 +53,7 @@ describe("checklist", () => {
       "insights.page.view",
       "job_costing.view",
       "backups.page.view",
+      "whatsapp.page.view",
       ...ACTIONS.map((a) => `administrative.report-deficiencies.${a}`),
       ...ACTIONS.map((a) => `administrative.documents.${a}`),
       ...ACTIONS.map((a) => `administrative.portal-documents.${a}`),

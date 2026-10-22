@@ -14,6 +14,7 @@ import {
   List,
   LogOut,
   Menu,
+  MessageCircle,
   Monitor,
   Moon,
   Plus,
@@ -59,6 +60,8 @@ export type Extras = {
   insights: boolean;
   data: boolean;
   timeClock: boolean;
+  /** F28: the WhatsApp board. */
+  whatsapp: boolean;
 };
 
 const GROUPS: { title: string; slugs: string[] }[] = [
@@ -478,6 +481,12 @@ export function Sidebar({
                   t("Tasks"),
                   <SquareKanban className="size-[18px]" aria-hidden />,
                 )}
+              {extras.whatsapp &&
+                link(
+                  "/whatsapp",
+                  t("WhatsApp"),
+                  <MessageCircle className="size-[18px]" aria-hidden />,
+                )}
             </ul>
           );
         if (!list.length) return null;
@@ -707,6 +716,15 @@ export function BottomNav({
             href: "/tasks",
             title: t("Tasks"),
             icon: <SquareKanban className="size-5" aria-hidden />,
+          },
+        ]
+      : []),
+    ...(extras.whatsapp
+      ? [
+          {
+            href: "/whatsapp",
+            title: t("WhatsApp"),
+            icon: <MessageCircle className="size-5" aria-hidden />,
           },
         ]
       : []),

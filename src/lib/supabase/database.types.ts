@@ -6385,6 +6385,110 @@ export type Database = {
           },
         ]
       }
+      wa_messages: {
+        Row: {
+          body: string
+          captured_at: string
+          chat: string
+          created_at: string
+          device: string
+          id: number
+          notif_id: number
+          sender: string | null
+          source: string
+        }
+        Insert: {
+          body: string
+          captured_at?: string
+          chat: string
+          created_at?: string
+          device: string
+          id?: number
+          notif_id: number
+          sender?: string | null
+          source?: string
+        }
+        Update: {
+          body?: string
+          captured_at?: string
+          chat?: string
+          created_at?: string
+          device?: string
+          id?: number
+          notif_id?: number
+          sender?: string | null
+          source?: string
+        }
+        Relationships: []
+      }
+      wa_tasks: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          chat: string
+          created_at: string
+          customer: string | null
+          details: string | null
+          id: number
+          message_id: number
+          occurred_at: string
+          phone: string | null
+          priority: string
+          status: string
+          summary: string
+          system: string | null
+          triage: string
+          triage_error: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string
+          chat: string
+          created_at?: string
+          customer?: string | null
+          details?: string | null
+          id?: number
+          message_id: number
+          occurred_at: string
+          phone?: string | null
+          priority?: string
+          status?: string
+          summary: string
+          system?: string | null
+          triage?: string
+          triage_error?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          chat?: string
+          created_at?: string
+          customer?: string | null
+          details?: string | null
+          id?: number
+          message_id?: number
+          occurred_at?: string
+          phone?: string | null
+          priority?: string
+          status?: string
+          summary?: string
+          system?: string | null
+          triage?: string
+          triage_error?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_tasks_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "wa_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_events: {
         Row: {
           actor: string | null

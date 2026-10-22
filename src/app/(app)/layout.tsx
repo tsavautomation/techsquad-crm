@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth/session";
+import { canSeeWhatsApp } from "@/lib/whatsapp/load";
 import { visibleModules } from "@/config/modules";
 import { BottomNav, ModuleTabsBar, Sidebar, TopBar, type CreateItem, type Extras, type Me, type NavItem } from "@/components/shell/nav";
 import { ADMIN_SCREENS, canSeeScreen } from "@/lib/admin/screens";
@@ -42,7 +43,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     .filter(({ table }) => canDo(user.permissions, table, "create", getTable))
     .map(({ table, label }) => ({ href: `${tableHref(table)}/new`, label: t(label), icon: table.tab ?? table.name }));
   const opens = (name: string) => canOpen(user.permissions, getTable(name), getTable);
-  const extras: Extras = { tasks: opens("tasks"), pipeline: opens("projects"), insights: user.permissions.has("insights.page.view"), data: opens("contacts"), timeClock: user.permissions.has("administrative.employees.view_all") };
+  const extras: Extras = { tasks: opens("tasks"), pipeline: opens("projects"), insights: user.permissions.has("insights.page.view"), data: opens("contacts"), timeClock: user.permissions.has("administrative.employees.view_all"), whatsapp: canSeeWhatsApp(user) };
   const showAdmin = ADMIN_SCREENS.some((s) => canSeeScreen(s, user.permissions, user.isSysadmin));
   const warnings = await loadMyWarnings();
   const impersonator = await readImpersonator(); // ADM-a
