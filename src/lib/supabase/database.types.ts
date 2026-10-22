@@ -994,6 +994,102 @@ export type Database = {
           },
         ]
       }
+      credentials: {
+        Row: {
+          account_number: string | null
+          archived_at: string | null
+          category: string | null
+          contact: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          fax: string | null
+          id: number
+          locked: boolean
+          notes: string | null
+          password: string | null
+          password_changed_on: string | null
+          phone: string | null
+          pin: string | null
+          purpose: string | null
+          status: string
+          submitted_at: string | null
+          title: string | null
+          two_factor: string | null
+          updated_at: string
+          updated_by: string | null
+          url: string | null
+          username: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          archived_at?: string | null
+          category?: string | null
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          fax?: string | null
+          id?: number
+          locked?: boolean
+          notes?: string | null
+          password?: string | null
+          password_changed_on?: string | null
+          phone?: string | null
+          pin?: string | null
+          purpose?: string | null
+          status?: string
+          submitted_at?: string | null
+          title?: string | null
+          two_factor?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          url?: string | null
+          username?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          archived_at?: string | null
+          category?: string | null
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          fax?: string | null
+          id?: number
+          locked?: boolean
+          notes?: string | null
+          password?: string | null
+          password_changed_on?: string | null
+          phone?: string | null
+          pin?: string | null
+          purpose?: string | null
+          status?: string
+          submitted_at?: string | null
+          title?: string | null
+          two_factor?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          url?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credentials_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credentials_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_outbox: {
         Row: {
           attachments: Json
@@ -4617,6 +4713,44 @@ export type Database = {
           started_at?: string
         }
         Relationships: []
+      }
+      sensitive_reveals: {
+        Row: {
+          action: string
+          at: string
+          field: string
+          id: number
+          record_id: number
+          table_name: string
+          user_id: string
+        }
+        Insert: {
+          action?: string
+          at?: string
+          field: string
+          id?: number
+          record_id: number
+          table_name: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          at?: string
+          field?: string
+          id?: number
+          record_id?: number
+          table_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sensitive_reveals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_requests: {
         Row: {

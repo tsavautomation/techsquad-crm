@@ -53,6 +53,7 @@ import { loadMessagePanel } from "@/lib/messages/load";
 import { PortalPanel } from "@/components/project/portal-panel";
 import { loadPortalPanel } from "@/lib/portal/staff-data";
 import { loadTimeline } from "@/lib/records/timeline";
+import { RevealLog } from "@/components/records/reveal-log";
 
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]/[id]">) {
@@ -175,6 +176,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "employee" && <ScorecardPanel employeeId={recordId} user={user} />}
       {t.detailAddon === "employee" && <EmployeeDeficiencies employeeId={recordId} user={user} />}
       {t.detailAddon === "deficiency" && <DeficiencyPanel id={recordId} status={String(row.status ?? "")} canExcuse={canModify} />}
+      {t.detailAddon === "credential" && <RevealLog table={t.name} id={recordId} user={user} />}
       {t.detailAddon === "project" && <ProjectBrief projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <SiteHistory projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <ProjectEquipment projectId={recordId} user={user} />}
@@ -271,7 +273,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
             <div className={cn("grid gap-1 px-4 py-3 sm:grid-cols-3 sm:gap-4 xl:border-b", WIDE_TYPES.has(f.type) && "xl:col-span-2")}>
               <dt className="text-sm text-muted-foreground">{f.label}</dt>
               <dd className="min-w-0 text-sm break-words sm:col-span-2">
-                <DetailValue field={f} value={f.type === "computed" ? computed[f.name] : values[f.name]} labels={labels[f.name] ?? {}} />
+                <DetailValue field={f} value={f.type === "computed" ? computed[f.name] : values[f.name]} labels={labels[f.name] ?? {}} log={{ table: t.name, id: recordId, field: f.name }} />
               </dd>
             </div>
           </Fragment>
@@ -313,7 +315,7 @@ async function computedValues(t: TableDef, id: number): Promise<Values> {
   return out;
 }
 
-function DetailValue({ field: f, value, labels }: { field: FieldDef; value: unknown; labels: Record<string, string> }) {
+function DetailValue({ field: f, value, labels, log }: { field: FieldDef; value: unknown; labels: Record<string, string>; log: { table: string; id: number; field: string } }) {
   const none = <span className="text-muted-foreground">—</span>;
 
   if (f.type === "computed") return <>{f.computed?.kind === "visit_days" ? Number(value ?? 0) : money.format(Number(value ?? 0))}</>;
@@ -362,10 +364,10 @@ function DetailValue({ field: f, value, labels }: { field: FieldDef; value: unkn
     if (!value) return none;
     const d = String(value).replace(/\D/g, "");
     const formatted = f.type === "ssn" ? `${d.slice(0, 3)}-${d.slice(3, 5)}-${d.slice(5)}` : `${d.slice(0, 2)}-${d.slice(2)}`;
-    if (f.sensitive) return value === MASK ? <span className="tracking-widest">{MASK}</span> : <SensitiveValue value={formatted} />;
+    if (f.sensitive) return value === MASK ? <span className="tracking-widest">{MASK}</span> : <SensitiveValue value={formatted} log={log} />;
     return <>{formatted}</>;
   }
 
-  if (f.sensitive && !f.shownInClear && typeof value === "string" && value && value !== MASK) return <SensitiveValue value={value} />;
+  if (f.sensitive && !f.shownInClear && typeof value === "string" && value && value !== MASK) return <SensitiveValue value={value} log={log} />;
   return <FieldValue field={f} value={value} />;
 }

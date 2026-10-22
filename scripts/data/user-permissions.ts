@@ -74,6 +74,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "inventory.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.documents": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.portal-apps": ["archive", "create", "delete", "modify", "view_all", "view_page"],
+      "administrative.credentials": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.portal-documents": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "administrative.records": ["delete_locked", "lock_unlock", "modify_locked"],
@@ -115,6 +116,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "administrative.payroll": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.documents": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.portal-apps": ["archive", "create", "delete", "modify", "view_all", "view_page"],
+      "administrative.credentials": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.portal-documents": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "administrative.records": ["delete_locked", "lock_unlock", "modify_locked"],
@@ -166,6 +168,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
       "administrative.payroll": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.documents": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.portal-apps": ["archive", "create", "delete", "modify", "view_all", "view_page"],
+      "administrative.credentials": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.portal-documents": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes", "options_utility_tables"],
       "administrative.records": ["delete_locked", "lock_unlock", "modify_locked"],
@@ -234,6 +237,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
   "lucas@tsav.net": {
     admin: false,
     permissions: {
+      "administrative.credentials": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "job_costing": ["view"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
@@ -268,6 +272,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
   "karina@tsav.net": {
     admin: true,
     permissions: {
+      "administrative.credentials": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.employees": ["create", "delete", "modify", "view_all", "view_page"],
       "inventory.inventory-checkout": ["create", "delete", "modify", "view_page"],
       "administrative.module": ["activity_history_add", "activity_history_view", "audit_log", "deleted_items", "files_add_new", "files_allow_delete", "files_view_files_pod", "notes_allow_delete", "notes_allow_delete_of_my_notes"],

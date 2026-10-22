@@ -58,6 +58,8 @@ export const MODULES: ModuleDef[] = [
       // F6 (Fred 2026-10-10): what the customer portal can show — documents ticked per project, and apps with store links.
       tab("administrative", "portal-documents", "Client Documents"),
       tab("administrative", "portal-apps", "Client Apps"),
+      // F30 (Fred 2026-10-22): the office's shared logins — shopping sites, Apple IDs, suppliers, software.
+      tab("administrative", "credentials", "Logins & passwords"),
     ],
   },
   {
