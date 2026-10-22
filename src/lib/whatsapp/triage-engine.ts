@@ -41,7 +41,7 @@ export type Triage = { category: Category; priority: Priority; customer: string 
 
 /** A text field the model may fill with anything: strings and numbers as they are, objects and lists flattened, blanks as null. */
 const text = (max: number) =>
-  z.unknown().transform((v) => {
+  z.unknown().optional().transform((v) => {
     if (v == null) return null;
     const s = typeof v === "string" || typeof v === "number" ? String(v) : Array.isArray(v) ? v.map((x) => (typeof x === "object" ? JSON.stringify(x) : String(x))).join("; ") : JSON.stringify(v);
     return s.replace(/\s+/g, " ").trim().slice(0, max) || null;
@@ -57,6 +57,7 @@ const AnswerSchema = z.object({
   details: text(1000),
   continues_previous: z
     .unknown()
+    .optional()
     .transform((v) => (typeof v === "boolean" ? v : typeof v === "string" ? !/^(false|no|0)$/i.test(v.trim()) : true)),
 });
 
