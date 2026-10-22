@@ -246,9 +246,10 @@ async function contactByPhone(db: SupabaseClient, phone: string | null): Promise
   if (!phone) return null;
   const tail = phone.slice(-7);
   const like = `%${tail.slice(0, 3)}%${tail.slice(3)}%`;
-  const { data } = await db.from("contacts").select("title, main_phone, alternate_phone").is("deleted_at", null).or(`main_phone.ilike.${like},alternate_phone.ilike.${like}`).limit(10);
+  const cols = ["main_phone", "alternate_phone", "intl_phone", "alternate_intl_phone"] as const;
+  const { data } = await db.from("contacts").select(`title, ${cols.join(", ")}`).is("deleted_at", null).or(cols.map((c) => `${c}.ilike.${like}`).join(",")).limit(10);
   const digits = (s: string | null) => (s ?? "").replace(/\D/g, "").replace(/^1(\d{10})$/, "$1");
-  const hit = ((data ?? []) as { title: string | null; main_phone: string | null; alternate_phone: string | null }[]).find((c) => digits(c.main_phone) === phone || digits(c.alternate_phone) === phone);
+  const hit = ((data ?? []) as ({ title: string | null } & Record<(typeof cols)[number], string | null>)[]).find((c) => cols.some((k) => digits(c[k]) === phone));
   return hit?.title?.trim() || null;
 }
 
