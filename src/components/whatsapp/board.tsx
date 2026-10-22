@@ -119,7 +119,10 @@ function Card({ card, people, visitsNewHref, showCategory }: { card: WaCard; peo
             <MessageCircle className="inline size-3 align-[-1px]" aria-hidden /> {card.message_count}
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap justify-end gap-1">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+          <button type="button" onClick={mute} disabled={pending} title={t("Mute this chat")} aria-label={t("Mute this chat")} className="inline-flex size-9 items-center justify-center rounded-md text-text-2 hover:bg-card hover:text-foreground md:size-7">
+            <BellOff className="size-4" aria-hidden />
+          </button>
           {showCategory && (
             <span className="rounded-md bg-card px-1.5 py-0.5 text-[11px] font-medium">
               <span aria-hidden>{CATEGORY_ICON[card.category]}</span> {t(CATEGORY_LABEL[card.category])}
