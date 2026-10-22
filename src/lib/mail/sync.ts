@@ -6,7 +6,9 @@ import { aiPickProject, MIN_CONFIDENCE } from "@/lib/ai/pick-project";
 import { queueEmailEvent, routeBacklog } from "@/lib/ai/route-email";
 import { loadAiSettings } from "@/lib/ai/review-queue";
 import { adminDb } from "@/lib/supabase/admin";
-import { fetchAnywhere, fetchRaw, findUid, IGNORED_LABEL, INBOX, loadSettings, moveToLabel, newUids, openPath, parseRaw, saveSettings, withMailbox, type GmailSettings, type Session } from "./client";
+import { fileMessage as fileText, readPending } from "@/lib/whatsapp/triage";
+import { formatPhone, isRingCentralText, parseRingCentralText } from "./sms";
+import { fetchAnywhere, fetchRaw, findUid, IGNORED_LABEL, INBOX, loadSettings, moveToLabel, newUids, openPath, parseRaw, saveSettings, trashMessage, TRASH, withMailbox, type GmailSettings, type Session } from "./client";
 import { actorLabel, emailFolderName, isSystemMail, matchProject, parseMessage, projectLabel, scoreCandidates, strongPick, type MailAttachment, type MatchBy, type ParsedMail, type ProjectForMatch } from "./engine";
 
 // F26-2 Gmail intake: every five minutes (pg_cron 'crm-mail' → /api/cron/mail) the mailbox is read over IMAP.
@@ -15,7 +17,7 @@ import { actorLabel, emailFolderName, isSystemMail, matchProject, parseMessage, 
 // OneDrive folder's name (Fred 2026-10-21: an email still in the inbox was not processed). Google's own
 // notices go to the label Ignored. The rest wait in the inbox and in the Assign list on Today.
 
-export type SyncSummary = { read: number; filed: number; waiting: number; moved: number; routed: number; errors: string[]; skipped?: string };
+export type SyncSummary = { read: number; filed: number; waiting: number; moved: number; routed: number; texts: number; errors: string[]; skipped?: string };
 export type StoredAttachment = MailAttachment & { item_id?: string; error?: string };
 
 const FIRST_LOOKBACK_MS = 30 * 24 * 3600_000;
@@ -88,9 +90,9 @@ async function fileInGmail(db: SupabaseClient, box: Session, mailId: number, gma
 /** Reads the new emails since the last check (never throws: the outcome is kept in the settings). */
 export async function syncMail(): Promise<SyncSummary> {
   const s = await loadSettings();
-  if (!s) return { read: 0, filed: 0, waiting: 0, moved: 0, routed: 0, errors: [], skipped: "Gmail is not connected" };
+  if (!s) return { read: 0, filed: 0, waiting: 0, moved: 0, routed: 0, texts: 0, errors: [], skipped: "Gmail is not connected" };
   const db = adminDb();
-  const out: SyncSummary = { read: 0, filed: 0, waiting: 0, moved: 0, routed: 0, errors: [] };
+  const out: SyncSummary = { read: 0, filed: 0, waiting: 0, moved: 0, routed: 0, texts: 0, errors: [] };
   const started = Date.now();
   let lastUid = s.last_uid;
   let uidValidity = s.uid_validity;
@@ -108,6 +110,11 @@ export async function syncMail(): Promise<SyncSummary> {
           const parsed = await readOne(box, uid);
           lastUid = uid;
           if (!parsed) continue;
+          // F31: a text message RingCentral emailed us joins the WhatsApp board and leaves the mailbox.
+          if (isRingCentralText(parsed.from.email, parsed.subject)) {
+            if (await ingestText(db, box, parsed, uid)) out.texts++;
+            continue;
+          }
           const system = isSystemMail(parsed.from.email);
           const decided = system
             ? { match: null, suggestions: [] as Suggestion[], aiTried: false }
@@ -164,6 +171,8 @@ export async function syncMail(): Promise<SyncSummary> {
       out.errors.push(...again.errors);
       // Emails processed earlier that are still in the inbox (assigned by hand before this, a move that failed).
       out.moved += await labelBacklog(db, box);
+      // F31: texts whose chat has been quiet for two minutes get their card read (the crm-push cron is the fallback).
+      if (out.texts) await readPending(db).catch(() => 0);
     });
     await save({ last_uid: lastUid, uid_validity: uidValidity, last_sync_at: new Date().toISOString(), last_sync_error: out.errors.length ? out.errors.slice(0, 3).join(" · ") : null, read_total: s.read_total + out.read });
     // F26-3: Claude reads the emails filed just now (and any left from before), within what is left of the budget.
@@ -181,6 +190,73 @@ export async function syncMail(): Promise<SyncSummary> {
 async function save(patch: Partial<GmailSettings>) {
   const cur = await loadSettings();
   if (cur) await saveSettings({ ...cur, ...patch });
+}
+
+/**
+ * F31: one RingCentral "New Text Message" email → a wa_messages row (source 'sms', chat "SMS · name or number")
+ * filed on its conversation like a WhatsApp notification, a mail_messages row for the record, and the email
+ * into Gmail's Trash. Returns false when the email had no readable text (it is then ignored, not trashed).
+ */
+async function ingestText(db: SupabaseClient, box: Session, parsed: ParsedMail, uid: number): Promise<boolean> {
+  const text = parseRingCentralText({ subject: parsed.subject, text: parsed.text });
+  const who = text ? await contactByPhone(db, text.phone) : null;
+  const number = text?.phone ? formatPhone(text.phone) : null;
+  const chat = text ? `SMS · ${who ?? number ?? text.sender}` : null;
+  const row = {
+    gmail_id: parsed.gmailId,
+    thread_id: parsed.threadId,
+    uid,
+    uid_validity: box.uidValidity,
+    received_at: parsed.receivedAt,
+    from_name: text ? (who ?? text.sender) : parsed.from.name || null,
+    from_email: parsed.from.email || null,
+    to_text: parsed.to || null,
+    subject: parsed.cleanSubject,
+    snippet: text?.body.replace(/\s+/g, " ").slice(0, 200) ?? parsed.snippet,
+    body_text: text?.body ?? parsed.text,
+    inner_senders: [],
+    attachments: [],
+    status: "ignored",
+    matched_by: text ? "sms" : null,
+  };
+  const { data: inserted, error } = await db.from("mail_messages").insert(row).select("id").single();
+  if (error) return false;
+  const mailId = (inserted as { id: number }).id;
+  if (!text || !chat) {
+    await fileInGmail(db, box, mailId, parsed.gmailId, uid, IGNORED_LABEL);
+    return false;
+  }
+  const notifId = /^\d{1,18}$/.test(parsed.gmailId) ? parsed.gmailId : String(hash53(parsed.gmailId));
+  const { data: wa } = await db
+    .from("wa_messages")
+    .upsert({ source: "sms", device: "ringcentral-email", notif_id: notifId, captured_at: parsed.receivedAt, chat, sender: who ?? number ?? text.sender, body: text.body }, { onConflict: "device,notif_id", ignoreDuplicates: true })
+    .select("id");
+  const waId = (wa as { id: number }[] | null)?.[0]?.id;
+  if (waId) {
+    const convId = await fileText(db, waId);
+    if (convId) await db.from("wa_conversations").update({ source: "sms" }).eq("id", convId).eq("chat", chat);
+  }
+  const trashed = await trashMessage(box, uid).catch(() => false);
+  await db.from("mail_messages").update({ gmail_label: trashed ? TRASH : NOT_IN_INBOX }).eq("id", mailId);
+  return true;
+}
+
+/** The contact whose phone this is (main or alternate), as "First Last", else null. */
+async function contactByPhone(db: SupabaseClient, phone: string | null): Promise<string | null> {
+  if (!phone) return null;
+  const tail = phone.slice(-7);
+  const like = `%${tail.slice(0, 3)}%${tail.slice(3)}%`;
+  const { data } = await db.from("contacts").select("title, main_phone, alternate_phone").is("deleted_at", null).or(`main_phone.ilike.${like},alternate_phone.ilike.${like}`).limit(10);
+  const digits = (s: string | null) => (s ?? "").replace(/\D/g, "").replace(/^1(\d{10})$/, "$1");
+  const hit = ((data ?? []) as { title: string | null; main_phone: string | null; alternate_phone: string | null }[]).find((c) => digits(c.main_phone) === phone || digits(c.alternate_phone) === phone);
+  return hit?.title?.trim() || null;
+}
+
+/** A stable 53-bit number for a Message-ID (only when Gmail gave no numeric id). */
+function hash53(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % Number.MAX_SAFE_INTEGER;
+  return h;
 }
 
 /** The emails in the Assign list, matched again with today's projects, threads and rules (newest 30). */

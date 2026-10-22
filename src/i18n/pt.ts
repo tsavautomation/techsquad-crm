@@ -1997,7 +1997,8 @@ export const PT: Record<string, string> = {
   "{a} on project timelines · {b} waiting in the Assign list · {c} ignored": "{a} nas linhas do tempo · {b} esperando na lista Atribuir · {c} ignorados",
   "Not connected. Nothing is read from the mailbox.": "Não conectado. Nada é lido da caixa de e-mail.",
   "Connect the mailbox": "Conectar a caixa de e-mail",
-  "{read} new: {filed} on project timelines, {waiting} to assign, {moved} moved out of the inbox{errors}": "{read} novos: {filed} nas linhas do tempo, {waiting} para atribuir, {moved} tirados da caixa de entrada{errors}",
+  "{read} new: {filed} on project timelines, {waiting} to assign, {moved} moved out of the inbox{texts}{errors}": "{read} novos: {filed} nas linhas do tempo, {waiting} para atribuir, {moved} tirados da caixa de entrada{texts}{errors}",
+  "texts to the WhatsApp board": "SMS para o quadro do WhatsApp",
   "errors": "erros",
   "Disconnect the mailbox? Emails already on the timelines stay; nothing new is read until it is connected again.": "Desconectar a caixa de e-mail? Os e-mails já nas linhas do tempo ficam; nada novo é lido até conectar de novo.",
   "Check the mailbox now": "Verificar a caixa de e-mail agora",
@@ -2177,4 +2178,5 @@ export const PT: Record<string, string> = {
   "copied {field}": "copiou {field}",
   "showed {field}": "mostrou {field}",
   "https://…": "https://…",
+  "Text messages RingCentral emails us (\"New Text Message from …\", sent on by the cPanel filter) go to the WhatsApp board as a conversation per number and are then deleted from the mailbox.": "As mensagens de texto que o RingCentral nos envia por e-mail (\"New Text Message from …\", repassadas pelo filtro do cPanel) vão para o quadro do WhatsApp como uma conversa por número e depois são apagadas da caixa de e-mail.",
 };

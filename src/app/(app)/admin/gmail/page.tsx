@@ -47,7 +47,8 @@ export default async function GmailPage() {
       </p>
       <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{t("Gmail intake")}</h1>
       <p className="mb-1 text-xs text-muted-foreground">{t("The CRM mailbox: forward project emails to {mailbox} with the project name or #number in the subject. Every five minutes the CRM reads it, puts each email on its project's timeline and files the attachments in OneDrive; what matches nothing waits in the Assign list on Today.", { mailbox: MAILBOX })}</p>
-      <p className="mb-4 text-xs text-muted-foreground">{t("A processed email leaves the Gmail inbox: filed ones go to the label Projects › the project, ignored ones to Ignored. Whatever is still in the inbox was not processed.")}</p>
+      <p className="mb-1 text-xs text-muted-foreground">{t("A processed email leaves the Gmail inbox: filed ones go to the label Projects › the project, ignored ones to Ignored. Whatever is still in the inbox was not processed.")}</p>
+      <p className="mb-4 text-xs text-muted-foreground">{t("Text messages RingCentral emails us (\"New Text Message from …\", sent on by the cPanel filter) go to the WhatsApp board as a conversation per number and are then deleted from the mailbox.")}</p>
 
       <section className="mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card">
         <h2 className="mb-2 text-[15px] font-semibold tracking-tight">{t("Status")}</h2>

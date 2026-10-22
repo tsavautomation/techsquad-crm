@@ -18,6 +18,7 @@ const HOST = "imap.gmail.com";
 export const INBOX = "INBOX";
 export const ALL_MAIL = "[Gmail]/All Mail";
 export const IGNORED_LABEL = "Ignored";
+export const TRASH = "[Gmail]/Trash";
 
 export type GmailSettings = {
   account: string;
@@ -148,6 +149,12 @@ export async function ensureLabel(client: ImapFlow, path: string): Promise<void>
       if (!/exist/i.test(e instanceof Error ? e.message : String(e))) throw e;
     }
   }
+}
+
+/** Deletes one message of the open mailbox the Gmail way: into Trash (Fred 2026-10-22: texts "we no longer need"). */
+export async function trashMessage(box: Session, uid: number): Promise<boolean> {
+  const r = await box.client.messageMove(String(uid), TRASH, { uid: true });
+  return Boolean(r);
 }
 
 /** Moves one message of the open mailbox into a label (out of the inbox). */
