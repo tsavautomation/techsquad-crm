@@ -14,7 +14,8 @@ export async function generateMetadata() {
 }
 
 // F28 WhatsApp Monitor (Fred 2026-10-21): at a glance, what came in on WhatsApp Business in the last days.
-// The capture PC forwards each notification, Claude reads it, and the team works the cards here.
+// The capture PC forwards each notification; messages gather per chat, Claude reads the thread once it goes quiet
+// (F28-b), and the team works the cards here; a card tied to a project also lives on that project's timeline.
 // Red = urgent, yellow = needs something from us, green = nothing needed (Fred's three colours).
 
 export default async function WhatsAppPage(props: PageProps<"/whatsapp">) {
@@ -57,9 +58,9 @@ export default async function WhatsAppPage(props: PageProps<"/whatsapp">) {
         ))}
       </div>
 
-      <PeriodSummary days={days} empty={board.tasks.length === 0} />
+      <PeriodSummary days={days} empty={board.cards.length === 0} />
 
-      <WaBoard tasks={board.tasks} people={board.people} />
+      <WaBoard cards={board.cards} people={board.people} />
     </div>
   );
 }

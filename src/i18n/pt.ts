@@ -2105,6 +2105,11 @@ export const PT: Record<string, string> = {
   "No WhatsApp messages in this period.": "Nenhuma mensagem de WhatsApp neste período.",
   "Refreshes every 20 seconds.": "Atualiza a cada 20 segundos.",
   "AI could not read this message: {reason}": "A IA não conseguiu ler esta mensagem: {reason}",
-  "Details and the original message": "Detalhes e a mensagem original",
+  "New messages: the AI reads them once the chat goes quiet.": "Mensagens novas: a IA lê quando a conversa ficar quieta.",
+  "AI could not read this conversation: {reason}": "A IA não conseguiu ler esta conversa: {reason}",
+  "Details and the messages ({n})": "Detalhes e as mensagens ({n})",
+  "Which project is this about?": "De qual projeto se trata?",
+  "Take off the project": "Tirar do projeto",
+  "Change": "Trocar",
   "WhatsApp board (messages from the WhatsApp PC, read by AI)": "Quadro do WhatsApp (mensagens do PC do WhatsApp, lidas pela IA)",
 };

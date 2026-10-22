@@ -6385,11 +6385,115 @@ export type Database = {
           },
         ]
       }
+      wa_conversations: {
+        Row: {
+          ai_at: string | null
+          ai_pending: boolean
+          assigned_to: string | null
+          category: string
+          chat: string
+          created_at: string
+          customer: string | null
+          details: string | null
+          event_id: number | null
+          id: number
+          last_message_at: string
+          message_count: number
+          phone: string | null
+          priority: string
+          project_id: number | null
+          read_through: number | null
+          source: string
+          started_at: string
+          status: string
+          summary: string
+          system: string | null
+          triage: string
+          triage_error: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_at?: string | null
+          ai_pending?: boolean
+          assigned_to?: string | null
+          category?: string
+          chat: string
+          created_at?: string
+          customer?: string | null
+          details?: string | null
+          event_id?: number | null
+          id?: number
+          last_message_at?: string
+          message_count?: number
+          phone?: string | null
+          priority?: string
+          project_id?: number | null
+          read_through?: number | null
+          source?: string
+          started_at?: string
+          status?: string
+          summary?: string
+          system?: string | null
+          triage?: string
+          triage_error?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_at?: string | null
+          ai_pending?: boolean
+          assigned_to?: string | null
+          category?: string
+          chat?: string
+          created_at?: string
+          customer?: string | null
+          details?: string | null
+          event_id?: number | null
+          id?: number
+          last_message_at?: string
+          message_count?: number
+          phone?: string | null
+          priority?: string
+          project_id?: number | null
+          read_through?: number | null
+          source?: string
+          started_at?: string
+          status?: string
+          summary?: string
+          system?: string | null
+          triage?: string
+          triage_error?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_conversations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "project_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_conversations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_conversations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wa_messages: {
         Row: {
           body: string
           captured_at: string
           chat: string
+          conversation_id: number | null
           created_at: string
           device: string
           id: number
@@ -6401,6 +6505,7 @@ export type Database = {
           body: string
           captured_at?: string
           chat: string
+          conversation_id?: number | null
           created_at?: string
           device: string
           id?: number
@@ -6412,6 +6517,7 @@ export type Database = {
           body?: string
           captured_at?: string
           chat?: string
+          conversation_id?: number | null
           created_at?: string
           device?: string
           id?: number
@@ -6419,72 +6525,12 @@ export type Database = {
           sender?: string | null
           source?: string
         }
-        Relationships: []
-      }
-      wa_tasks: {
-        Row: {
-          assigned_to: string | null
-          category: string
-          chat: string
-          created_at: string
-          customer: string | null
-          details: string | null
-          id: number
-          message_id: number
-          occurred_at: string
-          phone: string | null
-          priority: string
-          status: string
-          summary: string
-          system: string | null
-          triage: string
-          triage_error: string | null
-          updated_at: string
-        }
-        Insert: {
-          assigned_to?: string | null
-          category?: string
-          chat: string
-          created_at?: string
-          customer?: string | null
-          details?: string | null
-          id?: number
-          message_id: number
-          occurred_at: string
-          phone?: string | null
-          priority?: string
-          status?: string
-          summary: string
-          system?: string | null
-          triage?: string
-          triage_error?: string | null
-          updated_at?: string
-        }
-        Update: {
-          assigned_to?: string | null
-          category?: string
-          chat?: string
-          created_at?: string
-          customer?: string | null
-          details?: string | null
-          id?: number
-          message_id?: number
-          occurred_at?: string
-          phone?: string | null
-          priority?: string
-          status?: string
-          summary?: string
-          system?: string | null
-          triage?: string
-          triage_error?: string | null
-          updated_at?: string
-        }
         Relationships: [
           {
-            foreignKeyName: "wa_tasks_message_id_fkey"
-            columns: ["message_id"]
+            foreignKeyName: "wa_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
             isOneToOne: false
-            referencedRelation: "wa_messages"
+            referencedRelation: "wa_conversations"
             referencedColumns: ["id"]
           },
         ]

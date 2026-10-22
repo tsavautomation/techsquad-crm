@@ -5,6 +5,7 @@ import { deliverQueued } from "@/lib/engine/email";
 import { retryFiling, syncMail } from "@/lib/mail/sync";
 import { runPushReminders } from "@/lib/push/reminders";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
+import { fileMissing, readPending } from "@/lib/whatsapp/triage";
 
 // Scheduled automations (SPEC §5 'daily' / 'hourly', PLAN M11). Callers send
 // "Authorization: Bearer <CRON_SECRET>".
@@ -14,7 +15,8 @@ import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 //   /api/cron/hourly  run the hourly check now (manual)
 //   /api/cron/events  catch up on change history and retry queued email
 //   /api/cron/mail    read the CRM mailbox (F26-2; pg_cron every five minutes): answers at once, then works
-//   /api/cron/push    F27-b reminders (arrived without check-in, still clocked in, missing report); pg_cron every five minutes
+//   /api/cron/push    F27-b reminders (arrived without check-in, still clocked in, missing report); pg_cron every five minutes.
+//                     Also reads the WhatsApp conversations that went quiet (F28-b), as the fallback to the ingest's own delayed reading.
 
 export const maxDuration = 300;
 
@@ -60,6 +62,8 @@ export async function GET(req: Request, ctx: RouteContext<"/api/cron/[kind]">) {
     after(async () => {
       try {
         console.log("cron push:", JSON.stringify(await runPushReminders()));
+        const db = adminDb();
+        console.log("cron whatsapp:", JSON.stringify({ filed: await fileMissing(db).catch(() => 0), read: await readPending(db).catch(() => 0) }));
       } catch (e) {
         console.error("cron push failed:", e);
       }

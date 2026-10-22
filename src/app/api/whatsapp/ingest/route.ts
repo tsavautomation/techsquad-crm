@@ -2,13 +2,15 @@ import { timingSafeEqual } from "node:crypto";
 import { after } from "next/server";
 import { z } from "zod";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
-import { triageMessage, triageMissing } from "@/lib/whatsapp/triage";
+import { fileMessage, fileMissing, readPending } from "@/lib/whatsapp/triage";
+import { QUIET_MS } from "@/lib/whatsapp/triage-engine";
 
 // F28 WhatsApp Monitor: the capture PC (wa_agent.py) POSTs each WhatsApp notification here with the header
-// X-Agent-Secret = WHATSAPP_AGENT_SECRET. The message is stored at once and the AI reading runs after the
-// answer; a resend after a restart (same device + notif_id) answers 200 and changes nothing.
+// X-Agent-Secret = WHATSAPP_AGENT_SECRET. The message is stored and put on its chat's conversation at once;
+// the AI reading waits until the chat has been quiet (F28-b), so a greeting followed by the real request becomes
+// one card. A resend after a restart (same device + notif_id) answers 200 and changes nothing.
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const Body = z.object({
   device: z.string().trim().min(1).max(80),
@@ -26,6 +28,8 @@ function authorized(req: Request) {
   const want = Buffer.from(secret);
   return got.length === want.length && timingSafeEqual(got, want);
 }
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function POST(req: Request) {
   if (!authorized(req)) return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
@@ -47,15 +51,18 @@ export async function POST(req: Request) {
   if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
   const id = (data as { id: number }[] | null)?.[0]?.id;
   if (!id) return Response.json({ ok: true, duplicate: true });
+  const conversationId = await fileMessage(db, id);
 
   after(async () => {
     try {
-      const r = await triageMessage(db, id);
-      const caught = await triageMissing(db).catch(() => 0);
-      console.log("whatsapp ingest:", JSON.stringify({ id, ...r, caught }));
+      const filed = await fileMissing(db).catch(() => 0);
+      // Wait out the quiet period, then read whatever has gone quiet (a newer message postpones its chat).
+      await sleep(QUIET_MS + 5_000);
+      const read = await readPending(db);
+      console.log("whatsapp ingest:", JSON.stringify({ id, conversationId, filed, read }));
     } catch (e) {
-      console.error("whatsapp triage failed:", e);
+      console.error("whatsapp reading failed:", e);
     }
   });
-  return Response.json({ ok: true, id });
+  return Response.json({ ok: true, id, conversation_id: conversationId });
 }
