@@ -249,7 +249,7 @@ async function contactByPhone(db: SupabaseClient, phone: string | null): Promise
   const cols = ["main_phone", "alternate_phone", "intl_phone", "alternate_intl_phone"] as const;
   const { data } = await db.from("contacts").select(`title, ${cols.join(", ")}`).is("deleted_at", null).or(cols.map((c) => `${c}.ilike.${like}`).join(",")).limit(10);
   const digits = (s: string | null) => (s ?? "").replace(/\D/g, "").replace(/^1(\d{10})$/, "$1");
-  const hit = ((data ?? []) as ({ title: string | null } & Record<(typeof cols)[number], string | null>)[]).find((c) => cols.some((k) => digits(c[k]) === phone));
+  const hit = ((data ?? []) as unknown as ({ title: string | null } & Record<(typeof cols)[number], string | null>)[]).find((c) => cols.some((k) => digits(c[k]) === phone));
   return hit?.title?.trim() || null;
 }
 
