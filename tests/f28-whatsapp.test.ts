@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanPhone, compareCards, CONVERSATION_IDLE_MS, fallbackTriage, joinsConversation, parseTriage, QUIET_MS, readyToRead, telHref, threadPrompt, threadText, tone, TRIAGE_SYSTEM } from "@/lib/whatsapp/triage-engine";
+import { cleanPhone, compareCards, ignoredByRule, CONVERSATION_IDLE_MS, fallbackTriage, joinsConversation, parseTriage, QUIET_MS, readyToRead, telHref, threadPrompt, threadText, tone, TRIAGE_SYSTEM } from "@/lib/whatsapp/triage-engine";
 
 // F28 WhatsApp Monitor (SPEC §9.1 F28-a / F28-b): reading Claude's triage, the fallback, the grouping of messages
 // into conversations and Fred's three colours.
@@ -113,5 +113,23 @@ describe("Fred's colours and the board order", () => {
       { id: 4, priority: "normal" as const, last_message_at: "2026-10-21T09:00:00Z" },
     ];
     expect([...rows].sort(compareCards).map((r) => r.id)).toEqual([2, 3, 4, 1]);
+  });
+});
+
+describe("ignore rules (F28-d)", () => {
+  const timeTs = { chat: "TIME TS", kind: "regex" as const, pattern: "\\mcheck(ing|ed|in|out|[\\s/-]*(in|out))\\M" };
+  const any = { chat: null, kind: "contains" as const, pattern: "Bom dia" };
+  it("TIME TS check in / check out and the variations the team actually types make no card", () => {
+    for (const body of ["JP Joao Paulo Amaral‎: Checking warehouse", "Tech Squad - Fabio: Checkout warehouse", "Roberto Pizini: Checking/ checkout Enfield", "Check in", "check-out", "CHECKED IN at the Womack house", "checkin"])
+      expect(ignoredByRule("TIME TS", body, [timeTs])?.chat).toBe("TIME TS");
+    expect(ignoredByRule("time ts", "checking kilowatts", [timeTs])).not.toBeNull();
+  });
+  it("other chats and other texts still make cards; a chat-less rule applies everywhere, ignoring case and accents", () => {
+    expect(ignoredByRule("John Smith", "can you check in on the Crestron?", [timeTs])).toBeNull();
+    expect(ignoredByRule("TIME TS", "the van needs gas", [timeTs])).toBeNull();
+    expect(ignoredByRule("Maria", "bom dia, tudo bem?", [any])?.pattern).toBe("Bom dia");
+    expect(ignoredByRule("Maria", "BÓM DIA", [any])).not.toBeNull();
+    expect(ignoredByRule("Maria", "boa tarde", [any])).toBeNull();
+    expect(ignoredByRule("Maria", "anything", [{ chat: null, kind: "regex", pattern: "(" }])).toBeNull();
   });
 });

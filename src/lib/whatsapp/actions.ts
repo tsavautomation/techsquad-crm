@@ -89,6 +89,32 @@ export async function unmuteChatAction(chat: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+/** F28-d: adds an ignore rule: messages of `chat` (blank = every chat) containing `text` make no card. */
+export async function addIgnoreRuleAction(chat: string, text: string): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!canSeeWhatsApp(user)) return { ok: false, message: "You don't have the WhatsApp permission." };
+  const pattern = text.trim();
+  const c = chat.trim();
+  if (!pattern || pattern.length > 200 || c.length > 300) return { ok: false, message: "Type the text to ignore." };
+  const db = await recordsDb();
+  const { error } = await db.from("wa_ignore_rules").insert({ chat: c || null, kind: "contains", pattern, created_by: user.id });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/whatsapp/muted");
+  return { ok: true };
+}
+
+/** F28-d: removes an ignore rule. */
+export async function deleteIgnoreRuleAction(id: number): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!canSeeWhatsApp(user)) return { ok: false, message: "You don't have the WhatsApp permission." };
+  if (!Number.isInteger(id)) return { ok: false, message: "Bad request." };
+  const db = await recordsDb();
+  const { error } = await db.from("wa_ignore_rules").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/whatsapp/muted");
+  return { ok: true };
+}
+
 export type SummaryResult = { ok: true; text: string } | { ok: false; message: string };
 
 /** Two or three sentences about the period, written by Claude from the cards (not from the raw messages). */

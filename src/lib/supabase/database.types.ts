@@ -6559,6 +6559,44 @@ export type Database = {
           },
         ]
       }
+      wa_ignore_rules: {
+        Row: {
+          chat: string | null
+          created_at: string
+          created_by: string | null
+          id: number
+          kind: string
+          note: string | null
+          pattern: string
+        }
+        Insert: {
+          chat?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          kind?: string
+          note?: string | null
+          pattern: string
+        }
+        Update: {
+          chat?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          kind?: string
+          note?: string | null
+          pattern?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_ignore_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wa_messages: {
         Row: {
           body: string

@@ -96,3 +96,11 @@ export async function loadMuted(db: SupabaseClient): Promise<MutedChat[]> {
 }
 
 export const mutedCount = async (db: SupabaseClient): Promise<number> => (await db.from("wa_muted_chats").select("chat", { count: "exact", head: true })).count ?? 0;
+
+export type IgnoreRuleRow = { id: number; chat: string | null; kind: "contains" | "regex"; pattern: string; note: string | null; created_at: string };
+
+/** F28-d: the ignore rules, for the settings list. */
+export async function loadIgnoreRules(db: SupabaseClient): Promise<IgnoreRuleRow[]> {
+  const { data } = await db.from("wa_ignore_rules").select("id, chat, kind, pattern, note, created_at").order("chat").order("id");
+  return (data ?? []) as IgnoreRuleRow[];
+}

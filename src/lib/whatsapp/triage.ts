@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { aiConfigured, claude, describeError } from "@/lib/ai/claude";
 import { formatDateTime } from "@/lib/dates";
-import { fallbackTriage, joinsConversation, parseTriage, QUIET_MS, THREAD_LIMIT, threadPrompt, threadText, TRIAGE_SYSTEM, type ThreadMessage, type Triage } from "./triage-engine";
+import { fallbackTriage, ignoredByRule, joinsConversation, parseTriage, QUIET_MS, THREAD_LIMIT, threadPrompt, threadText, TRIAGE_SYSTEM, type IgnoreRule, type ThreadMessage, type Triage } from "./triage-engine";
 
 // F28-b: messages gather on conversations; after a quiet period Claude reads the thread and updates the card.
 // Never throws: when the key is missing or the model fails, the card still shows the latest message's first
@@ -24,8 +24,9 @@ export async function fileMessage(db: SupabaseClient, messageId: number): Promis
   if (!m) return null;
   if (m.conversation_id) return m.conversation_id;
   // F28-c: a muted chat makes no card; the message is kept, flagged, for when the chat is unmuted.
-  const { data: muted } = await db.from("wa_muted_chats").select("chat").eq("chat", m.chat).maybeSingle();
-  if (muted) {
+  const [{ data: muted }, { data: rules }] = await Promise.all([db.from("wa_muted_chats").select("chat").eq("chat", m.chat).maybeSingle(), db.from("wa_ignore_rules").select("chat, kind, pattern")]);
+  // F28-d: an ignore rule (check in / check out in TIME TS, …) keeps the message off the board too.
+  if (muted || ignoredByRule(m.chat, m.body, (rules ?? []) as IgnoreRule[])) {
     await db.from("wa_messages").update({ muted: true }).eq("id", m.id);
     return null;
   }

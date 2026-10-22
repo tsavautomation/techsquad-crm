@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { IgnoreRules } from "@/components/whatsapp/ignore-rules";
 import { UnmuteButton } from "@/components/whatsapp/unmute-button";
 import { requireUser } from "@/lib/auth/session";
 import { formatDateTime } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
-import { canSeeWhatsApp, loadMuted } from "@/lib/whatsapp/load";
+import { canSeeWhatsApp, loadIgnoreRules, loadMuted } from "@/lib/whatsapp/load";
 import { getT } from "@/i18n/server";
 
 export async function generateMetadata() {
@@ -13,12 +14,14 @@ export async function generateMetadata() {
 }
 
 // F28-c WhatsApp › Muted chats (Fred 2026-10-22): the groups and contacts whose messages make no cards, with Unmute.
+// F28-d: plus the ignore rules (a chat and a text, e.g. TIME TS + check in / check out).
 
 export default async function MutedChatsPage() {
   const tr = await getT();
   const user = await requireUser();
   if (!canSeeWhatsApp(user)) notFound();
-  const muted = await loadMuted(await recordsDb());
+  const db = await recordsDb();
+  const [muted, rules] = await Promise.all([loadMuted(db), loadIgnoreRules(db)]);
 
   return (
     <div className="mx-auto max-w-[800px]">
@@ -42,6 +45,7 @@ export default async function MutedChatsPage() {
           ))}
         </ul>
       )}
+      <IgnoreRules rules={rules} />
     </div>
   );
 }

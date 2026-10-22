@@ -143,3 +143,27 @@ export function compareCards<T extends { priority: Priority; last_message_at: st
 export function threadText(chat: string, messages: ThreadMessage[], formatAt: (iso: string) => string): string {
   return messages.map((m) => `${formatAt(m.at)} · ${m.sender ?? chat}: ${m.body.trim()}`).join("\n");
 }
+
+export type IgnoreRule = { chat: string | null; kind: "contains" | "regex"; pattern: string };
+
+const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ‎‏]/g, "").toLowerCase().trim();
+
+/** F28-d: a message makes no card when a rule for its chat (or for every chat) matches its text. */
+export function ignoredByRule(chat: string, body: string, rules: IgnoreRule[]): IgnoreRule | null {
+  const c = fold(chat);
+  const text = fold(body);
+  for (const r of rules) {
+    if (r.chat && fold(r.chat) !== c) continue;
+    if (r.kind === "contains") {
+      if (text.includes(fold(r.pattern))) return r;
+    } else {
+      try {
+        // Postgres word boundaries (\m \M, as the seeded rule is written) become JavaScript's \b.
+        if (new RegExp(r.pattern.replace(/\\m|\\M/g, "\\b"), "iu").test(text)) return r;
+      } catch {
+        // a bad pattern ignores nothing
+      }
+    }
+  }
+  return null;
+}
