@@ -10,7 +10,7 @@ const SUBJECT = /new\s+text\s+message\s+from\s+(.+?)\s*$/i;
 /** Lines of RingCentral's template that are not the text itself. */
 const BOILERPLATE = [
   /ringcentral/i,
-  /new (?:text|sms) message/i,
+  /\bnew (?:text|sms) message\b/i,
   /^\s*(?:from|to|received|sent|date|time|phone number|extension|line)\s*:/i,
   /\breply\b.*\b(?:app|link|click|here)\b/i,
   /^\s*(?:https?:\/\/|www\.)/i,
