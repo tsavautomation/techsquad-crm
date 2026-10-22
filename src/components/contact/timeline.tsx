@@ -28,6 +28,23 @@ const FILTERS: { key: string; label: string; kinds: TimelineKind[] }[] = [
 ];
 const SHOW = 25;
 
+/** The entry's text: four lines, and a button to read all of it (an email, a long note) and fold it back. */
+function Detail({ text, email }: { text: string; email: boolean }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const long = text.length > 280 || text.split("\n").length > 4;
+  return (
+    <div className="mt-0.5">
+      <p className={cn("text-sm whitespace-pre-line text-foreground/90", !open && "line-clamp-4")}>{text}</p>
+      {long && (
+        <button type="button" onClick={() => setOpen((o) => !o)} className="mt-1 h-8 rounded-md border px-2.5 text-xs font-medium hover:bg-muted">
+          {open ? t("Show less") : email ? t("Read the whole email") : t("Show more")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function Timeline({ items, canEdit = false }: { items: TimelineItem[]; canEdit?: boolean }) {
   const t = useT();
   const [filter, setFilter] = useState("all");
@@ -89,7 +106,7 @@ export function Timeline({ items, canEdit = false }: { items: TimelineItem[]; ca
                   {canEdit && <EventMovePicker eventId={i.ai.eventId} />}
                 </div>
               )}
-              {i.detail && <p className="mt-0.5 line-clamp-4 text-sm whitespace-pre-line text-foreground/90">{i.detail}</p>}
+              {i.detail && <Detail text={i.detail} email={i.kind === "email"} />}
               {times.length > 0 && <p className="mt-0.5 text-xs text-text-2">{times.join(" · ")}</p>}
               {i.files && i.files.length > 0 && (
                 <ul className="mt-1 flex flex-wrap gap-1.5">

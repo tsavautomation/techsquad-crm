@@ -2148,4 +2148,6 @@ export const PT: Record<string, string> = {
   "Visit status: {status}": "Status da visita: {status}",
   "Correct times or positions": "Corrigir horários ou posições",
   "Looks like:": "Parece ser:",
+  "Read the whole email": "Ler o e-mail inteiro",
+  "Show less": "Mostrar menos",
 };
