@@ -183,7 +183,8 @@ export const AGENT_DOWN_MS = 10 * 60_000;
 /** Heartbeat fine but nothing forwarded for this long in business hours = probably not capturing. */
 export const AGENT_QUIET_MS = 2 * 60 * 60_000;
 
-export type AgentState = "ok" | "down" | "quiet" | "unknown";
+/** "legacy": the PC still runs agent v1, which sends no heartbeat; only its messages are known. */
+export type AgentState = "ok" | "down" | "quiet" | "unknown" | "legacy";
 
 /** Monday to Saturday, 7 AM to 7 PM Eastern: when silence means something. */
 export function businessHoursET(nowMs: number): boolean {
@@ -193,8 +194,9 @@ export function businessHoursET(nowMs: number): boolean {
   return wd !== "Sun" && hour >= 7 && hour < 19;
 }
 
-export function agentState(a: { last_seen_at: string | null; last_message_at: string | null }, nowMs: number): AgentState {
+export function agentState(a: { version?: string | null; last_seen_at: string | null; last_message_at: string | null }, nowMs: number): AgentState {
   if (!a.last_seen_at) return "unknown";
+  if (!a.version) return "legacy";
   if (nowMs - Date.parse(a.last_seen_at) > AGENT_DOWN_MS) return "down";
   if (businessHoursET(nowMs) && (!a.last_message_at || nowMs - Date.parse(a.last_message_at) > AGENT_QUIET_MS)) return "quiet";
   return "ok";

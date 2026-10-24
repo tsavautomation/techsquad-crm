@@ -2139,6 +2139,7 @@ export const PT: Record<string, string> = {
   "stopped: no sign of the agent since {when}": "parado: sem sinal do agente desde {when}",
   "running, but no message forwarded since {when}": "rodando, mas sem encaminhar mensagem desde {when}",
   "never heard from": "nunca deu sinal",
+  "agent v1, no heartbeat yet · last message {when}": "agente v1, ainda sem sinal de vida · última mensagem {when}",
   "running · last message {when}": "rodando · última mensagem {when}",
   "{n} queued on the PC": "{n} na fila do PC",
   "WhatsApp board (messages from the WhatsApp PC, read by AI)": "Quadro do WhatsApp (mensagens do PC do WhatsApp, lidas pela IA)",

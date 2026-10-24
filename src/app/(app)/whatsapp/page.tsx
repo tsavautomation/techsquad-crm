@@ -73,7 +73,7 @@ export default async function WhatsAppPage(props: PageProps<"/whatsapp">) {
           <p key={a.device} className={cn("mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border px-3 py-2 text-[13px]", bad ? "border-warn-fg/30 bg-warn-bg text-warn-fg" : "bg-card text-text-2")}>
             <MonitorSmartphone className="size-4 shrink-0" aria-hidden />
             <span className="font-medium">{tr("WhatsApp PC {device}", { device: a.device })}</span>
-            <span>{state === "down" ? tr("stopped: no sign of the agent since {when}", { when: a.last_seen_at ? formatDateTime(a.last_seen_at) : "?" }) : state === "quiet" ? tr("running, but no message forwarded since {when}", { when: a.last_message_at ? formatDateTime(a.last_message_at) : "?" }) : state === "unknown" ? tr("never heard from") : tr("running · last message {when}", { when: a.last_message_at ? formatDateTime(a.last_message_at) : "—" })}</span>
+            <span>{state === "down" ? tr("stopped: no sign of the agent since {when}", { when: a.last_seen_at ? formatDateTime(a.last_seen_at) : "?" }) : state === "quiet" ? tr("running, but no message forwarded since {when}", { when: a.last_message_at ? formatDateTime(a.last_message_at) : "?" }) : state === "unknown" ? tr("never heard from") : state === "legacy" ? tr("agent v1, no heartbeat yet · last message {when}", { when: a.last_message_at ? formatDateTime(a.last_message_at) : "—" }) : tr("running · last message {when}", { when: a.last_message_at ? formatDateTime(a.last_message_at) : "—" })}</span>
             {a.pending > 0 && <span>· {tr("{n} queued on the PC", { n: a.pending })}</span>}
             {a.version && <span className="text-xs opacity-70">· v{a.version}</span>}
           </p>

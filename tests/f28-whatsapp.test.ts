@@ -146,12 +146,14 @@ describe("the capture PC watch (F28-e)", () => {
   });
   it("down after 10 minutes without a heartbeat, quiet after 2 hours without a message in business hours, otherwise ok", () => {
     expect(agentState({ last_seen_at: null, last_message_at: null }, tue3pm)).toBe("unknown");
-    expect(agentState({ last_seen_at: min(11, tue3pm), last_message_at: min(5, tue3pm) }, tue3pm)).toBe("down");
-    expect(agentState({ last_seen_at: min(1, tue3pm), last_message_at: min(121, tue3pm) }, tue3pm)).toBe("quiet");
-    expect(agentState({ last_seen_at: min(1, tue3pm), last_message_at: null }, tue3pm)).toBe("quiet");
-    expect(agentState({ last_seen_at: min(1, tue3pm), last_message_at: min(30, tue3pm) }, tue3pm)).toBe("ok");
-    expect(agentState({ last_seen_at: min(1, tue11pm), last_message_at: min(600, tue11pm) }, tue11pm)).toBe("ok");
-    expect(agentState({ last_seen_at: min(1, sun), last_message_at: null }, sun)).toBe("ok");
+    // Until the PC runs agent v2 there is no heartbeat: no alarm, just "legacy".
+    expect(agentState({ version: "2.0", last_seen_at: min(600, tue3pm), last_message_at: min(600, tue3pm) }, tue3pm)).toBe("legacy");
+    expect(agentState({ version: "2.0", last_seen_at: min(11, tue3pm), last_message_at: min(5, tue3pm) }, tue3pm)).toBe("down");
+    expect(agentState({ version: "2.0", last_seen_at: min(1, tue3pm), last_message_at: min(121, tue3pm) }, tue3pm)).toBe("quiet");
+    expect(agentState({ version: "2.0", last_seen_at: min(1, tue3pm), last_message_at: null }, tue3pm)).toBe("quiet");
+    expect(agentState({ version: "2.0", last_seen_at: min(1, tue3pm), last_message_at: min(30, tue3pm) }, tue3pm)).toBe("ok");
+    expect(agentState({ version: "2.0", last_seen_at: min(1, tue11pm), last_message_at: min(600, tue11pm) }, tue11pm)).toBe("ok");
+    expect(agentState({ version: "2.0", last_seen_at: min(1, sun), last_message_at: null }, sun)).toBe("ok");
   });
   it("cuts a long summary at a word, never mid-word", () => {
     expect(cutAtWord("short", 20)).toBe("short");
