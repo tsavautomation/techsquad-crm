@@ -8,6 +8,8 @@ export const PUSH_EVENTS = [
   { kind: "arrived_no_check_in", label: "Arrived at the job, no check-in after 45 min" },
   { kind: "forgot_clock_out", label: "Still clocked in after hours" },
   { kind: "missing_report", label: "Report not sent by the evening" },
+  // F28-e (Fred 2026-10-23): the WhatsApp capture PC stopped or went quiet in business hours.
+  { kind: "whatsapp_silent", label: "WhatsApp PC stopped or silent" },
 ] as const;
 
 /** F27-b: the van has sat within this distance of the job for this long without a check-in. */

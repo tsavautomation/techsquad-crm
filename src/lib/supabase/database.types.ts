@@ -6596,6 +6596,36 @@ export type Database = {
           },
         ]
       }
+      wa_agents: {
+        Row: {
+          device: string
+          last_message_at: string | null
+          last_seen_at: string
+          pending: number
+          started_at: string | null
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          device: string
+          last_message_at?: string | null
+          last_seen_at?: string
+          pending?: number
+          started_at?: string | null
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          device?: string
+          last_message_at?: string | null
+          last_seen_at?: string
+          pending?: number
+          started_at?: string | null
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: []
+      }
       wa_conversations: {
         Row: {
           ai_at: string | null

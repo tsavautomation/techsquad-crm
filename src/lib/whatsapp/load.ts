@@ -104,3 +104,11 @@ export async function loadIgnoreRules(db: SupabaseClient): Promise<IgnoreRuleRow
   const { data } = await db.from("wa_ignore_rules").select("id, chat, kind, pattern, note, created_at").order("chat").order("id");
   return (data ?? []) as IgnoreRuleRow[];
 }
+
+export type AgentStatus = { device: string; version: string | null; last_seen_at: string | null; last_message_at: string | null; pending: number };
+
+/** F28-e: the capture PCs, for the status line on the board. */
+export async function loadAgents(db: SupabaseClient): Promise<AgentStatus[]> {
+  const { data } = await db.from("wa_agents").select("device, version, last_seen_at, last_message_at, pending").order("device");
+  return (data ?? []) as AgentStatus[];
+}

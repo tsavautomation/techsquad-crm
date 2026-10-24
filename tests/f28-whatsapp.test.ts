@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanPhone, compareCards, ignoredByRule, CONVERSATION_IDLE_MS, fallbackTriage, joinsConversation, parseTriage, QUIET_MS, readyToRead, telHref, threadPrompt, threadText, tone, TRIAGE_SYSTEM } from "@/lib/whatsapp/triage-engine";
+import { agentState, businessHoursET, cleanPhone, compareCards, cutAtWord, ignoredByRule, CONVERSATION_IDLE_MS, fallbackTriage, joinsConversation, parseTriage, QUIET_MS, readyToRead, telHref, threadPrompt, threadText, tone, TRIAGE_SYSTEM } from "@/lib/whatsapp/triage-engine";
 
 // F28 WhatsApp Monitor (SPEC §9.1 F28-a / F28-b): reading Claude's triage, the fallback, the grouping of messages
 // into conversations and Fred's three colours.
@@ -131,5 +131,34 @@ describe("ignore rules (F28-d)", () => {
     expect(ignoredByRule("Maria", "BÓM DIA", [any])).not.toBeNull();
     expect(ignoredByRule("Maria", "boa tarde", [any])).toBeNull();
     expect(ignoredByRule("Maria", "anything", [{ chat: null, kind: "regex", pattern: "(" }])).toBeNull();
+  });
+});
+
+describe("the capture PC watch (F28-e)", () => {
+  const tue3pm = Date.parse("2026-10-20T19:00:00Z"); // Tuesday 3 PM ET
+  const tue11pm = Date.parse("2026-10-21T03:00:00Z"); // Tuesday 11 PM ET
+  const sun = Date.parse("2026-10-18T16:00:00Z"); // Sunday noon ET
+  const min = (n: number, from: number) => new Date(from - n * 60_000).toISOString();
+  it("knows business hours in Eastern time, Monday to Saturday 7 to 7", () => {
+    expect(businessHoursET(tue3pm)).toBe(true);
+    expect(businessHoursET(tue11pm)).toBe(false);
+    expect(businessHoursET(sun)).toBe(false);
+  });
+  it("down after 10 minutes without a heartbeat, quiet after 2 hours without a message in business hours, otherwise ok", () => {
+    expect(agentState({ last_seen_at: null, last_message_at: null }, tue3pm)).toBe("unknown");
+    expect(agentState({ last_seen_at: min(11, tue3pm), last_message_at: min(5, tue3pm) }, tue3pm)).toBe("down");
+    expect(agentState({ last_seen_at: min(1, tue3pm), last_message_at: min(121, tue3pm) }, tue3pm)).toBe("quiet");
+    expect(agentState({ last_seen_at: min(1, tue3pm), last_message_at: null }, tue3pm)).toBe("quiet");
+    expect(agentState({ last_seen_at: min(1, tue3pm), last_message_at: min(30, tue3pm) }, tue3pm)).toBe("ok");
+    expect(agentState({ last_seen_at: min(1, tue11pm), last_message_at: min(600, tue11pm) }, tue11pm)).toBe("ok");
+    expect(agentState({ last_seen_at: min(1, sun), last_message_at: null }, sun)).toBe("ok");
+  });
+  it("cuts a long summary at a word, never mid-word", () => {
+    expect(cutAtWord("short", 20)).toBe("short");
+    const long = "wants only the network switch upgraded instead of the proposal for switch and wiring";
+    const cut = cutAtWord(long, 40);
+    expect(cut.length).toBeLessThanOrEqual(40);
+    expect(cut.endsWith("…")).toBe(true);
+    expect(long.startsWith(cut.slice(0, -1) + " ")).toBe(true);
   });
 });

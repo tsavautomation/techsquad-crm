@@ -47,14 +47,22 @@ const text = (max: number) =>
     return s.replace(/\s+/g, " ").trim().slice(0, max) || null;
   });
 
+/** Cuts a long text at the last space before `max`, with an ellipsis, so nothing ends mid-word ("and wirin"). */
+export function cutAtWord(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max - 1);
+  const sp = cut.lastIndexOf(" ");
+  return `${sp > max * 0.6 ? cut.slice(0, sp) : cut}…`;
+}
+
 const AnswerSchema = z.object({
   category: z.enum(CATEGORIES).catch("fyi"),
   priority: z.enum(PRIORITIES).catch("normal"),
   customer: text(120),
   phone: text(40),
   system: text(80),
-  summary: text(200),
-  details: text(1000),
+  summary: text(300),
+  details: text(1200),
   continues_previous: z
     .unknown()
     .optional()
@@ -166,4 +174,28 @@ export function ignoredByRule(chat: string, body: string, rules: IgnoreRule[]): 
     }
   }
   return null;
+}
+
+// ---------------------------------------------------------------- F28-e: is the capture PC alive?
+
+/** No heartbeat for this long = the agent is down (it beats every minute). */
+export const AGENT_DOWN_MS = 10 * 60_000;
+/** Heartbeat fine but nothing forwarded for this long in business hours = probably not capturing. */
+export const AGENT_QUIET_MS = 2 * 60 * 60_000;
+
+export type AgentState = "ok" | "down" | "quiet" | "unknown";
+
+/** Monday to Saturday, 7 AM to 7 PM Eastern: when silence means something. */
+export function businessHoursET(nowMs: number): boolean {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", hour12: false }).formatToParts(new Date(nowMs));
+  const wd = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0") % 24;
+  return wd !== "Sun" && hour >= 7 && hour < 19;
+}
+
+export function agentState(a: { last_seen_at: string | null; last_message_at: string | null }, nowMs: number): AgentState {
+  if (!a.last_seen_at) return "unknown";
+  if (nowMs - Date.parse(a.last_seen_at) > AGENT_DOWN_MS) return "down";
+  if (businessHoursET(nowMs) && (!a.last_message_at || nowMs - Date.parse(a.last_message_at) > AGENT_QUIET_MS)) return "quiet";
+  return "ok";
 }

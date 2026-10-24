@@ -1,0 +1,22 @@
+WhatsApp capture agent v2 - update steps for the office PC (2026-10-23)
+
+1. On the office PC, open the folder  C:\Users\info\Documents\WhatsAppMonitor
+2. Close the agent window if it is running (the black console that says "WhatsApp capture agent running").
+3. Rename the current  wa_agent.py  to  wa_agent_v1.py  (keep it, just in case).
+4. Copy the new  wa_agent.py  from  OneDrive (TS)\CLAUDE\WhatsAppMonitor  into the folder.
+   Keep your existing  wa_agent.config.json  as it is (same URL, same secret).
+5. Double-click  start_wa_agent.bat  as before.
+   The window must say:  "WhatsApp capture agent v2.0 running."
+   and then a line like:  "startup: 23 notifications waiting, 9 WhatsApp messages forwarded"
+6. Open the CRM > WhatsApp. At the top you will see
+   "WhatsApp PC ts-claude  running · last message ..."  - that line is the heartbeat.
+
+What changes:
+- Messages still waiting in the Windows notification center are forwarded when the agent starts
+  (up to 48 hours back). The CRM ignores repeats, so nothing doubles.
+- New toasts are caught within half a second, so a message read on a phone right away is still captured.
+- Every minute the agent tells the CRM it is alive. If it stops, or forwards nothing for two hours
+  in business hours, Fred, Jessica and Saulo get a push notification "WhatsApp PC stopped / quiet".
+
+Optional settings in wa_agent.config.json (defaults shown):
+  "poll_seconds": 0.5,  "heartbeat_seconds": 60,  "backlog_hours": 48

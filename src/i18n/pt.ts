@@ -2134,6 +2134,13 @@ export const PT: Record<string, string> = {
   "Chat": "Conversa",
   "Text to ignore": "Texto a ignorar",
   "Add rule": "Adicionar regra",
+  "WhatsApp PC stopped or silent": "PC do WhatsApp parado ou em silêncio",
+  "WhatsApp PC {device}": "PC do WhatsApp {device}",
+  "stopped: no sign of the agent since {when}": "parado: sem sinal do agente desde {when}",
+  "running, but no message forwarded since {when}": "rodando, mas sem encaminhar mensagem desde {when}",
+  "never heard from": "nunca deu sinal",
+  "running · last message {when}": "rodando · última mensagem {when}",
+  "{n} queued on the PC": "{n} na fila do PC",
   "WhatsApp board (messages from the WhatsApp PC, read by AI)": "Quadro do WhatsApp (mensagens do PC do WhatsApp, lidas pela IA)",
   // F29 per-person check-in, far-away question (2026-10-22)
   "You are {distance} away from {place}": "Você está a {distance} de {place}",

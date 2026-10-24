@@ -52,6 +52,8 @@ export async function POST(req: Request) {
   const id = (data as { id: number }[] | null)?.[0]?.id;
   if (!id) return Response.json({ ok: true, duplicate: true });
   const conversationId = await fileMessage(db, id);
+  // F28-e: the PC status line ("last message … ago").
+  await db.from("wa_agents").update({ last_message_at: b.captured_at ?? new Date().toISOString() }).eq("device", b.device);
 
   after(async () => {
     try {

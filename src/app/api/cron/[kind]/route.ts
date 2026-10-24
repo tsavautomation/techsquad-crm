@@ -6,6 +6,7 @@ import { retryFiling, syncMail } from "@/lib/mail/sync";
 import { runPushReminders } from "@/lib/push/reminders";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { fileMissing, readPending } from "@/lib/whatsapp/triage";
+import { watchAgents } from "@/lib/whatsapp/watch";
 
 // Scheduled automations (SPEC §5 'daily' / 'hourly', PLAN M11). Callers send
 // "Authorization: Bearer <CRON_SECRET>".
@@ -63,7 +64,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/cron/[kind]">) {
       try {
         console.log("cron push:", JSON.stringify(await runPushReminders()));
         const db = adminDb();
-        console.log("cron whatsapp:", JSON.stringify({ filed: await fileMissing(db).catch(() => 0), read: await readPending(db).catch(() => 0) }));
+        console.log("cron whatsapp:", JSON.stringify({ filed: await fileMissing(db).catch(() => 0), read: await readPending(db).catch(() => 0), watch: await watchAgents(db).catch((e) => String(e)) }));
       } catch (e) {
         console.error("cron push failed:", e);
       }

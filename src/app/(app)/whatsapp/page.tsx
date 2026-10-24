@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BellOff, CheckCheck } from "lucide-react";
+import { BellOff, CheckCheck, MonitorSmartphone } from "lucide-react";
 import { WaBoard } from "@/components/whatsapp/board";
 import { PeriodSummary } from "@/components/whatsapp/period-summary";
 import { requireUser } from "@/lib/auth/session";
 import { recordsDb } from "@/lib/records/data";
-import { canSeeWhatsApp, DEFAULT_WINDOW, loadBoard, mutedCount, WINDOWS } from "@/lib/whatsapp/load";
-import { CATEGORIES, CATEGORY_ICON, CATEGORY_LABEL } from "@/lib/whatsapp/triage-engine";
+import { canSeeWhatsApp, DEFAULT_WINDOW, loadAgents, loadBoard, mutedCount, WINDOWS } from "@/lib/whatsapp/load";
+import { agentState, CATEGORIES, CATEGORY_ICON, CATEGORY_LABEL } from "@/lib/whatsapp/triage-engine";
+import { formatDateTime, nowMs } from "@/lib/dates";
 import { getTable } from "@/registry";
 import { tableHref } from "@/registry/routes";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,8 @@ export default async function WhatsAppPage(props: PageProps<"/whatsapp">) {
   const days = (WINDOWS as readonly number[]).includes(Number(dParam)) ? Number(dParam) : DEFAULT_WINDOW;
   const finished = fParam === "1";
   const db = await recordsDb();
-  const [board, muted] = await Promise.all([loadBoard(db, days, finished), mutedCount(db)]);
+  const [board, muted, agents] = await Promise.all([loadBoard(db, days, finished), mutedCount(db), loadAgents(db)]);
+  const now = nowMs();
   const windowLabel = (d: number) => (d === 1 ? tr("Today") : tr("{n} days", { n: d }));
   const href = (d: number, f: boolean) => {
     const q = [d !== DEFAULT_WINDOW ? `days=${d}` : "", f ? "finished=1" : ""].filter(Boolean).join("&");
@@ -63,6 +65,20 @@ export default async function WhatsAppPage(props: PageProps<"/whatsapp">) {
         </Link>
       </div>
 
+      {/* F28-e: is the capture PC alive? */}
+      {agents.map((a) => {
+        const state = agentState(a, now);
+        const bad = state === "down" || state === "quiet";
+        return (
+          <p key={a.device} className={cn("mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border px-3 py-2 text-[13px]", bad ? "border-warn-fg/30 bg-warn-bg text-warn-fg" : "bg-card text-text-2")}>
+            <MonitorSmartphone className="size-4 shrink-0" aria-hidden />
+            <span className="font-medium">{tr("WhatsApp PC {device}", { device: a.device })}</span>
+            <span>{state === "down" ? tr("stopped: no sign of the agent since {when}", { when: a.last_seen_at ? formatDateTime(a.last_seen_at) : "?" }) : state === "quiet" ? tr("running, but no message forwarded since {when}", { when: a.last_message_at ? formatDateTime(a.last_message_at) : "?" }) : state === "unknown" ? tr("never heard from") : tr("running · last message {when}", { when: a.last_message_at ? formatDateTime(a.last_message_at) : "—" })}</span>
+            {a.pending > 0 && <span>· {tr("{n} queued on the PC", { n: a.pending })}</span>}
+            {a.version && <span className="text-xs opacity-70">· v{a.version}</span>}
+          </p>
+        );
+      })}
       {finished ? (
         <p className="mb-4 text-[13px] text-text-2">{tr("Cards marked done or dismissed in this period. Set a status back to Open to bring one back to the board.")}</p>
       ) : (
