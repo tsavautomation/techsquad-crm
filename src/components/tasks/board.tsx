@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Lock, MessageSquare, Plus } from "lucide-react";
+import { Lock, MessageSquare, Plus, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/dates";
 import { localizeReturnCard } from "@/lib/field-day/return-card-text";
 import { saveRecordAction } from "@/lib/records/actions";
+import { acceptAiDoneAction, dismissAiDoneAction } from "@/lib/tasks/ai-actions";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
@@ -27,6 +28,8 @@ export type BoardCard = {
   project: string | null;
   notes: number;
   private: boolean;
+  /** J-z: Claude read a later report as confirming this task was done. */
+  aiDone: { reportId: number; reportDate: string | null; quote: string } | null;
 };
 export type BoardColumn = { value: string; label: string; color: string };
 type Props = {
@@ -40,11 +43,16 @@ type Props = {
   who: string;
   label: string;
   labels: { value: string; label: string }[];
+  /** J-y: client (the project's owner contact) and department (the project's Category). */
+  client: string;
+  clients: string[];
+  dept: string;
+  departments: { value: string; label: string }[];
 };
 
 const PRIORITY: Record<string, string> = { Urgent: "bg-bad-bg text-bad-fg", ASAP: "bg-warn-bg text-warn-fg" };
 
-export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, me, who, label, labels }: Props) {
+export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, me, who, label, labels, client, clients, dept, departments }: Props) {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -52,6 +60,13 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
   const [over, setOver] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
   const [text, setText] = useState("");
+
+  const aiDone = (id: number, accept: boolean) =>
+    start(async () => {
+      const r = accept ? await acceptAiDoneAction(id) : await dismissAiDoneAction(id);
+      if (!r.ok) toast.error(t(r.message));
+      else router.refresh();
+    });
 
   const move = (id: number, status: string) => {
     const c = cards.find((x) => x.id === id);
@@ -72,8 +87,8 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
       router.refresh();
     });
 
-  const go = (next: { who?: string; label?: string }) => {
-    const q = new URLSearchParams(Object.entries({ who, label, ...next }).filter(([, v]) => v));
+  const go = (next: { who?: string; label?: string; client?: string; dept?: string }) => {
+    const q = new URLSearchParams(Object.entries({ who, label, client, dept, ...next }).filter(([, v]) => v));
     router.push(q.size ? `/tasks?${q}` : "/tasks");
   };
 
@@ -98,6 +113,29 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
               </option>
             ))}
           </select>
+        )}
+        {clients.length > 0 && (
+          <select aria-label={t("Client")} className="h-10 max-w-[220px] rounded-[10px] border bg-card px-2 text-base md:text-sm" value={client} onChange={(e) => go({ client: e.target.value })}>
+            <option value="">{t("All clients")}</option>
+            {clients.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        )}
+        <select aria-label={t("Department")} className="h-10 rounded-[10px] border bg-card px-2 text-base md:text-sm" value={dept} onChange={(e) => go({ dept: e.target.value })}>
+          <option value="">{t("All departments")}</option>
+          {departments.map((d) => (
+            <option key={d.value} value={d.value}>
+              {t(d.label)}
+            </option>
+          ))}
+        </select>
+        {(who || label || client || dept) && (
+          <button type="button" onClick={() => go({ who: "", label: "", client: "", dept: "" })} className="inline-flex h-10 items-center gap-1 rounded-[10px] border px-2.5 text-sm text-text-2 hover:bg-muted">
+            <X className="size-3.5" aria-hidden /> {t("Clear filters")}
+          </button>
         )}
         <span className="text-sm text-muted-foreground">{t(cards.length === 1 ? "{n} task" : "{n} tasks", { n: cards.length })}</span>
       </div>
@@ -168,6 +206,30 @@ export function TaskBoard({ columns, cards, people, today, canEdit, canCreate, m
                           {c.member && <span className="ml-auto text-muted-foreground">{c.member.split(" ")[0]}</span>}
                         </span>
                       </Link>
+                      {c.aiDone && col.value !== "Completed" && (
+                        <div className="mx-3 mb-2 rounded-lg border border-ok-fg/30 bg-ok-bg px-2.5 py-2 text-xs text-ok-fg">
+                          <p className="flex items-start gap-1 font-medium">
+                            <Sparkles className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                            <span>
+                              {t("Looks done: a later report says so.")}{" "}
+                              <Link href={`/forms/job-reports/${c.aiDone.reportId}`} className="underline">
+                                {c.aiDone.reportDate ? t("Report of {date}", { date: c.aiDone.reportDate }) : t("Report #{n}", { n: c.aiDone.reportId })}
+                              </Link>
+                            </span>
+                          </p>
+                          {c.aiDone.quote && <p className="mt-1 italic">“{c.aiDone.quote}”</p>}
+                          {canEdit && (
+                            <p className="mt-1.5 flex gap-2">
+                              <button type="button" onClick={() => aiDone(c.id, true)} className="inline-flex h-9 items-center rounded-lg bg-ok-fg px-2.5 font-semibold text-white">
+                                {t("Complete it")}
+                              </button>
+                              <button type="button" onClick={() => aiDone(c.id, false)} className="inline-flex h-9 items-center rounded-lg border border-ok-fg/40 px-2.5">
+                                {t("Keep open")}
+                              </button>
+                            </p>
+                          )}
+                        </div>
+                      )}
                       {/* Dragging doesn't work on phones: move from here instead. */}
                       {canEdit && (
                         <select

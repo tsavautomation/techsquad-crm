@@ -2,11 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { ClockTabs } from "@/components/time-clock/clock-tabs";
+import { ManualEntry } from "@/components/time-clock/manual-entry";
+import { PeriodPicker } from "@/components/time-clock/period-picker";
 import { requireUser } from "@/lib/auth/session";
 import { formatDate, fromDateTimeLocalET, nowMs, toDateTimeLocalET, todayET } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
 import { addDays, clock } from "@/lib/schedule/dates";
 import { CLOCK_GROUPS } from "@/lib/time-clock/clock";
+import { DEPARTMENTS, inDepartment, periodSheet, type Department } from "@/lib/time-clock/period";
 import { FLAG_TEXT, formatHours, mondayOf, weekSheet, type SheetEntry, type WeekSheet } from "@/lib/time-clock/timesheet";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
@@ -21,48 +24,67 @@ export async function generateMetadata() {
 // Monday to Sunday, hours per day and the week total, from the clock-in → clock-out intervals only.
 // TC-b: shifts under 5 minutes, in / out / in within the same minute, over 14 hours, never closed, or closed
 // by the system are listed under "Needs a look" until the office reviews them on the day view.
+// Jessica's third round (2026-10-26): J-u only people who must clock in; J-v a department filter
+// (Low Voltage / Electrical / all); J-w any period (from – to, both days included); J-s Add a clock entry.
 
-type Person = { id: number; title: string | null; clock_group: string | null; status: string | null };
+type Person = { id: number; title: string | null; clock_group: string | null; status: string | null; departments: string[] | null; must_clock_in: boolean };
 type EntryRow = SheetEntry & { employee_id: number };
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function TimesheetsPage(props: PageProps<"/time-clock/timesheets">) {
   const tr = await getT();
   const user = await requireUser();
   if (!user.permissions.has("administrative.employees.view_all")) notFound();
-  const { week: weekParam, group: groupParam } = (await props.searchParams) as { week?: string; group?: string };
+  const canFix = user.permissions.has("administrative.employees.modify");
+  const sp = (await props.searchParams) as { week?: string; group?: string; dept?: string; from?: string; to?: string };
   const today = todayET();
-  const monday = mondayOf(weekParam && /^\d{4}-\d{2}-\d{2}$/.test(weekParam) ? weekParam : today);
+  const monday = mondayOf(sp.week && DAY.test(sp.week) ? sp.week : today);
   const thisMonday = mondayOf(today);
-  const group = (CLOCK_GROUPS as readonly string[]).includes(groupParam ?? "") ? groupParam! : "";
+  const group = (CLOCK_GROUPS as readonly string[]).includes(sp.group ?? "") ? sp.group! : "";
+  const dept: Department | "" = (DEPARTMENTS as readonly string[]).includes(sp.dept ?? "") ? (sp.dept as Department) : "";
+  // J-w: a period of any length replaces the week when both days are given (and in order).
+  const period = sp.from && sp.to && DAY.test(sp.from) && DAY.test(sp.to) && sp.from <= sp.to ? { from: sp.from, to: sp.to } : null;
+  const rangeFrom = period ? period.from : monday;
+  const rangeTo = period ? period.to : addDays(monday, 6);
   const sunday = addDays(monday, 6);
   const db = await recordsDb();
 
   const [{ data: emp }, { data: ent }] = await Promise.all([
-    db.from("employee_names").select("id, title, clock_group, status").is("deleted_at", null).order("title"),
+    db.from("employees").select("id, title, clock_group, status, departments, must_clock_in").is("deleted_at", null).order("title"),
     db
       .from("time_entries")
       .select("id, employee_id, kind, at, note, reviewed_at, auto_closed")
       .in("kind", ["clock_in", "clock_out"])
-      .gte("at", fromDateTimeLocalET(`${monday}T00:00`))
-      .lt("at", fromDateTimeLocalET(`${addDays(monday, 7)}T00:00`))
+      .gte("at", fromDateTimeLocalET(`${rangeFrom}T00:00`))
+      .lt("at", fromDateTimeLocalET(`${addDays(rangeTo, 1)}T00:00`))
       .is("deleted_at", null)
       .order("at"),
   ]);
   const entries = (ent ?? []) as EntryRow[];
   const byPerson = Map.groupBy(entries, (e) => e.employee_id);
-  // Everyone of the group still working, plus anyone of it who clocked that week.
-  const people = ((emp ?? []) as Person[]).filter((p) => (!group || (p.clock_group ?? "Field") === group) && (byPerson.has(p.id) || p.status === "Active" || p.status === "Reports"));
+  const everyone = (emp ?? []) as Person[];
+  // Everyone of the group and department who must clock in and is still working, plus anyone who clocked in the range.
+  const people = everyone.filter((p) => (!group || (p.clock_group ?? "Field") === group) && inDepartment(p.departments, dept) && (byPerson.has(p.id) || (p.must_clock_in && (p.status === "Active" || p.status === "Reports"))));
   const now = nowMs();
   const sheets = people.map((p) => ({ person: p, sheet: weekSheet(byPerson.get(p.id) ?? [], monday, now, today) }));
-  const toReview = sheets.flatMap(({ person, sheet }) => sheet.days.flatMap((d) => d.shifts.filter((s) => s.needsReview).map((s) => ({ person, day: d.date, shift: s }))));
+  const periods = period ? people.map((p) => ({ person: p, sheet: periodSheet(byPerson.get(p.id) ?? [], period.from, period.to, now, today) })) : [];
+  const toReview = (period ? periods.flatMap(({ person, sheet }) => sheet.days.flatMap((d) => d.shifts.filter((s) => s.needsReview).map((s) => ({ person, day: d.date, shift: s })))) : sheets.flatMap(({ person, sheet }) => sheet.days.flatMap((d) => d.shifts.filter((s) => s.needsReview).map((s) => ({ person, day: d.date, shift: s })))));
   const grand = sheets.reduce((n, s) => n + s.sheet.totalMinutes, 0);
 
   const employeesT = getTable("employees");
   const dayHref = (employeeId: number, day: string) => `/time-clock?day=${day}&employee=${employeeId}`;
-  const weekHref = (m: string, g: string = group) => `/time-clock/timesheets?week=${m}${g ? `&group=${g}` : ""}`;
+  const q = (o: { week?: string; group?: string; dept?: string; from?: string; to?: string }) => {
+    const p = new URLSearchParams();
+    const merged = { week: period ? "" : monday, group, dept, from: period?.from ?? "", to: period?.to ?? "", ...o };
+    for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v);
+    return `/time-clock/timesheets${p.size ? `?${p}` : ""}`;
+  };
+  const weekHref = (m: string, g: string = group) => q({ week: m, group: g, from: "", to: "" });
   const time = (iso: string) => clock(toDateTimeLocalET(iso).slice(11));
   const dow = (date: string) => new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(new Date(`${date}T12:00:00Z`));
   const dayLabels = sheets[0]?.sheet.days.map((d) => d.date) ?? Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const manualPeople = everyone.filter((p) => p.status === "Active" || p.status === "Reports" || p.status === "Freelance").map((p) => ({ id: p.id, name: p.title ?? `#${p.id}` }));
 
   return (
     <div className="mx-auto max-w-[1300px]">
@@ -75,32 +97,40 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <nav className="flex items-center gap-1 rounded-[10px] border bg-card p-0.5 text-[13px]" aria-label={tr("Week")}>
-          <Link href={weekHref(addDays(monday, -7))} className="inline-flex size-10 items-center justify-center rounded-lg hover:bg-muted" aria-label={tr("Previous week")}>
-            <ChevronLeft className="size-4" aria-hidden />
-          </Link>
-          <span className="px-2 font-semibold tabular-nums">
-            {formatDate(monday)} – {formatDate(sunday)}
-          </span>
-          <Link href={weekHref(addDays(monday, 7))} className="inline-flex size-10 items-center justify-center rounded-lg hover:bg-muted" aria-label={tr("Next week")}>
-            <ChevronRight className="size-4" aria-hidden />
-          </Link>
-          {monday !== thisMonday && (
-            <Link href={weekHref(thisMonday)} className="px-2 text-primary hover:underline">
-              {tr("This week")}
+        {!period && (
+          <nav className="flex items-center gap-1 rounded-[10px] border bg-card p-0.5 text-[13px]" aria-label={tr("Week")}>
+            <Link href={weekHref(addDays(monday, -7))} className="inline-flex size-10 items-center justify-center rounded-lg hover:bg-muted" aria-label={tr("Previous week")}>
+              <ChevronLeft className="size-4" aria-hidden />
             </Link>
-          )}
-        </nav>
+            <span className="px-2 font-semibold tabular-nums">
+              {formatDate(monday)} – {formatDate(sunday)}
+            </span>
+            <Link href={weekHref(addDays(monday, 7))} className="inline-flex size-10 items-center justify-center rounded-lg hover:bg-muted" aria-label={tr("Next week")}>
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
+            {monday !== thisMonday && (
+              <Link href={weekHref(thisMonday)} className="px-2 text-primary hover:underline">
+                {tr("This week")}
+              </Link>
+            )}
+          </nav>
+        )}
+        <PeriodPicker from={period?.from ?? ""} to={period?.to ?? ""} base={{ group, dept }} />
         <div className="flex rounded-[10px] border bg-muted p-0.5 text-[13px]" role="tablist" aria-label={tr("Time clock group")}>
-          {[
-            { key: "", label: tr("Everyone") },
-            ...CLOCK_GROUPS.map((g) => ({ key: g, label: tr(g) })),
-          ].map((g) => (
-            <Link key={g.key} href={weekHref(monday, g.key)} role="tab" aria-selected={g.key === group} className={cn("rounded-lg px-3 py-2", g.key === group ? "bg-card font-semibold shadow-card" : "text-text-2")}>
+          {[{ key: "", label: tr("Everyone") }, ...CLOCK_GROUPS.map((g) => ({ key: g, label: tr(g) }))].map((g) => (
+            <Link key={g.key} href={q({ group: g.key })} role="tab" aria-selected={g.key === group} className={cn("rounded-lg px-3 py-2", g.key === group ? "bg-card font-semibold shadow-card" : "text-text-2")}>
               {g.label}
             </Link>
           ))}
         </div>
+        <div className="flex rounded-[10px] border bg-muted p-0.5 text-[13px]" role="tablist" aria-label={tr("Department")}>
+          {[{ key: "", label: tr("All departments") }, ...DEPARTMENTS.map((d) => ({ key: d, label: tr(d) }))].map((d) => (
+            <Link key={d.key} href={q({ dept: d.key })} role="tab" aria-selected={d.key === dept} className={cn("rounded-lg px-3 py-2", d.key === dept ? "bg-card font-semibold shadow-card" : "text-text-2")}>
+              {d.label}
+            </Link>
+          ))}
+        </div>
+        {canFix && <ManualEntry people={manualPeople} defaultDay={period ? period.to : today} />}
       </div>
 
       {toReview.length > 0 && (
@@ -127,7 +157,41 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
         </section>
       )}
 
-      {sheets.length === 0 ? (
+      {period ? (
+        // J-w: any period, one block per person with their days and the total.
+        periods.length === 0 ? (
+          <p className="rounded-2xl border border-dashed bg-card px-6 py-10 text-center text-text-2">{tr("Nobody in this group.")}</p>
+        ) : (
+          <div className="grid gap-3">
+            <p className="text-[13px] text-text-2">
+              {tr("{from} to {to}, both days included", { from: formatDate(period.from), to: formatDate(period.to) })} · {tr("{n} people", { n: periods.length })} · <span className="font-semibold text-foreground tabular-nums">{formatHours(periods.reduce((n, p) => n + p.sheet.totalMinutes, 0))} h</span>
+            </p>
+            {periods.map(({ person, sheet }) => (
+              <section key={person.id} className="rounded-2xl border bg-card px-[18px] py-3 shadow-card">
+                <div className="flex items-baseline justify-between gap-2">
+                  <Link href={recordHref(employeesT, person.id)} className="font-semibold tracking-tight hover:underline">
+                    {person.title ?? `#${person.id}`}
+                  </Link>
+                  <span className="font-semibold tabular-nums">{formatHours(sheet.totalMinutes)} h</span>
+                </div>
+                <p className="text-xs text-text-2">{tr("{n} days worked", { n: sheet.days.filter((d) => d.minutes > 0).length })}</p>
+                <ul className="mt-1 flex flex-wrap gap-1.5 text-[13px]">
+                  {sheet.days
+                    .filter((d) => d.minutes > 0 || d.toReview > 0)
+                    .map((d) => (
+                      <li key={d.date}>
+                        <Link href={dayHref(person.id, d.date)} className={cn("inline-flex min-h-9 items-center gap-1 rounded-lg border px-2 tabular-nums hover:bg-muted", d.toReview > 0 && "border-warn-fg/30 bg-warn-bg text-warn-fg")}>
+                          {dow(d.date)} {formatDate(d.date).replace(/\/\d{4}$/, "")} · {formatHours(d.minutes)}
+                          {d.toReview > 0 && <AlertTriangle className="size-3.5" aria-hidden />}
+                        </Link>
+                      </li>
+                    ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )
+      ) : sheets.length === 0 ? (
         <p className="rounded-2xl border border-dashed bg-card px-6 py-10 text-center text-text-2">{tr("Nobody in this group.")}</p>
       ) : (
         <>

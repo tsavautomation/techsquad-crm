@@ -13,6 +13,10 @@ const ServiceList = z.object({ checklist: z.array(z.string()).default([]), tools
 export const FieldDaySchema = z.object({
   /** Employee who receives every return card (Jessica for now, SPEC §9.1 F2-c). */
   scheduler_employee_id: z.number().int().positive().nullable().default(null),
+  /** J-x: who receives the return cards of Electrical projects (Saulo); blank = the same person as above. */
+  scheduler_employee_id_electrical: z.number().int().positive().nullable().default(null),
+  /** J-t: who approves overtime (one task per person per week when a day passes 9 hours). */
+  overtime_approver_employee_id: z.number().int().positive().nullable().default(null),
   /** Days until a return card is due, by Job Report › Reason. */
   return_days: z.record(z.string(), z.number().int().min(0).max(90)).default({}),
   /** Per Visit › Service type: checklist added to the visit at check-in, and tools to bring. */
@@ -58,6 +62,15 @@ export function autoCloseAt(checkedInIso: string, day: string, cutoff: string): 
 }
 
 // ---------------------------------------------------------------- return cards
+
+/**
+ * J-x (Jessica via Fred 2026-10-26): the Electrical scheduler for Electrical projects (by the project's Category,
+ * else the technician's department), otherwise the usual one.
+ */
+export function pickScheduler(s: { scheduler_employee_id: number | null; scheduler_employee_id_electrical: number | null }, category: string | null | undefined, departments: string[] | null | undefined): number | null {
+  const electrical = (category ?? "").trim().toLowerCase() === "electrical" || (!category && (departments ?? []).includes("ELECTRICAL") && !(departments ?? []).includes("LOW VOLTAGE"));
+  return electrical && s.scheduler_employee_id_electrical ? s.scheduler_employee_id_electrical : s.scheduler_employee_id;
+}
 
 export const NOT_FINISHED = ["Partial", "Not done"];
 export const isNotFinished = (result: unknown) => typeof result === "string" && NOT_FINISHED.includes(result);

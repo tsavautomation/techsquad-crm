@@ -5,7 +5,7 @@ import { fromDateTimeLocalET } from "@/lib/dates";
 import { runAutomationsForRecord } from "@/lib/engine/automations";
 import { returnDueDate } from "@/lib/field-day/day";
 import { dumpRecordPdfSafely } from "@/lib/files/record-pdf";
-import { loadFieldDay } from "@/lib/field-day/return-card";
+import { loadFieldDay, resolveScheduler } from "@/lib/field-day/return-card";
 import { buildTitle } from "@/lib/records/title";
 import { realityCheckForReport } from "@/lib/reports/reality-run";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
@@ -107,7 +107,7 @@ async function rootCauseCheck(db: SupabaseClient, row: Row, keys: string[]): Pro
     if (have?.length) continue;
     const links = reports.map((r) => `${r.date ?? "?"} ${site}${recordHref(getTable("job_reports"), r.id)}`).join("\n");
     const values: Record<string, unknown> = {
-      member_id: settings.scheduler_employee_id,
+      member_id: await resolveScheduler(db, settings, row.project_id),
       status: "Pending",
       priority: "Urgent",
       due_date: row.date,

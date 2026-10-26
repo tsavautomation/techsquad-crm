@@ -115,6 +115,15 @@ export const employees: TableDef = {
       ]
     },
     {
+      // J-u (Jessica via Fred 2026-10-26): who appears on the time clock, timesheets, overtime and the forgotten clock-out checks.
+      "name": "must_clock_in",
+      "label": "Must clock in",
+      "type": "boolean",
+      "legacy": { "column": "", "fieldId": 0 },
+      "default": true,
+      "help": "Off: this person is left out of the time clock, the timesheets and the missing clock-out checks. Past entries are kept."
+    },
+    {
       "name": "date_of_birth",
       "label": "Date of Birth",
       "type": "date",

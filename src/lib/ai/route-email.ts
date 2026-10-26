@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toDateTimeLocalET, todayET } from "@/lib/dates";
-import { loadFieldDay } from "@/lib/field-day/return-card";
+import { loadFieldDay, resolveScheduler } from "@/lib/field-day/return-card";
 import { buildTitle } from "@/lib/records/title";
 import { addDays } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
@@ -105,11 +105,7 @@ async function createRequest(db: SupabaseClient, projectId: number, eventId: num
 /** A task for the person who schedules (Admin › Field day), due on the deadline or in two days. */
 async function createTask(db: SupabaseClient, projectId: number, details: string, dueDate: string | null): Promise<number | null> {
   const settings = await loadFieldDay(db);
-  let memberId: number | null = settings.scheduler_employee_id;
-  if (memberId) {
-    const { data } = await db.from("employees").select("id").eq("id", memberId).is("deleted_at", null).maybeSingle();
-    if (!data) memberId = null;
-  }
+  const memberId = await resolveScheduler(db, settings, projectId);
   const values: Record<string, unknown> = { member_id: memberId, status: "Pending", details, due_date: dueDate ?? addDays(todayET(), 2), project_id: projectId, labels: ["Email"] };
   values.title = await buildTitle(getTable("tasks"), values, null, db);
   const { data, error } = await db.from("tasks").insert(values).select("id").single();

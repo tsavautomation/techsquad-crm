@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureFieldSettings } from "@/lib/admin/field-settings";
 import { todayET } from "@/lib/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
+import { suggestDoneTasks } from "@/lib/ai/task-done";
+import { raiseOvertimeTasks } from "@/lib/time-clock/overtime";
 import { googleHourly } from "@/lib/google/sync";
 import { backfillRecordPdfs } from "@/lib/files/record-pdf";
 import { reviewQueuedReports } from "@/lib/ai/review";
@@ -314,7 +316,11 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
 
   if (await claimRun(db, keys.daily)) {
     try {
-      const daily = { ...(await runScheduled("daily", today)), cleanup: await cleanupOrphanUploads(db) };
+      const daily: Record<string, unknown> = { ...(await runScheduled("daily", today)), cleanup: await cleanupOrphanUploads(db) };
+      // J-t: the week closed yesterday (Sunday): one overtime task per field person with a day over 9 hours.
+      if (new Date(`${today}T12:00:00Z`).getUTCDay() === 1) daily.overtime = await raiseOvertimeTasks(db, today).catch((e) => ({ error: e instanceof Error ? e.message : String(e) }));
+      // J-z: open tasks whose project got a report in the last two days: does the report say it was done?
+      daily.taskDone = await suggestDoneTasks(db).catch((e) => ({ error: e instanceof Error ? e.message : String(e) }));
       await finishRun(db, keys.daily, daily);
       out.daily = daily;
     } catch (e) {

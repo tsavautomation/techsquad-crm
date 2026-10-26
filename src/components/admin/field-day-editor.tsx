@@ -49,6 +49,28 @@ export function FieldDayEditor({ initial, people, reasons, services }: { initial
             {s.scheduler_employee_id && !people.some((p) => p.id === s.scheduler_employee_id) && <option value={s.scheduler_employee_id}>{t("Employee #{id} (not imported yet)", { id: s.scheduler_employee_id })}</option>}
           </select>
         </label>
+        <label className="mt-3 block text-sm font-medium">
+          {t("Who schedules returns for Electrical projects")}
+          <select className={`${BOX} mt-1 h-11`} value={s.scheduler_employee_id_electrical ?? ""} onChange={(e) => setS({ ...s, scheduler_employee_id_electrical: e.target.value ? Number(e.target.value) : null })}>
+            <option value="">{t("Same person as above")}</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="mt-3 block text-sm font-medium">
+          {t("Who approves overtime (a day over 9 hours)")}
+          <select className={`${BOX} mt-1 h-11`} value={s.overtime_approver_employee_id ?? ""} onChange={(e) => setS({ ...s, overtime_approver_employee_id: e.target.value ? Number(e.target.value) : null })}>
+            <option value="">{t("Nobody (the task is only on the Tasks board)")}</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <h3 className="mt-4 mb-2 text-sm font-medium">{t("Days until the card is due, by reason")}</h3>
         <div className="grid gap-2 sm:grid-cols-2">
           {reasons.map((r) => (

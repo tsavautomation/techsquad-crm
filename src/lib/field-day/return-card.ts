@@ -5,7 +5,7 @@ import type { EngineRecord } from "@/lib/engine/record-view";
 import { buildTitle } from "@/lib/records/title";
 import { getTable } from "@/registry";
 import type { TableDef } from "@/registry/types";
-import { isNotFinished, missingLines, parseFieldDay, returnCardDetails, returnDueDate, type FieldDaySettings, type ReportForCard } from "./day";
+import { isNotFinished, missingLines, parseFieldDay, pickScheduler, returnCardDetails, returnDueDate, type FieldDaySettings, type ReportForCard } from "./day";
 
 // F2 return cards (docs/portal-features-merge.md §D, SPEC §9.1 F2-c), run by the automation
 // "Return card for a partial visit". Once per Job Report; the missing items become the card's checklist.
@@ -13,6 +13,27 @@ import { isNotFinished, missingLines, parseFieldDay, returnCardDetails, returnDu
 export async function loadFieldDay(db: SupabaseClient): Promise<FieldDaySettings> {
   const { data } = await db.from("app_settings").select("value").eq("key", "field_day").maybeSingle();
   return parseFieldDay((data as { value: unknown } | null)?.value);
+}
+
+/**
+ * J-x: who gets a task about this project: the Electrical scheduler for Electrical projects (project Category,
+ * else the first technician's department), otherwise the usual scheduler. Null when nobody is set or imported.
+ */
+export async function resolveScheduler(db: SupabaseClient, settings: FieldDaySettings, projectId: number | null, employeeIds: number[] = []): Promise<number | null> {
+  let category: string | null = null;
+  if (projectId) {
+    const { data } = await db.from("projects").select("category").eq("id", projectId).maybeSingle();
+    category = (data as { category: string | null } | null)?.category ?? null;
+  }
+  let departments: string[] | null = null;
+  if (!category && employeeIds.length) {
+    const { data } = await db.from("employees").select("departments").eq("id", employeeIds[0]).maybeSingle();
+    departments = (data as { departments: string[] | null } | null)?.departments ?? null;
+  }
+  const id = pickScheduler(settings, category, departments);
+  if (!id) return null;
+  const { data } = await db.from("employees").select("id").eq("id", id).is("deleted_at", null).maybeSingle();
+  return data ? id : null; // not imported yet: the card still shows on the Tasks board
 }
 
 /** Creates the card and returns what it did, or null when there's nothing to do. */
@@ -34,11 +55,8 @@ export async function createReturnCard(db: SupabaseClient, t: TableDef, rec: Eng
     second = Boolean(before && isNotFinished(before.result));
   }
 
-  let memberId: number | null = settings.scheduler_employee_id;
-  if (memberId) {
-    const { data } = await db.from("employees").select("id").eq("id", memberId).is("deleted_at", null).maybeSingle();
-    if (!data) memberId = null; // not imported yet: the card still shows on the Tasks board
-  }
+  const techs = Array.isArray(v.who_can_ids) ? (v.who_can_ids as unknown[]).filter((x): x is number => typeof x === "number") : [];
+  const memberId = await resolveScheduler(db, settings, projectId, techs);
 
   const values: Record<string, unknown> = {
     member_id: memberId,

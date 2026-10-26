@@ -1388,6 +1388,7 @@ export type Database = {
           id: number
           last_name: string | null
           locked: boolean
+          must_clock_in: boolean
           pay_frequency: string | null
           phone: string | null
           ssn: string | null
@@ -1419,6 +1420,7 @@ export type Database = {
           id?: number
           last_name?: string | null
           locked?: boolean
+          must_clock_in?: boolean
           pay_frequency?: string | null
           phone?: string | null
           ssn?: string | null
@@ -1450,6 +1452,7 @@ export type Database = {
           id?: number
           last_name?: string | null
           locked?: boolean
+          must_clock_in?: boolean
           pay_frequency?: string | null
           phone?: string | null
           ssn?: string | null
@@ -5635,6 +5638,10 @@ export type Database = {
       }
       tasks: {
         Row: {
+          ai_done_at: string | null
+          ai_done_dismissed_at: string | null
+          ai_done_quote: string | null
+          ai_done_report_id: number | null
           archived_at: string | null
           created_at: string
           created_by: string | null
@@ -5660,6 +5667,10 @@ export type Database = {
           visit_id: number | null
         }
         Insert: {
+          ai_done_at?: string | null
+          ai_done_dismissed_at?: string | null
+          ai_done_quote?: string | null
+          ai_done_report_id?: number | null
           archived_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -5685,6 +5696,10 @@ export type Database = {
           visit_id?: number | null
         }
         Update: {
+          ai_done_at?: string | null
+          ai_done_dismissed_at?: string | null
+          ai_done_quote?: string | null
+          ai_done_report_id?: number | null
           archived_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -5710,6 +5725,13 @@ export type Database = {
           visit_id?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_ai_done_report_id_fkey"
+            columns: ["ai_done_report_id"]
+            isOneToOne: false
+            referencedRelation: "job_reports"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_created_by_fkey"
             columns: ["created_by"]

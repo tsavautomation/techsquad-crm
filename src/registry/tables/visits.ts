@@ -88,6 +88,8 @@ export const visits: TableDef = {
       options: [
         { label: "Part of the project", value: "Project", color: "#2563eb" },
         { label: "Service call (billed separately)", value: "Service call", color: "#d97706" },
+        // J-s2 (Jessica via Fred 2026-10-26): the hand-over visit that closes the project.
+        { label: "Final delivery", value: "Final delivery", color: "#16a34a" },
       ],
       legacy: NEW,
     },

@@ -120,6 +120,7 @@ export const tasks: TableDef = {
         { label: "Return", value: "Return", color: "#0891b2" },
         // F19-c: the 3rd report with the same problem on a site raises one of these.
         { label: "Root cause", value: "Root cause", color: "#be123c" },
+        { label: "Overtime", value: "Overtime", color: "#7c3aed" },
       ],
       legacy: NEW,
     },

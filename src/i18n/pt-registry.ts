@@ -635,4 +635,9 @@ export const PT_REGISTRY: Record<string, string> = {
   "Check-out": "Check-out",
   "The time you arrived, as you record it. It does not change the visit's check-in.": "A hora em que você chegou, como você registra. Não altera o check-in da visita.",
   "The time you left.": "A hora em que você saiu.",
+  // Jessica's third round (2026-10-26)
+  "Must clock in": "Deve bater ponto",
+  "Off: this person is left out of the time clock, the timesheets and the missing clock-out checks. Past entries are kept.": "Não: esta pessoa fica fora do ponto, das folhas de horas e das verificações de saída esquecida. O histórico é mantido.",
+  "Final delivery": "Entrega final",
+  "Overtime": "Horas extras",
 };
