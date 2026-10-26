@@ -122,8 +122,8 @@ function pickByDiscipline(candidates: ProjectForMatch[], subject: string | null 
 /**
  * Which project an email belongs to, in this order: "#id" in the subject (a project that exists), the
  * thread an earlier email was filed under, the project name in the subject (the longest name that
- * appears as whole words; two different projects of the same length = nobody wins), the sender's address
- * against the projects' contacts (exactly one project). Nothing certain → null: the Assign list decides.
+ * appears as whole words; two different projects of the same length = nobody wins). Nothing certain → null:
+ * the word scores (where the sender's contact counts, F26-g) and the Assign list decide.
  */
 export function matchProject(m: MailForMatch, projects: ProjectForMatch[], threads: Map<string, number>): { projectId: number; by: MatchBy } | null {
   const id = projectIdInSubject(m.subject);
@@ -168,13 +168,8 @@ export function matchProject(m: MailForMatch, projects: ProjectForMatch[], threa
     if (bySurname) return { projectId: bySurname.id, by: "surname" };
   }
 
-  // The sender (or the forwarded "From:") is a project's end-customer contact; several projects → LV / EL decides.
-  const senders = m.senders.map((s) => s.toLowerCase()).filter(Boolean);
-  if (senders.length) {
-    const hits = customers.filter((p) => p.emails.some((e) => senders.includes(e.toLowerCase())));
-    const bySender = hits.length ? pickByDiscipline(hits, m.subject) : null;
-    if (bySender) return { projectId: bySender.id, by: "sender" };
-  }
+  // F26-g (Fred 2026-10-26): the sender being a project's contact is NOT enough on its own (one client has
+  // several projects, and a contact may carry a wrong address); it only adds weight in scoreCandidates.
   return null;
 }
 
@@ -296,7 +291,11 @@ export type Candidate = { project: ProjectForMatch; score: number; words: string
  * subject (full weight) or in the first lines of the body (half weight). A street number next to the street's
  * own words counts double, a client's last name counts double. Sorted best first, at most `limit`.
  */
-export function scoreCandidates(m: { subject: string | null; text?: string | null }, projects: ProjectForMatch[], limit = 8): Candidate[] {
+/** F26-g: what the sender being the project's contact is worth: with one more word it files (strongPick needs 3). */
+export const SENDER_WEIGHT = 2;
+
+export function scoreCandidates(m: { subject: string | null; text?: string | null; senders?: string[] }, projects: ProjectForMatch[], limit = 8): Candidate[] {
+  const senders = (m.senders ?? []).map((x) => x.trim().toLowerCase()).filter(Boolean);
   const subject = new Set(normalizeText(cleanSubject(m.subject)).split(" ").filter(Boolean));
   const body = new Set(normalizeText((m.text ?? "").slice(0, 1500)).split(" ").filter(Boolean));
   const weightOf = (w: string) => (subject.has(w) ? 1 : body.has(w) ? 0.5 : 0);
@@ -321,6 +320,10 @@ export function scoreCandidates(m: { subject: string | null; text?: string | nul
         score += weight * f;
         hit.push(w);
       }
+    }
+    if (senders.length && p.emails.some((e) => senders.includes(e.toLowerCase()))) {
+      score += SENDER_WEIGHT;
+      hit.push("sender");
     }
     if (score > 0) out.push({ project: p, score, words: hit });
   }

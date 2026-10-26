@@ -77,7 +77,8 @@ describe("matching an email to a project", () => {
     expect(subjectDiscipline("Low voltage and electrical walk")).toBeNull();
     expect(subjectDiscipline("Elevator keys")).toBeNull(); // "el" only as a whole word
     expect(matchProject(mail({ subject: "Fwd: LV - Womack Residence", senders: ["fred@techsquadfl.com", "chloecromarty@gmail.com"] }), womack, none)).toEqual({ projectId: 1260, by: "surname" });
-    expect(matchProject(mail({ subject: "Fwd: LV - details", senders: ["chloecromarty@gmail.com"] }), womack, none)).toEqual({ projectId: 1260, by: "sender" });
+    // F26-g: the sender alone files nothing any more.
+    expect(matchProject(mail({ subject: "Fwd: LV - details", senders: ["chloecromarty@gmail.com"] }), womack, none)).toBeNull();
     expect(matchProject(mail({ subject: "Fwd: Womack Residence EL", senders: ["chloecromarty@gmail.com"] }), womack, none)).toEqual({ projectId: 1265, by: "surname" });
     expect(matchProject(mail({ subject: "Fwd: Womack Residence", senders: ["chloecromarty@gmail.com"] }), womack, none)).toBeNull();
     // The same word settles two projects with the same name in the subject.
@@ -138,8 +139,8 @@ describe("matching an email to a project", () => {
     expect(matchProject(mail({ subject: "Roth Residence" }), two, threads)).toBeNull(); // two different Roths
   });
 
-  it("then the sender, only when exactly one project has that contact", () => {
-    expect(matchProject(mail({ subject: "hello", senders: ["Serena@x.com"] }), projects, threads)).toEqual({ projectId: 1300, by: "sender" });
+  it("the sender alone never files (F26-g, Fred 2026-10-26: one client has several projects, and a contact may carry a wrong address)", () => {
+    expect(matchProject(mail({ subject: "hello", senders: ["Serena@x.com"] }), projects, threads)).toBeNull();
     expect(matchProject(mail({ subject: "hello", senders: ["shared@x.com"] }), projects, threads)).toBeNull();
     expect(matchProject(mail({ subject: "hello", senders: ["nobody@x.com"] }), projects, threads)).toBeNull();
   });
@@ -194,5 +195,20 @@ describe("parsed emails", () => {
 
   it("names the OneDrive folder with the Eastern date and a safe subject", () => {
     expect(emailFolderName("2026-10-21T14:00:00.000Z", "Fwd: Villa Serena: RFI / doors?")).toBe("2026-10-21 Villa Serena- RFI - doors-");
+  });
+});
+
+describe("F26-g: the sender counts as a hint in the scores, never alone", () => {
+  const projects = [
+    { id: 1, title: "Steve - Hallandale Beach", emails: ["office@example.com"], category: null, ownerType: "End Customer", ownerLastName: "Landau" },
+    { id: 2, title: "Roth Residence", emails: ["roth@example.com"], category: null, ownerType: "End Customer", ownerLastName: "Roth" },
+  ];
+  it("gives the contact's project two points, which files only with another word of the project", () => {
+    const alone = scoreCandidates({ subject: "You made the sale for Ruckus ICX", senders: ["office@example.com"] }, projects);
+    expect(alone.map((c) => [c.project.id, c.score, c.words])).toEqual([[1, 2, ["sender"]]]);
+    expect(strongPick(alone, "You made the sale")).toBeNull();
+    const withWord = scoreCandidates({ subject: "Hallandale invoice", senders: ["office@example.com"] }, projects);
+    expect(withWord[0].score).toBe(3);
+    expect(strongPick(withWord, "Hallandale invoice")?.id).toBe(1);
   });
 });

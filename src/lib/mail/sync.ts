@@ -68,7 +68,7 @@ type Suggestion = { id: number; title: string | null; score: number };
 async function decideProject(db: SupabaseClient, m: { subject: string | null; text: string | null; from: string; senders: string[]; threadId: string | null; attachments: string[] }, catalog: Catalog, askAi: boolean): Promise<{ match: { projectId: number; by: MatchBy } | null; suggestions: Suggestion[]; aiTried: boolean }> {
   const exact = matchProject({ subject: m.subject, senders: m.senders, threadId: m.threadId }, catalog.projects, catalog.threads);
   if (exact) return { match: exact, suggestions: [], aiTried: false };
-  const scored = scoreCandidates({ subject: m.subject, text: m.text }, catalog.projects);
+  const scored = scoreCandidates({ subject: m.subject, text: m.text, senders: m.senders }, catalog.projects);
   const suggestions = scored.slice(0, 5).map((c) => ({ id: c.project.id, title: c.project.title, score: c.score }));
   const strong = strongPick(scored, m.subject);
   if (strong) return { match: { projectId: strong.id, by: "words" }, suggestions, aiTried: false };
