@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ebayKind, extractPrompt, fieldsFor, heuristics, linksIn, merge, parseExtraction, textLinks, titleKey } from "@/lib/ebay/engine";
+import { ebayKind, extractPrompt, fieldsFor, heuristics, linksIn, merge, parseExtraction, repairJson, textLinks, titleKey } from "@/lib/ebay/engine";
 
 // F32 Ebay sales (SPEC §9.1 F32-a): which emails are eBay's two, the regex reading, Claude's answer, the merge.
 
@@ -81,5 +81,15 @@ describe("a label email in eBay's 2026 layout (values made up)", () => {
     const sale = fieldsFor("sale", { ...x, label_url: "https://x", tracking: "T" }, { tracking: "9400100000000000000001" });
     expect(sale.label_url).toBeUndefined();
     expect(sale.tracking).toBeUndefined();
+  });
+});
+
+describe("an address with real line breaks inside the JSON string", () => {
+  it("is repaired and read", () => {
+    const raw = '{"item_title":"Sample Switch 12P","ship_to":"Pat Example\n1 Sample Rd\nSample City, ST 00000","price":64.9}';
+    expect(() => JSON.parse(raw)).toThrow();
+    expect(JSON.parse(repairJson(raw)).ship_to).toBe("Pat Example\n1 Sample Rd\nSample City, ST 00000");
+    expect(parseExtraction(raw)?.ship_to).toBe("Pat Example\n1 Sample Rd\nSample City, ST 00000");
+    expect(parseExtraction(raw)?.price).toBe(64.9);
   });
 });

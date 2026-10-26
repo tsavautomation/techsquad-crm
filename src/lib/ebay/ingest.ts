@@ -20,8 +20,9 @@ async function extract(kind: EbayKind, parsed: ParsedMail): Promise<{ data: Extr
   if (!aiConfigured()) return { data: fallback, mode: "fallback", error: "ANTHROPIC_API_KEY is not set" };
   try {
     const res = await claude().messages.create({ model: EXTRACT_MODEL, max_tokens: 900, system: EXTRACT_SYSTEM, messages: [{ role: "user", content: extractPrompt({ subject: parsed.subject, from: actorLabel(parsed.from), receivedAt: parsed.receivedAt, text: parsed.text, links }) }] });
-    const ai = parseExtraction(res.content.find((b) => b.type === "text")?.text ?? "");
-    if (!ai) return { data: fallback, mode: "fallback", error: "The AI answer could not be read" };
+    const raw = res.content.find((b) => b.type === "text")?.text ?? "";
+    const ai = parseExtraction(raw);
+    if (!ai) return { data: fallback, mode: "fallback", error: `The AI answer could not be read (${res.stop_reason ?? "?"}): ${raw.slice(0, 400)}` };
     return { data: merge(ai, fallback), mode: "ai", error: null };
   } catch (e) {
     return { data: fallback, mode: "fallback", error: describeError(e) };

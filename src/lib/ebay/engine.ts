@@ -82,6 +82,34 @@ const Schema = z.object({
   tracking: str(80),
 });
 
+/** Raw line breaks and tabs inside a JSON string (an address on several lines) become escapes, so JSON.parse accepts them. */
+export function repairJson(text: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+  for (const ch of text) {
+    if (inString) {
+      if (escaped) {
+        out += ch;
+        escaped = false;
+      } else if (ch === "\\") {
+        out += ch;
+        escaped = true;
+      } else if (ch === '"') {
+        out += ch;
+        inString = false;
+      } else if (ch === "\n") out += "\\n";
+      else if (ch === "\r") out += "";
+      else if (ch === "\t") out += "\\t";
+      else out += ch;
+    } else {
+      out += ch;
+      if (ch === '"') inString = true;
+    }
+  }
+  return out;
+}
+
 /** Reads Claude's answer: a JSON object, with or without a fence or chatter. Null when unreadable. */
 export function parseExtraction(raw: string): Extracted | null {
   const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
@@ -89,10 +117,15 @@ export function parseExtraction(raw: string): Extracted | null {
   const end = cleaned.lastIndexOf("}");
   if (start < 0 || end <= start) return null;
   let parsed: unknown;
+  const slice = cleaned.slice(start, end + 1);
   try {
-    parsed = JSON.parse(cleaned.slice(start, end + 1));
+    parsed = JSON.parse(slice);
   } catch {
-    return null;
+    try {
+      parsed = JSON.parse(repairJson(slice));
+    } catch {
+      return null;
+    }
   }
   const r = Schema.safeParse(parsed);
   if (!r.success) return null;
