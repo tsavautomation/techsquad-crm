@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ebayKind, extractPrompt, fieldsFor, heuristics, linksIn, merge, parseExtraction, repairJson, textLinks, titleKey } from "@/lib/ebay/engine";
+import { ebayKind, extractPrompt, fieldsFor, heuristics, itemTitle, linksIn, merge, parseExtraction, repairJson, textLinks, titleKey } from "@/lib/ebay/engine";
 
 // F32 Ebay sales (SPEC §9.1 F32-a): which emails are eBay's two, the regex reading, Claude's answer, the merge.
 
@@ -91,5 +91,15 @@ describe("an address with real line breaks inside the JSON string", () => {
     expect(JSON.parse(repairJson(raw)).ship_to).toBe("Pat Example\n1 Sample Rd\nSample City, ST 00000");
     expect(parseExtraction(raw)?.ship_to).toBe("Pat Example\n1 Sample Rd\nSample City, ST 00000");
     expect(parseExtraction(raw)?.price).toBe(64.9);
+  });
+});
+
+describe("the item name (Fred 2026-10-26: the title of the tile)", () => {
+  it("comes from the subject, the bracketed order link, or the line above Order number", () => {
+    expect(itemTitle("sale", "", "You made the sale for Sample Switch 12P")).toBe("Sample Switch 12P");
+    expect(itemTitle("sale", "Fwd: You made the sale for Sample Switch 12P".slice(0, 0) + "blah\n[Sample Switch 12P]<https://www.ebay.com/mesh/ord/details?orderid=27-00000-00001&x=1>\n", "Fwd: your order")).toBe("Sample Switch 12P");
+    expect(itemTitle("label", "Tracking\n\n9400100000000000000001\n\n[alt]\n<https://cgi.ebay.com/ws/eBayISAPI.dll?ViewItem&item=270000000001>\nSample Switch 12P\nOrder number\n\n27-00000-00001\n", "Your shipping label is ready")).toBe("Sample Switch 12P");
+    expect(itemTitle("sale", "nothing here", "Weekly deals")).toBeNull();
+    expect(heuristics("sale", "x", [], "You made the sale for Sample Switch 12P").item_title).toBe("Sample Switch 12P");
   });
 });

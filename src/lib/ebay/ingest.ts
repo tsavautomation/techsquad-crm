@@ -16,7 +16,7 @@ export const isEbayMail = (parsed: Pick<ParsedMail, "from" | "subject" | "innerS
 
 async function extract(kind: EbayKind, parsed: ParsedMail): Promise<{ data: Extracted; mode: "ai" | "fallback"; error: string | null }> {
   const links = linksIn(parsed.html);
-  const fallback = heuristics(kind, parsed.text, links);
+  const fallback = heuristics(kind, parsed.text, links, parsed.subject);
   if (!aiConfigured()) return { data: fallback, mode: "fallback", error: "ANTHROPIC_API_KEY is not set" };
   try {
     const res = await claude().messages.create({ model: EXTRACT_MODEL, max_tokens: 900, system: EXTRACT_SYSTEM, messages: [{ role: "user", content: extractPrompt({ subject: parsed.subject, from: actorLabel(parsed.from), receivedAt: parsed.receivedAt, text: parsed.text, links }) }] });

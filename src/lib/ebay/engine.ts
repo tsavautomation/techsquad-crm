@@ -160,9 +160,10 @@ export function textLinks(text: string | null | undefined): string[] {
 }
 
 /** What can be read without a model: the order number, a label link, a price, a tracking number. */
-export function heuristics(kind: EbayKind, text: string, htmlLinks: string[]): Extracted {
+export function heuristics(kind: EbayKind, text: string, htmlLinks: string[], subject = ""): Extracted {
   const e: Extracted = { ...EMPTY };
   const links = [...htmlLinks, ...textLinks(text)];
+  e.item_title = itemTitle(kind, text, subject);
   e.order_number = text.match(ORDER_NUMBER)?.[1] ?? null;
   const price = text.match(/(?:sold for|price|item price|you made)[^$\n]{0,40}\$\s?([\d,]+\.\d{2})/i) ?? text.match(/\$\s?([\d,]+\.\d{2})/);
   if (price) e.price = Number(price[1].replace(/,/g, ""));
@@ -176,6 +177,27 @@ export function heuristics(kind: EbayKind, text: string, htmlLinks: string[]): E
   const user = text.match(/\bbuyer\s*\n+\s*([A-Za-z0-9._*-]{3,40})\s*\n/i);
   if (user && !/^(name|user)/i.test(user[1])) e.buyer_username = user[1];
   return e;
+}
+
+/**
+ * The item's name: the subject "You made the sale for <item>", the sale email's "[<item>]<link to the order>",
+ * or, on the label email, the line just above "Order number".
+ */
+export function itemTitle(kind: EbayKind, text: string, subject: string): string | null {
+  const clean = (t: string) => t.replace(/\s+/g, " ").replace(/^[\[\s]+|[\]\s]+$/g, "").trim().slice(0, 300) || null;
+  const fromSubject = subject.match(/\b(?:sale|sold)\s+for\s+(.+?)\s*$/i)?.[1];
+  if (fromSubject && !/^(?:your|the)\s+item$/i.test(fromSubject)) return clean(fromSubject);
+  const bracket = text.match(/\[([^\]\n]{3,200})\]\s*<https?:\/\/(?:www\.)?(?:cgi\.)?ebay\.com\/(?:mesh\/ord|itm|ws\/eBayISAPI)/i)?.[1];
+  if (bracket && !/^(?:alt|image|logo|shop ebay)$/i.test(bracket.trim())) return clean(bracket);
+  if (kind === "label") {
+    const lines = text.split("\n").map((l) => l.trim());
+    const at = lines.findIndex((l) => /^order number\b/i.test(l));
+    for (let i = at - 1; i >= 0 && i >= at - 4; i--) {
+      const l = lines[i];
+      if (l && !/^(?:<https?:|\[alt\]|\[image)/i.test(l) && !/^https?:\/\//i.test(l) && l.length >= 3) return clean(l);
+    }
+  }
+  return null;
 }
 
 /** Heuristic values fill the gaps the model left; the model wins where both answer. */
