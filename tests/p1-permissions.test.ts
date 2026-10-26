@@ -54,6 +54,7 @@ describe("checklist", () => {
       "job_costing.view",
       "backups.page.view",
       "whatsapp.page.view",
+      "inventory.ebay.view_page",
       ...ACTIONS.map((a) => `administrative.report-deficiencies.${a}`),
       ...ACTIONS.map((a) => `administrative.documents.${a}`),
       ...ACTIONS.map((a) => `administrative.portal-documents.${a}`),

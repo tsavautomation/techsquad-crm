@@ -226,6 +226,8 @@ export type ParsedMail = {
   text: string;
   innerSenders: string[];
   attachments: MailAttachment[];
+  /** The HTML part as received (capped), for readers that need the links (F32 eBay label). */
+  html: string;
 };
 
 const TEXT_CAP = 20_000;
@@ -258,6 +260,7 @@ export function parseMessage(mail: MailInput, meta: { uid: number; uidValidity: 
     text,
     innerSenders: innerSenders(text),
     attachments: attachmentsOf(mail.attachments),
+    html: typeof mail.html === "string" ? mail.html.slice(0, 400_000) : "",
   };
 }
 

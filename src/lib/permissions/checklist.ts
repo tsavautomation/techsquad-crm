@@ -52,6 +52,8 @@ export const PAGE_ITEMS: ChecklistItem[] = [
   { key: "backups.page.view", label: "Backups (the nightly copies in OneDrive)" },
   // F28: Fred 2026-10-21. Starts with the Job costing holders; administrators always see it.
   { key: "whatsapp.page.view", label: "WhatsApp board (messages from the WhatsApp PC, read by AI)" },
+  // F32: Fred 2026-10-26. Roberto, Fred, Karina, Saulo, Jessica, Luana and Lucas.
+  { key: "inventory.ebay.view_page", label: "Ebay sales (Inventory › Ebay)" },
 ];
 
 export const ADMIN_ITEMS: ChecklistItem[] = [

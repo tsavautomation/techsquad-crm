@@ -19,6 +19,8 @@ export const INBOX = "INBOX";
 export const ALL_MAIL = "[Gmail]/All Mail";
 export const IGNORED_LABEL = "Ignored";
 export const TRASH = "[Gmail]/Trash";
+/** gmail_label when the email could not be moved (it is no longer in the inbox, or the move failed). */
+export const NOT_IN_INBOX = "-";
 
 export type GmailSettings = {
   account: string;

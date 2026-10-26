@@ -8,7 +8,8 @@ import { loadAiSettings } from "@/lib/ai/review-queue";
 import { adminDb } from "@/lib/supabase/admin";
 import { fileMessage as fileText, readPending } from "@/lib/whatsapp/triage";
 import { formatPhone, isRingCentralText, parseRingCentralText } from "./sms";
-import { fetchAnywhere, fetchRaw, findUid, IGNORED_LABEL, INBOX, loadSettings, moveToLabel, newUids, openPath, parseRaw, saveSettings, trashMessage, TRASH, withMailbox, type GmailSettings, type Session } from "./client";
+import { fetchAnywhere, fetchRaw, findUid, IGNORED_LABEL, INBOX, loadSettings, moveToLabel, newUids, NOT_IN_INBOX, openPath, parseRaw, saveSettings, trashMessage, TRASH, withMailbox, type GmailSettings, type Session } from "./client";
+import { ingestEbay, isEbayMail } from "@/lib/ebay/ingest";
 import { actorLabel, emailFolderName, isSystemMail, matchProject, parseMessage, projectLabel, scoreCandidates, strongPick, type MailAttachment, type MatchBy, type ParsedMail, type ProjectForMatch } from "./engine";
 
 // F26-2 Gmail intake: every five minutes (pg_cron 'crm-mail' → /api/cron/mail) the mailbox is read over IMAP.
@@ -17,14 +18,13 @@ import { actorLabel, emailFolderName, isSystemMail, matchProject, parseMessage, 
 // OneDrive folder's name (Fred 2026-10-21: an email still in the inbox was not processed). Google's own
 // notices go to the label Ignored. The rest wait in the inbox and in the Assign list on Today.
 
-export type SyncSummary = { read: number; filed: number; waiting: number; moved: number; routed: number; texts: number; errors: string[]; skipped?: string };
+export type SyncSummary = { read: number; filed: number; waiting: number; moved: number; routed: number; texts: number; ebay: number; errors: string[]; skipped?: string };
 export type StoredAttachment = MailAttachment & { item_id?: string; error?: string };
 
 const FIRST_LOOKBACK_MS = 30 * 24 * 3600_000;
 const BUDGET_MS = 150_000;
 const MAX_PER_RUN = 100;
 /** gmail_label for an email that was no longer in the inbox when the CRM went to move it (someone moved it by hand). */
-const NOT_IN_INBOX = "-";
 
 type MailRow = { id: number; gmail_id: string; uid: number | null; uid_validity: number | null; received_at: string; from_name: string | null; from_email: string | null; subject: string | null; body_text: string | null; attachments: StoredAttachment[]; event_id: number | null };
 
@@ -90,9 +90,9 @@ async function fileInGmail(db: SupabaseClient, box: Session, mailId: number, gma
 /** Reads the new emails since the last check (never throws: the outcome is kept in the settings). */
 export async function syncMail(): Promise<SyncSummary> {
   const s = await loadSettings();
-  if (!s) return { read: 0, filed: 0, waiting: 0, moved: 0, routed: 0, texts: 0, errors: [], skipped: "Gmail is not connected" };
+  if (!s) return { read: 0, filed: 0, waiting: 0, moved: 0, routed: 0, texts: 0, ebay: 0, errors: [], skipped: "Gmail is not connected" };
   const db = adminDb();
-  const out: SyncSummary = { read: 0, filed: 0, waiting: 0, moved: 0, routed: 0, texts: 0, errors: [] };
+  const out: SyncSummary = { read: 0, filed: 0, waiting: 0, moved: 0, routed: 0, texts: 0, ebay: 0, errors: [] };
   const started = Date.now();
   let lastUid = s.last_uid;
   let uidValidity = s.uid_validity;
@@ -113,6 +113,11 @@ export async function syncMail(): Promise<SyncSummary> {
           // F31: a text message RingCentral emailed us joins the WhatsApp board and leaves the mailbox.
           if (isRingCentralText(parsed.from.email, parsed.subject)) {
             if (await ingestText(db, box, parsed, uid)) out.texts++;
+            continue;
+          }
+          // F32: eBay's sale and shipping-label emails become Ebay sales (Inventory › Ebay) and leave the mailbox.
+          if (isEbayMail(parsed.from.email, parsed.subject)) {
+            if (await ingestEbay(db, box, parsed, uid)) out.ebay++;
             continue;
           }
           const system = isSystemMail(parsed.from.email);

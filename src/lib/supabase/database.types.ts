@@ -1090,6 +1090,118 @@ export type Database = {
           },
         ]
       }
+      ebay_sales: {
+        Row: {
+          buyer_name: string | null
+          buyer_username: string | null
+          created_at: string
+          extraction: string
+          extraction_error: string | null
+          id: number
+          item_id: string | null
+          item_title: string | null
+          label_mail_id: number | null
+          label_ready_at: string | null
+          label_url: string | null
+          notes: string | null
+          order_number: string | null
+          price: number | null
+          quantity: number | null
+          raw_label_text: string | null
+          raw_sale_text: string | null
+          sale_mail_id: number | null
+          ship_to: string | null
+          shipped_at: string | null
+          shipped_by: string | null
+          shipping: number | null
+          sold_at: string | null
+          status: string
+          total: number | null
+          tracking: string | null
+          updated_at: string
+        }
+        Insert: {
+          buyer_name?: string | null
+          buyer_username?: string | null
+          created_at?: string
+          extraction?: string
+          extraction_error?: string | null
+          id?: number
+          item_id?: string | null
+          item_title?: string | null
+          label_mail_id?: number | null
+          label_ready_at?: string | null
+          label_url?: string | null
+          notes?: string | null
+          order_number?: string | null
+          price?: number | null
+          quantity?: number | null
+          raw_label_text?: string | null
+          raw_sale_text?: string | null
+          sale_mail_id?: number | null
+          ship_to?: string | null
+          shipped_at?: string | null
+          shipped_by?: string | null
+          shipping?: number | null
+          sold_at?: string | null
+          status?: string
+          total?: number | null
+          tracking?: string | null
+          updated_at?: string
+        }
+        Update: {
+          buyer_name?: string | null
+          buyer_username?: string | null
+          created_at?: string
+          extraction?: string
+          extraction_error?: string | null
+          id?: number
+          item_id?: string | null
+          item_title?: string | null
+          label_mail_id?: number | null
+          label_ready_at?: string | null
+          label_url?: string | null
+          notes?: string | null
+          order_number?: string | null
+          price?: number | null
+          quantity?: number | null
+          raw_label_text?: string | null
+          raw_sale_text?: string | null
+          sale_mail_id?: number | null
+          ship_to?: string | null
+          shipped_at?: string | null
+          shipped_by?: string | null
+          shipping?: number | null
+          sold_at?: string | null
+          status?: string
+          total?: number | null
+          tracking?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ebay_sales_label_mail_id_fkey"
+            columns: ["label_mail_id"]
+            isOneToOne: false
+            referencedRelation: "mail_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ebay_sales_sale_mail_id_fkey"
+            columns: ["sale_mail_id"]
+            isOneToOne: false
+            referencedRelation: "mail_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ebay_sales_shipped_by_fkey"
+            columns: ["shipped_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_outbox: {
         Row: {
           attachments: Json

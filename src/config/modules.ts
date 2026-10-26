@@ -72,6 +72,8 @@ export const MODULES: ModuleDef[] = [
       tab("inventory", "products", "Product"),
       tab("inventory", "stock", "Stock"),
       tab("inventory", "inventory-checkout", "Inventory Checkout"),
+      // F32 (Fred 2026-10-26): eBay sales to ship, built from eBay's emails.
+      tab("inventory", "ebay", "Ebay"),
     ],
   },
   {
