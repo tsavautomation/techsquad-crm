@@ -116,7 +116,7 @@ export async function syncMail(): Promise<SyncSummary> {
             continue;
           }
           // F32: eBay's sale and shipping-label emails become Ebay sales (Inventory › Ebay) and leave the mailbox.
-          if (isEbayMail(parsed.from.email, parsed.subject)) {
+          if (isEbayMail(parsed)) {
             if (await ingestEbay(db, box, parsed, uid)) out.ebay++;
             continue;
           }

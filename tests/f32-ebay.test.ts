@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ebayKind, extractPrompt, heuristics, linksIn, merge, parseExtraction, titleKey } from "@/lib/ebay/engine";
+import { ebayKind, extractPrompt, fieldsFor, heuristics, linksIn, merge, parseExtraction, textLinks, titleKey } from "@/lib/ebay/engine";
 
 // F32 Ebay sales (SPEC §9.1 F32-a): which emails are eBay's two, the regex reading, Claude's answer, the merge.
 
@@ -11,6 +11,9 @@ describe("recognising eBay's emails", () => {
     expect(ebayKind("info@tsav.net", "Fwd: eBay: Your shipping label is ready")).toBe("label");
     expect(ebayKind("ebay@ebay.com", "Weekly deals for you")).toBeNull();
     expect(ebayKind("someone@gmail.com", "You made the sale")).toBeNull();
+    // Forwarded by the office: the forwarder is the sender, eBay is in the forwarded From: line or the text.
+    expect(ebayKind("info@techsquadfl.com", "Your shipping label is ready", { innerSenders: ["ebay@ebay.com"] })).toBe("label");
+    expect(ebayKind("info@techsquadfl.com", "You made the sale", { text: "From: eBay <ebay@ebay.com>\nSold!" })).toBe("sale");
     expect(ebayKind("service@ringcentral.com", "New Text Message from (305) 555-0100")).toBeNull();
   });
 });
@@ -52,5 +55,31 @@ describe("reading Claude's answer and merging", () => {
     expect(extractPrompt({ subject: "S", from: "eBay", receivedAt: "now", text: "body", links: ["https://x"] })).toContain("Links in the email:\nhttps://x");
     expect(titleKey("Crestron TSW-760 Touch Screen, Black (used)")).toBe("crestron tsw 760 touch screen black");
     expect(titleKey(null)).toBe("");
+  });
+});
+
+describe("a label email in eBay's 2026 layout (values made up)", () => {
+  const text = "________________________________\nFrom: eBay <ebay@ebay.com>\nSent: Monday, October 26, 2026 7:37 AM\nSubject: Your shipping label is ready\n\nDownload label <https://www.ebay.com/ship/single/print/00000000-0000-0000-0000-000000000001>\n\nPrint packing slip<https://www.ebay.com/sh/ord/prt?module=PACKING_SLIP_MODULE&labelId=00000000>\n\nShip to\n\nPat Example\nSample City, 00000-0000\n\nTracking\n\n9400100000000000000001\n\nSample Switch 12P\nOrder number\n\n27-00000-00001\n\nItem Number\n\n270000000001\n\nBuyer\n\nsamplebuyer\n\nQty\n\n1\n\nOrder total:\nUSPS Ground Advantage   USD 12.08\n";
+  it("reads the label link from the text, the tracking, the order and item numbers and the buyer id", () => {
+    expect(textLinks(text)).toContain("https://www.ebay.com/ship/single/print/00000000-0000-0000-0000-000000000001");
+    const h = heuristics("label", text, []);
+    expect(h.label_url).toBe("https://www.ebay.com/ship/single/print/00000000-0000-0000-0000-000000000001");
+    expect(h.tracking).toBe("9400100000000000000001");
+    expect(h.order_number).toBe("27-00000-00001");
+    expect(h.item_id).toBe("270000000001");
+    expect(h.buyer_username).toBe("samplebuyer");
+  });
+  it("the label email never overwrites the sale's price with the postage, but fills blanks and owns the label and tracking", () => {
+    const x = { ...heuristics("label", text, []), price: 12.08, buyer_name: "Pat Example", ship_to: "Pat Example\nSample City, 00000-0000" };
+    const existing = { price: 425, buyer_name: "Pat Example", ship_to: "Pat Example\n1 Sample Rd\nSample City, ST 00000-0000", tracking: null, label_url: null };
+    const f = fieldsFor("label", x, existing);
+    expect(f.price).toBeUndefined();
+    expect(f.ship_to).toBeUndefined();
+    expect(f.label_url).toBe(x.label_url);
+    expect(f.tracking).toBe("9400100000000000000001");
+    expect(fieldsFor("label", x, null).price).toBe(12.08);
+    const sale = fieldsFor("sale", { ...x, label_url: "https://x", tracking: "T" }, { tracking: "9400100000000000000001" });
+    expect(sale.label_url).toBeUndefined();
+    expect(sale.tracking).toBeUndefined();
   });
 });

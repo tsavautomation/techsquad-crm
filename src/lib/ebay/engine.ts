@@ -10,11 +10,14 @@ const EBAY_SENDER = /@(?:[a-z0-9.-]+\.)?ebay\.(?:com|co\.uk|ca|de|com\.au)$/i;
 const SALE_SUBJECT = /\byou made the sale\b|\byour item sold\b|\bsold!?\b.*\bship\b|\bitem sold\b/i;
 const LABEL_SUBJECT = /\bshipping label is ready\b|\byour label is ready\b|\bprint your (?:shipping )?label\b/i;
 
-/** The sale email or the label email, by sender and subject; null for anything else. */
-export function ebayKind(fromEmail: string | null | undefined, subject: string | null | undefined): EbayKind | null {
+/**
+ * The sale email or the label email, by subject and sender; null for anything else. A forwarded copy has the
+ * forwarder as sender, so the forwarded "From: eBay <ebay@ebay.com>" line (innerSenders) or "eBay" in the text counts too.
+ */
+export function ebayKind(fromEmail: string | null | undefined, subject: string | null | undefined, hints: { innerSenders?: string[]; text?: string | null } = {}): EbayKind | null {
   const from = (fromEmail ?? "").trim();
   const subj = subject ?? "";
-  const fromEbay = EBAY_SENDER.test(from);
+  const fromEbay = EBAY_SENDER.test(from) || (hints.innerSenders ?? []).some((e) => EBAY_SENDER.test(e.trim())) || /\bebay\b/i.test((hints.text ?? "").slice(0, 3000));
   if (LABEL_SUBJECT.test(subj) && (fromEbay || /\bebay\b/i.test(subj))) return "label";
   if (SALE_SUBJECT.test(subj) && (fromEbay || /\bebay\b/i.test(subj))) return "sale";
   return null;
@@ -116,9 +119,17 @@ export function linksIn(html: string | null | undefined): string[] {
   return out;
 }
 
+/** The URLs written in a plain-text email ("Download label <https://…>"). */
+export function textLinks(text: string | null | undefined): string[] {
+  const out: string[] = [];
+  for (const m of (text ?? "").matchAll(/https?:\/\/[^\s<>"')\]]+/g)) if (!out.includes(m[0])) out.push(m[0]);
+  return out;
+}
+
 /** What can be read without a model: the order number, a label link, a price, a tracking number. */
-export function heuristics(kind: EbayKind, text: string, links: string[]): Extracted {
+export function heuristics(kind: EbayKind, text: string, htmlLinks: string[]): Extracted {
   const e: Extracted = { ...EMPTY };
+  const links = [...htmlLinks, ...textLinks(text)];
   e.order_number = text.match(ORDER_NUMBER)?.[1] ?? null;
   const price = text.match(/(?:sold for|price|item price|you made)[^$\n]{0,40}\$\s?([\d,]+\.\d{2})/i) ?? text.match(/\$\s?([\d,]+\.\d{2})/);
   if (price) e.price = Number(price[1].replace(/,/g, ""));
@@ -128,7 +139,9 @@ export function heuristics(kind: EbayKind, text: string, links: string[]): Extra
   if (item) e.item_id = item[1];
   const tracking = text.match(/tracking(?: number)?\s*[:#]?\s*([A-Z0-9]{10,34})\b/i);
   if (tracking) e.tracking = tracking[1];
-  if (kind === "label") e.label_url = links.find((u) => /label/i.test(u) && /ebay/i.test(u)) ?? links.find((u) => /label/i.test(u)) ?? null;
+  if (kind === "label") e.label_url = links.find((u) => /ebay\.com\/ship\/.*print/i.test(u)) ?? links.find((u) => /label/i.test(u) && /ebay/i.test(u) && !/packing/i.test(u)) ?? links.find((u) => /label/i.test(u)) ?? null;
+  const user = text.match(/\bbuyer\s*\n+\s*([A-Za-z0-9._*-]{3,40})\s*\n/i);
+  if (user && !/^(name|user)/i.test(user[1])) e.buyer_username = user[1];
   return e;
 }
 
@@ -137,6 +150,28 @@ export function merge(ai: Extracted | null, fallback: Extracted): Extracted {
   if (!ai) return fallback;
   const out = { ...fallback };
   for (const k of Object.keys(EMPTY) as (keyof Extracted)[]) if (ai[k] !== null && ai[k] !== undefined) (out as Record<string, unknown>)[k] = ai[k];
+  return out;
+}
+
+/** What the label email owns on the row; everything else it may only fill in where the sale email left a blank. */
+export const LABEL_FIELDS: (keyof Extracted)[] = ["label_url", "tracking"];
+
+/**
+ * Values to write when an email lands on an existing row: the sale email sets its facts; the label email sets
+ * the label link and tracking, and fills blanks (the sale email's price is never replaced by the postage).
+ */
+export function fieldsFor(kind: EbayKind, x: Extracted, existing: Partial<Record<keyof Extracted, unknown>> | null): Partial<Extracted> {
+  const out: Partial<Extracted> = {};
+  for (const k of Object.keys(EMPTY) as (keyof Extracted)[]) {
+    const v = x[k];
+    if (v === null || v === undefined) continue;
+    if (kind === "label" && !LABEL_FIELDS.includes(k) && existing && existing[k] !== null && existing[k] !== undefined) continue;
+    (out as Record<string, unknown>)[k] = v;
+  }
+  if (kind === "sale") {
+    delete out.label_url;
+    if (existing?.tracking) delete out.tracking;
+  }
   return out;
 }
 
