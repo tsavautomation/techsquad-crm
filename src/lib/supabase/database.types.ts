@@ -6500,6 +6500,10 @@ export type Database = {
           billing: string | null
           checked_in_at: string | null
           checked_out_at: string | null
+          contact_email: string | null
+          contact_id: number | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -6541,6 +6545,10 @@ export type Database = {
           billing?: string | null
           checked_in_at?: string | null
           checked_out_at?: string | null
+          contact_email?: string | null
+          contact_id?: number | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -6582,6 +6590,10 @@ export type Database = {
           billing?: string | null
           checked_in_at?: string | null
           checked_out_at?: string | null
+          contact_email?: string | null
+          contact_id?: number | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -6614,6 +6626,13 @@ export type Database = {
           vehicle_id?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "visits_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "visits_created_by_fkey"
             columns: ["created_by"]
@@ -7555,6 +7574,10 @@ export type Database = {
           billing: string | null
           checked_in_at: string | null
           checked_out_at: string | null
+          contact_email: string | null
+          contact_id: number | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -7605,6 +7628,10 @@ export type Database = {
           billing: string | null
           checked_in_at: string | null
           checked_out_at: string | null
+          contact_email: string | null
+          contact_id: number | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -7655,6 +7682,10 @@ export type Database = {
           billing: string | null
           checked_in_at: string | null
           checked_out_at: string | null
+          contact_email: string | null
+          contact_id: number | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null

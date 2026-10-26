@@ -42,6 +42,8 @@ export const visits: TableDef = {
       heading: "Visit",
       options: [
         { label: "Client visit", value: "Visit", color: "#2563eb" },
+        // SV-a (Fred 2026-10-26): a survey at a new client has no project yet; it carries its own address and contact.
+        { label: "Survey", value: "Survey", color: "#0d9488" },
         { label: "Internal (warehouse, training…)", value: "Internal", color: "#6b7280" },
       ],
       legacy: NEW,
@@ -97,6 +99,11 @@ export const visits: TableDef = {
     { name: "access_notes", label: "Parking and access", type: "textarea", maxLength: 1000, placeholder: "E.g. visitor parking on P2, check in at the front desk…", legacy: NEW },
     // F21-b (Fred 2026-10-07): a survey at a new client has no project address yet, so the visit can carry its own.
     { name: "address", label: "Visit address", type: "address", help: "Only when it differs from the project's address: a survey at a new client, another site. Blank = the project's address.", legacy: NEW },
+    // SV-a: who the technician meets at a survey (shown by the Survey rule); optionally a contact already in the CRM.
+    { name: "contact_name", label: "Contact name", type: "text", startsHidden: true, maxLength: 120, legacy: NEW },
+    { name: "contact_phone", label: "Contact phone", type: "phone", startsHidden: true, legacy: NEW },
+    { name: "contact_email", label: "Contact email", type: "email", startsHidden: true, legacy: NEW },
+    { name: "contact_id", label: "Contact (if already in the CRM)", type: "lookup", startsHidden: true, lookup: { table: "contacts" }, legacy: NEW },
     {
       name: "status",
       label: "Status",
@@ -143,6 +150,26 @@ export const visits: TableDef = {
     { name: "repeat_count", label: "Number of visits in the series", type: "number", createOnly: true, startsHidden: true, default: "4", help: "Including this one (2 to 24).", legacy: NEW },
   ],
   rules: [
+    // SV-a: a survey has no project; its own address and the contact met there are what the technician needs.
+    {
+      id: 900004,
+      title: "Survey has an address and a contact instead of a project",
+      when: [{ field: "kind", op: "equal", value: "Survey" }],
+      then: [
+        { do: "hide", field: "project_id" },
+        { do: "clear", field: "project_id" },
+        { do: "clear", field: "subject" },
+        { do: "require", field: "address" },
+        { do: "show", field: "contact_name" },
+        { do: "require", field: "contact_name" },
+        { do: "show", field: "contact_phone" },
+        { do: "show", field: "contact_email" },
+        { do: "show", field: "contact_id" },
+        { do: "hide", field: "billing" },
+        { do: "clear", field: "billing" },
+        { do: "hide", field: "maintenance_visit" },
+      ],
+    },
     { id: 900001, title: "Show series size when repeating", when: [{ field: "repeat", op: "not_empty" }], then: [{ do: "show", field: "repeat_count" }, { do: "require", field: "repeat_count" }] },
     // J-k: a client visit needs its project; an internal event hides the project and the client-only fields and needs a subject.
     { id: 900002, title: "Client visit needs a project", when: [{ field: "kind", op: "equal", value: "Visit" }], then: [{ do: "require", field: "project_id" }, { do: "clear", field: "subject" }] },

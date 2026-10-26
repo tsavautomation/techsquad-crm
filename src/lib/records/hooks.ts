@@ -6,6 +6,8 @@ import { seriesStarts, type RepeatRule } from "@/lib/schedule/series";
 import type { TableDef } from "@/registry/types";
 import { syncJoin } from "./relations";
 import { buildTitle } from "./title";
+import { surveyPlace, isSurvey } from "@/lib/schedule/survey";
+import type { Address } from "./values";
 
 // Table-specific follow-ups after a record is created through saveRecord (one write path).
 // A hook returns an error message, or nothing when all went well.
@@ -41,3 +43,28 @@ const linkReturnCard: AfterCreate = async (db, _t, id, values) => {
 const visitCreated: AfterCreate = async (...args) => (await visitSeries(...args)) || (await linkReturnCard(...args));
 
 export const AFTER_CREATE: Record<string, AfterCreate> = { visits: visitCreated };
+
+// ---------------------------------------------------------------- titles that formulas cannot make (SV, Fred 2026-10-26)
+
+/**
+ * A survey visit is "SURVEY – <address or contact> – <date> – <technician>" and its report
+ * "SURVEY – <address or contact> – <technicians> – <date>": the formula with the place where the project would be.
+ * Null when the ordinary formula applies.
+ */
+export async function titleOverride(db: SupabaseClient, t: TableDef, values: Values): Promise<string | null> {
+  if (t.name === "visits") {
+    if (!isSurvey(values.kind as string | null) || values.project_id) return null;
+    const place = surveyPlace(values.address as Address | null, values.contact_name as string | null);
+    return buildTitle(t, { ...values, project_id: null, subject: place ? `SURVEY – ${place}` : "SURVEY" }, null, db);
+  }
+  if (t.name === "job_reports") {
+    if (values.project_id || typeof values.visit_id !== "number") return null;
+    const { data } = await db.from("visits").select("kind, address, contact_name").eq("id", values.visit_id).maybeSingle();
+    const v = data as { kind: string | null; address: Address | null; contact_name: string | null } | null;
+    if (!v || !isSurvey(v.kind)) return null;
+    const place = surveyPlace(v.address, v.contact_name);
+    const rest = (await buildTitle(t, { ...values, project_id: null }, null, db)) ?? "";
+    return `SURVEY${place ? ` – ${place}` : ""}${rest}`;
+  }
+  return null;
+}

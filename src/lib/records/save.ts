@@ -9,7 +9,7 @@ import type { TableDef } from "@/registry/types";
 import { getRecord, recordsDb, rowValues } from "./data";
 import { loadAttachments, loadJoins, syncAttachments, syncJoin } from "./relations";
 import { TABLE_CHECKS } from "./checks";
-import { AFTER_CREATE } from "./hooks";
+import { AFTER_CREATE, titleOverride } from "./hooks";
 import { sanitizeRichText } from "./sanitize";
 import { buildTitle } from "./title";
 import { isEditable, isMultiLookup, isRowField, isUpload, newRecordValues, normalize, validate, type FileItem } from "./values";
@@ -82,7 +82,7 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
     }
     row[f.name] = v ?? null;
   }
-  row.title = await buildTitle(t, values, id, db);
+  row.title = (await titleOverride(db, t, values)) ?? (await buildTitle(t, values, id, db));
 
   let recordId = id;
   if (recordId) {

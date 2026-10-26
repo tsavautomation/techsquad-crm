@@ -5,6 +5,7 @@ import { recordsDb } from "@/lib/records/data";
 import type { Address } from "@/lib/records/values";
 import { getTable } from "@/registry";
 import { technicianColors } from "./colors";
+import { isSurvey, SURVEY_COLOR, visitLabel } from "./survey";
 import { addDays, weekStartOf } from "./dates";
 
 // One week of the calendar (F1), Sunday to Saturday in Eastern time, as seen by the signed-in user.
@@ -47,6 +48,8 @@ type Row = {
   project_id: number | null;
   kind: string | null;
   subject: string | null;
+  address: Address | null;
+  contact_name: string | null;
   visits_team: { target_id: number }[];
   projects: { title: string | null; job_address: Address | null } | null;
   reality_flags: { level: string }[] | null;
@@ -62,7 +65,7 @@ export async function loadWeek(week: string | undefined): Promise<{ weekStart: s
   const [{ data }, { data: emp }] = await Promise.all([
     db
       .from("visits")
-      .select("id, title, starts_at, duration, arrival_window, status, service_type, instructions, technician_id, project_id, kind, subject, reality_flags, visits_team(target_id), projects(title, job_address)")
+      .select("id, title, starts_at, duration, arrival_window, status, service_type, instructions, technician_id, project_id, kind, subject, address, contact_name, reality_flags, visits_team(target_id), projects(title, job_address)")
       .gte("starts_at", from)
       .lt("starts_at", to)
       .is("deleted_at", null)
@@ -81,16 +84,17 @@ export async function loadWeek(week: string | undefined): Promise<{ weekStart: s
     id: v.id,
     // F15: a visit from Google Calendar that found no project keeps Google's title and shows grey.
     // J-k: an internal event (warehouse, training…) shows its subject.
-    project: v.projects?.title ?? (v.project_id ? `Project #${v.project_id}` : v.kind === "Internal" ? v.subject || "Internal" : v.title || "No project"),
-    noProject: !v.project_id && v.kind !== "Internal",
-    address: line(v.projects?.job_address ?? null),
+    // SV-a: a survey shows "SURVEY – <address or contact>".
+    project: visitLabel(v, v.projects?.title),
+    noProject: !v.project_id && v.kind !== "Internal" && !isSurvey(v.kind),
+    address: line(v.address ?? v.projects?.job_address ?? null),
     start: toDateTimeLocalET(v.starts_at),
     duration: Number(v.duration ?? 60),
     window: Number(v.arrival_window ?? 0),
     techId: v.technician_id,
     team: v.visits_team.map((t) => t.target_id),
     status: v.status ?? "Scheduled",
-    color: (v.technician_id && colors.get(v.technician_id)) || (!v.project_id && v.kind !== "Internal" && v.status !== "Cancelled" ? "#9ca3af" : statusField.options?.find((o) => o.value === v.status)?.color ?? "#2563eb"),
+    color: (v.technician_id && colors.get(v.technician_id)) || (isSurvey(v.kind) && v.status !== "Cancelled" ? SURVEY_COLOR : !v.project_id && v.kind !== "Internal" && v.status !== "Cancelled" ? "#9ca3af" : statusField.options?.find((o) => o.value === v.status)?.color ?? "#2563eb"),
     statusColor: statusField.options?.find((o) => o.value === v.status)?.color ?? "#2563eb",
     service: v.service_type,
     instructions: v.instructions,

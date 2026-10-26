@@ -29,4 +29,16 @@ const stockSerial: Check = async (db, id, values) => {
   return hit ? { serial: "Another Stock record already has this serial" } : ({} as Record<string, string>);
 };
 
-export const TABLE_CHECKS: Record<string, Check> = { products: productSku, stock_items: stockSerial };
+/** SV-b: a Job Report without a project is only allowed for a Survey visit. */
+const reportProject: Check = async (db, _id, values) => {
+  const ok: Record<string, string> = {};
+  if (typeof values.project_id === "number") return ok;
+  const visitId = values.visit_id;
+  if (typeof visitId === "number") {
+    const { data } = await db.from("visits").select("kind").eq("id", visitId).maybeSingle();
+    if ((data as { kind: string | null } | null)?.kind === "Survey") return ok;
+  }
+  return { project_id: "Project is required (only a survey's report can be without one)" };
+};
+
+export const TABLE_CHECKS: Record<string, Check> = { products: productSku, stock_items: stockSerial, job_reports: reportProject };

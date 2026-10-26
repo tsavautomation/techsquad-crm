@@ -79,8 +79,14 @@ describe("registry ↔ WebAuthor export", () => {
     }
   });
 
+  // Deliberate departures from WebAuthor, each with its SPEC §9.1 row.
+  const REQUIRED_CHANGED = new Set([
+    "frx_techsquad_job_report.project", // SV-b (Fred 2026-10-26): a survey's report has no project; the save still refuses any other report without one
+  ]);
+
   it("keeps required flags", () => {
     for (const { legacyTable, raw } of exported) {
+      if (REQUIRED_CHANGED.has(`${legacyTable}.${raw.column_name}`)) continue;
       expect(Boolean(findField(legacyTable, raw)!.required), `${legacyTable}.${raw.column_name}`).toBe(raw.required === "true");
     }
   });

@@ -106,12 +106,13 @@ export async function listRecords(t: TableDef, p: ListParams) {
     const f = byName.get(range ? range[1] : k);
     if (!f) continue;
     if (range) {
-      if (!["date", "datetime"].includes(f.type) || !/^d{4}-d{2}-d{2}$/.test(v)) continue;
+      if (!["date", "datetime"].includes(f.type) || !/^\d{4}-\d{2}-\d{2}$/.test(v)) continue;
       if (range[2] === "from") query = query.gte(f.name, f.type === "date" ? v : fromDateTimeLocalET(`${v}T00:00`));
       else query = f.type === "date" ? query.lte(f.name, v) : query.lt(f.name, fromDateTimeLocalET(`${nextDay(v)}T00:00`));
-    } else if (["select", "radio"].includes(f.type) || (f.type === "lookup" && !f.multiple)) query = query.eq(k, v);
+    } else if (f.type === "lookup" && !f.multiple && v === "__none") query = query.is(k, null); // SV-b: "Surveys without a project"
+    else if (["select", "radio"].includes(f.type) || (f.type === "lookup" && !f.multiple)) query = query.eq(k, v);
     else if (f.type === "boolean") query = query.eq(k, v === "true");
-    else if (f.type === "lookup" && f.multiple && /^d+$/.test(v)) {
+    else if (f.type === "lookup" && f.multiple && /^\d+$/.test(v)) {
       const { data: links } = await db.from(`${t.name}_${f.name.replace(/_ids$/, "")}`).select("record_id").eq("target_id", Number(v)).limit(2000);
       const ids = ((links ?? []) as { record_id: number }[]).map((r) => r.record_id);
       if (ids.length) query = query.in("id", ids);

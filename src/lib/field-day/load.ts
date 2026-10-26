@@ -1,4 +1,5 @@
 import "server-only";
+import { isSurvey, visitLabel } from "@/lib/schedule/survey";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CurrentUser } from "@/lib/auth/session";
 import { fromDateTimeLocalET, toDateTimeLocalET, todayET } from "@/lib/dates";
@@ -63,6 +64,8 @@ type VisitRow = {
   project_id: number | null;
   kind: string | null;
   subject: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
   service_type: string | null;
   instructions: string | null;
   access_notes: string | null;
@@ -73,7 +76,7 @@ type VisitRow = {
   vehicles: { title: string | null } | null;
   projects: { title: string | null; job_address: Address | null } | null;
 };
-const COLS = "id, starts_at, duration, arrival_window, status, project_id, kind, subject, service_type, instructions, access_notes, on_way_at, checked_in_at, checked_out_at, address, vehicles(title), projects(title, job_address)";
+const COLS = "id, starts_at, duration, arrival_window, status, project_id, kind, subject, contact_name, contact_phone, service_type, instructions, access_notes, on_way_at, checked_in_at, checked_out_at, address, vehicles(title), projects(title, job_address)";
 
 /** F21-i: what a technician needs about the site before ringing the bell (client, phone, gate code, unit, COI). */
 export type SiteCard = { client: string | null; phone: string | null; gate: string | null; unit: string | null; coi: { name: string; url: string }[] };
@@ -193,7 +196,7 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
     duration: Number(v.duration ?? 60),
     arrival_window: Number(v.arrival_window ?? 0),
     status: v.status ?? "Scheduled",
-    project: v.projects?.title ?? (v.project_id ? `Project #${v.project_id}` : v.kind === "Internal" ? v.subject || "Internal" : "No project"),
+    project: visitLabel(v, v.projects?.title),
     projectId: v.project_id,
     // F21-b: the visit's own address when it has one (a survey at a new client), else the project's.
     address,
@@ -215,7 +218,7 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
   });
   const reportsDue = past
     .filter((v) => v.checked_out_at && v.kind !== "Internal" && !reportOf.has(v.id)) // J-k: no report for an internal event
-    .map((v) => ({ id: v.id, project: v.projects?.title ?? `Visit #${v.id}`, projectId: v.project_id, checked_out_at: v.checked_out_at! }));
+    .map((v) => ({ id: v.id, project: v.projects?.title ?? (isSurvey(v.kind) ? visitLabel(v, null) : `Visit #${v.id}`), projectId: v.project_id, checked_out_at: v.checked_out_at! }));
   return { visits, reportsDue };
 }
 

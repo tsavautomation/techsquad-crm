@@ -37,7 +37,7 @@ export const jobReports: TableDef = {
         "column": "project",
         "fieldId": 67711
       },
-      "required": true,
+      "required": false, // SV-b: a survey's report has no project (the save refuses any other report without one),
       "lookup": {
         "table": "projects"
       }

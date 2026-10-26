@@ -1,4 +1,5 @@
 import { initialsOf } from "./initials";
+import { visitLabel } from "./survey";
 import { PIN_DONE, PIN_ON_SITE, PIN_PLANNED } from "./pins";
 import "server-only";
 import { fromDateTimeLocalET, todayET, toDateTimeLocalET } from "@/lib/dates";
@@ -64,7 +65,7 @@ export async function loadMapDay(date: string | undefined): Promise<{ date: stri
   const [{ data }, { data: emp }, settings] = await Promise.all([
     db
       .from("visits")
-      .select("id, starts_at, duration, status, service_type, technician_id, project_id, checked_in_at, checked_out_at, visits_team(target_id), vehicles(title), projects(title, job_address)")
+      .select("id, starts_at, duration, status, service_type, technician_id, project_id, kind, address, contact_name, checked_in_at, checked_out_at, visits_team(target_id), vehicles(title), projects(title, job_address)")
       .gte("starts_at", from)
       .lt("starts_at", to)
       .is("deleted_at", null)
@@ -91,7 +92,7 @@ export async function loadMapDay(date: string | undefined): Promise<{ date: stri
     return {
       id: r.id,
       href: `/schedule/visits/${r.id}`,
-      project: r.projects?.title ?? (r.project_id ? `Project #${r.project_id}` : "No project"),
+      project: visitLabel(r, r.projects?.title),
       projectId: r.project_id,
       address,
       lat: pos?.lat ?? null,

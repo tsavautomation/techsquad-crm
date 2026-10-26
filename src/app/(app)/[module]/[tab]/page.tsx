@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowDown, ArrowUp, Lock, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { filterFields, listFields, listFilterFields, listRecords, lookupTitles, userNames } from "@/lib/records/data";
+import { filterFields, listFields, listFilterFields, listRecords, lookupTitles, recordsDb, userNames } from "@/lib/records/data";
 import { getTable } from "@/registry";
 import { canDo, canOpen, fieldsFor } from "@/registry/permissions";
 import { recordHref, tableFromRoute, tableHref } from "@/registry/routes";
@@ -44,6 +44,8 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
     filter,
   });
 
+  // SV-b: how many job reports still wait for a project (surveys), for the link under the title.
+  const surveysWithoutProject = t.name === "job_reports" ? ((await (await recordsDb()).from("job_reports").select("id", { count: "exact", head: true }).is("project_id", null).is("deleted_at", null).is("archived_at", null)).count ?? 0) : 0;
   const cols = listFields(t);
   const [titles, names] = await Promise.all([lookupTitles(t, rows, cols), userNames(rows, cols.filter((c) => c.type === "user").map((c) => c.name))]);
   const base = tableHref(t);
@@ -58,7 +60,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
     field: f.type === "lookup" ? f : undefined,
     quick: quick.has(f.name),
   }));
-  const pickedLookups = listFilterFields(t).filter((f) => f.type === "lookup" && /^d+$/.test(filter[f.name] ?? ""));
+  const pickedLookups = listFilterFields(t).filter((f) => f.type === "lookup" && /^\d+$/.test(filter[f.name] ?? ""));
   const pickedTitles = await Promise.all(pickedLookups.map((f) => lookupTitles(t, [{ [f.name]: f.multiple ? [Number(filter[f.name])] : Number(filter[f.name]) }], [f])));
   const labels: Record<string, Record<string, string>> = {};
   pickedLookups.forEach((f, i) => {
@@ -96,6 +98,14 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
           <h1 className="text-2xl font-semibold">{t.label}</h1>
           <p className="text-sm text-muted-foreground">
             {tr(count === 1 ? "{n} record" : "{n} records", { n: count })}
+            {surveysWithoutProject > 0 && (
+              <>
+                {" · "}
+                <Link href={`${base}?f.project_id=__none`} className="font-medium text-warn-fg underline-offset-4 hover:underline">
+                  {tr("Surveys without a project ({n})", { n: surveysWithoutProject })}
+                </Link>
+              </>
+            )}
             {showDeletedLink && (
               <>
                 {" · "}

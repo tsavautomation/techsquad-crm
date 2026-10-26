@@ -640,4 +640,10 @@ export const PT_REGISTRY: Record<string, string> = {
   "Off: this person is left out of the time clock, the timesheets and the missing clock-out checks. Past entries are kept.": "Não: esta pessoa fica fora do ponto, das folhas de horas e das verificações de saída esquecida. O histórico é mantido.",
   "Final delivery": "Entrega final",
   "Overtime": "Horas extras",
+  // SV survey visits (2026-10-26)
+  "Survey": "Survey",
+  "Contact name": "Nome do contato",
+  "Contact phone": "Telefone do contato",
+  "Contact email": "E-mail do contato",
+  "Contact (if already in the CRM)": "Contato (se já estiver no CRM)",
 };

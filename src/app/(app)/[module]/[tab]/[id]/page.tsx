@@ -42,6 +42,7 @@ import { SiteHistory } from "@/components/project/site-history";
 import { ProjectBrief } from "@/components/project/project-brief";
 import { ProjectEquipment } from "@/components/project/equipment";
 import { ProposedVisitPanel } from "@/components/schedule/proposed-visit-panel";
+import { AssignProjectPanel } from "@/components/project/assign-project-panel";
 import { RealityPanel } from "@/components/reports/reality-panel";
 import { ScorecardPanel } from "@/components/reports/scorecard-panel";
 import { ProjectHours } from "@/components/project/project-hours";
@@ -168,6 +169,8 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
           missing={t.fields.filter((f) => f.required && f.name !== "status" && (row[f.name] === null || row[f.name] === undefined || row[f.name] === "")).map((f) => f.label)}
         />
       )}
+      {t.detailAddon === "visit" && <AssignProjectPanel table="visits" id={recordId} />}
+      {t.name === "job_reports" && <AssignProjectPanel table="job_reports" id={recordId} />}
       {t.detailAddon === "visit" && <VisitFieldPanel visitId={recordId} />}
       {t.detailAddon === "visit" && <RealityPanel table="visits" id={recordId} />}
       {t.detailAddon === "task" && <ReturnCardPanel taskId={recordId} />}
