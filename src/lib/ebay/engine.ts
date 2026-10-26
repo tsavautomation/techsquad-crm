@@ -210,6 +210,7 @@ export function merge(ai: Extracted | null, fallback: Extracted): Extracted {
 
 /** What the label email owns on the row; everything else it may only fill in where the sale email left a blank. */
 export const LABEL_FIELDS: (keyof Extracted)[] = ["label_url", "tracking"];
+const MONEY_FIELDS: (keyof Extracted)[] = ["price", "shipping", "total"];
 
 /**
  * Values to write when an email lands on an existing row: the sale email sets its facts; the label email sets
@@ -220,6 +221,8 @@ export function fieldsFor(kind: EbayKind, x: Extracted, existing: Partial<Record
   for (const k of Object.keys(EMPTY) as (keyof Extracted)[]) {
     const v = x[k];
     if (v === null || v === undefined) continue;
+    // The label email's money is the postage the seller paid, never the order's price, shipping or total.
+    if (kind === "label" && MONEY_FIELDS.includes(k)) continue;
     if (kind === "label" && !LABEL_FIELDS.includes(k) && existing && existing[k] !== null && existing[k] !== undefined) continue;
     (out as Record<string, unknown>)[k] = v;
   }

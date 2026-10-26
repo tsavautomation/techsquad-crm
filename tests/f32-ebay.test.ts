@@ -77,7 +77,9 @@ describe("a label email in eBay's 2026 layout (values made up)", () => {
     expect(f.ship_to).toBeUndefined();
     expect(f.label_url).toBe(x.label_url);
     expect(f.tracking).toBe("9400100000000000000001");
-    expect(fieldsFor("label", x, null).price).toBe(12.08);
+    // Even on a fresh row the label email's postage is not the price.
+    expect(fieldsFor("label", x, null).price).toBeUndefined();
+    expect(fieldsFor("label", { ...x, shipping: 12.08, total: 12.08 }, { shipping: null, total: null }).shipping).toBeUndefined();
     const sale = fieldsFor("sale", { ...x, label_url: "https://x", tracking: "T" }, { tracking: "9400100000000000000001" });
     expect(sale.label_url).toBeUndefined();
     expect(sale.tracking).toBeUndefined();
