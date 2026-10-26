@@ -7,7 +7,7 @@ import { runPushReminders } from "@/lib/push/reminders";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { fileMissing, readPending } from "@/lib/whatsapp/triage";
 import { watchAgents } from "@/lib/whatsapp/watch";
-import { reprocessEbay } from "@/lib/ebay/ingest";
+import { reprocessEbay, rereadSale } from "@/lib/ebay/ingest";
 
 // Scheduled automations (SPEC §5 'daily' / 'hourly', PLAN M11). Callers send
 // "Authorization: Bearer <CRON_SECRET>".
@@ -51,6 +51,8 @@ export async function GET(req: Request, ctx: RouteContext<"/api/cron/[kind]">) {
     // F32: /api/cron/mail?ebay=<mail_messages id> re-reads one eBay email that was filed elsewhere (by hand, with the secret).
     const ebayId = Number(new URL(req.url).searchParams.get("ebay"));
     if (ebayId) return Response.json({ kind, ebay: await reprocessEbay(adminDb(), ebayId) });
+    const saleId = Number(new URL(req.url).searchParams.get("ebay_sale"));
+    if (saleId) return Response.json({ kind, ebay_sale: await rereadSale(adminDb(), saleId) });
     after(async () => {
       try {
         const r = await syncMail();

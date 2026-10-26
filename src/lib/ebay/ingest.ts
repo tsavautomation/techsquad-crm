@@ -107,3 +107,25 @@ export async function reprocessEbay(db: SupabaseClient, mailId: number): Promise
     return { ok: true as const, kind, trashed };
   });
 }
+
+/**
+ * Reads a sale again from the emails' text kept on mail_messages (no Gmail needed: the originals are in the
+ * Trash by then). For tuning the reading after a change, by hand: /api/cron/mail?ebay_sale=<id>.
+ */
+export async function rereadSale(db: SupabaseClient, saleId: number): Promise<{ ok: true; read: EbayKind[] } | { ok: false; message: string }> {
+  const { data } = await db.from("ebay_sales").select("id, sale_mail_id, label_mail_id").eq("id", saleId).maybeSingle();
+  const sale = data as { id: number; sale_mail_id: number | null; label_mail_id: number | null } | null;
+  if (!sale) return { ok: false, message: "sale not found" };
+  const read: EbayKind[] = [];
+  for (const [kind, mailId] of [["sale", sale.sale_mail_id], ["label", sale.label_mail_id]] as [EbayKind, number | null][]) {
+    if (!mailId) continue;
+    const { data: m } = await db.from("mail_messages").select("gmail_id, thread_id, uid, received_at, from_name, from_email, to_text, subject, body_text, inner_senders").eq("id", mailId).maybeSingle();
+    const row = m as { gmail_id: string; thread_id: string | null; uid: number | null; received_at: string; from_name: string | null; from_email: string | null; to_text: string | null; subject: string | null; body_text: string | null; inner_senders: string[] | null } | null;
+    if (!row) continue;
+    const parsed: ParsedMail = { gmailId: row.gmail_id, threadId: row.thread_id, uid: row.uid ?? 0, receivedAt: row.received_at, from: { name: row.from_name ?? "", email: row.from_email ?? "" }, to: row.to_text ?? "", subject: row.subject ?? "", cleanSubject: row.subject ?? "", snippet: "", text: row.body_text ?? "", innerSenders: row.inner_senders ?? [], attachments: [], html: "" };
+    await db.from("ebay_sales").update({ extraction: "ai", extraction_error: null }).eq("id", saleId);
+    await fileSale(db, kind, parsed, mailId);
+    read.push(kind);
+  }
+  return { ok: true, read };
+}
