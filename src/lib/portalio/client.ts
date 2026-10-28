@@ -152,6 +152,10 @@ export async function listProposals(userKey: string, q: { modifiedAfter?: string
 
 export const getProposal = (userKey: string, id: number) => request<ProposalDetail>(`/public/proposals/${id}`, { userKey });
 
+/** FIN-i: a change order's own detail (same shape as a proposal: financialSummary.changeOrderTotal, salesTax, areas → options → items). */
+export type ChangeOrderDetail = { id: number; number?: number | null; name?: string | null; status?: string | null; clientLastDecisionDate?: string | null; lastModifiedDate?: string | null; lastModifiedByUserDate?: string | null; total?: { changeOrderTotal?: number } | null; financialSummary?: { partsTotal?: number; laborTotal?: number; changeOrderTotal?: number; salesTax?: { total?: number } | null } | null; areas?: ProposalDetail["areas"] };
+export const getChangeOrder = (userKey: string, proposalId: number, changeOrderId: number) => request<ChangeOrderDetail>(`/public/proposals/${proposalId}/changeorders/${changeOrderId}`, { userKey });
+
 // ---------------------------------------------------------------- webhooks
 
 export type Subscription = { subscriptionId: number | string; secretKey?: string; url: string; description?: string; enabled?: boolean; events?: string[] };

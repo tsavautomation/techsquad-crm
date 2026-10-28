@@ -1,12 +1,16 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminDb } from "@/lib/supabase/admin";
-import { getProposal, listProposals, loadSettings, patchSettings, type ProposalDetail, type ProposalSummary } from "./client";
-import { matchContacts, suggestProjects, type ContactLite, type ContactMatch, type PortalCustomer, type PortalLocation, type ProjectLite, type Suggestion } from "./match";
+import { getProposal, listProposals, loadSettings, patchSettings, reviewFrom, type PortalSettings, type ProposalDetail, type ProposalSummary } from "./client";
+import { matchContacts, suggestProjects, OPEN_REQUEST, type ContactLite, type ContactMatch, type PortalCustomer, type PortalLocation, type ProjectLite, type Suggestion } from "./match";
+import { autoLinkCandidate } from "./plan";
+import { syncLinkedProposal, type TxSyncSummary } from "./transactions";
 
 // PI-b (SPEC §9.1): the mirror of Portal.io proposals. The hourly tick and Sync now read what changed since the last
 // sync; Sync everything reads every proposal (archived included); the webhook refreshes one proposal at once.
-// Nothing here writes to Portal.io, creates clients or creates Transactions: accepted proposals only get suggestions.
+// Nothing here writes to Portal.io or creates clients. Transactions: a linked proposal's Approved Proposal, change
+// orders, Invoices and Payments are kept up to date by transactions.ts (FIN Part 2); an accepted proposal whose
+// Portal.io customer has exactly one project is linked by itself (FIN-l), every other one waits for a person.
 
 export type ProposalRow = {
   id: number;
@@ -109,20 +113,84 @@ export async function contactMatches(db: SupabaseClient, c: PortalCustomer | nul
 
 // ---------------------------------------------------------------- sync
 
-export type SyncSummary = { checked: number; updated: number; toReview: number; errors: string[]; skipped?: string };
+export type SyncSummary = { checked: number; updated: number; toReview: number; errors: string[]; skipped?: string; transactions?: TxTally };
 export type Financial = { parts: number | null; labor: number | null; fee: number | null; subtotal: number | null; tax: number | null };
 
-async function upsertDetail(db: SupabaseClient, d: ProposalDetail, archived: boolean, index: Awaited<ReturnType<typeof loadProjectIndex>> | null): Promise<void> {
+type Index = Awaited<ReturnType<typeof loadProjectIndex>>;
+export type TxTally = { proposals: number; created: number; updated: number; autoLinked: number };
+const tally = (t: TxTally | undefined, r: TxSyncSummary) => {
+  if (!t) return;
+  t.proposals++;
+  t.created += r.created.main + r.created.co + r.created.invoice + r.created.payment;
+  t.updated += r.updated;
+};
+
+async function upsertDetail(db: SupabaseClient, d: ProposalDetail, archived: boolean, index: Index | null, s: PortalSettings | null, tx?: TxTally): Promise<void> {
   const row = rowFromDetail(d, archived);
   const { data: prev } = await db.from("portal_proposals").select("link_status, suggestions, customer").eq("id", d.id).maybeSingle();
   const before = prev as { link_status: string; suggestions: Suggestion[] | null; customer: PortalCustomer | null } | null;
   const patch: Record<string, unknown> = { ...row };
+  const status = before?.link_status ?? "new";
   // PI-c: suggestions for an accepted proposal not yet linked, recomputed on every read (projects change too).
-  if (ACCEPTED.includes(row.status ?? "") && (before?.link_status ?? "new") === "new" && index) {
-    patch.suggestions = suggestProjects({ number: row.number, name: row.name, customer: row.customer, location: row.location }, index.projects, index.txByNumber);
+  let suggestions: Suggestion[] | null = null;
+  if (ACCEPTED.includes(row.status ?? "") && status === "new" && index) {
+    suggestions = suggestProjects({ number: row.number, name: row.name, customer: row.customer, location: row.location }, index.projects, index.txByNumber);
+    patch.suggestions = suggestions;
   }
   const { error } = await db.from("portal_proposals").upsert(patch, { onConflict: "id" });
   if (error) throw new Error(`Proposal ${d.id}: ${error.message}`);
+  // FIN Part 2: a linked proposal's Transactions follow; a new accepted one may link itself (FIN-l).
+  if (status === "linked") tally(tx, await syncLinkedProposal(db, d.id, { settings: s }));
+  else if (suggestions && !archived && index && (await autoLink(db, { id: d.id, number: row.number, customer: row.customer, accepted_at: row.accepted_at }, suggestions, index, s))) {
+    if (tx) tx.autoLinked++;
+    tally(tx, await syncLinkedProposal(db, d.id, { settings: s }));
+  }
+}
+
+/**
+ * FIN-l: link a new accepted proposal by itself when its Portal.io customer belongs to exactly one Low Voltage project
+ * and nothing stronger points elsewhere. Only proposals within the review window (PI-i); the History and Timeline say
+ * it was automatic, so the office can undo it like any link (Replace, or delete the Transaction).
+ */
+async function autoLink(db: SupabaseClient, p: { id: number; number: number | null; customer: PortalCustomer | null; accepted_at: string | null }, suggestions: Suggestion[], index: Index, s: PortalSettings | null): Promise<boolean> {
+  const customerId = p.customer?.id ?? null;
+  if (!customerId) return false;
+  const from = s ? s.review_from : await reviewFrom();
+  if (from && (!p.accepted_at || p.accepted_at.slice(0, 10) < from)) return false;
+  const { data } = await db.from("projects").select("id, title").eq("portal_customer_id", customerId).eq("category", "Low Voltage").is("deleted_at", null).limit(5);
+  const candidates = (data ?? []) as { id: number; title: string | null }[];
+  const projectId = autoLinkCandidate(customerId, candidates.map((c) => c.id), suggestions);
+  if (!projectId) return false;
+  const title = candidates[0].title ?? `#${projectId}`;
+  const { data: row } = await db.from("portal_proposals").select("total, name, change_orders").eq("id", p.id).maybeSingle();
+  const r = row as { total: number | null; name: string | null; change_orders: ChangeOrder[] } | null;
+  // synced_* follow the mirror, so no "changed in Portal.io" card appears for what the sync itself wrote.
+  const { error } = await db.from("portal_proposals").update({ project_id: projectId, link_status: "linked", linked_at: new Date().toISOString(), auto_linked: true, synced_total: r?.total ?? null, synced_name: r?.name ?? null, synced_change_orders: r?.change_orders ?? [] }).eq("id", p.id).eq("link_status", "new");
+  if (error) return false;
+  const who = [p.customer?.firstName, p.customer?.lastName, p.customer?.companyName].filter(Boolean).join(" ");
+  await db.from("audit_log").insert({ table_name: "projects", record_id: projectId, action: "update", actor: null, changes: { portal_proposal: [null, `Portal.io proposal #${p.number ?? p.id} linked automatically: its customer (${who}) has only this project`] } });
+  await db.from("project_events").insert({ project_id: projectId, channel: "portal", source_table: "portal_proposals", source_id: p.id, source_ref: `portal:${p.id}`, occurred_at: new Date().toISOString(), actor: "Portal.io", title: `Portal.io: proposal #${p.number ?? p.id} accepted`, body: `${r?.name ?? ""}\nLinked automatically to ${title} (same Portal.io customer)`, attachments: [], created_by: null });
+  if (p.number !== null) index.txByNumber.set(String(p.number), [...(index.txByNumber.get(String(p.number)) ?? []), projectId]);
+  return true;
+}
+
+/** FIN-j: linked proposals with a payment request still open (or never synced) are read again once an hour. */
+async function rereadOpen(db: SupabaseClient, s: PortalSettings, index: Index, deadline: number, out: SyncSummary): Promise<boolean> {
+  const { data } = await db.from("portal_proposals").select("id, number, payment_requests, fetched_at, tx_synced_at, archived").eq("link_status", "linked").eq("archived", false).limit(500);
+  const stale = Date.now() - 50 * 60_000;
+  for (const p of (data ?? []) as { id: number; number: number | null; payment_requests: PaymentRequest[]; fetched_at: string; tx_synced_at: string | null; archived: boolean }[]) {
+    const open = (p.payment_requests ?? []).some((r) => OPEN_REQUEST(r.status)) || !p.tx_synced_at;
+    if (!open || new Date(p.fetched_at).getTime() > stale) continue;
+    if (Date.now() > deadline) return false;
+    try {
+      const d = await getProposal(s.user_key, p.id);
+      await upsertDetail(db, d, p.archived, index, s, out.transactions);
+      out.updated++;
+    } catch (e) {
+      out.errors.push(`#${p.number ?? p.id}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  return true;
 }
 
 /**
@@ -139,7 +207,7 @@ export async function syncProposals(opts: { full?: boolean; reread?: boolean; bu
   // Vercel cuts a function at its time limit without warning, so every run works inside a budget and says when it
   // stopped early; the next run (a click or the hourly tick) continues, because proposals already read are skipped.
   const budget = opts.budgetMs ?? 50_000;
-  const out: SyncSummary = { checked: 0, updated: 0, toReview: 0, errors: [] };
+  const out: SyncSummary = { checked: 0, updated: 0, toReview: 0, errors: [], transactions: { proposals: 0, created: 0, updated: 0, autoLinked: 0 } };
   let stopped = false;
   const stop = () => {
     stopped = true;
@@ -151,6 +219,8 @@ export async function syncProposals(opts: { full?: boolean; reread?: boolean; bu
   const includeArchived = opts.full || !s.last_full_sync_at;
   const index = await loadProjectIndex(db);
   try {
+    // FIN-j first: the few linked proposals with open requests (the money people are waiting for), then the list walk.
+    if (!(await rereadOpen(db, s, index, started + budget, out))) stop();
     for (const archived of includeArchived ? [false, true] : [false]) {
       if (stopped) break;
       for (let page = 1; page < 200; page++) {
@@ -175,7 +245,7 @@ export async function syncProposals(opts: { full?: boolean; reread?: boolean; bu
           }
           try {
             const d = await getProposal(s.user_key, p.id);
-            await upsertDetail(db, d, archived, index);
+            await upsertDetail(db, d, archived, index, s, out.transactions);
             out.updated++;
           } catch (e) {
             out.errors.push(`#${p.number ?? p.id}: ${e instanceof Error ? e.message : String(e)}`);
@@ -207,7 +277,7 @@ export async function refreshProposal(id: number): Promise<{ ok: true; status: s
     const d = await getProposal(s.user_key, id);
     const db = adminDb();
     const { data: prev } = await db.from("portal_proposals").select("archived").eq("id", id).maybeSingle();
-    await upsertDetail(db, d, (prev as { archived: boolean } | null)?.archived ?? false, await loadProjectIndex(db));
+    await upsertDetail(db, d, (prev as { archived: boolean } | null)?.archived ?? false, await loadProjectIndex(db), s);
     return { ok: true, status: d.status ?? null };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : String(e) };

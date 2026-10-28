@@ -96,15 +96,21 @@ function NewCard({ card, compact }: { card: ReviewCardData; compact?: boolean })
     return () => clearTimeout(timer);
   }, [q, picked]);
 
-  const run = (fn: () => Promise<Res>, done?: string) =>
+  const run = <R extends Res>(fn: () => Promise<R>, done?: string | ((r: R & { ok: true }) => string)) =>
     start(async () => {
       const r = await fn();
       if (!r.ok) toast.error(t(r.message));
       else {
-        if (done) toast.success(done);
+        if (done) toast.success(typeof done === "function" ? done(r as R & { ok: true }) : done);
         router.refresh();
       }
     });
+  // FIN Part 2: what the sync wrote right after Link (change orders, invoices, payments).
+  const linked = (r: { sync?: { created: { co: number; invoice: number; payment: number } } }) => {
+    const c = r.sync?.created;
+    const extra = c ? [c.co ? t("{n} change orders", { n: c.co }) : "", c.invoice ? t("{n} invoices", { n: c.invoice }) : "", c.payment ? t("{n} payments", { n: c.payment }) : ""].filter(Boolean).join(", ") : "";
+    return extra ? `${t("Approved Proposal transaction created.")} ${t("Also from Portal.io: {list}.", { list: extra })}` : t("Approved Proposal transaction created.");
+  };
 
   return (
     <div className="rounded-xl border px-3 py-2 text-sm">
@@ -147,7 +153,7 @@ function NewCard({ card, compact }: { card: ReviewCardData; compact?: boolean })
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={!picked || pending} onClick={() => picked && run(() => linkProposalAction(card.id, picked.id), t("Approved Proposal transaction created."))} className={PRIMARY}>
+            <button type="button" disabled={!picked || pending} onClick={() => picked && run(() => linkProposalAction(card.id, picked.id), linked)} className={PRIMARY}>
               {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} {t("Link to project")}
             </button>
             {!compact && (

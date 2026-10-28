@@ -3168,6 +3168,8 @@ export type Database = {
         Row: {
           accepted_at: string | null
           archived: boolean
+          auto_linked: boolean
+          change_order_details: Json
           change_orders: Json
           created_at: string
           currency: string | null
@@ -3195,11 +3197,14 @@ export type Database = {
           synced_total: number | null
           total: number | null
           transaction_id: number | null
+          tx_synced_at: string | null
           updated_at: string
         }
         Insert: {
           accepted_at?: string | null
           archived?: boolean
+          auto_linked?: boolean
+          change_order_details?: Json
           change_orders?: Json
           created_at?: string
           currency?: string | null
@@ -3227,11 +3232,14 @@ export type Database = {
           synced_total?: number | null
           total?: number | null
           transaction_id?: number | null
+          tx_synced_at?: string | null
           updated_at?: string
         }
         Update: {
           accepted_at?: string | null
           archived?: boolean
+          auto_linked?: boolean
+          change_order_details?: Json
           change_orders?: Json
           created_at?: string
           currency?: string | null
@@ -3259,6 +3267,7 @@ export type Database = {
           synced_total?: number | null
           total?: number | null
           transaction_id?: number | null
+          tx_synced_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -6280,6 +6289,7 @@ export type Database = {
           portal_number: string | null
           portal_proposal_id: number | null
           portal_request_id: number | null
+          portal_synced: Json | null
           project_id: number | null
           reason: string | null
           reference: string | null
@@ -6317,6 +6327,7 @@ export type Database = {
           portal_number?: string | null
           portal_proposal_id?: number | null
           portal_request_id?: number | null
+          portal_synced?: Json | null
           project_id?: number | null
           reason?: string | null
           reference?: string | null
@@ -6354,6 +6365,7 @@ export type Database = {
           portal_number?: string | null
           portal_proposal_id?: number | null
           portal_request_id?: number | null
+          portal_synced?: Json | null
           project_id?: number | null
           reason?: string | null
           reference?: string | null

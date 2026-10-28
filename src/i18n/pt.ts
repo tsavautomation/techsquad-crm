@@ -2456,4 +2456,7 @@ export const PT: Record<string, string> = {
   "Title": "Título",
   "Amount": "Valor",
   "Description": "Descrição",
+  "{n} linked proposals followed: {c} transactions created, {u} updated, {a} linked automatically": "{n} propostas ligadas acompanhadas: {c} transações criadas, {u} atualizadas, {a} ligadas automaticamente",
+  "Also from Portal.io: {list}.": "Também do Portal.io: {list}.",
+  "{n} invoices": "{n} faturas",
 };

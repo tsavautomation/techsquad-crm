@@ -13,13 +13,13 @@ import { recordHref } from "@/registry/routes";
 import { clearMirror, disconnect, exchangeCredentials, listSubscriptions, loadSettings, portalEnv, saveSettings, subscribeWebhook, unsubscribeWebhook, PortalError, WEBHOOK_EVENTS, DEFAULT_REVIEW_FROM } from "./client";
 import { proposalChanges, type ContactMatch } from "./match";
 import { contactMatches, refreshProposal, syncProposals, type ProposalRow, type SyncSummary, PROPOSAL_COLS } from "./sync";
+import { syncLinkedProposal, type TxSyncSummary } from "./transactions";
 
 // PI-a…PI-e (SPEC §9.1): Admin › Portal.io, and what the office does with an accepted proposal on Finance / Today /
 // the project page. Transactions, contacts and projects are created through saveRecord (validation, audit,
 // permissions), never by the mirror itself.
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; message: string };
-
 
 async function sysadmin(): Promise<Result<{ id: string }>> {
   const me = await requireUser();
@@ -189,7 +189,13 @@ const txValues = (p: ProposalRow, projectId: number, date: string) => ({
 });
 
 /** PI-c Link: the Approved-Proposal Transaction under the chosen project, History and Timeline lines. */
-export async function linkProposalAction(proposalId: number, projectId: number): Promise<Result<{ transactionId: number }>> {
+/** FIN Part 2: the Transactions that hang on a linked proposal (change orders, invoices, payments, items), with the person as the History actor. */
+async function followUp(proposalId: number, actor: string): Promise<TxSyncSummary> {
+  const s = await loadSettings().catch(() => null);
+  return syncLinkedProposal(adminDb(), proposalId, { settings: s, actor });
+}
+
+export async function linkProposalAction(proposalId: number, projectId: number): Promise<Result<{ transactionId: number; sync: TxSyncSummary }>> {
   const a = await finance();
   if (!a.ok) return a;
   const p = await proposal(proposalId);
@@ -200,11 +206,12 @@ export async function linkProposalAction(proposalId: number, projectId: number):
   if (!r.ok) return { ok: false, message: r.message ?? Object.values(r.errors).join("; ") };
   const { data: pr } = await adminDb().from("projects").select("title").eq("id", projectId).maybeSingle();
   const title = (pr as { title: string | null } | null)?.title ?? `#${projectId}`;
-  await adminDb().from("portal_proposals").update({ project_id: projectId, transaction_id: r.id, synced_total: p.total, synced_name: p.name, synced_change_orders: p.change_orders, link_status: "linked", linked_at: new Date().toISOString(), linked_by: a.me.id }).eq("id", proposalId);
+  await adminDb().from("portal_proposals").update({ project_id: projectId, transaction_id: r.id, synced_total: p.total, synced_name: p.name, synced_change_orders: p.change_orders, link_status: "linked", linked_at: new Date().toISOString(), linked_by: a.me.id, auto_linked: false }).eq("id", proposalId);
   await history(projectId, a.me.id, "portal_proposal", `Portal.io proposal #${p.number ?? p.id} "${p.name ?? ""}" (${money(p.total)}) linked by ${who(a.me)}: Approved Proposal transaction created`);
   await timeline(projectId, p, `Portal.io: proposal #${p.number ?? p.id} accepted`, `${p.name ?? ""}\nTotal ${money(p.total)} · linked to ${title} by ${who(a.me)}`, a.me.id);
+  const sync = await followUp(proposalId, a.me.id);
   refreshPaths(projectId);
-  return { ok: true, transactionId: r.id };
+  return { ok: true, transactionId: r.id, sync };
 }
 
 /** PI-c Ignore: kept in the mirror, never offered again (undo on the Finance tab). */
@@ -227,6 +234,7 @@ export async function refreshProposalAction(proposalId: number): Promise<Result>
   const r = await saveRecord("transactions", p.transaction_id, { amount: Number(p.total ?? 0), description: (p.name ?? "").slice(0, 100) || undefined });
   if (!r.ok) return { ok: false, message: r.message ?? Object.values(r.errors).join("; ") };
   await adminDb().from("portal_proposals").update({ synced_total: p.total, synced_name: p.name, synced_change_orders: p.change_orders }).eq("id", proposalId);
+  await followUp(proposalId, a.me.id);
   await history(p.project_id, a.me.id, "portal_proposal", `Refreshed from Portal.io by ${who(a.me)}: proposal #${p.number ?? p.id} ${ch.total ? `${money(ch.total[0])} → ${money(ch.total[1])}` : "(name or change orders)"}`);
   refreshPaths(p.project_id);
   return { ok: true };
@@ -244,6 +252,7 @@ export async function replaceProposalAction(proposalId: number): Promise<Result>
   if (!r.ok) return { ok: false, message: r.message ?? Object.values(r.errors).join("; ") };
   await adminDb().from("portal_proposals").update({ transaction_id: r.id, synced_total: p.total, synced_name: p.name, synced_change_orders: p.change_orders, linked_at: new Date().toISOString(), linked_by: a.me.id }).eq("id", proposalId);
   await history(p.project_id, a.me.id, "portal_proposal", `Replaced from Portal.io by ${who(a.me)}: proposal #${p.number ?? p.id}, old transaction ${money(p.synced_total)} deleted, new transaction ${money(p.total)}`);
+  await followUp(proposalId, a.me.id);
   refreshPaths(p.project_id);
   return { ok: true };
 }

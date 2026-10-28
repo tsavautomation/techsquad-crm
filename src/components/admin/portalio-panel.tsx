@@ -90,7 +90,7 @@ export function PortalPanel({ hasWebhook }: { hasWebhook: boolean }) {
       const r = await syncPortalNowAction(full);
       if (!r.ok) return void toast.error(t(r.message));
       const s = r.summary;
-      setLast(s.skipped ? t(s.skipped) : t("{checked} proposals checked, {updated} read again, {review} accepted ones waiting for a project{errors}", { checked: s.checked, updated: s.updated, review: s.toReview, errors: s.errors.length ? ` · ${s.errors.length} ${t("errors")}: ${s.errors.slice(0, 2).join("; ")}` : "" }));
+      setLast(s.skipped ? t(s.skipped) : t("{checked} proposals checked, {updated} read again, {review} accepted ones waiting for a project{errors}", { checked: s.checked, updated: s.updated, review: s.toReview, errors: s.errors.length ? ` · ${s.errors.length} ${t("errors")}: ${s.errors.slice(0, 2).join("; ")}` : "" }) + (s.transactions?.proposals ? ` · ${t("{n} linked proposals followed: {c} transactions created, {u} updated, {a} linked automatically", { n: s.transactions.proposals, c: s.transactions.created, u: s.transactions.updated, a: s.transactions.autoLinked })}` : ""));
       router.refresh();
     });
   const list = () =>
