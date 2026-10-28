@@ -2459,4 +2459,13 @@ export const PT: Record<string, string> = {
   "{n} linked proposals followed: {c} transactions created, {u} updated, {a} linked automatically": "{n} propostas ligadas acompanhadas: {c} transações criadas, {u} atualizadas, {a} ligadas automaticamente",
   "Also from Portal.io: {list}.": "Também do Portal.io: {list}.",
   "{n} invoices": "{n} faturas",
+  "Sales sheet": "Planilha de vendas",
+  "paid {a} in {n} payments": "pago {a} em {n} pagamentos",
+  "commission": "comissão",
+  "Linked: {c} transactions created, {u} adopted.": "Ligado: {c} transações criadas, {u} adotadas.",
+  "Linked.": "Ligado.",
+  "Sales Projections sheet": "Planilha Sales Projections",
+  "Rows of Luana's sheet (proposal, payments by month, discount, card fee, tip) that still need a project. Link to project writes the Approved Proposal and the payments under it, adopting what Portal.io already wrote; {linked} rows are linked, {ignored} ignored.": "Linhas da planilha da Luana (proposta, pagamentos por mês, desconto, taxa de cartão, gorjeta) que ainda precisam de projeto. Ligar ao projeto grava a Approved Proposal e os pagamentos nele, adotando o que o Portal.io já gravou; {linked} linhas ligadas, {ignored} ignoradas.",
+  "{n} more rows": "mais {n} linhas",
+  "Portal.io proposal #{n} is linked to this project": "A proposta #{n} do Portal.io está ligada a este projeto",
 };

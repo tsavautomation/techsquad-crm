@@ -5222,6 +5222,144 @@ export type Database = {
           },
         ]
       }
+      sheet_proposals: {
+        Row: {
+          amount: number | null
+          auto_linked: boolean
+          cc_fee: number | null
+          change_order: number | null
+          commission: boolean
+          commission_amount: number | null
+          created_at: string
+          customer: string | null
+          date: string | null
+          designer: string | null
+          discount: number | null
+          id: number
+          imported_at: string
+          link_status: string
+          linked_at: string | null
+          linked_by: string | null
+          main_number: number | null
+          notes: string | null
+          number: string | null
+          payments: Json
+          probability: string | null
+          project_id: number | null
+          receivable: string | null
+          row_key: string
+          status: string | null
+          suggestions: Json | null
+          tip: number | null
+          title: string | null
+          transaction_id: number | null
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          amount?: number | null
+          auto_linked?: boolean
+          cc_fee?: number | null
+          change_order?: number | null
+          commission?: boolean
+          commission_amount?: number | null
+          created_at?: string
+          customer?: string | null
+          date?: string | null
+          designer?: string | null
+          discount?: number | null
+          id?: number
+          imported_at?: string
+          link_status?: string
+          linked_at?: string | null
+          linked_by?: string | null
+          main_number?: number | null
+          notes?: string | null
+          number?: string | null
+          payments?: Json
+          probability?: string | null
+          project_id?: number | null
+          receivable?: string | null
+          row_key: string
+          status?: string | null
+          suggestions?: Json | null
+          tip?: number | null
+          title?: string | null
+          transaction_id?: number | null
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          amount?: number | null
+          auto_linked?: boolean
+          cc_fee?: number | null
+          change_order?: number | null
+          commission?: boolean
+          commission_amount?: number | null
+          created_at?: string
+          customer?: string | null
+          date?: string | null
+          designer?: string | null
+          discount?: number | null
+          id?: number
+          imported_at?: string
+          link_status?: string
+          linked_at?: string | null
+          linked_by?: string | null
+          main_number?: number | null
+          notes?: string | null
+          number?: string | null
+          payments?: Json
+          probability?: string | null
+          project_id?: number | null
+          receivable?: string | null
+          row_key?: string
+          status?: string | null
+          suggestions?: Json | null
+          tip?: number | null
+          title?: string | null
+          transaction_id?: number | null
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sheet_proposals_linked_by_fkey"
+            columns: ["linked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sheet_proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sheet_proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sheet_proposals_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "portal_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sheet_proposals_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_outbox: {
         Row: {
           body: string
@@ -6294,6 +6432,7 @@ export type Database = {
           reason: string | null
           reference: string | null
           sales_tax: number | null
+          sheet_ref: string | null
           submitted_at: string | null
           tip: number | null
           title: string | null
@@ -6332,6 +6471,7 @@ export type Database = {
           reason?: string | null
           reference?: string | null
           sales_tax?: number | null
+          sheet_ref?: string | null
           submitted_at?: string | null
           tip?: number | null
           title?: string | null
@@ -6370,6 +6510,7 @@ export type Database = {
           reason?: string | null
           reference?: string | null
           sales_tax?: number | null
+          sheet_ref?: string | null
           submitted_at?: string | null
           tip?: number | null
           title?: string | null

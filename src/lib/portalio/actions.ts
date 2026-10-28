@@ -14,6 +14,7 @@ import { clearMirror, disconnect, exchangeCredentials, listSubscriptions, loadSe
 import { proposalChanges, type ContactMatch } from "./match";
 import { contactMatches, refreshProposal, syncProposals, type ProposalRow, type SyncSummary, PROPOSAL_COLS } from "./sync";
 import { syncLinkedProposal, type TxSyncSummary } from "./transactions";
+import { linkSheetRowsByNumber } from "@/lib/finance/sheet-link";
 
 // PI-a…PI-e (SPEC §9.1): Admin › Portal.io, and what the office does with an accepted proposal on Finance / Today /
 // the project page. Transactions, contacts and projects are created through saveRecord (validation, audit,
@@ -210,6 +211,7 @@ export async function linkProposalAction(proposalId: number, projectId: number):
   await history(projectId, a.me.id, "portal_proposal", `Portal.io proposal #${p.number ?? p.id} "${p.name ?? ""}" (${money(p.total)}) linked by ${who(a.me)}: Approved Proposal transaction created`);
   await timeline(projectId, p, `Portal.io: proposal #${p.number ?? p.id} accepted`, `${p.name ?? ""}\nTotal ${money(p.total)} · linked to ${title} by ${who(a.me)}`, a.me.id);
   const sync = await followUp(proposalId, a.me.id);
+  await linkSheetRowsByNumber(adminDb(), p.number, projectId, a.me.id); // FIN-m
   refreshPaths(projectId);
   return { ok: true, transactionId: r.id, sync };
 }

@@ -22,7 +22,7 @@ export const normalizeStreet = (s: string | null | undefined) =>
   (s ?? "")
     .toLowerCase()
     .replace(/[.,#]/g, " ")
-    .replace(/\b(avenue)\b/g, "ave")
+    .replace(/\b(avenue|av)\b/g, "ave")
     .replace(/\b(street)\b/g, "st")
     .replace(/\b(boulevard)\b/g, "blvd")
     .replace(/\b(drive)\b/g, "dr")
@@ -33,14 +33,22 @@ export const normalizeStreet = (s: string | null | undefined) =>
 // Only filler words: "Residence" stays, so "Dixon Residence" finds "Dixon Residence" with two words in common.
 const STOP = new Set(["the", "and", "of", "at", "a", "an", "project", "proposal", "llc", "inc", "change", "order"]);
 /** Lower case, accents folded (Aurélio = Aurelio), punctuation gone, stop words and single letters dropped. */
-export const tokens = (s: string | null | undefined) =>
-  (s ?? "")
+const TOKENS = new Map<string, string[]>();
+export const tokens = (s: string | null | undefined): string[] => {
+  const key = s ?? "";
+  const hit = TOKENS.get(key);
+  if (hit) return hit;
+  const out = key
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9 ]+/g, " ")
     .split(/\s+/)
     .filter((w) => w.length > 1 && !STOP.has(w));
+  if (TOKENS.size > 50_000) TOKENS.clear();
+  TOKENS.set(key, out);
+  return out;
+};
 
 /** Words in common, and the share of the shorter name's words found in the other (0..1). */
 export function nameOverlap(a: string | null | undefined, b: string | null | undefined): { hits: number; share: number } {

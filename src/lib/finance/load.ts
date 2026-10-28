@@ -5,6 +5,7 @@ import { reviewFrom } from "@/lib/portalio/client";
 import { proposalChanges, OPEN_REQUEST } from "@/lib/portalio/match";
 import { ACCEPTED, PROPOSAL_COLS, type PaymentRequest, type ProposalRow } from "@/lib/portalio/sync";
 import { loadFinanceSettings } from "./settings";
+import { SHEET_COLS, type SheetRowRecord } from "./sheet-link";
 import { dueBuckets, figures, financialStatus, paymentNumbers, reliabilitySuggestion, type Figures, type FinRow, type FinancialStatus } from "./status";
 
 // FIN (SPEC §9.1 FIN-a…FIN-h, Fred 2026-10-28): what Administrative › Finance and the project's Finance card read, with
@@ -312,4 +313,18 @@ export async function loadProjectTransactions(db: SupabaseClient, projectId: num
   const rows = (data ?? []) as Omit<ProjectTransaction, "payment_no">[];
   const numbers = paymentNumbers(rows.filter((r) => r.type === "Payment"));
   return rows.map((r) => ({ ...r, payment_no: numbers.get(r.id) ?? null }));
+}
+
+// ---------------------------------------------------------------- FIN-m the Sales Projections sheet
+
+export type SheetReview = { rows: SheetRowRecord[]; total: number; linked: number; ignored: number };
+
+/** Sheet rows still waiting for a project, newest first (`limit` of them), with the counts for the heading. */
+export async function loadSheetReview(db: SupabaseClient, limit = 60): Promise<SheetReview> {
+  const [{ data, count }, { count: linked }, { count: ignored }] = await Promise.all([
+    db.from("sheet_proposals").select(SHEET_COLS, { count: "exact" }).eq("link_status", "new").order("date", { ascending: false, nullsFirst: false }).order("id").limit(limit),
+    db.from("sheet_proposals").select("id", { count: "exact", head: true }).eq("link_status", "linked"),
+    db.from("sheet_proposals").select("id", { count: "exact", head: true }).eq("link_status", "ignored"),
+  ]);
+  return { rows: (data ?? []) as unknown as SheetRowRecord[], total: count ?? 0, linked: linked ?? 0, ignored: ignored ?? 0 };
 }

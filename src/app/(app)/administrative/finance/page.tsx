@@ -6,8 +6,8 @@ import { IgnoredList } from "@/components/finance/ignored-list";
 import { requireUser } from "@/lib/auth/session";
 import { todayET } from "@/lib/dates";
 import { canSeeFinance } from "@/lib/finance/access";
-import { toCardData } from "@/lib/finance/cards";
-import { CLIENT_KEYS, PARTNER_KEYS, loadByClient, loadDashboard, loadFinanceProjects, loadIgnored, loadPayments, loadProposals, loadReview, type ClientKey, type PartnerKey } from "@/lib/finance/load";
+import { sheetCardData, toCardData } from "@/lib/finance/cards";
+import { CLIENT_KEYS, PARTNER_KEYS, loadByClient, loadDashboard, loadFinanceProjects, loadIgnored, loadPayments, loadProposals, loadReview, loadSheetReview, type ClientKey, type PartnerKey } from "@/lib/finance/load";
 import { loadSettings } from "@/lib/portalio/client";
 import { recordsDb } from "@/lib/records/data";
 import { getTable } from "@/registry";
@@ -22,7 +22,7 @@ export async function generateMetadata() {
 // FIN-f (Fred 2026-10-28): Administrative › Finance for Low Voltage projects: what we have to receive, projects by
 // Financial Status, payments and approved proposals by period, totals by client, P&L, and the Portal.io review.
 
-type Search = { tab?: string; by?: string; from?: string; to?: string; partner?: string };
+type Search = { tab?: string; by?: string; from?: string; to?: string; partner?: string; sheet?: string };
 const TABS = ["receivables", "projects", "payments", "proposals", "clients", "pnl", "portal"] as const;
 type Tab = (typeof TABS)[number];
 
@@ -38,7 +38,8 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const from = sp.from ?? `${year}-01-01`;
   const to = sp.to ?? todayET();
   const db = await recordsDb();
-  const [projects, review, ignored, settings] = await Promise.all([loadFinanceProjects(db), loadReview(db), user.isSysadmin ? loadIgnored(db) : Promise.resolve([]), loadSettings().catch(() => null)]);
+  const sheetLimit = Math.min(Number(sp.sheet ?? 60) || 60, 1000);
+  const [projects, review, ignored, settings, sheet] = await Promise.all([loadFinanceProjects(db), loadReview(db), user.isSysadmin ? loadIgnored(db) : Promise.resolve([]), loadSettings().catch(() => null), loadSheetReview(db, sheetLimit)]);
   const [dashboard, groups, payments, proposals] = await Promise.all([
     tab === "receivables" ? loadDashboard(db, projects) : null,
     tab === "clients" ? loadByClient(db, projects, by, from, to) : [],
@@ -54,7 +55,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
     { id: "proposals", label: tr("Proposals") },
     { id: "clients", label: tr("By client") },
     { id: "pnl", label: tr("P&L") },
-    { id: "portal", label: tr("Portal.io"), count: review.length },
+    { id: "portal", label: tr("Portal.io"), count: review.length + sheet.total },
   ];
 
   return (
@@ -94,6 +95,22 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
             {review.length ? <PortalReview cards={toCardData(review)} /> : <p className="py-6 text-center text-sm text-text-2">{tr("Nothing to review.")}</p>}
             {ignored.length > 0 && <IgnoredList rows={ignored.map((p) => ({ id: p.id, number: p.number, name: p.name, total: p.total }))} />}
             {settings?.last_sync_at && <p className="mt-3 text-xs text-text-2">{tr("Last sync with Portal.io: {when}", { when: new Date(settings.last_sync_at).toLocaleString("en-US", { timeZone: "America/New_York" }) })}</p>}
+            {(sheet.total > 0 || sheet.linked > 0) && (
+              <div className="mt-6">
+                <h2 className="mb-1 text-[15px] font-semibold tracking-tight">
+                  {tr("Sales Projections sheet")} <span className="rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn-fg">{sheet.total}</span>
+                </h2>
+                <p className="mb-3 text-[13px] text-text-2">{tr("Rows of Luana's sheet (proposal, payments by month, discount, card fee, tip) that still need a project. Link to project writes the Approved Proposal and the payments under it, adopting what Portal.io already wrote; {linked} rows are linked, {ignored} ignored.", { linked: sheet.linked, ignored: sheet.ignored })}</p>
+                {sheet.rows.length ? <PortalReview cards={sheetCardData(sheet.rows)} /> : <p className="py-4 text-center text-sm text-text-2">{tr("Nothing to review.")}</p>}
+                {sheet.total > sheet.rows.length && (
+                  <p className="mt-3 text-xs text-text-2">
+                    <Link href={`/administrative/finance?tab=portal&sheet=${sheetLimit + 100}`} className="text-primary hover:underline">
+                      {tr("{n} more rows", { n: sheet.total - sheet.rows.length })}
+                    </Link>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </section>

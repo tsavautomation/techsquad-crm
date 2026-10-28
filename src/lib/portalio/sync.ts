@@ -2,9 +2,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminDb } from "@/lib/supabase/admin";
 import { getProposal, listProposals, loadSettings, patchSettings, reviewFrom, type PortalSettings, type ProposalDetail, type ProposalSummary } from "./client";
-import { matchContacts, suggestProjects, OPEN_REQUEST, type ContactLite, type ContactMatch, type PortalCustomer, type PortalLocation, type ProjectLite, type Suggestion } from "./match";
+import { matchContacts, suggestProjects, OPEN_REQUEST, type ContactLite, type ContactMatch, type PortalCustomer, type PortalLocation, type Suggestion } from "./match";
 import { autoLinkCandidate } from "./plan";
 import { syncLinkedProposal, type TxSyncSummary } from "./transactions";
+import { loadProjectIndex } from "./project-index";
+import { linkSheetRowsByNumber } from "@/lib/finance/sheet-link";
 
 // PI-b (SPEC §9.1): the mirror of Portal.io proposals. The hourly tick and Sync now read what changed since the last
 // sync; Sync everything reads every proposal (archived included); the webhook refreshes one proposal at once.
@@ -79,22 +81,7 @@ export function rowFromDetail(d: ProposalDetail, archived = false) {
 
 // ---------------------------------------------------------------- suggestions
 
-/** Every project with its owner's e-mail / phone, and which projects already carry each Portal number in a Transaction. */
-export async function loadProjectIndex(db: SupabaseClient): Promise<{ projects: ProjectLite[]; txByNumber: Map<string, number[]> }> {
-  const [{ data: pr }, { data: tx }] = await Promise.all([
-    db.from("projects").select("id, title, job_address, job_owner_id, contacts:job_owner_id(first_name, last_name, email, main_phone)").is("deleted_at", null).limit(5000),
-    db.from("transactions").select("project_id, portal_number").eq("payment_type", "Apply to Project").is("deleted_at", null).not("portal_number", "is", null).not("project_id", "is", null).limit(5000),
-  ]);
-  type Row = { id: number; title: string | null; job_address: ProjectLite["job_address"]; contacts: { first_name: string | null; last_name: string | null; email: string | null; main_phone: string | null } | null };
-  const projects = ((pr ?? []) as unknown as Row[]).map((p) => ({ id: p.id, title: p.title, job_address: p.job_address, owner_email: p.contacts?.email ?? null, owner_phone: p.contacts?.main_phone ?? null, owner_name: p.contacts ? [p.contacts.first_name, p.contacts.last_name].filter(Boolean).join(" ") : null }));
-  const txByNumber = new Map<string, number[]>();
-  for (const t of (tx ?? []) as { project_id: number; portal_number: string }[]) {
-    const k = t.portal_number.replace(/\D/g, "");
-    if (!k) continue;
-    txByNumber.set(k, [...(txByNumber.get(k) ?? []), t.project_id]);
-  }
-  return { projects, txByNumber };
-}
+export { loadProjectIndex } from "./project-index";
 
 /** PI-d: contacts that look like the proposal's customer (e-mail, phone, then full name). */
 export async function contactMatches(db: SupabaseClient, c: PortalCustomer | null): Promise<ContactMatch[]> {
@@ -171,6 +158,7 @@ async function autoLink(db: SupabaseClient, p: { id: number; number: number | nu
   await db.from("audit_log").insert({ table_name: "projects", record_id: projectId, action: "update", actor: null, changes: { portal_proposal: [null, `Portal.io proposal #${p.number ?? p.id} linked automatically: its customer (${who}) has only this project`] } });
   await db.from("project_events").insert({ project_id: projectId, channel: "portal", source_table: "portal_proposals", source_id: p.id, source_ref: `portal:${p.id}`, occurred_at: new Date().toISOString(), actor: "Portal.io", title: `Portal.io: proposal #${p.number ?? p.id} accepted`, body: `${r?.name ?? ""}\nLinked automatically to ${title} (same Portal.io customer)`, attachments: [], created_by: null });
   if (p.number !== null) index.txByNumber.set(String(p.number), [...(index.txByNumber.get(String(p.number)) ?? []), projectId]);
+  await linkSheetRowsByNumber(db, p.number, projectId, null); // FIN-m: the sheet's row of the same proposal follows
   return true;
 }
 

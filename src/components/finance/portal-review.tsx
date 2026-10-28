@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/dates";
 import { searchProjectsAction } from "@/lib/mail/actions";
 import { contactMatchesAction, createProjectFromProposalAction, ignoreProposalAction, keepProposalAction, linkProposalAction, organizationByNameAction, refreshFromPortalAction, refreshProposalAction, replaceProposalAction, searchContactsAction, type NewContactInput } from "@/lib/portalio/actions";
 import type { ContactMatch } from "@/lib/portalio/match";
+import { createProjectFromSheetRowAction, ignoreSheetRowAction, linkSheetRowAction, sheetContactMatchesAction, sheetCustomerAction } from "@/lib/finance/sheet-actions";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
@@ -30,7 +31,10 @@ export type ReviewCardData = {
   project_id: number | null;
   projectTitle: string | null;
   projectHref: string | null;
-  portalUrl: string;
+  portalUrl: string | null;
+  /** FIN-m: a row of the Sales Projections sheet uses the same card and the same choices. */
+  source: "portal" | "sheet";
+  sheet?: { customer: string | null; designer: string | null; paid: number; payments: number; status: string | null; receivable: string | null; commission: boolean; date: string | null };
 };
 
 const money = (n: number | null | undefined) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(n ?? 0));
@@ -65,16 +69,31 @@ function Head({ card }: { card: ReviewCardData }) {
           #{card.number ?? card.id} · {card.name || t("(no name)")}
         </span>
         <b className="text-[15px]">{money(card.total)}</b>
-        <a href={card.portalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-          Portal.io <ExternalLink className="size-3" aria-hidden />
-        </a>
+        {card.portalUrl && (
+          <a href={card.portalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+            Portal.io <ExternalLink className="size-3" aria-hidden />
+          </a>
+        )}
+        {card.source === "sheet" && <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{t("Sales sheet")}</span>}
       </p>
-      <p className="text-xs text-text-2">
-        {card.accepted_at ? `${t("Accepted")} ${formatDate(card.accepted_at)}` : ""}
-        {who ? ` · ${who}` : ""}
-        {c?.email ? ` · ${c.email}` : ""}
-        {c?.phone ? ` · ${c.phone}` : ""}
-      </p>
+      {card.source === "sheet" && card.sheet ? (
+        <p className="text-xs text-text-2">
+          {card.sheet.date ? `${formatDate(card.sheet.date)} · ` : ""}
+          {card.sheet.customer ?? ""}
+          {card.sheet.designer ? ` · ${card.sheet.designer}` : ""}
+          {` · ${t("paid {a} in {n} payments", { a: money(card.sheet.paid), n: card.sheet.payments })}`}
+          {card.sheet.status ? ` · ${card.sheet.status}` : ""}
+          {card.sheet.receivable ? ` / ${card.sheet.receivable}` : ""}
+          {card.sheet.commission ? ` · ${t("commission")}` : ""}
+        </p>
+      ) : (
+        <p className="text-xs text-text-2">
+          {card.accepted_at ? `${t("Accepted")} ${formatDate(card.accepted_at)}` : ""}
+          {who ? ` · ${who}` : ""}
+          {c?.email ? ` · ${c.email}` : ""}
+          {c?.phone ? ` · ${c.phone}` : ""}
+        </p>
+      )}
       {where && <p className="text-xs text-text-2">{where}</p>}
     </>
   );
@@ -106,6 +125,7 @@ function NewCard({ card, compact }: { card: ReviewCardData; compact?: boolean })
       }
     });
   // FIN Part 2: what the sync wrote right after Link (change orders, invoices, payments).
+  const sheetLinked = (r: { sync?: { created: number; updated: number } }) => (r.sync ? t("Linked: {c} transactions created, {u} adopted.", { c: r.sync.created, u: r.sync.updated }) : t("Linked."));
   const linked = (r: { sync?: { created: { co: number; invoice: number; payment: number } } }) => {
     const c = r.sync?.created;
     const extra = c ? [c.co ? t("{n} change orders", { n: c.co }) : "", c.invoice ? t("{n} invoices", { n: c.invoice }) : "", c.payment ? t("{n} payments", { n: c.payment }) : ""].filter(Boolean).join(", ") : "";
@@ -153,7 +173,7 @@ function NewCard({ card, compact }: { card: ReviewCardData; compact?: boolean })
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={!picked || pending} onClick={() => picked && run(() => linkProposalAction(card.id, picked.id), linked)} className={PRIMARY}>
+            <button type="button" disabled={!picked || pending} onClick={() => picked && (card.source === "sheet" ? run(() => linkSheetRowAction(card.id, picked.id), sheetLinked) : run(() => linkProposalAction(card.id, picked.id), linked))} className={PRIMARY}>
               {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} {t("Link to project")}
             </button>
             {!compact && (
@@ -161,7 +181,7 @@ function NewCard({ card, compact }: { card: ReviewCardData; compact?: boolean })
                 {t("New project")}
               </button>
             )}
-            <button type="button" disabled={pending} onClick={() => run(() => ignoreProposalAction(card.id))} className={PLAIN}>
+            <button type="button" disabled={pending} onClick={() => run(() => (card.source === "sheet" ? ignoreSheetRowAction(card.id) : ignoreProposalAction(card.id)))} className={PLAIN}>
               {t("Ignore")}
             </button>
           </div>
@@ -187,9 +207,14 @@ function NewProjectBox({ card, onClose }: { card: ReviewCardData; onClose: () =>
   const [pending, start] = useTransition();
 
   useEffect(() => {
+    if (card.source === "sheet") {
+      void sheetContactMatchesAction(card.id).then(setMatches);
+      void sheetCustomerAction(card.id).then((n) => setForm((f) => ({ ...f, first_name: n.firstName ?? "", last_name: n.lastName ?? "" })));
+      return;
+    }
     void contactMatchesAction(card.id).then(setMatches);
     if (c?.companyName) void organizationByNameAction(c.companyName).then((o) => (setOrg(o), setForm((f) => ({ ...f, organization_id: o?.id ?? null }))));
-  }, [card.id, c?.companyName]);
+  }, [card.id, card.source, c?.companyName]);
   useEffect(() => {
     if (picked || q.trim().length < 2) return;
     const timer = setTimeout(() => void searchContactsAction(q).then(setChoices), 250);
@@ -198,7 +223,8 @@ function NewProjectBox({ card, onClose }: { card: ReviewCardData; onClose: () =>
 
   const create = () =>
     start(async () => {
-      const r = await createProjectFromProposalAction(card.id, mode === "pick" ? { contactId: picked!.id } : { newContact: form });
+      const owner = mode === "pick" ? { contactId: picked!.id } : { newContact: form };
+      const r = card.source === "sheet" ? await createProjectFromSheetRowAction(card.id, owner) : await createProjectFromProposalAction(card.id, owner);
       if (!r.ok) return void toast.error(t(r.message));
       toast.success(t("Project created and the proposal linked."));
       router.refresh();
