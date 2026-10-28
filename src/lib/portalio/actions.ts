@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser, type CurrentUser } from "@/lib/auth/session";
 import { todayET } from "@/lib/dates";
+import { canSeeFinance } from "@/lib/finance/access";
 import { deleteRecordAction } from "@/lib/records/record-actions";
 import { saveRecord } from "@/lib/records/save";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
@@ -19,8 +20,6 @@ import { contactMatches, refreshProposal, syncProposals, type ProposalRow, type 
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; message: string };
 
-export const FINANCE_PERMISSION = "administrative.finance.view_page";
-export const canSeeFinance = (user: CurrentUser) => user.isSysadmin || user.permissions.has(FINANCE_PERMISSION) || user.permissions.has("administrative.transactions.view_page");
 
 async function sysadmin(): Promise<Result<{ id: string }>> {
   const me = await requireUser();

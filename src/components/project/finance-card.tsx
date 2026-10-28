@@ -4,7 +4,7 @@ import type { CurrentUser } from "@/lib/auth/session";
 import { formatDate, nowMs } from "@/lib/dates";
 import { toCardData } from "@/lib/finance/cards";
 import { loadProjectProposals, loadReview } from "@/lib/finance/load";
-import { canSeeFinance } from "@/lib/portalio/actions";
+import { canSeeFinance } from "@/lib/finance/access";
 import { proposalUrl } from "@/lib/portalio/client";
 import { OPEN_REQUEST } from "@/lib/portalio/match";
 import { recordsDb } from "@/lib/records/data";

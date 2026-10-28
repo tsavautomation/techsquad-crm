@@ -7,7 +7,7 @@ import { requireUser } from "@/lib/auth/session";
 import { todayET } from "@/lib/dates";
 import { toCardData } from "@/lib/finance/cards";
 import { CLIENT_KEYS, loadByClient, loadFinanceProjects, loadIgnored, loadReview, type ClientKey } from "@/lib/finance/load";
-import { canSeeFinance } from "@/lib/portalio/actions";
+import { canSeeFinance } from "@/lib/finance/access";
 import { loadSettings } from "@/lib/portalio/client";
 import { recordsDb } from "@/lib/records/data";
 import { getTable } from "@/registry";

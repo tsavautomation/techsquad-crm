@@ -3,7 +3,7 @@ import { FileCheck2 } from "lucide-react";
 import type { CurrentUser } from "@/lib/auth/session";
 import { toCardData } from "@/lib/finance/cards";
 import { loadReview } from "@/lib/finance/load";
-import { canSeeFinance } from "@/lib/portalio/actions";
+import { canSeeFinance } from "@/lib/finance/access";
 import { recordsDb } from "@/lib/records/data";
 import { getT } from "@/i18n/server";
 import { PortalReview } from "@/components/finance/portal-review";
