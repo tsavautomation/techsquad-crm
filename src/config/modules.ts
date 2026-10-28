@@ -49,6 +49,8 @@ export const MODULES: ModuleDef[] = [
       tab("administrative", "employees", "Employees"),
       tab("administrative", "payroll", "Payroll"),
       tab("administrative", "transactions", "Transactions"),
+      // PI-h (Fred 2026-10-28): projects by payment status, totals by client, Portal.io proposals to review.
+      tab("administrative", "finance", "Finance"),
       tab("administrative", "vehicles", "Vehicle"),
       tab("administrative", "rma", "RMA"),
       tab("administrative", "tasks", "Tasks"),

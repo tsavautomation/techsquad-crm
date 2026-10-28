@@ -3158,6 +3158,138 @@ export type Database = {
           },
         ]
       }
+      portal_proposals: {
+        Row: {
+          accepted_at: string | null
+          archived: boolean
+          change_orders: Json
+          created_at: string
+          currency: string | null
+          customer: Json | null
+          detail: Json | null
+          fetched_at: string
+          id: number
+          items_count: number | null
+          link_status: string
+          linked_at: string | null
+          linked_by: string | null
+          location: Json | null
+          name: string | null
+          number: number | null
+          payment_requests: Json
+          portal_created_at: string | null
+          portal_modified_at: string | null
+          project_id: number | null
+          salesperson: Json | null
+          status: string | null
+          suggestions: Json | null
+          synced_change_orders: Json | null
+          synced_name: string | null
+          synced_total: number | null
+          total: number | null
+          transaction_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          archived?: boolean
+          change_orders?: Json
+          created_at?: string
+          currency?: string | null
+          customer?: Json | null
+          detail?: Json | null
+          fetched_at?: string
+          id: number
+          items_count?: number | null
+          link_status?: string
+          linked_at?: string | null
+          linked_by?: string | null
+          location?: Json | null
+          name?: string | null
+          number?: number | null
+          payment_requests?: Json
+          portal_created_at?: string | null
+          portal_modified_at?: string | null
+          project_id?: number | null
+          salesperson?: Json | null
+          status?: string | null
+          suggestions?: Json | null
+          synced_change_orders?: Json | null
+          synced_name?: string | null
+          synced_total?: number | null
+          total?: number | null
+          transaction_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          archived?: boolean
+          change_orders?: Json
+          created_at?: string
+          currency?: string | null
+          customer?: Json | null
+          detail?: Json | null
+          fetched_at?: string
+          id?: number
+          items_count?: number | null
+          link_status?: string
+          linked_at?: string | null
+          linked_by?: string | null
+          location?: Json | null
+          name?: string | null
+          number?: number | null
+          payment_requests?: Json
+          portal_created_at?: string | null
+          portal_modified_at?: string | null
+          project_id?: number | null
+          salesperson?: Json | null
+          status?: string | null
+          suggestions?: Json | null
+          synced_change_orders?: Json | null
+          synced_name?: string | null
+          synced_total?: number | null
+          total?: number | null
+          transaction_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_proposals_linked_by_fkey"
+            columns: ["linked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_proposals_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "portal_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_proposals_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           archived_at: string | null
@@ -3559,7 +3691,11 @@ export type Database = {
           builder_developer_notes: string | null
           building_id: number | null
           category: string | null
+          commission_amount: number | null
+          commission_contact_id: number | null
           commission_notes: string | null
+          commission_organization_id: number | null
+          commission_percent: number | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -3624,7 +3760,11 @@ export type Database = {
           builder_developer_notes?: string | null
           building_id?: number | null
           category?: string | null
+          commission_amount?: number | null
+          commission_contact_id?: number | null
           commission_notes?: string | null
+          commission_organization_id?: number | null
+          commission_percent?: number | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -3689,7 +3829,11 @@ export type Database = {
           builder_developer_notes?: string | null
           building_id?: number | null
           category?: string | null
+          commission_amount?: number | null
+          commission_contact_id?: number | null
           commission_notes?: string | null
+          commission_organization_id?: number | null
+          commission_percent?: number | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -3758,6 +3902,20 @@ export type Database = {
             columns: ["building_id"]
             isOneToOne: false
             referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_commission_contact_id_fkey"
+            columns: ["commission_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_commission_organization_id_fkey"
+            columns: ["commission_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -7540,6 +7698,15 @@ export type Database = {
           invoiced_amount: number
           paid_amount: number
           project_id: number
+        }[]
+      }
+      project_payment_status: {
+        Args: { p_project_ids: number[] }
+        Returns: {
+          next_due: string
+          open_requests: number
+          project_id: number
+          status: string
         }[]
       }
       project_visit_days: {

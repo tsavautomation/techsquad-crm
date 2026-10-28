@@ -54,6 +54,8 @@ export const PAGE_ITEMS: ChecklistItem[] = [
   { key: "whatsapp.page.view", label: "WhatsApp board (messages from the WhatsApp PC, read by AI)" },
   // F32: Fred 2026-10-26. Roberto, Fred, Karina, Saulo, Jessica, Luana and Lucas.
   { key: "inventory.ebay.view_page", label: "Ebay sales (Inventory › Ebay)" },
+  // PI-h: Fred 2026-10-28. Starts with the Transactions holders (Fred, Karina, Luana, Saulo, Uli).
+  { key: "administrative.finance.view_page", label: "Finance (projects by payment status, totals by client, Portal.io)" },
 ];
 
 export const ADMIN_ITEMS: ChecklistItem[] = [

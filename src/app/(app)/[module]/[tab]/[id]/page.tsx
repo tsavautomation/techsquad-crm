@@ -55,6 +55,8 @@ import { PortalPanel } from "@/components/project/portal-panel";
 import { loadPortalPanel } from "@/lib/portal/staff-data";
 import { loadTimeline } from "@/lib/records/timeline";
 import { RevealLog } from "@/components/records/reveal-log";
+import { FinanceCard } from "@/components/project/finance-card";
+import { PaymentStatusBadge } from "@/components/finance/payment-status-badge";
 
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]/[id]">) {
@@ -186,6 +188,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.detailAddon === "project" && <RequestsPanel projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <PendingItems projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <MaintenancePlan projectId={recordId} user={user} />}
+      {t.detailAddon === "project" && <FinanceCard projectId={recordId} user={user} />}
       {t.detailAddon === "visit" && canModify && <FieldDataPanel visitId={recordId} />}
       {t.detailAddon === "project" && <PunchListPanel projectId={recordId} user={user} />}
       {t.name === "job_reports" && <RealityPanel table="job_reports" id={recordId} />}
@@ -315,12 +318,19 @@ async function computedValues(t: TableDef, id: number): Promise<Values> {
     const { data } = await db.rpc("project_visit_days", { p_project_ids: [id] });
     for (const f of days) out[f.name] = ((data as { visit_days: number }[] | null) ?? [])[0]?.visit_days ?? 0;
   }
+  // PI-f: Paid / Current / Overdue / No data (a word for everyone; the amounts need Transactions).
+  const pay = comps.filter((f) => f.computed?.kind === "payment_status");
+  if (pay.length) {
+    const { data } = await db.rpc("project_payment_status", { p_project_ids: [id] });
+    for (const f of pay) out[f.name] = ((data as { status: string }[] | null) ?? [])[0]?.status ?? "No data";
+  }
   return out;
 }
 
 function DetailValue({ field: f, value, labels, log }: { field: FieldDef; value: unknown; labels: Record<string, string>; log: { table: string; id: number; field: string } }) {
   const none = <span className="text-muted-foreground">—</span>;
 
+  if (f.type === "computed" && f.computed?.kind === "payment_status") return <PaymentStatusBadge status={String(value ?? "No data")} />;
   if (f.type === "computed") return <>{f.computed?.kind === "visit_days" ? Number(value ?? 0) : money.format(Number(value ?? 0))}</>;
 
   if (f.type === "file" || f.type === "image" || f.type === "signature") {

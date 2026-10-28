@@ -509,6 +509,8 @@ export const projects: TableDef = {
       "legacy": NEW,
       "computed": { "kind": "visit_days" },
     },
+    // PI-f (Fred 2026-10-28): the payment status every project reader sees; the amounts below stay with Transactions.
+    { name: "payment_status", label: "Payment status", type: "computed", heading: "FINANCIAL STATUS", legacy: NEW, computed: { kind: "payment_status" } },
     {
       "name": "approved_amount",
       "requires": "administrative.transactions.view_page",
@@ -518,7 +520,6 @@ export const projects: TableDef = {
         "column": "approved",
         "fieldId": 68951
       },
-      "heading": "FINANCIAL STATUS",
       "computed": {
         "kind": "sum",
         "table": "transactions",
@@ -589,6 +590,11 @@ export const projects: TableDef = {
         }
       ]
     },
+    // PI-g (Fred 2026-10-28): the commission set for the project. Seen only with Transactions; what was paid stays in Transactions (reason Commission).
+    { name: "commission_contact_id", label: "Commission to", type: "lookup", lookup: { table: "contacts" }, heading: "COMMISSION", requires: "administrative.transactions.view_page", legacy: NEW },
+    { name: "commission_organization_id", label: "Commission to (organization)", type: "lookup", lookup: { table: "organizations" }, requires: "administrative.transactions.view_page", legacy: NEW },
+    { name: "commission_percent", label: "Commission %", type: "number", requires: "administrative.transactions.view_page", legacy: NEW },
+    { name: "commission_amount", label: "Commission amount", type: "money", requires: "administrative.transactions.view_page", legacy: NEW },
     {
       "name": "warranty",
       "label": "Warranty",

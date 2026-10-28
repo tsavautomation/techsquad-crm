@@ -27,6 +27,7 @@ import { etSlot, runKeys } from "./schedule";
 import { closeForgottenDay } from "@/lib/field-day/forgotten";
 import { nightlyBackupStep } from "@/lib/backups/run";
 import { syncMail } from "@/lib/mail/sync";
+import { syncProposals } from "@/lib/portalio/sync";
 // Automations engine (SPEC §5). Data-driven: every WebAuthor trigger is a row in public.automations.
 //
 // Event runs: after each request, pending change-history rows (audit_log.automation_status is null)
@@ -350,6 +351,12 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
     out.mail = await syncMail();
   } catch (e) {
     out.mail = { error: e instanceof Error ? e.message : String(e) };
+  }
+  // PI-b: Portal.io proposals changed since the last sync, once an hour (the webhook covers the minutes between).
+  if (await claimRun(db, keys.hourly.replace("hourly:", "portalio:"))) {
+    const r = await syncProposals({ budgetMs: 120_000 });
+    await finishRun(db, keys.hourly.replace("hourly:", "portalio:"), r as unknown as Record<string, unknown>);
+    out.portalio = r;
   }
   // SPEC §9.1 OD-c: PDF copies for records that still lack one (two minutes per tick; never breaks the tick).
   try {

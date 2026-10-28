@@ -56,7 +56,9 @@ export type ComputedDef =
       where: Record<string, string>;
     }
   /** Days the project was visited: Job Report dates ∪ visit check-in days (SPEC §9.1 F9-d). A count, not money. */
-  | { kind: "visit_days" };
+  | { kind: "visit_days" }
+  /** PI-f: Paid / Current / Overdue / No data from Portal.io payment requests and Transactions (project_payment_status()); a word, not money. */
+  | { kind: "payment_status" };
 
 export type FieldDef = {
   name: string;
