@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { connectPortalAction, disconnectPortalAction, listWebhooksAction, registerWebhookAction, removeWebhookAction, syncPortalNowAction } from "@/lib/portalio/actions";
+import { connectPortalAction, disconnectPortalAction, listWebhooksAction, registerWebhookAction, removeWebhookAction, setReviewFromAction, syncPortalNowAction } from "@/lib/portalio/actions";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
@@ -43,6 +43,33 @@ export function PortalConnectForm({ user }: { user: string }) {
         {pending && <Loader2 className="size-4 animate-spin" aria-hidden />} {t("Connect Portal.io")}
       </button>
     </form>
+  );
+}
+
+/** PI-i: which accepted proposals are offered for review: those accepted from this date on (empty = all). */
+export function ReviewFromForm({ value }: { value: string }) {
+  const t = useT();
+  const router = useRouter();
+  const [date, setDate] = useState(value);
+  const [pending, start] = useTransition();
+  const save = () =>
+    start(async () => {
+      const r = await setReviewFromAction(date);
+      if (!r.ok) return void toast.error(t(r.message));
+      toast.success(t("Saved."));
+      router.refresh();
+    });
+  return (
+    <div className="flex flex-wrap items-end gap-2 rounded-[10px] bg-muted/50 px-3 py-2">
+      <label className="flex flex-col gap-1 text-xs text-text-2">
+        {t("Offer for review proposals accepted from")}
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={cn(INPUT, "text-foreground")} />
+      </label>
+      <button type="button" onClick={save} disabled={pending || date === value} className={cn(BTN, "border bg-card font-medium hover:bg-muted")}>
+        {t("Save")}
+      </button>
+      <p className="basis-full text-xs text-text-2">{t("Older accepted proposals stay in the mirror and still count for the Finance figures once linked; they are just not offered. Empty = every accepted proposal.")}</p>
+    </div>
   );
 }
 
@@ -96,7 +123,7 @@ export function PortalPanel({ hasWebhook }: { hasWebhook: boolean }) {
         </button>
         <button
           type="button"
-          onClick={() => window.confirm(t("Disconnect Portal.io? The mirrored proposals stay; nothing new is read until it is connected again.")) && run(disconnectPortalAction)}
+          onClick={() => window.confirm(t("Disconnect Portal.io? The mirrored proposals are removed (transactions already linked stay, with their Portal #); nothing is read until it is connected again.")) && run(disconnectPortalAction)}
           disabled={pending}
           className={cn(BTN, "border font-medium text-bad-fg hover:bg-muted")}>
           {t("Disconnect")}

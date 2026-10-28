@@ -8,6 +8,20 @@ import { signedHeaders } from "./sign";
 // Admin › Portal.io and kept encrypted in app_integrations under 'portalio'. The CRM only reads from Portal.io.
 
 export const KEY = "portalio";
+/** PI-i (Fred 2026-10-28, going to production): review starts with this year's proposals; changeable on Admin › Portal.io. */
+export const DEFAULT_REVIEW_FROM = "2026-01-01";
+
+/** The accepted date a proposal needs to be offered for review (null = every proposal). */
+export async function reviewFrom(): Promise<string | null> {
+  const s = await loadSettings().catch(() => null);
+  return s ? s.review_from : DEFAULT_REVIEW_FROM;
+}
+
+/** PI-i: switching environments (sandbox → production) or disconnecting empties the mirror; links live on in the Transactions (they carry the Portal #). */
+export async function clearMirror() {
+  const { error } = await adminDb().from("portal_proposals").delete().gte("id", 0);
+  if (error) throw new Error(`Could not clear the Portal.io mirror: ${error.message}`);
+}
 
 export type PortalEnv = "sandbox" | "production";
 
@@ -21,6 +35,8 @@ export type PortalSettings = {
   last_sync_at: string | null;
   last_sync_error: string | null;
   last_full_sync_at: string | null;
+  /** PI-i: only proposals accepted on or after this date are offered for review (older ones stay in the mirror). */
+  review_from: string | null;
   webhook: { subscription_id: number | string; secret: string; url: string; events: string[]; created_at: string } | null;
 };
 
@@ -39,7 +55,7 @@ export async function loadSettings(): Promise<PortalSettings | null> {
   const d = (data as { data: Partial<PortalSettings> } | null)?.data;
   if (!d?.user_key) return null;
   const s = d as PortalSettings;
-  return { ...s, user_key: decrypt(s.user_key), webhook: s.webhook ? { ...s.webhook, secret: decrypt(s.webhook.secret) } : null, last_sync_at: s.last_sync_at ?? null, last_sync_error: s.last_sync_error ?? null, last_full_sync_at: s.last_full_sync_at ?? null };
+  return { ...s, user_key: decrypt(s.user_key), webhook: s.webhook ? { ...s.webhook, secret: decrypt(s.webhook.secret) } : null, last_sync_at: s.last_sync_at ?? null, last_sync_error: s.last_sync_error ?? null, last_full_sync_at: s.last_full_sync_at ?? null, review_from: s.review_from === undefined ? DEFAULT_REVIEW_FROM : s.review_from };
 }
 
 export async function saveSettings(s: PortalSettings, userId: string | null = null) {

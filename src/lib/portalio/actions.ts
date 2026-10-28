@@ -10,7 +10,7 @@ import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { getTable } from "@/registry";
 import { canDo } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
-import { disconnect, exchangeCredentials, listSubscriptions, loadSettings, portalEnv, saveSettings, subscribeWebhook, unsubscribeWebhook, PortalError, WEBHOOK_EVENTS } from "./client";
+import { clearMirror, disconnect, exchangeCredentials, listSubscriptions, loadSettings, portalEnv, saveSettings, subscribeWebhook, unsubscribeWebhook, PortalError, WEBHOOK_EVENTS, DEFAULT_REVIEW_FROM } from "./client";
 import { proposalChanges, type ContactMatch } from "./match";
 import { contactMatches, refreshProposal, syncProposals, type ProposalRow, type SyncSummary, PROPOSAL_COLS } from "./sync";
 
@@ -57,7 +57,7 @@ export async function connectPortalAction(username: string, password: string): P
   try {
     const r = await exchangeCredentials(username.trim(), password);
     const prev = await loadSettings();
-    await saveSettings({ env: portalEnv()!.env, user_key: r.apiKey, user_name: r.userName, display_name: r.displayName, connected_at: new Date().toISOString(), connected_by: a.id, last_sync_at: null, last_sync_error: null, last_full_sync_at: null, webhook: prev?.webhook ?? null }, a.id);
+    await saveSettings({ env: portalEnv()!.env, user_key: r.apiKey, user_name: r.userName, display_name: r.displayName, connected_at: new Date().toISOString(), connected_by: a.id, last_sync_at: null, last_sync_error: null, last_full_sync_at: null, webhook: prev?.webhook ?? null, review_from: prev?.review_from === undefined ? DEFAULT_REVIEW_FROM : prev.review_from }, a.id);
   } catch (e) {
     const m = err(e);
     return { ok: false, message: /401|refused|Unauthorized/i.test(m) ? "Portal.io refused the sign-in. Check the e-mail and password (the sandbox uses your production password)." : m };
@@ -71,8 +71,25 @@ export async function disconnectPortalAction(): Promise<Result> {
   if (!a.ok) return a;
   const s = await loadSettings();
   if (s?.webhook) await unsubscribeWebhook(s.user_key, s.webhook.subscription_id).catch(() => undefined);
+  // The mirror goes with the connection (a sandbox copy must not mix with production); the Transactions keep their Portal #.
+  await clearMirror();
   await disconnect();
   revalidatePath("/admin/portalio");
+  refreshPaths();
+  return { ok: true };
+}
+
+/** PI-i: Admin › Portal.io › "Offer for review proposals accepted from" (empty = all of them). */
+export async function setReviewFromAction(date: string): Promise<Result> {
+  const a = await sysadmin();
+  if (!a.ok) return a;
+  const d = date.trim();
+  if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) return { ok: false, message: "Type a date as yyyy-mm-dd, or leave it empty for every proposal." };
+  const s = await loadSettings();
+  if (!s) return { ok: false, message: "Connect Portal.io first." };
+  await saveSettings({ ...s, review_from: d || null }, a.id);
+  revalidatePath("/admin/portalio");
+  refreshPaths();
   return { ok: true };
 }
 

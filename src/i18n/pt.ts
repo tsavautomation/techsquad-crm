@@ -2392,4 +2392,9 @@ export const PT: Record<string, string> = {
   "Verifying": "Verificando",
   "Cancelled": "Cancelado",
   "Refunded": "Reembolsado",
+  "Type a date as yyyy-mm-dd, or leave it empty for every proposal.": "Digite uma data como aaaa-mm-dd, ou deixe vazio para todas as propostas.",
+  "Offer for review proposals accepted from": "Oferecer para revisão propostas aceitas a partir de",
+  "Older accepted proposals stay in the mirror and still count for the Finance figures once linked; they are just not offered. Empty = every accepted proposal.": "Propostas aceitas mais antigas ficam no espelho e contam nos números do Financeiro quando ligadas; só não são oferecidas. Vazio = todas as aceitas.",
+  "Disconnect Portal.io? The mirrored proposals are removed (transactions already linked stay, with their Portal #); nothing is read until it is connected again.": "Desconectar o Portal.io? As propostas espelhadas são removidas (transações já ligadas ficam, com o Portal #); nada é lido até conectar de novo.",
+  "Switching from the sandbox to production: set PORTAL_ENV=production on Vercel, deploy, Disconnect here (this empties the mirror) and Connect again, then Sync everything.": "Para passar do sandbox para produção: defina PORTAL_ENV=production no Vercel, faça o deploy, Desconecte aqui (isso esvazia o espelho) e Conecte de novo, depois Sincronizar tudo.",
 };

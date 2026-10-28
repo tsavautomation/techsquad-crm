@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { proposalChanges, OPEN_REQUEST } from "@/lib/portalio/match";
+import { reviewFrom } from "@/lib/portalio/client";
 import { ACCEPTED, PROPOSAL_COLS, type PaymentRequest, type ProposalRow } from "@/lib/portalio/sync";
 
 // PI-h (SPEC §9.1): what Administrative › Finance reads with the signed-in person's client (RLS applies).
@@ -136,7 +137,12 @@ export type ReviewCard = {
 export async function loadReview(db: SupabaseClient, projectId?: number): Promise<ReviewCard[]> {
   let q = db.from("portal_proposals").select(PROPOSAL_COLS).eq("archived", false).in("link_status", ["new", "linked"]).order("accepted_at", { ascending: false, nullsFirst: false }).limit(300);
   if (projectId) q = q.eq("project_id", projectId);
-  else q = q.in("status", ACCEPTED);
+  else {
+    q = q.in("status", ACCEPTED);
+    // PI-i: older accepted proposals stay in the mirror but are not offered (Admin › Portal.io sets the date).
+    const from = await reviewFrom();
+    if (from) q = q.or(`accepted_at.gte.${from}T00:00:00Z,link_status.eq.linked`);
+  }
   const { data } = await q;
   const rows = (data ?? []) as ProposalRow[];
   const cards: ReviewCard[] = [];

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PortalConnectForm, PortalPanel } from "@/components/admin/portalio-panel";
+import { PortalConnectForm, PortalPanel, ReviewFromForm } from "@/components/admin/portalio-panel";
 import { requireUser } from "@/lib/auth/session";
 import { formatDateTime } from "@/lib/dates";
 import { loadSettings, portalEnv } from "@/lib/portalio/client";
@@ -26,7 +26,9 @@ export default async function PortalioPage() {
     const [a, b, c, d] = await Promise.all([
       db.from("portal_proposals").select("id", { count: "exact", head: true }),
       db.from("portal_proposals").select("id", { count: "exact", head: true }).in("status", ["Accepted", "Completed"]),
-      db.from("portal_proposals").select("id", { count: "exact", head: true }).in("status", ["Accepted", "Completed"]).eq("link_status", "new").eq("archived", false),
+      settings.review_from
+        ? db.from("portal_proposals").select("id", { count: "exact", head: true }).in("status", ["Accepted", "Completed"]).eq("link_status", "new").eq("archived", false).gte("accepted_at", `${settings.review_from}T00:00:00Z`)
+        : db.from("portal_proposals").select("id", { count: "exact", head: true }).in("status", ["Accepted", "Completed"]).eq("link_status", "new").eq("archived", false),
       db.from("portal_proposals").select("id", { count: "exact", head: true }).eq("link_status", "linked"),
     ]);
     counts = { total: a.count ?? 0, accepted: b.count ?? 0, review: c.count ?? 0, linked: d.count ?? 0 };
@@ -61,6 +63,7 @@ export default async function PortalioPage() {
             {settings.last_sync_error && <p className="rounded-[10px] bg-bad-bg px-3 py-2 text-bad-fg">{settings.last_sync_error}</p>}
             <p className="text-text-2">{t("{total} proposals mirrored · {accepted} accepted · {linked} linked to projects · {review} waiting for a project", counts)}</p>
             <p className="text-text-2">{settings.webhook ? t("Webhook registered ({url}) since {date}", { url: settings.webhook.url, date: formatDateTime(settings.webhook.created_at) }) : t("No webhook: changes arrive with the hourly sync. Register it once the CRM is on its public address.")}</p>
+            <ReviewFromForm value={settings.review_from ?? ""} />
             <PortalPanel hasWebhook={Boolean(settings.webhook)} />
           </div>
         ) : (
@@ -82,7 +85,7 @@ export default async function PortalioPage() {
             t("Every hour the CRM reads what changed; with the webhook registered, a status change arrives within seconds."),
             t("An accepted proposal appears on Finance › Portal.io and on Today. Link to project creates the Approved Proposal transaction; New project asks you to pick or create the Job Owner first."),
             t("When a linked proposal changes in Portal.io, the card comes back with Refresh (update the transaction), Replace (new transaction, old one deleted) or Keep as is."),
-            t("Switching from the sandbox to production: set PORTAL_ENV=production on Vercel, deploy, Disconnect here and Connect again, then Sync everything."),
+            t("Switching from the sandbox to production: set PORTAL_ENV=production on Vercel, deploy, Disconnect here (this empties the mirror) and Connect again, then Sync everything."),
           ].map((s, i) => (
             <li key={i} className="flex gap-3">
               <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">{i + 1}</span>

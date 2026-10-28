@@ -184,7 +184,9 @@ export async function syncProposals(opts: { full?: boolean; reread?: boolean; bu
         if (items.length < 100) break;
       }
     }
-    const { count } = await db.from("portal_proposals").select("id", { count: "exact", head: true }).in("status", ACCEPTED).eq("link_status", "new").eq("archived", false);
+    let cq = db.from("portal_proposals").select("id", { count: "exact", head: true }).in("status", ACCEPTED).eq("link_status", "new").eq("archived", false);
+    if (s.review_from) cq = cq.gte("accepted_at", `${s.review_from}T00:00:00Z`);
+    const { count } = await cq;
     out.toReview = count ?? 0;
     const at = new Date().toISOString();
     // A run cut short leaves last_sync_at alone, so the next one lists from the same point and picks up the rest.
