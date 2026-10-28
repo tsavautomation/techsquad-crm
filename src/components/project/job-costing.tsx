@@ -21,7 +21,7 @@ export async function JobCosting({ projectId, user }: { projectId: number; user:
   const db = await recordsDb();
   const data = await loadProjectCosting(db, projectId);
   if (!data) return null;
-  const { costing: c, names } = data;
+  const { costing: c, names, partsEstimate } = data;
   const et = getTable("employees");
 
   const stat = (label: string, value: string, sub?: string, tone?: string) => (
@@ -39,7 +39,7 @@ export async function JobCosting({ projectId, user }: { projectId: number; user:
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stat(tr("Approved"), c.approved ? money.format(c.approved) : "—", c.approved ? undefined : tr("no approved proposal yet"))}
         {stat(tr("Labour"), money.format(c.labourCost), tr("{t} on site", { t: formatMinutes(c.labourMin) }))}
-        {stat(tr("Materials"), money.format(c.materialsCost), tr(c.materialsCount === 1 ? "{n} sale" : "{n} sales", { n: c.materialsCount }))}
+        {stat(tr("Materials"), money.format(c.materialsCost), partsEstimate ? tr("{n} sales · parts in the proposals {est}", { n: c.materialsCount, est: money.format(partsEstimate) }) : tr(c.materialsCount === 1 ? "{n} sale" : "{n} sales", { n: c.materialsCount }))}
         {stat(tr("Margin"), c.margin === null ? "—" : money.format(c.margin), c.marginPct === null ? tr("needs an approved amount") : tr("{pct}% of approved", { pct: c.marginPct }), marginTone)}
       </div>
       <p className="mt-2 text-xs text-text-2">{tr("Total cost {t}: labour plus materials.", { t: money.format(c.totalCost) })}</p>

@@ -859,6 +859,7 @@ export type Database = {
           main_phone: string | null
           notes: string | null
           organization_id: number | null
+          payment_reliability: string | null
           phone_extension: string | null
           preferred_language: string | null
           referred_by_contact_id: number | null
@@ -894,6 +895,7 @@ export type Database = {
           main_phone?: string | null
           notes?: string | null
           organization_id?: number | null
+          payment_reliability?: string | null
           phone_extension?: string | null
           preferred_language?: string | null
           referred_by_contact_id?: number | null
@@ -929,6 +931,7 @@ export type Database = {
           main_phone?: string | null
           notes?: string | null
           organization_id?: number | null
+          payment_reliability?: string | null
           phone_extension?: string | null
           preferred_language?: string | null
           referred_by_contact_id?: number | null
@@ -2347,6 +2350,7 @@ export type Database = {
           locked: boolean
           main_email: string | null
           main_phone: string | null
+          payment_reliability: string | null
           portal_login: string | null
           portal_password: string | null
           submitted_at: string | null
@@ -2372,6 +2376,7 @@ export type Database = {
           locked?: boolean
           main_email?: string | null
           main_phone?: string | null
+          payment_reliability?: string | null
           portal_login?: string | null
           portal_password?: string | null
           submitted_at?: string | null
@@ -2397,6 +2402,7 @@ export type Database = {
           locked?: boolean
           main_email?: string | null
           main_phone?: string | null
+          payment_reliability?: string | null
           portal_login?: string | null
           portal_password?: string | null
           submitted_at?: string | null
@@ -3736,6 +3742,7 @@ export type Database = {
           owner_contact_intl: string | null
           permit_id: number | null
           plans: string | null
+          portal_customer_id: number | null
           referral_contact_id: number | null
           referral_organization_id: number | null
           referral_type: string | null
@@ -3805,6 +3812,7 @@ export type Database = {
           owner_contact_intl?: string | null
           permit_id?: number | null
           plans?: string | null
+          portal_customer_id?: number | null
           referral_contact_id?: number | null
           referral_organization_id?: number | null
           referral_type?: string | null
@@ -3874,6 +3882,7 @@ export type Database = {
           owner_contact_intl?: string | null
           permit_id?: number | null
           plans?: string | null
+          portal_customer_id?: number | null
           referral_contact_id?: number | null
           referral_organization_id?: number | null
           referral_type?: string | null
@@ -4017,6 +4026,72 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_items: {
+        Row: {
+          brand: string | null
+          cost: number | null
+          created_at: string
+          description: string | null
+          id: number
+          item_type: string | null
+          model: string | null
+          name: string | null
+          portal_item_id: number | null
+          quantity: number | null
+          sell_price: number | null
+          supplier: string | null
+          total: number | null
+          transaction_id: number
+        }
+        Insert: {
+          brand?: string | null
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: number
+          item_type?: string | null
+          model?: string | null
+          name?: string | null
+          portal_item_id?: number | null
+          quantity?: number | null
+          sell_price?: number | null
+          supplier?: string | null
+          total?: number | null
+          transaction_id: number
+        }
+        Update: {
+          brand?: string | null
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: number
+          item_type?: string | null
+          model?: string | null
+          name?: string | null
+          portal_item_id?: number | null
+          quantity?: number | null
+          sell_price?: number | null
+          supplier?: string | null
+          total?: number | null
+          transaction_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "portal_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -6182,20 +6257,35 @@ export type Database = {
         Row: {
           amount: number | null
           archived_at: string | null
+          cc_fee: number | null
           contact_id: number | null
           created_at: string
           created_by: string | null
           date: string | null
           deleted_at: string | null
           description: string | null
+          discount: number | null
+          due_date: string | null
+          due_date_edited_at: string | null
           id: number
+          invoice_status: string | null
+          is_change_order: boolean
           locked: boolean
+          method: string | null
           organization_id: number | null
+          parent_transaction_id: number | null
+          parts_cost: number | null
           payment_type: string | null
+          portal_change_order_id: number | null
           portal_number: string | null
+          portal_proposal_id: number | null
+          portal_request_id: number | null
           project_id: number | null
           reason: string | null
+          reference: string | null
+          sales_tax: number | null
           submitted_at: string | null
+          tip: number | null
           title: string | null
           type: string | null
           updated_at: string
@@ -6204,20 +6294,35 @@ export type Database = {
         Insert: {
           amount?: number | null
           archived_at?: string | null
+          cc_fee?: number | null
           contact_id?: number | null
           created_at?: string
           created_by?: string | null
           date?: string | null
           deleted_at?: string | null
           description?: string | null
+          discount?: number | null
+          due_date?: string | null
+          due_date_edited_at?: string | null
           id?: number
+          invoice_status?: string | null
+          is_change_order?: boolean
           locked?: boolean
+          method?: string | null
           organization_id?: number | null
+          parent_transaction_id?: number | null
+          parts_cost?: number | null
           payment_type?: string | null
+          portal_change_order_id?: number | null
           portal_number?: string | null
+          portal_proposal_id?: number | null
+          portal_request_id?: number | null
           project_id?: number | null
           reason?: string | null
+          reference?: string | null
+          sales_tax?: number | null
           submitted_at?: string | null
+          tip?: number | null
           title?: string | null
           type?: string | null
           updated_at?: string
@@ -6226,20 +6331,35 @@ export type Database = {
         Update: {
           amount?: number | null
           archived_at?: string | null
+          cc_fee?: number | null
           contact_id?: number | null
           created_at?: string
           created_by?: string | null
           date?: string | null
           deleted_at?: string | null
           description?: string | null
+          discount?: number | null
+          due_date?: string | null
+          due_date_edited_at?: string | null
           id?: number
+          invoice_status?: string | null
+          is_change_order?: boolean
           locked?: boolean
+          method?: string | null
           organization_id?: number | null
+          parent_transaction_id?: number | null
+          parts_cost?: number | null
           payment_type?: string | null
+          portal_change_order_id?: number | null
           portal_number?: string | null
+          portal_proposal_id?: number | null
+          portal_request_id?: number | null
           project_id?: number | null
           reason?: string | null
+          reference?: string | null
+          sales_tax?: number | null
           submitted_at?: string | null
+          tip?: number | null
           title?: string | null
           type?: string | null
           updated_at?: string
@@ -6265,6 +6385,20 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_parent_transaction_id_fkey"
+            columns: ["parent_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "portal_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_parent_transaction_id_fkey"
+            columns: ["parent_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
           {
@@ -7698,18 +7832,19 @@ export type Database = {
         Args: { p_project_ids: number[] }
         Returns: {
           approved_amount: number
+          category: string
+          cc_fee_amount: number
+          commission_amount: number
+          commission_percent: number
+          discount_amount: number
           invoiced_amount: number
+          job_status: string
+          open_invoice_dues: string[]
           paid_amount: number
+          parts_cost: number
           project_id: number
-        }[]
-      }
-      project_payment_status: {
-        Args: { p_project_ids: number[] }
-        Returns: {
-          next_due: string
-          open_requests: number
-          project_id: number
-          status: string
+          sales_tax: number
+          tip_amount: number
         }[]
       }
       project_visit_days: {

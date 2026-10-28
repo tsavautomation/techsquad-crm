@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ByClientTable, ProjectsTable } from "@/components/finance/finance-tables";
+import { ByClientTable, PaymentsTable, PnLTable, ProjectsTable, ProposalsTable, ReceivablesDashboard } from "@/components/finance/finance-tables";
 import { PortalReview } from "@/components/finance/portal-review";
 import { IgnoredList } from "@/components/finance/ignored-list";
 import { requireUser } from "@/lib/auth/session";
 import { todayET } from "@/lib/dates";
-import { toCardData } from "@/lib/finance/cards";
-import { CLIENT_KEYS, loadByClient, loadFinanceProjects, loadIgnored, loadReview, type ClientKey } from "@/lib/finance/load";
 import { canSeeFinance } from "@/lib/finance/access";
+import { toCardData } from "@/lib/finance/cards";
+import { CLIENT_KEYS, PARTNER_KEYS, loadByClient, loadDashboard, loadFinanceProjects, loadIgnored, loadPayments, loadProposals, loadReview, type ClientKey, type PartnerKey } from "@/lib/finance/load";
 import { loadSettings } from "@/lib/portalio/client";
 import { recordsDb } from "@/lib/records/data";
 import { getTable } from "@/registry";
@@ -19,28 +19,41 @@ export async function generateMetadata() {
   return { title: (await getT())("Finance") };
 }
 
-// PI-h (Fred 2026-10-28): Administrative › Finance. Portal.io proposals to review, every project by payment status,
-// and totals by client in a period ("all Navicon projects at year end").
+// FIN-f (Fred 2026-10-28): Administrative › Finance for Low Voltage projects: what we have to receive, projects by
+// Financial Status, payments and approved proposals by period, totals by client, P&L, and the Portal.io review.
 
-type Search = { tab?: string; by?: string; from?: string; to?: string };
+type Search = { tab?: string; by?: string; from?: string; to?: string; partner?: string };
+const TABS = ["receivables", "projects", "payments", "proposals", "clients", "pnl", "portal"] as const;
+type Tab = (typeof TABS)[number];
 
 export default async function FinancePage({ searchParams }: { searchParams: Promise<Search> }) {
   const tr = await getT();
   const user = await requireUser();
   if (!canSeeFinance(user)) notFound();
   const sp = await searchParams;
-  const tab = sp.tab === "clients" ? "clients" : sp.tab === "portal" ? "portal" : "projects";
+  const tab: Tab = (TABS as readonly string[]).includes(sp.tab ?? "") ? (sp.tab as Tab) : "receivables";
   const by = (CLIENT_KEYS.some((k) => k.key === sp.by) ? sp.by : "owner") as ClientKey;
+  const partner = (PARTNER_KEYS.some((k) => k.key === sp.partner) ? sp.partner : "design_firm") as PartnerKey;
   const year = todayET().slice(0, 4);
   const from = sp.from ?? `${year}-01-01`;
   const to = sp.to ?? todayET();
   const db = await recordsDb();
   const [projects, review, ignored, settings] = await Promise.all([loadFinanceProjects(db), loadReview(db), user.isSysadmin ? loadIgnored(db) : Promise.resolve([]), loadSettings().catch(() => null)]);
-  const groups = tab === "clients" ? await loadByClient(db, projects, by, from, to) : [];
+  const [dashboard, groups, payments, proposals] = await Promise.all([
+    tab === "receivables" ? loadDashboard(db, projects) : null,
+    tab === "clients" ? loadByClient(db, projects, by, from, to) : [],
+    tab === "payments" ? loadPayments(db, projects, from, to) : [],
+    tab === "proposals" ? loadProposals(db, projects, from, to, partner) : [],
+  ]);
   const hrefFor = tableHref(getTable("projects"));
-  const tabs: { id: "projects" | "clients" | "portal"; label: string; count?: number }[] = [
+  const txHref = tableHref(getTable("transactions"));
+  const tabs: { id: Tab; label: string; count?: number }[] = [
+    { id: "receivables", label: tr("To receive") },
     { id: "projects", label: tr("Projects") },
+    { id: "payments", label: tr("Payments") },
+    { id: "proposals", label: tr("Proposals") },
     { id: "clients", label: tr("By client") },
+    { id: "pnl", label: tr("P&L") },
     { id: "portal", label: tr("Portal.io"), count: review.length },
   ];
 
@@ -48,19 +61,23 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
     <div className="mx-auto max-w-[1300px]">
       <div className="mb-4">
         <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Finance")}</h1>
-        <p className="text-xs text-muted-foreground">{tr("Every project with money: payment status, totals by client, and the proposals Portal.io accepted that still need a project.")}</p>
+        <p className="text-xs text-muted-foreground">{tr("Low Voltage projects only: what we have to receive, payments, approved proposals, totals by client, P&L, and the proposals Portal.io accepted that still need a project.")}</p>
       </div>
       <nav className="mb-3 flex gap-1.5 overflow-x-auto">
         {tabs.map((x) => (
-          <Link key={x.id} href={x.id === "projects" ? "/administrative/finance" : `/administrative/finance?tab=${x.id}`} className={cn("inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap", tab === x.id ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted")}>
+          <Link key={x.id} href={x.id === "receivables" ? "/administrative/finance" : `/administrative/finance?tab=${x.id}`} className={cn("inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap", tab === x.id ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted")}>
             {x.label}
             {x.count ? <span className={cn("rounded-full px-1.5 text-xs", tab === x.id ? "bg-primary-foreground/20" : "bg-warn-bg text-warn-fg")}>{x.count}</span> : null}
           </Link>
         ))}
       </nav>
       <section className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
+        {tab === "receivables" && dashboard && <ReceivablesDashboard d={dashboard} hrefFor={hrefFor} canSetGrace={user.isSysadmin} />}
         {tab === "projects" && <ProjectsTable rows={projects} hrefFor={hrefFor} />}
+        {tab === "payments" && <PaymentsTable rows={payments} from={from} to={to} hrefFor={hrefFor} txHref={txHref} />}
+        {tab === "proposals" && <ProposalsTable rows={proposals} from={from} to={to} partner={partner} partners={PARTNER_KEYS} hrefFor={hrefFor} txHref={txHref} />}
         {tab === "clients" && <ByClientTable groups={groups} keys={CLIENT_KEYS} current={by} from={from} to={to} hrefFor={hrefFor} />}
+        {tab === "pnl" && <PnLTable rows={projects} hrefFor={hrefFor} />}
         {tab === "portal" && (
           <div>
             {!settings && (

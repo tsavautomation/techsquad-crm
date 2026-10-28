@@ -57,6 +57,9 @@ import { loadTimeline } from "@/lib/records/timeline";
 import { RevealLog } from "@/components/records/reveal-log";
 import { FinanceCard } from "@/components/project/finance-card";
 import { PaymentStatusBadge } from "@/components/finance/payment-status-badge";
+import { financialStatus, ordinal, paymentNumbers, type FinRow } from "@/lib/finance/status";
+import { loadFinanceSettings } from "@/lib/finance/settings";
+import { todayET } from "@/lib/dates";
 
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]/[id]">) {
@@ -309,20 +312,29 @@ async function computedValues(t: TableDef, id: number): Promise<Values> {
   if (!comps.length) return {};
   const db = await recordsDb();
   const out: Values = {};
-  if (comps.some((f) => f.computed?.kind === "sum")) {
+  const needsFin = comps.some((f) => f.computed?.kind === "sum" || f.computed?.kind === "payment_status");
+  if (needsFin) {
     const { data } = await db.rpc("project_financials", { p_project_ids: [id] });
-    Object.assign(out, ((data as Values[] | null) ?? [])[0] ?? {});
+    const fin = ((data as FinRow[] | null) ?? [])[0];
+    if (fin) Object.assign(out, { approved_amount: fin.approved_amount, invoiced_amount: fin.invoiced_amount, paid_amount: fin.paid_amount });
+    // FIN-c: Financial Status on read (Paid → Delinquent → Past Due → Current), with the grace days from Admin.
+    for (const f of comps.filter((x) => x.computed?.kind === "payment_status")) out[f.name] = fin ? financialStatus(fin, (await loadFinanceSettings(db)).grace_days, todayET()) : "No data";
   }
   const days = comps.filter((f) => f.computed?.kind === "visit_days");
   if (days.length) {
     const { data } = await db.rpc("project_visit_days", { p_project_ids: [id] });
     for (const f of days) out[f.name] = ((data as { visit_days: number }[] | null) ?? [])[0]?.visit_days ?? 0;
   }
-  // PI-f: Paid / Current / Overdue / No data (a word for everyone; the amounts need Transactions).
-  const pay = comps.filter((f) => f.computed?.kind === "payment_status");
-  if (pay.length) {
-    const { data } = await db.rpc("project_payment_status", { p_project_ids: [id] });
-    for (const f of pay) out[f.name] = ((data as { status: string }[] | null) ?? [])[0]?.status ?? "No data";
+  // FIN-a: a Payment's order within its project by date.
+  const pno = comps.filter((f) => f.computed?.kind === "payment_no");
+  if (pno.length && t.name === "transactions") {
+    const { data: me } = await db.from("transactions").select("project_id, type").eq("id", id).maybeSingle();
+    const row = me as { project_id: number | null; type: string | null } | null;
+    if (row?.project_id && row.type === "Payment") {
+      const { data: all } = await db.from("transactions").select("id, date").eq("project_id", row.project_id).eq("type", "Payment").eq("payment_type", "Apply to Project").is("deleted_at", null);
+      const k = paymentNumbers((all ?? []) as { id: number; date: string | null }[]).get(id);
+      for (const f of pno) out[f.name] = k ? ordinal(k) : null;
+    }
   }
   return out;
 }
@@ -331,6 +343,7 @@ function DetailValue({ field: f, value, labels, log }: { field: FieldDef; value:
   const none = <span className="text-muted-foreground">—</span>;
 
   if (f.type === "computed" && f.computed?.kind === "payment_status") return <PaymentStatusBadge status={String(value ?? "No data")} />;
+  if (f.type === "computed" && f.computed?.kind === "payment_no") return value ? <>{String(value)}</> : none;
   if (f.type === "computed") return <>{f.computed?.kind === "visit_days" ? Number(value ?? 0) : money.format(Number(value ?? 0))}</>;
 
   if (f.type === "file" || f.type === "image" || f.type === "signature") {

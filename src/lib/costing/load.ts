@@ -19,7 +19,7 @@ export async function loadPayRates(db: SupabaseClient, employeeIds: number[]): P
   return ((data ?? []) as PayRate[]).map((r) => ({ ...r, hourly_rate: Number(r.hourly_rate) }));
 }
 
-export type ProjectCosting = { costing: Costing; names: Map<number, string>; rates: PayRate[] };
+export type ProjectCosting = { costing: Costing; names: Map<number, string>; rates: PayRate[]; /** FIN-e: Σ cost × quantity of the approved proposals' parts (Portal.io), the estimate beside the real Materials. */ partsEstimate: number };
 
 /** Labour (visits × rates), materials (Sale costs) and the approved amount for one project. */
 export async function loadProjectCosting(db: SupabaseClient, projectId: number): Promise<ProjectCosting | null> {
@@ -39,12 +39,14 @@ export async function loadProjectCosting(db: SupabaseClient, projectId: number):
   for (const x of (team ?? []) as { record_id: number; target_id: number }[]) teamOf.set(x.record_id, [...(teamOf.get(x.record_id) ?? []), x.target_id]);
   const visits: HoursVisit[] = visitsRaw.map((r) => ({ ...r, team_ids: teamOf.get(r.id) ?? [] }));
   const materials = (sales ?? []) as { id: number; cost: number | string | null }[];
-  const approved = Number(((fin ?? []) as { approved_amount: number | string }[])[0]?.approved_amount ?? 0) || 0;
+  const finRow = ((fin ?? []) as { approved_amount: number | string; parts_cost: number | string }[])[0];
+  const approved = Number(finRow?.approved_amount ?? 0) || 0;
+  const partsEstimate = Number(finRow?.parts_cost ?? 0) || 0;
   if (!visits.length && !materials.length && !approved) return null;
 
   const people = [...new Set(visits.flatMap((v) => [v.technician_id, ...(v.team_ids ?? [])]).filter((x): x is number => x !== null))];
   const [rates, { data: emp }] = await Promise.all([loadPayRates(db, people), people.length ? db.from("employee_names").select("id, title").in("id", people) : Promise.resolve({ data: [] })]);
   const names = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
   const costing = jobCosting(visits, rates as RateRow[], materials, approved, nowMs());
-  return { costing, names, rates };
+  return { costing, names, rates, partsEstimate };
 }

@@ -15,6 +15,8 @@ import { QuickTask } from "./quick-task";
 import { localizeReturnCard } from "@/lib/field-day/return-card-text";
 import { getT } from "@/i18n/server";
 import type { T } from "@/i18n/core";
+import { financialStatus, type FinRow } from "@/lib/finance/status";
+import { loadFinanceSettings } from "@/lib/finance/settings";
 
 // "Today" sections from the Portal design (docs/portal-features-merge.md §I), built on what exists now.
 // F4: follow-ups count logged calls / messages (Interactions) as contact, and call-backs.
@@ -84,14 +86,22 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
   const upcoming = can("visits")
     ? Promise.resolve(db
         .from("visits")
-        .select("id, starts_at, duration, checked_in_at, status, technician_id, project_id, projects(title, job_address, financial_status), employees:technician_id(title, phone)")
+        .select("id, starts_at, duration, checked_in_at, status, technician_id, project_id, projects(title, job_address), employees:technician_id(title, phone)")
         .gte("starts_at", dayStart)
         .lt("starts_at", in14)
         .neq("status", "Cancelled")
         .is("deleted_at", null)
         .order("starts_at")
-        .then(({ data }) => (data ?? []) as unknown as { id: number; starts_at: string; duration: string | null; checked_in_at: string | null; status: string; project_id: number | null; projects: { title: string | null; job_address: { street?: string } | null; financial_status: string | null } | null; employees: { title: string | null; phone: string | null } | null }[]))
+        .then(({ data }) => (data ?? []) as unknown as { id: number; starts_at: string; duration: string | null; checked_in_at: string | null; status: string; project_id: number | null; projects: { title: string | null; job_address: { street?: string } | null } | null; employees: { title: string | null; phone: string | null } | null }[]))
     : Promise.resolve([]);
+  // FIN-c: Financial Status is computed on read (Paid → Delinquent → Past Due → Current), never stored.
+  const delinquentProjects = upcoming.then(async (v) => {
+    const ids = [...new Set(v.map((x) => x.project_id).filter((x): x is number => x !== null))];
+    if (!ids.length) return new Set<number>();
+    const [{ data: fin }, settings] = await Promise.all([db.rpc("project_financials", { p_project_ids: ids }), loadFinanceSettings(db)]);
+    const today = todayET();
+    return new Set(((fin ?? []) as FinRow[]).filter((r) => financialStatus(r, settings.grace_days, today) === "Delinquent").map((r) => r.project_id));
+  });
 
   const when = (iso: string) => {
     const l = toDateTimeLocalET(iso);
@@ -159,10 +169,10 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
             action: x.employees?.phone ? { href: `tel:${x.employees.phone.replace(/[^\d+]/g, "")}`, label: tr("Call {name}", { name: x.employees.title?.split(" ")[0] ?? "" }) } : undefined,
           })),
       })),
-      upcoming.then((v) => ({
+      Promise.all([upcoming, delinquentProjects]).then(([v, bad]) => ({
         id: "delinquent",
         title: tr("Delinquent clients with visits in the next 14 days"),
-        rows: v.filter((x) => x.projects?.financial_status === "Delinquent").map((x) => ({ href: recordHref(visitsT, x.id), title: x.projects?.title ?? tr("Visit #{id}", { id: x.id }), meta: tr("{when} · check with accounting before going", { when: when(x.starts_at) }), tone: "bad" as const })),
+        rows: v.filter((x) => x.project_id !== null && bad.has(x.project_id)).map((x) => ({ href: recordHref(visitsT, x.id), title: x.projects?.title ?? tr("Visit #{id}", { id: x.id }), meta: tr("{when} · check with accounting before going", { when: when(x.starts_at) }), tone: "bad" as const })),
       })),
       upcoming.then((v) => ({
         id: "no-address",

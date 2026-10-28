@@ -1,13 +1,7 @@
+import { STATUS_TONE } from "@/lib/finance/status";
 import { getT } from "@/i18n/server";
 
-// PI-f: the one word everyone sees on a project: Paid / Current / Overdue / No data.
-
-export const STATUS_TONE: Record<string, string> = {
-  Paid: "bg-ok-bg text-ok-fg",
-  Current: "bg-info-bg text-info-fg",
-  Overdue: "bg-bad-bg text-bad-fg",
-  "No data": "bg-muted text-text-2",
-};
+// FIN-c: the one word everyone sees on a project: Paid / Current / Past Due / Delinquent / No data.
 
 export async function PaymentStatusBadge({ status }: { status: string }) {
   const tr = await getT();

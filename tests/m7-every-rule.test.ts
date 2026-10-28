@@ -21,6 +21,10 @@ type Case = {
 };
 
 const CASES: Case[] = [
+  // ---------------------------------------------------------------- Transactions FIN-a (Fred 2026-10-28): detail fields follow the Type
+  { rule: 900401, table: "transactions", title: "Payment shows method, reference, fee, tip, discount, payment #", values: { payment_type: "Apply to Project", type: "Payment" }, shown: ["method", "reference", "cc_fee", "tip", "discount", "payment_no"], hidden: ["due_date", "invoice_status", "is_change_order", "sales_tax"] },
+  { rule: 900402, table: "transactions", title: "Invoice shows due date and status", values: { payment_type: "Apply to Project", type: "Invoice" }, shown: ["due_date", "invoice_status"], hidden: ["method", "cc_fee", "parts_cost"] },
+  { rule: 900403, table: "transactions", title: "Approved Proposal shows change order, main proposal, tax, parts", values: { payment_type: "Apply to Project", type: "Proposal" }, shown: ["is_change_order", "parent_transaction_id", "sales_tax", "parts_cost"], hidden: ["method", "due_date"] },
   // ---------------------------------------------------------------- Projects (SPEC §4.1)
   { rule: 3370, table: "projects", title: "Building = Yes shows building + unit", values: { in_building: true }, shown: ["building_id", "apartment_or_unit"] },
   { rule: 3371, table: "projects", title: "Building = No hides them", values: { in_building: false }, hidden: ["building_id", "apartment_or_unit"] },
@@ -135,7 +139,7 @@ describe("every field rule (SPEC §4)", () => {
   it("covers all 46 rules in the registry", () => {
     // Rules numbered from 900000 were added for this CRM (F2) and are tested in f2-field-day.test.ts.
     const inRegistry = REGISTRY.flatMap((t) => t.rules.filter((r) => r.id < 900000).map((r) => r.id)).sort();
-    const tested = [...new Set(CASES.map((c) => c.rule))].sort();
+    const tested = [...new Set(CASES.map((c) => c.rule).filter((id) => id < 900000))].sort();
     expect(inRegistry).toHaveLength(46);
     expect(tested).toEqual(inRegistry);
   });

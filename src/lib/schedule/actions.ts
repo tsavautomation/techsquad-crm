@@ -1,5 +1,9 @@
 "use server";
 
+import { todayET } from "@/lib/dates";
+import { financialStatus, type FinRow } from "@/lib/finance/status";
+import { loadFinanceSettings } from "@/lib/finance/settings";
+
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { getRecord, recordsDb } from "@/lib/records/data";
@@ -30,15 +34,18 @@ export async function visitContextAction(projectId: number): Promise<VisitContex
   await requireUser();
   const db = await recordsDb();
   const [{ data: p }, { data: last }, pending] = await Promise.all([
-    db.from("projects").select("job_address, financial_status").eq("id", projectId).maybeSingle(),
+    db.from("projects").select("job_address").eq("id", projectId).maybeSingle(),
     db.from("visits").select("access_notes").eq("project_id", projectId).not("access_notes", "is", null).is("deleted_at", null).order("starts_at", { ascending: false }).limit(1),
     openPendingFor(db, projectId),
   ]);
   if (!p) return null;
-  const row = p as { job_address: Address | null; financial_status: string | null };
+  const row = p as { job_address: Address | null };
+  // FIN-c: Delinquent is computed (Complete with a balance), not a stored flag.
+  const [{ data: fin }, settings] = await Promise.all([db.rpc("project_financials", { p_project_ids: [projectId] }), loadFinanceSettings(db)]);
+  const finRow = ((fin ?? []) as FinRow[])[0];
   return {
     address: oneLine(row.job_address),
-    delinquent: row.financial_status === "Delinquent",
+    delinquent: finRow ? financialStatus(finRow, settings.grace_days, todayET()) === "Delinquent" : false,
     lastAccessNotes: (last?.[0] as { access_notes: string } | undefined)?.access_notes ?? null,
     pending: pending.map((i) => ({ taskId: i.taskId, title: i.title, due: i.due, reportDate: i.reportDate })),
   };

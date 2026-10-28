@@ -509,8 +509,9 @@ export const projects: TableDef = {
       "legacy": NEW,
       "computed": { "kind": "visit_days" },
     },
-    // PI-f (Fred 2026-10-28): the payment status every project reader sees; the amounts below stay with Transactions.
-    { name: "payment_status", label: "Payment status", type: "computed", heading: "FINANCIAL STATUS", legacy: NEW, computed: { kind: "payment_status" } },
+    // FIN-c (Fred 2026-10-28): Financial Status is computed on read for everyone who may open the project
+    // (Paid → Delinquent → Past Due → Current, src/lib/finance/status.ts); the amounts below stay with Transactions.
+    { name: "financial_status", label: "Financial Status", type: "computed", heading: "FINANCIAL STATUS", legacy: { column: "financial_status", fieldId: 68803 }, computed: { kind: "payment_status" } },
     {
       "name": "approved_amount",
       "requires": "administrative.transactions.view_page",
@@ -567,28 +568,6 @@ export const projects: TableDef = {
           "type": "Payment"
         }
       }
-    },
-    {
-      "name": "financial_status",
-      "requires": "administrative.transactions.view_page",
-      "label": "Financial Status",
-      "type": "select",
-      "legacy": {
-        "column": "financial_status",
-        "fieldId": 68803
-      },
-      "options": [
-        {
-          "label": "Current",
-          "value": "Current",
-          "color": "#4caf50"
-        },
-        {
-          "label": "Delinquent",
-          "value": "Delinquent",
-          "color": "#e91e63"
-        }
-      ]
     },
     // PI-g (Fred 2026-10-28): the commission set for the project. Seen only with Transactions; what was paid stays in Transactions (reason Commission).
     { name: "commission_contact_id", label: "Commission to", type: "lookup", lookup: { table: "contacts" }, heading: "COMMISSION", requires: "administrative.transactions.view_page", legacy: NEW },

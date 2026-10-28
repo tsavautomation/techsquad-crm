@@ -2,6 +2,8 @@
 // Now maintained by hand: edit freely, but keep labels and options identical to SPEC.md.
 import type { TableDef } from "../types";
 
+const NEW = { column: "", fieldId: 0 };
+
 export const contacts: TableDef = {
   "name": "contacts",
   "label": "Contacts",
@@ -284,6 +286,8 @@ export const contacts: TableDef = {
         }
       ]
     },
+    // FIN-d (Fred 2026-10-28): does this client usually pay on time? Typed by the office; the system's suggestion (average days late) is shown next to it, never written here.
+    { name: "payment_reliability", label: "Payment Reliability", type: "select", requires: "administrative.transactions.view_page", legacy: NEW, heading: "PAYMENTS", options: [{ label: "High", value: "High", color: "#4caf50" }, { label: "Medium", value: "Medium", color: "#ff9800" }, { label: "Low", value: "Low", color: "#e91e63" }] },
     {
       "name": "notes",
       "label": "Notes",
