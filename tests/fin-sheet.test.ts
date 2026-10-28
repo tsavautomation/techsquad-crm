@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cleanTitle, monthFromHeader, parseSheet, planSheetLink, splitNumber, type SheetExistingTx } from "@/lib/finance/sheet";
-import { sheetSuggestions } from "@/lib/finance/sheet-link";
+import { customerKey, sheetSuggestions, withLearned } from "@/lib/finance/sheet-link";
 
 // FIN-m (Fred 2026-10-28): the Sales Projections sheet read into rows, the suggestions, and what Link writes.
 
@@ -89,5 +89,14 @@ describe("what Link writes", () => {
     const co = parseSheet(header, [line({ 5: "1673CO1", 6: "1673CO1-Extra", 7: 500 })])[0];
     const p = planSheetLink(8, co, 55, [tx({ id: 1, type: "Proposal", amount: 97690.66, portal_number: "1673" })]);
     expect(p.create[0]).toMatchObject({ type: "Proposal", is_change_order: true, parent_transaction_id: 1, portal_number: "1673CO1", description: "Extra" });
+  });
+});
+
+describe("FIN-n remembering a link", () => {
+  it("the learned project goes first, replacing itself if already there; the customer key ignores case and spaces", () => {
+    const learned = { id: 2, title: "Hyman (#2)", reason: "You linked this customer to this project", score: 95 };
+    expect(withLearned([{ id: 1, title: "A", reason: "Similar name", score: 60 }, { id: 2, title: "Hyman (#2)", reason: "Similar name", score: 55 }], learned)).toEqual([learned, { id: 1, title: "A", reason: "Similar name", score: 60 }]);
+    expect(withLearned(null, learned)).toEqual([learned]);
+    expect(customerKey("2687 Flamingo:  Simcha Hyman ")).toBe(customerKey("2687 flamingo: simcha hyman"));
   });
 });

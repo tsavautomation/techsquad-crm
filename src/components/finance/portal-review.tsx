@@ -125,7 +125,7 @@ function NewCard({ card, compact }: { card: ReviewCardData; compact?: boolean })
       }
     });
   // FIN Part 2: what the sync wrote right after Link (change orders, invoices, payments).
-  const sheetLinked = (r: { sync?: { created: number; updated: number } }) => (r.sync ? t("Linked: {c} transactions created, {u} adopted.", { c: r.sync.created, u: r.sync.updated }) : t("Linked."));
+  const sheetLinked = (r: { sync?: { created: number; updated: number; remembered: number } }) => (r.sync ? `${t("Linked: {c} transactions created, {u} adopted.", { c: r.sync.created, u: r.sync.updated })}${r.sync.remembered ? ` ${t("{n} other rows of this client now suggest the same project.", { n: r.sync.remembered })}` : ""}` : t("Linked."));
   const linked = (r: { sync?: { created: { co: number; invoice: number; payment: number } } }) => {
     const c = r.sync?.created;
     const extra = c ? [c.co ? t("{n} change orders", { n: c.co }) : "", c.invoice ? t("{n} invoices", { n: c.invoice }) : "", c.payment ? t("{n} payments", { n: c.payment }) : ""].filter(Boolean).join(", ") : "";

@@ -24,7 +24,37 @@ export function sheetSuggestions(row: SheetRow, projects: ProjectLite[], txByNum
   return out.slice(0, 5);
 }
 
-export type SheetLinkSummary = { created: number; updated: number; notes: string[]; transactionId: number | null };
+export type SheetLinkSummary = { created: number; updated: number; notes: string[]; transactionId: number | null; remembered: number };
+
+/** The customer cell as a key: "2687 Flamingo: Simcha Hyman " and "2687 flamingo: simcha hyman" are the same client. */
+export const customerKey = (customer: string | null | undefined) => (customer ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/** A learned suggestion goes first; the same project already suggested is replaced, never doubled. */
+export function withLearned(suggestions: Suggestion[] | null, learned: Suggestion): Suggestion[] {
+  return [learned, ...(suggestions ?? []).filter((x) => x.id !== learned.id)].slice(0, 5);
+}
+
+/**
+ * FIN-n (Fred 2026-10-28, "à medida que eu faço link, o algoritmo lembrar"): after a row is linked, every row still
+ * waiting with the same customer cell, or the same Portal.io number (a change order of the linked proposal), gets
+ * that project as its first suggestion, so the next cards of the same client already point at it.
+ */
+export async function rememberLink(db: SupabaseClient, row: SheetRow, projectId: number, projectTitle: string | null): Promise<number> {
+  const title = `${projectTitle ?? "Project"} (#${projectId})`;
+  const { data } = await db.from("sheet_proposals").select("id, customer, main_number, suggestions").eq("link_status", "new").limit(5000);
+  const key = customerKey(row.customer);
+  let n = 0;
+  for (const r of (data ?? []) as { id: number; customer: string | null; main_number: number | null; suggestions: Suggestion[] | null }[]) {
+    const sameNumber = row.main_number !== null && r.main_number === row.main_number;
+    const sameCustomer = key.length > 2 && customerKey(r.customer) === key;
+    if (!sameNumber && !sameCustomer) continue;
+    const learned: Suggestion = sameNumber ? { id: projectId, title, reason: `Portal.io #${row.main_number} was linked to this project`, score: 100 } : { id: projectId, title, reason: "You linked this customer to this project", score: 95 };
+    if (r.suggestions?.[0]?.id === projectId && r.suggestions[0].score >= learned.score) continue;
+    await db.from("sheet_proposals").update({ suggestions: withLearned(r.suggestions, learned) }).eq("id", r.id);
+    n++;
+  }
+  return n;
+}
 
 /** History line on the project (audit_log; actor = the person, or null for the import). */
 async function history(db: SupabaseClient, projectId: number, actor: string | null, note: string) {
@@ -44,7 +74,7 @@ export async function linkSheetRow(db: SupabaseClient, rowId: number, projectId:
   const { data: tx } = await db.from("transactions").select(TX_COLS).eq("project_id", projectId).eq("payment_type", "Apply to Project").is("deleted_at", null).limit(2000);
   const existing = (tx ?? []) as SheetExistingTx[];
   const plan = planSheetLink(rowId, row, projectId, existing);
-  const summary: SheetLinkSummary = { created: 0, updated: 0, notes: plan.notes, transactionId: null };
+  const summary: SheetLinkSummary = { created: 0, updated: 0, notes: plan.notes, transactionId: null, remembered: 0 };
   for (const c of plan.create) {
     const { data: ins, error } = await db.from("transactions").insert({ ...c, created_by: opts.actor ?? null }).select("id").single();
     if (error) return { ok: false, message: `Could not write ${String(c.type)}: ${error.message}` };
@@ -77,6 +107,7 @@ export async function linkSheetRow(db: SupabaseClient, rowId: number, projectId:
   }
   if (row.notes) await db.from("record_notes").insert({ table_name: "projects", record_id: projectId, body: `Sales Projections sheet, ${row.number ?? ""}: ${row.notes}`, created_by: opts.actor ?? null });
   await db.from("sheet_proposals").update({ link_status: "linked", project_id: projectId, transaction_id: summary.transactionId, auto_linked: Boolean(opts.auto), linked_at: new Date().toISOString(), linked_by: opts.actor ?? null }).eq("id", rowId);
+  if (!opts.auto) summary.remembered = await rememberLink(db, row, projectId, project?.title ?? null);
   const how = opts.auto ? "linked automatically (its Portal.io proposal is linked to this project)" : "linked";
   await history(db, projectId, opts.actor ?? null, `Sales Projections sheet row ${row.number ?? ""} "${row.title ?? ""}" (${row.amount}) ${how}: ${summary.created} transactions created, ${summary.updated} adopted${summary.notes.length ? `; ${summary.notes.join("; ")}` : ""}`);
   return { ok: true, summary };
