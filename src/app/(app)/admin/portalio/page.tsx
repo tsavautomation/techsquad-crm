@@ -25,8 +25,8 @@ export default async function PortalioPage() {
     const db = adminDb();
     const [a, b, c, d] = await Promise.all([
       db.from("portal_proposals").select("id", { count: "exact", head: true }),
-      db.from("portal_proposals").select("id", { count: "exact", head: true }).eq("status", "Accepted"),
-      db.from("portal_proposals").select("id", { count: "exact", head: true }).eq("status", "Accepted").eq("link_status", "new").eq("archived", false),
+      db.from("portal_proposals").select("id", { count: "exact", head: true }).in("status", ["Accepted", "Completed"]),
+      db.from("portal_proposals").select("id", { count: "exact", head: true }).in("status", ["Accepted", "Completed"]).eq("link_status", "new").eq("archived", false),
       db.from("portal_proposals").select("id", { count: "exact", head: true }).eq("link_status", "linked"),
     ]);
     counts = { total: a.count ?? 0, accepted: b.count ?? 0, review: c.count ?? 0, linked: d.count ?? 0 };

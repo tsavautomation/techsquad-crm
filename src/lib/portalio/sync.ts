@@ -18,6 +18,7 @@ export type ProposalRow = {
   customer: PortalCustomer | null;
   location: PortalLocation | null;
   salesperson: { id?: number; email?: string | null; firstName?: string | null; lastName?: string | null } | null;
+  financial: Financial | null;
   payment_requests: PaymentRequest[];
   change_orders: ChangeOrder[];
   items_count: number | null;
@@ -38,7 +39,10 @@ export type ProposalRow = {
 export type PaymentRequest = { id: number | null; status: string | null; amount: number | null; dueDate: string | null; description: string | null; paymentMethod: string | null };
 export type ChangeOrder = { id: number; number: number | null; name: string | null; status: string | null; total: number | null };
 
-export const PROPOSAL_COLS = "id, number, name, status, total, currency, customer, location, salesperson, payment_requests, change_orders, items_count, portal_created_at, portal_modified_at, accepted_at, archived, project_id, transaction_id, synced_total, synced_name, synced_change_orders, link_status, linked_at, suggestions, fetched_at";
+/** Statuses that mean the client said yes (Completed = accepted and the job finished). */
+export const ACCEPTED = ["Accepted", "Completed"];
+
+export const PROPOSAL_COLS = "id, number, name, status, total, currency, customer, location, salesperson, financial, payment_requests, change_orders, items_count, portal_created_at, portal_modified_at, accepted_at, archived, project_id, transaction_id, synced_total, synced_name, synced_change_orders, link_status, linked_at, suggestions, fetched_at";
 
 /** The columns a Portal.io detail answer fills (never the CRM's own link columns). */
 export function rowFromDetail(d: ProposalDetail, archived = false) {
@@ -50,8 +54,10 @@ export function rowFromDetail(d: ProposalDetail, archived = false) {
     number: d.number ?? null,
     name: d.name ?? null,
     status: d.status ?? null,
-    total: d.total?.proposalTotal ?? d.proposalTotal ?? null,
-    currency: d.total?.currency?.code ?? "USD",
+    // The detail keeps the money under financialSummary (seen on the sandbox 2026-10-28); the list under total.
+    total: d.financialSummary?.proposalTotal ?? d.total?.proposalTotal ?? d.proposalTotal ?? null,
+    currency: d.financialSummary?.currency?.code ?? d.total?.currency?.code ?? "USD",
+    financial: d.financialSummary ? { parts: d.financialSummary.partsTotal ?? null, labor: d.financialSummary.laborTotal ?? null, fee: d.financialSummary.feeTotal ?? null, subtotal: d.financialSummary.proposalSubtotal ?? null, tax: d.financialSummary.salesTax?.total ?? null } : null,
     customer: c ? { id: c.id ?? null, partyType: c.partyType ?? null, contactType: c.contactType ?? null, firstName: c.firstName ?? null, lastName: c.lastName ?? null, companyName: c.companyName ?? null, email: c.contactEmail ?? null, phone: c.contactPhone ?? null } : null,
     location: loc ? { street: loc.street ?? null, suite: loc.suite ?? null, city: loc.city ?? null, state: loc.state ?? null, stateAbbrev: loc.stateAbbrev ?? null, postalCode: loc.postalCode ?? null } : null,
     salesperson: d.salesperson ? { id: d.salesperson.id, email: d.salesperson.email ?? null, firstName: d.salesperson.firstName ?? null, lastName: d.salesperson.lastName ?? null } : null,
@@ -60,7 +66,7 @@ export function rowFromDetail(d: ProposalDetail, archived = false) {
     items_count: items,
     portal_created_at: d.createdDate ?? null,
     portal_modified_at: d.lastModifiedDate ?? null,
-    accepted_at: d.status === "Accepted" ? d.clientLastDecisionDate ?? d.lastModifiedByUserDate ?? null : null,
+    accepted_at: ACCEPTED.includes(d.status ?? "") ? d.clientLastDecisionDate ?? d.lastCompletedDate ?? d.lastModifiedByUserDate ?? null : null,
     archived,
     detail: d as unknown as Record<string, unknown>,
     fetched_at: new Date().toISOString(),
@@ -104,14 +110,15 @@ export async function contactMatches(db: SupabaseClient, c: PortalCustomer | nul
 // ---------------------------------------------------------------- sync
 
 export type SyncSummary = { checked: number; updated: number; toReview: number; errors: string[]; skipped?: string };
+export type Financial = { parts: number | null; labor: number | null; fee: number | null; subtotal: number | null; tax: number | null };
 
 async function upsertDetail(db: SupabaseClient, d: ProposalDetail, archived: boolean, index: Awaited<ReturnType<typeof loadProjectIndex>> | null): Promise<void> {
   const row = rowFromDetail(d, archived);
   const { data: prev } = await db.from("portal_proposals").select("link_status, suggestions, customer").eq("id", d.id).maybeSingle();
   const before = prev as { link_status: string; suggestions: Suggestion[] | null; customer: PortalCustomer | null } | null;
   const patch: Record<string, unknown> = { ...row };
-  // PI-c: suggestions for an accepted proposal not yet linked (recomputed when the customer changed or there were none).
-  if (row.status === "Accepted" && (before?.link_status ?? "new") === "new" && index && (!before?.suggestions || JSON.stringify(before.customer) !== JSON.stringify(row.customer))) {
+  // PI-c: suggestions for an accepted proposal not yet linked, recomputed on every read (projects change too).
+  if (ACCEPTED.includes(row.status ?? "") && (before?.link_status ?? "new") === "new" && index) {
     patch.suggestions = suggestProjects({ number: row.number, name: row.name, customer: row.customer, location: row.location }, index.projects, index.txByNumber);
   }
   const { error } = await db.from("portal_proposals").upsert(patch, { onConflict: "id" });
@@ -122,21 +129,33 @@ async function upsertDetail(db: SupabaseClient, d: ProposalDetail, archived: boo
  * Read what changed in Portal.io since the last sync (or everything, archived included, with `full`), fetch each
  * changed proposal's detail and upsert it. Never throws: the error lands on the settings and in the summary.
  */
-export async function syncProposals(opts: { full?: boolean; budgetMs?: number } = {}): Promise<SyncSummary> {
+const STOPPED = "Stopped at the time limit; the next sync continues";
+
+export async function syncProposals(opts: { full?: boolean; reread?: boolean; budgetMs?: number } = {}): Promise<SyncSummary> {
   const s = await loadSettings();
   if (!s) return { checked: 0, updated: 0, toReview: 0, errors: [], skipped: "Portal.io is not connected" };
   const db = adminDb();
   const started = Date.now();
-  const budget = opts.budgetMs ?? 240_000;
+  // Vercel cuts a function at its time limit without warning, so every run works inside a budget and says when it
+  // stopped early; the next run (a click or the hourly tick) continues, because proposals already read are skipped.
+  const budget = opts.budgetMs ?? 50_000;
   const out: SyncSummary = { checked: 0, updated: 0, toReview: 0, errors: [] };
+  let stopped = false;
+  const stop = () => {
+    stopped = true;
+    if (!out.errors.includes(STOPPED)) out.errors.push(STOPPED);
+  };
   // A day of overlap: Portal.io's ModifiedAfter is compared to lastModifiedDate, and the clocks need not agree.
   const since = opts.full || !s.last_sync_at ? undefined : new Date(new Date(s.last_sync_at).getTime() - 24 * 3600_000).toISOString();
+  // Archived proposals are walked on a full sync, and until one full walk has finished.
+  const includeArchived = opts.full || !s.last_full_sync_at;
   const index = await loadProjectIndex(db);
   try {
-    for (const archived of opts.full ? [false, true] : [false]) {
+    for (const archived of includeArchived ? [false, true] : [false]) {
+      if (stopped) break;
       for (let page = 1; page < 200; page++) {
         if (Date.now() - started > budget) {
-          out.errors.push("Stopped at the time limit; the next sync continues");
+          stop();
           break;
         }
         const list = await listProposals(s.user_key, { modifiedAfter: since, isArchive: archived, pageNumber: page, pageSize: 100 });
@@ -149,7 +168,11 @@ export async function syncProposals(opts: { full?: boolean; budgetMs?: number } 
         for (const p of items) {
           const k = known.get(p.id);
           const changed = !k || !k.portal_modified_at || !p.lastModifiedDate || new Date(p.lastModifiedDate).getTime() > new Date(k.portal_modified_at).getTime() || k.archived !== archived;
-          if (!changed) continue;
+          if (!changed && !opts.reread) continue;
+          if (Date.now() - started > budget) {
+            stop();
+            break;
+          }
           try {
             const d = await getProposal(s.user_key, p.id);
             await upsertDetail(db, d, archived, index);
@@ -161,10 +184,11 @@ export async function syncProposals(opts: { full?: boolean; budgetMs?: number } 
         if (items.length < 100) break;
       }
     }
-    const { count } = await db.from("portal_proposals").select("id", { count: "exact", head: true }).eq("status", "Accepted").eq("link_status", "new").eq("archived", false);
+    const { count } = await db.from("portal_proposals").select("id", { count: "exact", head: true }).in("status", ACCEPTED).eq("link_status", "new").eq("archived", false);
     out.toReview = count ?? 0;
     const at = new Date().toISOString();
-    await patchSettings({ last_sync_at: at, last_sync_error: out.errors.length ? out.errors.slice(0, 3).join(" · ") : null, ...(opts.full ? { last_full_sync_at: at } : {}) });
+    // A run cut short leaves last_sync_at alone, so the next one lists from the same point and picks up the rest.
+    await patchSettings({ ...(stopped ? {} : { last_sync_at: at }), last_sync_error: out.errors.length ? out.errors.slice(0, 3).join(" · ") : null, ...(includeArchived && !stopped ? { last_full_sync_at: at } : {}) });
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e);
     out.errors.push(m);

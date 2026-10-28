@@ -122,6 +122,8 @@ export type ProposalDetail = ProposalSummary & {
   proposalSubtotal?: number;
   proposalTotal?: number;
   salesTax?: { total?: number } | null;
+  /** Where the sandbox really keeps the money (2026-10-28): financialSummary.proposalTotal etc. */
+  financialSummary?: { partsTotal?: number; laborTotal?: number; feeTotal?: number; proposalSubtotal?: number; proposalTotal?: number; salesTax?: { total?: number } | null; currency?: { code?: string; symbol?: string } } | null;
   paymentRequests?: { id?: number; status?: string; amount?: number; dueDate?: string | null; description?: string | null; paymentMethod?: string | null }[] | null;
   paymentSchedule?: unknown;
   changeOrders?: { id: number; number?: number; name?: string | null; status?: string; total?: { changeOrderTotal?: number } | null }[] | null;

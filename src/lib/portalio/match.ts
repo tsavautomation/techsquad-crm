@@ -30,17 +30,27 @@ export const normalizeStreet = (s: string | null | undefined) =>
     .replace(/\s+/g, " ")
     .trim();
 
-const STOP = new Set(["the", "and", "of", "at", "a", "an", "residence", "res", "home", "house", "project", "proposal", "llc", "inc"]);
-export const tokens = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9À-ſ ]+/g, " ").split(/\s+/).filter((w) => w.length > 1 && !STOP.has(w));
+// Only filler words: "Residence" stays, so "Dixon Residence" finds "Dixon Residence" with two words in common.
+const STOP = new Set(["the", "and", "of", "at", "a", "an", "project", "proposal", "llc", "inc", "change", "order"]);
+/** Lower case, accents folded (Aurélio = Aurelio), punctuation gone, stop words and single letters dropped. */
+export const tokens = (s: string | null | undefined) =>
+  (s ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 1 && !STOP.has(w));
 
-/** Share of the shorter name's words found in the other (0..1). */
-export function nameSimilarity(a: string | null | undefined, b: string | null | undefined): number {
+/** Words in common, and the share of the shorter name's words found in the other (0..1). */
+export function nameOverlap(a: string | null | undefined, b: string | null | undefined): { hits: number; share: number } {
   const ta = tokens(a);
   const tb = new Set(tokens(b));
-  if (!ta.length || !tb.size) return 0;
+  if (!ta.length || !tb.size) return { hits: 0, share: 0 };
   const hits = ta.filter((w) => tb.has(w)).length;
-  return hits / Math.min(ta.length, tb.size);
+  return { hits, share: hits / Math.min(ta.length, tb.size) };
 }
+export const nameSimilarity = (a: string | null | undefined, b: string | null | undefined) => nameOverlap(a, b).share;
 
 /**
  * Projects an accepted proposal could belong to, best first. `txByNumber`: project ids of Transactions already
@@ -64,8 +74,10 @@ export function suggestProjects(p: ProposalLite, projects: ProjectLite[], txByNu
     if (email && normalizeEmail(pr.owner_email) === email) add(pr.id, "The Job Owner has the same e-mail", 90);
     if (street && pr.job_address?.street && normalizeStreet(pr.job_address.street) === street && (!zip || !pr.job_address.zip || pr.job_address.zip.slice(0, 5) === zip)) add(pr.id, "Same job address", 85);
     if (phone.length >= 10 && normalizePhone(pr.owner_phone) === phone) add(pr.id, "The Job Owner has the same phone", 80);
-    const sim = Math.max(nameSimilarity(p.name, pr.title), nameSimilarity([p.customer?.firstName, p.customer?.lastName].filter(Boolean).join(" "), pr.title), nameSimilarity([p.customer?.firstName, p.customer?.lastName].filter(Boolean).join(" "), pr.owner_name));
-    if (sim >= 0.5) add(pr.id, "Similar name", Math.round(40 + sim * 30));
+    // Similar name: at least two words in common (one word, "Studio" or "Antonio", matched half the projects on the sandbox).
+    const who = [p.customer?.firstName, p.customer?.lastName].filter(Boolean).join(" ");
+    const best = [nameOverlap(p.name, pr.title), nameOverlap(who, pr.title), nameOverlap(who, pr.owner_name)].reduce((x, y) => (y.share > x.share || (y.share === x.share && y.hits > x.hits) ? y : x));
+    if (best.hits >= 2 && best.share >= 0.5) add(pr.id, "Similar name", Math.round(40 + best.share * 30));
   }
   return [...out.values()].sort((a, b) => b.score - a.score).slice(0, 5);
 }

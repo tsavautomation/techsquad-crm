@@ -79,7 +79,8 @@ export async function disconnectPortalAction(): Promise<Result> {
 export async function syncPortalNowAction(full: boolean): Promise<Result<{ summary: SyncSummary }>> {
   const a = await sysadmin();
   if (!a.ok) return a;
-  const summary = await syncProposals({ full, budgetMs: 280_000 });
+  // 50 s: under Vercel's function limit, so the run always gets to write its summary; a long sync takes several clicks (or the hourly ticks).
+  const summary = await syncProposals({ full, reread: full, budgetMs: 50_000 });
   revalidatePath("/admin/portalio");
   refreshPaths();
   return { ok: true, summary };

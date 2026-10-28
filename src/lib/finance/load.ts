@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { proposalChanges, OPEN_REQUEST } from "@/lib/portalio/match";
-import { PROPOSAL_COLS, type PaymentRequest, type ProposalRow } from "@/lib/portalio/sync";
+import { ACCEPTED, PROPOSAL_COLS, type PaymentRequest, type ProposalRow } from "@/lib/portalio/sync";
 
 // PI-h (SPEC §9.1): what Administrative › Finance reads with the signed-in person's client (RLS applies).
 // Nothing is stored: Approved / Invoiced / Paid come from Transactions (project_financials), the payment status
@@ -136,12 +136,12 @@ export type ReviewCard = {
 export async function loadReview(db: SupabaseClient, projectId?: number): Promise<ReviewCard[]> {
   let q = db.from("portal_proposals").select(PROPOSAL_COLS).eq("archived", false).in("link_status", ["new", "linked"]).order("accepted_at", { ascending: false, nullsFirst: false }).limit(300);
   if (projectId) q = q.eq("project_id", projectId);
-  else q = q.eq("status", "Accepted");
+  else q = q.in("status", ACCEPTED);
   const { data } = await q;
   const rows = (data ?? []) as ProposalRow[];
   const cards: ReviewCard[] = [];
   for (const p of rows) {
-    if (p.link_status === "new" && p.status === "Accepted") cards.push({ proposal: p, kind: "new", changes: null, projectTitle: null });
+    if (p.link_status === "new" && ACCEPTED.includes(p.status ?? "")) cards.push({ proposal: p, kind: "new", changes: null, projectTitle: null });
     else if (p.link_status === "linked") {
       const ch = proposalChanges(p);
       if (ch) cards.push({ proposal: p, kind: "changed", changes: ch, projectTitle: null });

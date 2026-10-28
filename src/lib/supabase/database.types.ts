@@ -3168,6 +3168,7 @@ export type Database = {
           customer: Json | null
           detail: Json | null
           fetched_at: string
+          financial: Json | null
           id: number
           items_count: number | null
           link_status: string
@@ -3199,6 +3200,7 @@ export type Database = {
           customer?: Json | null
           detail?: Json | null
           fetched_at?: string
+          financial?: Json | null
           id: number
           items_count?: number | null
           link_status?: string
@@ -3230,6 +3232,7 @@ export type Database = {
           customer?: Json | null
           detail?: Json | null
           fetched_at?: string
+          financial?: Json | null
           id?: number
           items_count?: number | null
           link_status?: string

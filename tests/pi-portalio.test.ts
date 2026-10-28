@@ -61,9 +61,13 @@ describe("PI-c project suggestions", () => {
     expect(s[0].id).toBe(1);
     expect(s[0].score).toBe(90);
     expect(s.find((x) => x.id === 2)).toBeUndefined();
-    const weak = suggestProjects({ number: 2, name: "Smith - Theater", customer: null, location: null }, projects, new Map());
+    const weak = suggestProjects({ number: 2, name: "Smith Home Theater", customer: null, location: null }, projects, new Map());
     expect(weak[0]).toMatchObject({ id: 2, reason: "Similar name" });
     expect(weak[0].score).toBeLessThan(80);
+    // One word in common is not a suggestion ("Smith" alone; on the sandbox "Studio" matched half the projects).
+    expect(suggestProjects({ number: 3, name: "Smith - Doorbell", customer: null, location: null }, projects, new Map())).toEqual([]);
+    // Accents fold: Marco Aurélio finds "Aurelio, Marco".
+    expect(suggestProjects({ number: 4, name: "Vessel", customer: { firstName: "Marco", lastName: "Aurélio Silva" }, location: null }, [{ id: 9, title: "Aurelio, Marco - Nassau", job_address: null, owner_email: null, owner_phone: null, owner_name: null }], new Map())[0]).toMatchObject({ id: 9, reason: "Similar name" });
   });
   it("normalizes phones and streets", () => {
     expect(normalizePhone("+1 (305) 555-0100")).toBe("3055550100");
