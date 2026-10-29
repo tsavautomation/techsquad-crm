@@ -5,11 +5,15 @@ import { requireUser } from "@/lib/auth/session";
 import { fromDateTimeLocalET } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
 import { addDays } from "@/lib/schedule/dates";
+import { shiftSequenceProblem } from "./week-approval";
+import { weekApprovedFor } from "./week-status";
 
 // J-s Manual clock entries (Jessica via Fred 2026-10-26, "when someone forgets to clock in or out"): the office
 // adds a shift (person, day, in, out) or completes a half shift. Each row carries who did it, when and why
 // (note + corrected_by / corrected_at), so the day view shows it as a correction; a day in an approved pay
 // period is refused. Hours follow from the entries, so totals recalculate by themselves.
+// TC-h (2026-10-29): a day in an approved week is refused until the week is reopened, and a day may hold
+// several shifts as long as they do not overlap (shiftSequenceProblem).
 
 export type ManualResult = { ok: true; added: ("clock_in" | "clock_out")[] } | { ok: false; message: string };
 
@@ -45,6 +49,7 @@ export async function addManualShiftAction(input: { employeeId: number; day: str
     .order("at");
   const entries = (data ?? []) as Entry[];
   if (entries.some((e) => e.pay_period_id)) return { ok: false, message: "This day is in an approved pay period. Ask an administrator to reopen it." };
+  if (await weekApprovedFor(db, employeeId, day)) return { ok: false, message: "This week's timesheet is approved. Reopen it on Timesheets first." };
 
   const inAt = inTime ? fromDateTimeLocalET(`${day}T${inTime}`) : null;
   let outAt = outTime ? fromDateTimeLocalET(`${day}T${outTime}`) : null;
@@ -64,6 +69,9 @@ export async function addManualShiftAction(input: { employeeId: number; day: str
     if (orphanOut && inAt >= orphanOut.at) return { ok: false, message: "The clock-in must come before that day's clock-out." };
     rows.push({ kind: "clock_in", at: inAt });
   }
+  // Several shifts in a day are fine; overlapping ones are not.
+  const problem = shiftSequenceProblem([...entries.map((e) => ({ kind: e.kind as "clock_in" | "clock_out", at: e.at })), ...rows]);
+  if (problem) return { ok: false, message: problem };
   const who = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const stamp = new Date().toISOString();
   const { error } = await db.from("time_entries").insert(

@@ -7,6 +7,7 @@ import { isApprover } from "@/lib/field-day/corrections";
 import { entryLocked, recordLockedCorrection } from "@/lib/payroll/lock";
 import { recordsDb } from "@/lib/records/data";
 import type { Geo } from "./clock";
+import { weekApprovedFor } from "./week-status";
 import { myClockToday, recordEntry } from "./record";
 
 // P2 Time clock actions. Everyone records their own entries; people who may edit Employees correct them.
@@ -34,8 +35,13 @@ export async function clockAction(kind: "clock_in" | "clock_out", geo: Geo | nul
   return { ok: true, place: r.entry.place };
 }
 
-/** TC-f: an entry in an approved pay period is changed only by an administrator, with a reason; the difference becomes an adjustment. */
+/**
+ * TC-h: an entry in an approved week is not changed by anyone until the week is reopened on Timesheets.
+ * TC-f: an entry in an approved pay period is changed only by an administrator, with a reason; the difference becomes an adjustment.
+ */
 async function lockCheck(db: Awaited<ReturnType<typeof recordsDb>>, user: Awaited<ReturnType<typeof requireUser>>, id: number, reason: string | undefined): Promise<{ locked: boolean; message?: string }> {
+  const { data: e } = await db.from("time_entries").select("employee_id, at").eq("id", id).maybeSingle();
+  if (e && (await weekApprovedFor(db, e.employee_id as number, toDateTimeLocalET(e.at as string).slice(0, 10)))) return { locked: true, message: "This week's timesheet is approved. Reopen it on Timesheets to change this entry." };
   const locked = await entryLocked(db, id);
   if (!locked) return { locked: false };
   if (!user.isSysadmin) return { locked: true, message: "This entry belongs to an approved pay period; only an administrator can change it." };

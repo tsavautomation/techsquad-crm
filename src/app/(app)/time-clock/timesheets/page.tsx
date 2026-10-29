@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { ClockTabs } from "@/components/time-clock/clock-tabs";
 import { ManualEntry } from "@/components/time-clock/manual-entry";
 import { PeriodPicker } from "@/components/time-clock/period-picker";
+import { ApproveAll, WeekApproval } from "@/components/time-clock/week-approval";
 import { requireUser } from "@/lib/auth/session";
 import { formatDate, fromDateTimeLocalET, nowMs, toDateTimeLocalET, todayET } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
@@ -11,6 +12,8 @@ import { addDays, clock } from "@/lib/schedule/dates";
 import { CLOCK_GROUPS } from "@/lib/time-clock/clock";
 import { DEPARTMENTS, inDepartment, periodSheet, type Department } from "@/lib/time-clock/period";
 import { FLAG_TEXT, formatHours, mondayOf, weekSheet, type SheetEntry, type WeekSheet } from "@/lib/time-clock/timesheet";
+import { weekBlockers, weekEnded, weekStatusOf, type Blocker, type WeekStatus } from "@/lib/time-clock/week-approval";
+import { canApproveWeeks, loadWeekPending, loadWeekRows, type WeekRowWithNames } from "@/lib/time-clock/week-status";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
 import { cn } from "@/lib/utils";
@@ -26,6 +29,8 @@ export async function generateMetadata() {
 // by the system are listed under "Needs a look" until the office reviews them on the day view.
 // Jessica's third round (2026-10-26): J-u only people who must clock in; J-v a department filter
 // (Low Voltage / Electrical / all); J-w any period (from – to, both days included); J-s Add a clock entry.
+// TC-h (Jessica via Fred 2026-10-29): each week is Open / Approved / Reopened per person; approving locks its
+// entries; a status filter and Approve all for the approvers (administrative.timesheets.approve).
 
 type Person = { id: number; title: string | null; clock_group: string | null; status: string | null; departments: string[] | null; must_clock_in: boolean };
 type EntryRow = SheetEntry & { employee_id: number };
@@ -37,7 +42,7 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
   const user = await requireUser();
   if (!user.permissions.has("administrative.employees.view_all")) notFound();
   const canFix = user.permissions.has("administrative.employees.modify");
-  const sp = (await props.searchParams) as { week?: string; group?: string; dept?: string; from?: string; to?: string };
+  const sp = (await props.searchParams) as { week?: string; group?: string; dept?: string; from?: string; to?: string; status?: string };
   const today = todayET();
   const monday = mondayOf(sp.week && DAY.test(sp.week) ? sp.week : today);
   const thisMonday = mondayOf(today);
@@ -45,6 +50,8 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
   const dept: Department | "" = (DEPARTMENTS as readonly string[]).includes(sp.dept ?? "") ? (sp.dept as Department) : "";
   // J-w: a period of any length replaces the week when both days are given (and in order).
   const period = sp.from && sp.to && DAY.test(sp.from) && DAY.test(sp.to) && sp.from <= sp.to ? { from: sp.from, to: sp.to } : null;
+  const statusFilter: "" | "open" | "approved" = sp.status === "open" || sp.status === "approved" ? sp.status : "";
+  const canApprove = canApproveWeeks(user);
   const rangeFrom = period ? period.from : monday;
   const rangeTo = period ? period.to : addDays(monday, 6);
   const sunday = addDays(monday, 6);
@@ -67,16 +74,29 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
   // Everyone of the group and department who must clock in and is still working, plus anyone who clocked in the range.
   const people = everyone.filter((p) => (!group || (p.clock_group ?? "Field") === group) && inDepartment(p.departments, dept) && (byPerson.has(p.id) || (p.must_clock_in && (p.status === "Active" || p.status === "Reports"))));
   const now = nowMs();
-  const sheets = people.map((p) => ({ person: p, sheet: weekSheet(byPerson.get(p.id) ?? [], monday, now, today) }));
+  // TC-h: the week's approval per person (rows + what still blocks it), then the status filter.
+  const ids = people.map((p) => p.id);
+  const [weekRows, weekPending] = period ? [new Map<number, WeekRowWithNames>(), new Map<number, { corrections: number; overtime: boolean }>()] : await Promise.all([loadWeekRows(db, monday, ids), loadWeekPending(db, monday, ids)]);
+  const allSheets = people.map((p) => {
+    const sheet = weekSheet(byPerson.get(p.id) ?? [], monday, now, today);
+    const row = weekRows.get(p.id);
+    const pend = weekPending.get(p.id) ?? { corrections: 0, overtime: false };
+    const status: WeekStatus = weekStatusOf(row);
+    const blockers: Blocker[] = status === "Approved" ? [] : weekBlockers({ sheet, pendingCorrections: pend.corrections, pendingOvertime: pend.overtime, monday, today });
+    return { person: p, sheet, status, blockers, approver: row?.approver ?? null };
+  });
+  const sheets = allSheets.filter((s) => (statusFilter === "open" ? s.status !== "Approved" : statusFilter === "approved" ? s.status === "Approved" : true));
+  const approvable = allSheets.filter((s) => s.status !== "Approved" && s.blockers.length === 0).map((s) => s.person.id);
+  const openCount = allSheets.filter((s) => s.status !== "Approved").length;
   const periods = period ? people.map((p) => ({ person: p, sheet: periodSheet(byPerson.get(p.id) ?? [], period.from, period.to, now, today) })) : [];
   const toReview = (period ? periods.flatMap(({ person, sheet }) => sheet.days.flatMap((d) => d.shifts.filter((s) => s.needsReview).map((s) => ({ person, day: d.date, shift: s })))) : sheets.flatMap(({ person, sheet }) => sheet.days.flatMap((d) => d.shifts.filter((s) => s.needsReview).map((s) => ({ person, day: d.date, shift: s })))));
   const grand = sheets.reduce((n, s) => n + s.sheet.totalMinutes, 0);
 
   const employeesT = getTable("employees");
   const dayHref = (employeeId: number, day: string) => `/time-clock?day=${day}&employee=${employeeId}`;
-  const q = (o: { week?: string; group?: string; dept?: string; from?: string; to?: string }) => {
+  const q = (o: { week?: string; group?: string; dept?: string; from?: string; to?: string; status?: string }) => {
     const p = new URLSearchParams();
-    const merged = { week: period ? "" : monday, group, dept, from: period?.from ?? "", to: period?.to ?? "", ...o };
+    const merged = { week: period ? "" : monday, group, dept, from: period?.from ?? "", to: period?.to ?? "", status: statusFilter, ...o };
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v);
     return `/time-clock/timesheets${p.size ? `?${p}` : ""}`;
   };
@@ -130,8 +150,19 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
             </Link>
           ))}
         </div>
+        {!period && (
+          <div className="flex rounded-[10px] border bg-muted p-0.5 text-[13px]" role="tablist" aria-label={tr("Approval status")}>
+            {[{ key: "", label: tr("All") }, { key: "open", label: tr("Open ({n})", { n: openCount }) }, { key: "approved", label: tr("Approved ({n})", { n: allSheets.length - openCount }) }].map((s) => (
+              <Link key={s.key} href={q({ status: s.key })} role="tab" aria-selected={s.key === statusFilter} className={cn("rounded-lg px-3 py-2", s.key === statusFilter ? "bg-card font-semibold shadow-card" : "text-text-2")}>
+                {s.label}
+              </Link>
+            ))}
+          </div>
+        )}
         {canFix && <ManualEntry people={manualPeople} defaultDay={period ? period.to : today} />}
+        {canApprove && !period && weekEnded(monday, today) && <ApproveAll monday={monday} employeeIds={approvable} />}
       </div>
+      {!period && canApprove && !weekEnded(monday, today) && <p className="mb-3 text-xs text-text-2">{tr("A week can be approved from the Monday after it ends. Approving locks that person's clock entries for the week; Reopen (with a reason) unlocks them.")}</p>}
 
       {toReview.length > 0 && (
         <section className="mb-4 rounded-2xl border border-warn-fg/30 bg-warn-bg px-[18px] py-3 shadow-card">
@@ -197,7 +228,7 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
         <>
           {/* Phones: one card per person with the seven days in a row. */}
           <div className="grid gap-3 md:hidden">
-            {sheets.map(({ person, sheet }) => (
+            {sheets.map(({ person, sheet, status, blockers, approver }) => (
               <section key={person.id} className="rounded-2xl border bg-card px-3 py-3 shadow-card">
                 <div className="mb-2 flex items-baseline justify-between gap-2 px-1">
                   <Link href={recordHref(employeesT, person.id)} className="truncate text-[15px] font-semibold tracking-tight hover:underline">
@@ -206,6 +237,9 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
                   <span className="shrink-0 text-sm font-semibold tabular-nums">{formatHours(sheet.totalMinutes)}</span>
                 </div>
                 <WeekRow sheet={sheet} employeeId={person.id} dayHref={dayHref} dow={dow} compact />
+                <div className="mt-2 flex items-center justify-end px-1">
+                  <WeekApproval employeeId={person.id} monday={monday} status={status} blockers={blockers} canApprove={canApprove} approver={approver} />
+                </div>
               </section>
             ))}
           </div>
@@ -224,10 +258,11 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
                     </th>
                   ))}
                   <th className="px-4 py-2.5 text-right font-medium">{tr("Week")}</th>
+                  <th className="px-4 py-2.5 text-right font-medium">{tr("Status")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {sheets.map(({ person, sheet }) => (
+                {sheets.map(({ person, sheet, status, blockers, approver }) => (
                   <tr key={person.id}>
                     <td className="px-4 py-2">
                       <Link href={recordHref(employeesT, person.id)} className="font-medium hover:underline">
@@ -241,6 +276,9 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
                       </td>
                     ))}
                     <td className="px-4 py-2 text-right font-semibold tabular-nums">{formatHours(sheet.totalMinutes)}</td>
+                    <td className="px-4 py-2 text-right">
+                      <WeekApproval employeeId={person.id} monday={monday} status={status} blockers={blockers} canApprove={canApprove} approver={approver} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -253,6 +291,7 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
                     </td>
                   ))}
                   <td className="px-4 py-2 text-right font-semibold tabular-nums">{formatHours(grand)}</td>
+                  <td className="px-4 py-2" />
                 </tr>
               </tfoot>
             </table>

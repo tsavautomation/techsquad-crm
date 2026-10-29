@@ -67,12 +67,12 @@ export function payLine(shifts: Shift[], rates: RateRow[], pto: PtoDay[] = [], a
 export const hours = (minutes: number) => Math.round((minutes / 60) * 100) / 100;
 
 /** The CSV of a period: one line per person; Excel-friendly (BOM, CRLF). */
-export function periodCsv(rows: { name: string; frequency: string; period: string; line: PayLine }[]): string {
+export function periodCsv(rows: { name: string; frequency: string; period: string; line: PayLine; weeks?: string; approvedBy?: string }[]): string {
   const esc = (v: string | number) => {
     const s = String(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const head = ["Name", "Pay frequency", "Period", "Hours", "PTO hours", "Rate", "Amount", "Adjustments", "Total", "Needs review"];
-  const lines = rows.map((r) => [r.name, r.frequency, r.period, hours(r.line.minutes), hours(r.line.ptoMinutes), r.line.rateText, r.line.amount ?? "", r.line.adjustments, r.line.total ?? "", r.line.toReview].map(esc).join(","));
+  const head = ["Name", "Pay frequency", "Period", "Hours", "PTO hours", "Rate", "Amount", "Adjustments", "Total", "Needs review", "Weeks approved", "Approved by"];
+  const lines = rows.map((r) => [r.name, r.frequency, r.period, hours(r.line.minutes), hours(r.line.ptoMinutes), r.line.rateText, r.line.amount ?? "", r.line.adjustments, r.line.total ?? "", r.line.toReview, r.weeks ?? "", r.approvedBy ?? ""].map(esc).join(","));
   return `﻿${[head.join(","), ...lines].join("\r\n")}\r\n`;
 }

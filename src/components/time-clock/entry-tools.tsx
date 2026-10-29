@@ -12,7 +12,7 @@ import { useT } from "@/i18n/client";
  * period shows a lock; only an administrator can still change it, and must say why (the difference is paid
  * as an adjustment in the next period).
  */
-export function EntryTools({ id, time, locked = false, admin = false }: { id: number; time: string; locked?: boolean; admin?: boolean }) {
+export function EntryTools({ id, time, locked = false, admin = false, weekLocked = false }: { id: number; time: string; locked?: boolean; admin?: boolean; weekLocked?: boolean }) {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -20,6 +20,14 @@ export function EntryTools({ id, time, locked = false, admin = false }: { id: nu
   const [value, setValue] = useState(time);
   const [reason, setReason] = useState("");
   const BTN = "inline-flex h-9 items-center gap-1 rounded-md border px-2 text-xs hover:bg-muted disabled:opacity-50";
+
+  // TC-h: the week is approved; nobody changes it until it is reopened on Timesheets.
+  if (weekLocked)
+    return (
+      <span className="inline-flex h-9 items-center gap-1 px-1 text-xs text-muted-foreground" title={t("Week approved: reopen it on Timesheets to change this entry")}>
+        <Lock className="size-3.5" aria-hidden />
+      </span>
+    );
 
   if (locked && !admin)
     return (

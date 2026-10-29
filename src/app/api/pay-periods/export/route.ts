@@ -7,6 +7,9 @@ import { hours, periodCsv } from "@/lib/payroll/engine";
 import { loadPayrollSettings, loadPeriod } from "@/lib/payroll/load";
 import { isFrequency, periodFor } from "@/lib/payroll/periods";
 import { recordsDb } from "@/lib/records/data";
+import { addDays } from "@/lib/schedule/dates";
+import { mondayOf } from "@/lib/time-clock/timesheet";
+import { loadWeekRows } from "@/lib/time-clock/week-status";
 
 /**
  * TC-g: a pay period as CSV or Excel (name, frequency, period, hours, PTO, rate, amount, adjustments, total,
@@ -26,7 +29,14 @@ export async function GET(req: Request) {
   const period = periodFor(frequency, startsOn, await loadPayrollSettings(db));
   const data = await loadPeriod(db, period);
   const label = `${formatDate(period.starts_on)} – ${formatDate(period.ends_on)}`;
-  const rows = data.lines.map((l) => ({ name: l.person.title, frequency, period: label, line: l.line }));
+  // TC-h: the weekly approvals covering the period ("2/2" and who approved them).
+  const mondays: string[] = [];
+  for (let m = mondayOf(period.starts_on); m <= period.ends_on; m = addDays(m, 7)) mondays.push(m);
+  const weekRows = await Promise.all(mondays.map((m) => loadWeekRows(db, m, data.lines.map((l) => l.person.id))));
+  const rows = data.lines.map((l) => {
+    const mine = weekRows.map((w) => w.get(l.person.id)).filter((w) => w?.status === "Approved");
+    return { name: l.person.title, frequency, period: label, line: l.line, weeks: `${mine.length}/${mondays.length}`, approvedBy: [...new Set(mine.map((w) => w!.approver).filter(Boolean))].join(", ") };
+  });
   const base = `pay-period-${frequency.toLowerCase().replace(/[^a-z]/g, "")}-${period.starts_on}`;
 
   if (format === "csv") {
@@ -46,9 +56,11 @@ export async function GET(req: Request) {
     { header: "Adjustments", key: "adjustments", width: 12 },
     { header: "Total", key: "total", width: 12 },
     { header: "Needs review", key: "review", width: 12 },
+    { header: "Weeks approved", key: "weeks", width: 14 },
+    { header: "Approved by", key: "approvedBy", width: 20 },
   ];
   ws.getRow(1).font = { bold: true };
-  for (const r of rows) ws.addRow({ name: r.name, frequency: r.frequency, period: r.period, hours: hours(r.line.minutes), pto: hours(r.line.ptoMinutes), rate: r.line.rateText, amount: r.line.amount, adjustments: r.line.adjustments, total: r.line.total, review: r.line.toReview });
+  for (const r of rows) ws.addRow({ name: r.name, frequency: r.frequency, period: r.period, hours: hours(r.line.minutes), pto: hours(r.line.ptoMinutes), rate: r.line.rateText, amount: r.line.amount, adjustments: r.line.adjustments, total: r.line.total, review: r.line.toReview, weeks: r.weeks, approvedBy: r.approvedBy });
   for (const key of ["amount", "adjustments", "total"]) ws.getColumn(key).numFmt = '"$"#,##0.00';
   ws.addRow({});
   ws.addRow({ name: `Totals (${data.lines.length} people)`, hours: hours(data.totals.minutes), pto: hours(data.totals.ptoMinutes), amount: data.totals.amount, adjustments: data.totals.adjustments, total: data.totals.total }).font = { bold: true };

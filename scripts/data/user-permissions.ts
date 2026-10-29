@@ -70,6 +70,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     admin: false,
     permissions: {
       "job_costing": ["view"],
+      "administrative.timesheets": ["approve"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.documents": ["archive", "create", "delete", "modify", "view_all", "view_page"],
@@ -163,6 +164,7 @@ export const USER_PERMISSIONS: Record<string, SeedPermissions> = {
     admin: false,
     permissions: {
       "job_costing": ["view"],
+      "administrative.timesheets": ["approve"],
       "administrative.employees": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "inventory.inventory-checkout": ["archive", "create", "delete", "modify", "view_all", "view_page"],
       "administrative.payroll": ["archive", "create", "delete", "modify", "view_all", "view_page"],

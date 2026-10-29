@@ -32,8 +32,8 @@ describe("visitStepMessage", () => {
 });
 
 describe("event kinds", () => {
-  it("knows its six events and nothing else", () => {
-    expect(PUSH_EVENTS.map((e) => e.kind)).toEqual(["visit_check_in", "visit_check_out", "arrived_no_check_in", "forgot_clock_out", "missing_report", "whatsapp_silent"]);
+  it("knows its seven events and nothing else", () => {
+    expect(PUSH_EVENTS.map((e) => e.kind)).toEqual(["visit_check_in", "visit_check_out", "arrived_no_check_in", "forgot_clock_out", "missing_report", "whatsapp_silent", "timesheets_to_approve"]);
     expect(isPushKind("visit_check_in")).toBe(true);
     expect(isPushKind("email")).toBe(false);
   });

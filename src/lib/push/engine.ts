@@ -10,6 +10,8 @@ export const PUSH_EVENTS = [
   { kind: "missing_report", label: "Report not sent by the evening" },
   // F28-e (Fred 2026-10-23): the WhatsApp capture PC stopped or went quiet in business hours.
   { kind: "whatsapp_silent", label: "WhatsApp PC stopped or silent" },
+  // TC-h: Monday morning, to the approvers, while last week still has Open timesheets.
+  { kind: "timesheets_to_approve", label: "Timesheets waiting for approval (Monday)" },
 ] as const;
 
 /** F27-b: the van has sat within this distance of the job for this long without a check-in. */

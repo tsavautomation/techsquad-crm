@@ -63,6 +63,8 @@ describe("checklist", () => {
       ...ACTIONS.map((a) => `administrative.portal-apps.${a}`),
       // Logins & passwords (F30, 20261022050000).
       ...ACTIONS.map((a) => `administrative.credentials.${a}`),
+      // Weekly timesheet approval (TC-h, 20261029100000).
+      "administrative.timesheets.approve",
     ]);
     // Migration 20261004000000 moved Inventory Checkout under Inventory and removed Sale (SPEC §9.1 INV-a).
     const asOfP1 = (k: string) => k.replace("inventory.inventory-checkout.", "administrative.inventory-checkout.");
