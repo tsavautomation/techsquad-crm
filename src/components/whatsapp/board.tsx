@@ -59,7 +59,7 @@ export function WaBoard({ cards, people, visitsNewHref }: { cards: WaCard[]; peo
         {CATEGORIES.map((c) => {
           const list = cards.filter((x) => x.category === c);
           return (
-            <section key={c} className="flex w-[300px] shrink-0 flex-col gap-2 rounded-2xl bg-muted/60 p-2" aria-label={t(CATEGORY_LABEL[c])}>
+            <section key={c} className="flex min-w-[220px] flex-1 basis-0 flex-col gap-2 rounded-2xl bg-muted/60 p-2" aria-label={t(CATEGORY_LABEL[c])}>
               <h2 className="flex items-baseline justify-between px-1 pt-1 text-[13px] font-semibold tracking-tight">
                 <span>
                   <span aria-hidden>{CATEGORY_ICON[c]}</span> {t(CATEGORY_LABEL[c])}
