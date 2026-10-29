@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { fromDateTimeLocalET, toDateTimeLocalET } from "@/lib/dates";
 import { isApprover } from "@/lib/field-day/corrections";
+import { entryLocked, recordLockedCorrection } from "@/lib/payroll/lock";
 import { recordsDb } from "@/lib/records/data";
 import type { Geo } from "./clock";
 import { myClockToday, recordEntry } from "./record";
@@ -33,30 +34,45 @@ export async function clockAction(kind: "clock_in" | "clock_out", geo: Geo | nul
   return { ok: true, place: r.entry.place };
 }
 
+/** TC-f: an entry in an approved pay period is changed only by an administrator, with a reason; the difference becomes an adjustment. */
+async function lockCheck(db: Awaited<ReturnType<typeof recordsDb>>, user: Awaited<ReturnType<typeof requireUser>>, id: number, reason: string | undefined): Promise<{ locked: boolean; message?: string }> {
+  const locked = await entryLocked(db, id);
+  if (!locked) return { locked: false };
+  if (!user.isSysadmin) return { locked: true, message: "This entry belongs to an approved pay period; only an administrator can change it." };
+  if (!reason?.trim()) return { locked: true, message: "This entry belongs to an approved pay period: say why you are changing it." };
+  return { locked: true };
+}
+
 /** Correct an entry's time (HH:MM, Eastern, same day). The original time is kept and the correction signed. */
-export async function correctEntryAction(id: number, time: string): Promise<{ ok: true } | { ok: false; message: string }> {
+export async function correctEntryAction(id: number, time: string, reason?: string): Promise<{ ok: true } | { ok: false; message: string }> {
   const user = await requireUser();
   if (!user.permissions.has("administrative.employees.modify")) return { ok: false, message: "You don't have permission to do that." };
   if (!/^\d{2}:\d{2}$/.test(time)) return { ok: false, message: "Please enter a time like 07:45." };
   const db = await recordsDb();
   const { data: e } = await db.from("time_entries").select("id, at, original_at").eq("id", id).maybeSingle();
   if (!e) return { ok: false, message: "Entry not found." };
+  const lock = await lockCheck(db, user, id, reason);
+  if (lock.message) return { ok: false, message: lock.message };
   const day = toDateTimeLocalET(e.at as string).slice(0, 10);
   const at = fromDateTimeLocalET(`${day}T${time}`);
-  const { error } = await db.from("time_entries").update({ at, original_at: e.original_at ?? e.at, corrected_at: new Date().toISOString(), corrected_by: user.id }).eq("id", id);
+  const { error } = await db.from("time_entries").update({ at, original_at: e.original_at ?? e.at, corrected_at: new Date().toISOString(), corrected_by: user.id, note: lock.locked ? `Corrected after the pay period was approved: ${reason!.trim()}` : undefined }).eq("id", id);
   if (error) return { ok: false, message: error.message };
+  if (lock.locked) await recordLockedCorrection(db, user, id, reason!.trim());
   revalidatePath("/time-clock");
   revalidatePath("/");
   return { ok: true };
 }
 
 /** Remove an entry (soft delete; it stays in the database). */
-export async function removeEntryAction(id: number): Promise<{ ok: true } | { ok: false; message: string }> {
+export async function removeEntryAction(id: number, reason?: string): Promise<{ ok: true } | { ok: false; message: string }> {
   const user = await requireUser();
   if (!user.permissions.has("administrative.employees.modify")) return { ok: false, message: "You don't have permission to do that." };
   const db = await recordsDb();
-  const { error } = await db.from("time_entries").update({ deleted_at: new Date().toISOString(), corrected_at: new Date().toISOString(), corrected_by: user.id }).eq("id", id);
+  const lock = await lockCheck(db, user, id, reason);
+  if (lock.message) return { ok: false, message: lock.message };
+  const { error } = await db.from("time_entries").update({ deleted_at: new Date().toISOString(), corrected_at: new Date().toISOString(), corrected_by: user.id, note: lock.locked ? `Removed after the pay period was approved: ${reason!.trim()}` : undefined }).eq("id", id);
   if (error) return { ok: false, message: error.message };
+  if (lock.locked) await recordLockedCorrection(db, user, id, reason!.trim());
   revalidatePath("/time-clock");
   revalidatePath("/");
   return { ok: true };

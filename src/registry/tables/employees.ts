@@ -124,6 +124,19 @@ export const employees: TableDef = {
       "help": "Off: this person is left out of the time clock, the timesheets and the missing clock-out checks. Past entries are kept."
     },
     {
+      // TC-e pay periods (Jessica via Fred 2026-10-21): which pay period this person is paid in. Blank = not in pay periods.
+      "name": "pay_frequency",
+      "label": "Pay frequency",
+      "type": "select",
+      "legacy": { "column": "", "fieldId": 0 },
+      "help": "Semi-monthly pays the 1st to the 15th and the 16th to the end of the month. Blank: this person is not paid through pay periods.",
+      "options": [
+        { "label": "Biweekly", "value": "Biweekly" },
+        { "label": "Semi-monthly", "value": "Semi-monthly" },
+        { "label": "Monthly", "value": "Monthly" }
+      ]
+    },
+    {
       "name": "date_of_birth",
       "label": "Date of Birth",
       "type": "date",

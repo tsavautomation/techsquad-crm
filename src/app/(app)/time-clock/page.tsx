@@ -26,7 +26,7 @@ export async function generateMetadata() {
 const KIND_LABEL: Record<EntryKind, string> = { clock_in: "Clocked in", clock_out: "Clocked out", on_way: "On my way", visit_in: "Arrived at the job", visit_out: "Left the job" };
 const PLACE_TONE: Record<Place, string> = { Office: "text-info-fg", "On site": "text-ok-fg", Elsewhere: "text-warn-fg", Unknown: "text-muted-foreground" };
 
-type Row = TimeEntry & { employee_id: number; note: string | null; reviewed_at: string | null; auto_closed: boolean; corrected_at: string | null; original_at: string | null; employees: { title: string | null } | null; visits: { projects: { title: string | null } | null } | null };
+type Row = TimeEntry & { employee_id: number; note: string | null; reviewed_at: string | null; auto_closed: boolean; pay_period_id: number | null; corrected_at: string | null; original_at: string | null; employees: { title: string | null } | null; visits: { projects: { title: string | null } | null } | null };
 
 export default async function TimeClockPage(props: PageProps<"/time-clock">) {
   const tr = await getT();
@@ -40,7 +40,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
   const db = await recordsDb();
   let q = db
     .from("time_entries")
-    .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, auto_closed, corrected_at, original_at, employees:employee_id(title), visits:visit_id(projects(title))")
+    .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, auto_closed, pay_period_id, corrected_at, original_at, employees:employee_id(title), visits:visit_id(projects(title))")
     .gte("at", fromDateTimeLocalET(`${day}T00:00`))
     .lt("at", fromDateTimeLocalET(`${addDays(day, 1)}T00:00`))
     .is("deleted_at", null);
@@ -155,7 +155,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                           )}
                         </span>
                       </div>
-                      {canFix && <EntryTools id={e.id} time={toDateTimeLocalET(e.at).slice(11, 16)} />}
+                      {canFix && <EntryTools id={e.id} time={toDateTimeLocalET(e.at).slice(11, 16)} locked={e.pay_period_id !== null} admin={user.isSysadmin} />}
                     </li>
                   ))}
                 </ol>

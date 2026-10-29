@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  CalendarCheck,
   ChartColumn,
   ChevronRight,
   Clock,
@@ -60,6 +61,8 @@ export type Extras = {
   insights: boolean;
   data: boolean;
   timeClock: boolean;
+  /** TC-f: Pay periods, for the Job costing permission. */
+  payPeriods: boolean;
   /** F28: the WhatsApp board. */
   whatsapp: boolean;
 };
@@ -508,7 +511,7 @@ export function Sidebar({
           </div>
         );
       })}
-      {(extras.insights || extras.data || extras.timeClock) && (
+      {(extras.insights || extras.data || extras.timeClock || extras.payPeriods) && (
         <>
           <p className="mx-2.5 mt-[18px] mb-1.5 text-[11px] tracking-[0.08em] text-[#7c8da6] uppercase">
             {t("Management")}
@@ -519,6 +522,12 @@ export function Sidebar({
                 "/time-clock",
                 t("Time clock"),
                 <Clock className="size-[18px]" aria-hidden />,
+              )}
+            {extras.payPeriods &&
+              link(
+                "/pay-periods",
+                t("Pay periods"),
+                <CalendarCheck className="size-[18px]" aria-hidden />,
               )}
             {extras.insights &&
               link(
@@ -734,6 +743,15 @@ export function BottomNav({
             href: "/time-clock",
             title: t("Time clock"),
             icon: <Clock className="size-5" aria-hidden />,
+          },
+        ]
+      : []),
+    ...(extras.payPeriods
+      ? [
+          {
+            href: "/pay-periods",
+            title: t("Pay periods"),
+            icon: <CalendarCheck className="size-5" aria-hidden />,
           },
         ]
       : []),
