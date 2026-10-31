@@ -2,6 +2,7 @@ import {
   BellRing,
   Mail,
   Activity,
+  HeartPulse,
   Award,
   Sparkles,
   Briefcase,
@@ -98,6 +99,7 @@ export const TILE_ICONS: Record<string, { icon: LucideIcon; tint: string }> = {
   usage: { icon: Activity, tint: "#16a34a" },
   "field-day": { icon: Truck, tint: "#0891b2" },
   alerts: { icon: BellRing, tint: "#d97706" },
+  health: { icon: HeartPulse, tint: "#dc2626" },
   gmail: { icon: Mail, tint: "#dc2626" },
   messages: { icon: MessageSquareText, tint: "#16a34a" },
   // Modules and other pages (sheets)

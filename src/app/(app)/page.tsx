@@ -7,6 +7,7 @@ import { TodaySections } from "@/components/dashboard/today";
 import { AssignMail } from "@/components/dashboard/assign-mail";
 import { PortalReviewCard } from "@/components/dashboard/portal-review-card";
 import { DashboardWidgets } from "@/components/dashboard/widgets";
+import { HealthWarning } from "@/components/dashboard/health-warning";
 import { MyDay } from "@/components/field-day/my-day";
 import { MySkills } from "@/components/performance/my-skills";
 import { MyClock } from "@/components/time-clock/my-clock";
@@ -39,6 +40,8 @@ export default async function DashboardPage() {
         {user.firstName ? `, ${user.firstName}` : ""}
       </h1>
       <p className="mb-5 text-xs text-muted-foreground">{date}</p>
+      {/* HC-a: administrators see a warning when the nightly diagnostic found a broken integration. */}
+      <HealthWarning user={user} now={now.getTime()} />
       {modules.length === 0 ? (
         <p className="rounded-2xl border border-dashed bg-card px-6 py-10 text-center text-text-2">{t("You don't have access to any modules yet. Ask an administrator to add you to a group.")}</p>
       ) : (

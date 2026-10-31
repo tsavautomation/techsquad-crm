@@ -27,6 +27,7 @@ import { etSlot, runKeys } from "./schedule";
 
 import { closeForgottenDay } from "@/lib/field-day/forgotten";
 import { nightlyBackupStep } from "@/lib/backups/run";
+import { runHealthChecks } from "@/lib/health/checks";
 import { syncMail } from "@/lib/mail/sync";
 import { syncProposals } from "@/lib/portalio/sync";
 // Automations engine (SPEC §5). Data-driven: every WebAuthor trigger is a row in public.automations.
@@ -327,6 +328,10 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
       }
       // J-z: open tasks whose project got a report in the last two days: does the report say it was done?
       daily.taskDone = await suggestDoneTasks(db).catch((e) => ({ error: e instanceof Error ? e.message : String(e) }));
+      // HC-a: the nightly diagnostic of every integration (its report feeds the Home page warning).
+      daily.health = await runHealthChecks("tick", now)
+        .then((r) => ({ failed: r.checks.filter((c) => !c.ok && !c.skipped).map((c) => c.key) }))
+        .catch((e) => ({ error: e instanceof Error ? e.message : String(e) }));
       await finishRun(db, keys.daily, daily);
       out.daily = daily;
     } catch (e) {
