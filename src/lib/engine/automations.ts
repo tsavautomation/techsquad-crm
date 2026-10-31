@@ -353,10 +353,15 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
     out.mail = { error: e instanceof Error ? e.message : String(e) };
   }
   // PI-b: Portal.io proposals changed since the last sync, once an hour (the webhook covers the minutes between).
-  if (await claimRun(db, keys.hourly.replace("hourly:", "portalio:"))) {
-    const r = await syncProposals({ budgetMs: 120_000 });
-    await finishRun(db, keys.hourly.replace("hourly:", "portalio:"), r as unknown as Record<string, unknown>);
-    out.portalio = r;
+  // Never breaks the tick: the steps after it (PDFs, reminders, the nightly backup) must still run.
+  try {
+    if (await claimRun(db, keys.hourly.replace("hourly:", "portalio:"))) {
+      const r = await syncProposals({ budgetMs: 120_000 });
+      await finishRun(db, keys.hourly.replace("hourly:", "portalio:"), r as unknown as Record<string, unknown>);
+      out.portalio = r;
+    }
+  } catch (e) {
+    out.portalio = { error: e instanceof Error ? e.message : String(e) };
   }
   // SPEC §9.1 OD-c: PDF copies for records that still lack one (two minutes per tick; never breaks the tick).
   try {
