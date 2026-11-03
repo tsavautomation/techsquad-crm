@@ -69,9 +69,30 @@ export type Data = {
 
 export type Change = { project_id: number | null; table: "transactions" | "projects"; id: number | null; set: Record<string, unknown>; before: Record<string, unknown>; why: string; rule: string };
 export type Note = { project_id: number | null; rule: string; text: string };
+/** Fred 2026-11-03: how the sheet's Indicator/Designer names map to CRM organizations (sheet name → CRM title). */
+export const PARTNER_ALIASES: Record<string, string> = {
+  "Navicon Construction": "INDIGO CONSTRUCTION SERVICES, LLC",
+  "Design Solutions Miami": "Design Solutions, Inc",
+  "JC Interiors": "Jessica Cordeiro Interiors, Inc.",
+  "Squadra Design": "Squadra Concierge and Interiors",
+  "MC Décor": "MC Studio",
+  "Giga Russo": "Benetti Services, Inc",
+  "Anderson Mendes": "M2 Connexion Corp",
+};
+/** Fred 2026-11-03: partners to create (sheet name → new organization or contact). */
+export const PARTNER_CREATES: Record<string, { table: "organizations" | "contacts"; row: Record<string, unknown> }> = {
+  "Urban Coast": { table: "organizations", row: { title: "Urban Coast" } },
+  Newman: { table: "organizations", row: { title: "Newman Construction Group", type: "General Contractor", address: { street: "1590 NE 162nd St Suite 300", address_2: "", city: "North Miami Beach", state: "FL", zip: "33162" }, main_phone: "(305) 933-2583", main_email: "Office@newmanbc.com" } },
+  "Jackson Cardoso": { table: "contacts", row: { title: "JACKSON CARDOSO", first_name: "Jackson", last_name: "Cardoso" } },
+  "Alejandra Martinez": { table: "contacts", row: { title: "ALEJANDRA MARTINEZ", first_name: "Alejandra", last_name: "Martinez" } },
+  Livia: { table: "contacts", row: { title: "LIVIA", first_name: "Livia" } },
+};
+
 export type Plan = {
   changes: Change[];
   creates: { project_id: number; row: Record<string, unknown>; why: string; rule: string }[];
+  /** Partners to create before the project changes; a project change then carries `new:<sheet name>` in place of the id. */
+  partnerCreates: { key: string; table: "organizations" | "contacts"; row: Record<string, unknown>; projects: number[] }[];
   notes: Note[];
   /** Per project: approved / paid / discount / balance before and after. */
   totals: Map<number, { before: Totals; after: Totals }>;
@@ -102,7 +123,7 @@ export const SUPERSEDE: { project: number; keep: string; replaces: string[]; why
 export const IGNORE_REQUESTS_OF_PROJECT = new Set([1135]);
 
 export function buildPlan(d: Data): Plan {
-  const plan: Plan = { changes: [], creates: [], notes: [], totals: new Map(), numbering: new Map() };
+  const plan: Plan = { changes: [], creates: [], partnerCreates: [], notes: [], totals: new Map(), numbering: new Map() };
   const live = new Map(d.tx.map((t) => [t.id, { ...t }]));
   const gone = new Set<number>(); // soft-deleted by the plan
   const superseded = new Map<number, number>(); // proposal → by
@@ -353,8 +374,19 @@ export function buildPlan(d: Data): Plan {
       continue;
     }
     const name = designers[0];
-    const org = orgByName.get(fold(name)) ?? [...orgByName.values()].find((o) => fold(o.title).startsWith(fold(name)) || fold(name).startsWith(fold(o.title)));
-    const contact = org ? null : (contactByName.get(fold(name)) ?? null);
+    const lookFor = PARTNER_ALIASES[name] ?? name;
+    let org = orgByName.get(fold(lookFor)) ?? [...orgByName.values()].find((o) => fold(o.title).startsWith(fold(lookFor)) || fold(lookFor).startsWith(fold(o.title))) ?? null;
+    let contact = org ? null : (contactByName.get(fold(lookFor)) ?? null);
+    const create = !org && !contact ? PARTNER_CREATES[name] : undefined;
+    if (create) {
+      // Created by the apply step; the project change carries "new:<name>" until the row exists.
+      let pc = plan.partnerCreates.find((c) => c.key === name);
+      if (!pc) plan.partnerCreates.push((pc = { key: name, table: create.table, row: create.row, projects: [] }));
+      pc.projects.push(p.id);
+      const placeholder = { id: `new:${name}` as unknown as number, title: String(create.row.title), type: (create.row.type as string | null) ?? null };
+      if (create.table === "organizations") org = placeholder;
+      else contact = placeholder;
+    }
     if (!org && !contact) {
       note(p.id, "D", `Partner "${name}" is neither an organization nor a contact: create it, then link`);
       continue;
@@ -362,7 +394,7 @@ export function buildPlan(d: Data): Plan {
     const set: Record<string, unknown> = {};
     const beforeP: Record<string, unknown> = {};
     if (!hasPartner) {
-      if (org) set[org.type === "Design Firm" ? "design_firm_id" : "referral_organization_id"] = org.id;
+      if (org) set[org.type === "Design Firm" ? "design_firm_id" : org.type === "General Contractor" ? "general_contractor_id" : org.type === "Developer Builder" ? "builder_developer_id" : "referral_organization_id"] = org.id;
       else set.referral_contact_id = contact!.id;
     }
     if (wantsCommission && !p.commission_contact_id && !p.commission_organization_id) {
@@ -370,7 +402,8 @@ export function buildPlan(d: Data): Plan {
       else set.commission_contact_id = contact!.id;
     }
     for (const k of Object.keys(set)) beforeP[k] = (p as unknown as Record<string, unknown>)[k];
-    if (Object.keys(set).length) plan.changes.push({ project_id: p.id, table: "projects", id: p.id, set, before: beforeP, why: `Sheet Indicator/Designer "${name}"${wantsCommission ? " with commission (Y)" : ""} → ${org ? `organization ${org.title}` : `contact ${contact!.title}`}`, rule: "D" });
+    const target = org ? `organization ${org.title}` : `contact ${contact!.title}`;
+    if (Object.keys(set).length) plan.changes.push({ project_id: p.id, table: "projects", id: p.id, set, before: beforeP, why: `Sheet Indicator/Designer "${name}"${wantsCommission ? " with commission (Y)" : ""} → ${create ? `NEW ${target}` : target}`, rule: "D" });
   }
 
   // ---------------------------------------------------------------- lists for Luana
