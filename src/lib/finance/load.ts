@@ -68,12 +68,24 @@ type ProjectRow = {
 };
 
 const PROJECT_SELECT = "id, title, job_status, category, owner:job_owner_id(id, title, payment_reliability, organizations:organization_id(id, title, payment_reliability)), design_firm:design_firm_id(title), gc:general_contractor_id(title), builder:builder_developer_id(title), ref_c:referral_contact_id(title), ref_o:referral_organization_id(title), com_c:commission_contact_id(title), com_o:commission_organization_id(title)";
+/** PostgREST returns at most 1000 rows per request whatever .limit() says: page until a short page comes back (FIN-o). */
+async function pageAll<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await page(from, from + 999);
+    if (error) throw new Error(error.message);
+    const got = (data ?? []) as T[];
+    rows.push(...got);
+    if (got.length < 1000) return rows;
+  }
+}
+
 const APPROVED_OR_LATER = new Set(["Proposal Approved", "ON HOLD", "Infrastructure", "Installation", "Programming", "Complete"]);
 
 /** Every Low Voltage project that has money, a linked proposal, or should have one (status Proposal Approved or later). */
 export async function loadFinanceProjects(db: SupabaseClient): Promise<FinanceProject[]> {
-  const [{ data: tx }, { data: pp }, { data: later }] = await Promise.all([
-    db.from("transactions").select("project_id").eq("payment_type", "Apply to Project").is("deleted_at", null).not("project_id", "is", null).limit(20000),
+  const [tx, { data: pp }, { data: later }] = await Promise.all([
+    pageAll<{ project_id: number }>((a, b) => db.from("transactions").select("project_id").eq("payment_type", "Apply to Project").is("deleted_at", null).not("project_id", "is", null).order("id").range(a, b)),
     db.from("portal_proposals").select("project_id").eq("link_status", "linked").not("project_id", "is", null).limit(20000),
     db.from("projects").select("id").eq("category", LOW_VOLTAGE).in("job_status", [...APPROVED_OR_LATER]).is("deleted_at", null).not("id", "in", EXCLUDED_PROJECT_FILTER).limit(5000),
   ]);
@@ -174,14 +186,15 @@ export type PaymentLine = { id: number; date: string | null; project_id: number;
 export async function loadPayments(db: SupabaseClient, projects: FinanceProject[], from: string | null, to: string | null): Promise<PaymentLine[]> {
   const byId = new Map(projects.map((p) => [p.id, p]));
   if (!byId.size) return [];
-  let q = db.from("transactions").select("id, date, project_id, description, portal_number, amount, cc_fee, tip, discount, method, reference").eq("payment_type", "Apply to Project").eq("type", "Payment").is("deleted_at", null).in("project_id", [...byId.keys()]).order("date", { ascending: false }).limit(5000);
-  if (from) q = q.gte("date", from);
-  if (to) q = q.lte("date", to);
-  const { data } = await q;
   type Row = { id: number; date: string | null; project_id: number; description: string | null; portal_number: string | null; amount: number; cc_fee: number | null; tip: number | null; discount: number | null; method: string | null; reference: string | null };
-  const rows = (data ?? []) as Row[];
+  const rows = await pageAll<Row>((a, b) => {
+    let q = db.from("transactions").select("id, date, project_id, description, portal_number, amount, cc_fee, tip, discount, method, reference").eq("payment_type", "Apply to Project").eq("type", "Payment").is("deleted_at", null).in("project_id", [...byId.keys()]);
+    if (from) q = q.gte("date", from);
+    if (to) q = q.lte("date", to);
+    return q.order("date", { ascending: false }).order("id").range(a, b);
+  });
   // Payment # needs every payment of the project, not only the period's.
-  const { data: all } = rows.length ? await db.from("transactions").select("id, date, project_id").eq("payment_type", "Apply to Project").eq("type", "Payment").is("deleted_at", null).in("project_id", [...new Set(rows.map((r) => r.project_id))]).limit(20000) : { data: [] };
+  const all = rows.length ? await pageAll<{ id: number; date: string | null; project_id: number }>((a, b) => db.from("transactions").select("id, date, project_id").eq("payment_type", "Apply to Project").eq("type", "Payment").is("deleted_at", null).in("project_id", [...new Set(rows.map((r) => r.project_id))]).order("id").range(a, b)) : [];
   const perProject = new Map<number, { id: number; date: string | null }[]>();
   for (const a of (all ?? []) as { id: number; date: string | null; project_id: number }[]) perProject.set(a.project_id, [...(perProject.get(a.project_id) ?? []), a]);
   const numbers = new Map<number, number>();
@@ -198,12 +211,15 @@ export type ProposalLine = { id: number; date: string | null; project_id: number
 export async function loadProposals(db: SupabaseClient, projects: FinanceProject[], from: string | null, to: string | null, partner: PartnerKey): Promise<ProposalLine[]> {
   const byId = new Map(projects.map((p) => [p.id, p]));
   if (!byId.size) return [];
-  let q = db.from("transactions").select("id, date, project_id, description, portal_number, amount, is_change_order, sales_tax, parts_cost").eq("payment_type", "Apply to Project").eq("type", "Proposal").is("deleted_at", null).in("project_id", [...byId.keys()]).order("date", { ascending: false }).limit(5000);
-  if (from) q = q.gte("date", from);
-  if (to) q = q.lte("date", to);
-  const { data } = await q;
   type Row = { id: number; date: string | null; project_id: number; description: string | null; portal_number: string | null; amount: number; is_change_order: boolean; sales_tax: number | null; parts_cost: number | null };
-  return ((data ?? []) as Row[]).map((r) => {
+  // Superseded proposals (FIN-o) are history: never listed or summed here.
+  const rows = await pageAll<Row>((a, b) => {
+    let q = db.from("transactions").select("id, date, project_id, description, portal_number, amount, is_change_order, sales_tax, parts_cost").eq("payment_type", "Apply to Project").eq("type", "Proposal").is("deleted_at", null).is("superseded_by_id", null).in("project_id", [...byId.keys()]);
+    if (from) q = q.gte("date", from);
+    if (to) q = q.lte("date", to);
+    return q.order("date", { ascending: false }).order("id").range(a, b);
+  });
+  return rows.map((r) => {
     const p = byId.get(r.project_id)!;
     const amount = Number(r.amount);
     // Commission on this proposal = the project's Commission % × this proposal's amount (FIN-e).
@@ -218,14 +234,16 @@ export type ClientTotals = { client: string; projects: { id: number; title: stri
 export async function loadByClient(db: SupabaseClient, projects: FinanceProject[], key: ClientKey, from: string | null, to: string | null): Promise<ClientTotals[]> {
   const byId = new Map(projects.map((p) => [p.id, p]));
   if (!byId.size) return [];
-  let q = db.from("transactions").select("project_id, type, amount, discount").eq("payment_type", "Apply to Project").is("deleted_at", null).in("project_id", [...byId.keys()]).limit(20000);
-  if (from) q = q.gte("date", from);
-  if (to) q = q.lte("date", to);
-  const { data } = await q;
+  const data = await pageAll<{ project_id: number; type: string; amount: number; discount: number | null; superseded_by_id: number | null }>((a, b) => {
+    let q = db.from("transactions").select("project_id, type, amount, discount, superseded_by_id").eq("payment_type", "Apply to Project").is("deleted_at", null).in("project_id", [...byId.keys()]);
+    if (from) q = q.gte("date", from);
+    if (to) q = q.lte("date", to);
+    return q.order("id").range(a, b);
+  });
   const sums = new Map<number, { approved: number; invoiced: number; paid: number }>();
-  for (const t of (data ?? []) as { project_id: number; type: string; amount: number; discount: number | null }[]) {
+  for (const t of data) {
     const s = sums.get(t.project_id) ?? { approved: 0, invoiced: 0, paid: 0 };
-    if (t.type === "Proposal") s.approved += Number(t.amount ?? 0);
+    if (t.type === "Proposal") s.approved += t.superseded_by_id ? 0 : Number(t.amount ?? 0);
     else if (t.type === "Invoice") s.invoiced += Number(t.amount ?? 0);
     else if (t.type === "Payment") s.paid += Number(t.amount ?? 0) + Number(t.discount ?? 0);
     sums.set(t.project_id, s);
@@ -251,9 +269,8 @@ export async function loadByClient(db: SupabaseClient, projects: FinanceProject[
 /** Average days late of a client's paid invoices (Due Date → first payment on or after it), for the suggestion beside the manual value. */
 export async function reliabilityFor(db: SupabaseClient, projectIds: number[]): Promise<ReturnType<typeof reliabilitySuggestion>> {
   if (!projectIds.length) return null;
-  const { data } = await db.from("transactions").select("project_id, type, date, due_date, invoice_status").eq("payment_type", "Apply to Project").in("type", ["Invoice", "Payment"]).is("deleted_at", null).in("project_id", projectIds).limit(20000);
   type Row = { project_id: number; type: string; date: string | null; due_date: string | null; invoice_status: string | null };
-  const rows = (data ?? []) as Row[];
+  const rows = await pageAll<Row>((a, b) => db.from("transactions").select("project_id, type, date, due_date, invoice_status").eq("payment_type", "Apply to Project").in("type", ["Invoice", "Payment"]).is("deleted_at", null).in("project_id", projectIds).order("id").range(a, b));
   const late: number[] = [];
   for (const inv of rows.filter((r) => r.type === "Invoice" && r.due_date && r.invoice_status === "Paid")) {
     const pay = rows.filter((r) => r.type === "Payment" && r.project_id === inv.project_id && r.date && r.date >= (inv.due_date as string)).map((r) => r.date as string).sort()[0];
@@ -310,7 +327,7 @@ export type ProjectTransaction = { id: number; type: string; description: string
 
 /** The project's transactions (Apply to Project) with the Payment #, for the Finance card's lists. */
 export async function loadProjectTransactions(db: SupabaseClient, projectId: number): Promise<ProjectTransaction[]> {
-  const { data } = await db.from("transactions").select("id, type, description, portal_number, amount, date, due_date, invoice_status, method, cc_fee, tip, discount, is_change_order, parent_transaction_id, sales_tax, parts_cost").eq("project_id", projectId).eq("payment_type", "Apply to Project").is("deleted_at", null).order("date").limit(500);
+  const { data } = await db.from("transactions").select("id, type, description, portal_number, amount, date, due_date, invoice_status, method, cc_fee, tip, discount, is_change_order, parent_transaction_id, sales_tax, parts_cost").eq("project_id", projectId).eq("payment_type", "Apply to Project").is("deleted_at", null).is("superseded_by_id", null).order("date").limit(1000);
   const rows = (data ?? []) as Omit<ProjectTransaction, "payment_no">[];
   const numbers = paymentNumbers(rows.filter((r) => r.type === "Payment"));
   return rows.map((r) => ({ ...r, payment_no: numbers.get(r.id) ?? null }));

@@ -12,24 +12,30 @@ import { adminDb } from "@/lib/supabase/admin";
 
 export const SHEET = "Sales Projections_Dashboard Updated 10-27-26.xlsx";
 
-async function all<T>(q: PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<T[]> {
-  const { data, error } = await q;
-  if (error) throw new Error(error.message);
-  return (data ?? []) as T[];
+// PostgREST returns at most 1000 rows per request whatever .limit() says: page by id until a short page comes back.
+const PAGE = 1000;
+async function all<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    const got = (data ?? []) as T[];
+    rows.push(...got);
+    if (got.length < PAGE) return rows;
+  }
 }
 
 export async function loadFixData(): Promise<Data> {
   const db = adminDb();
   const [tx, sheet, portal, projects, items, organizations, contacts] = await Promise.all([
-    all<Tx>(db.from("transactions").select("*").is("deleted_at", null).limit(20000)),
-    all<Data["sheet"][number]>(db.from("sheet_proposals").select("id, number, main_number, change_order, title, customer, amount, date, designer, commission, payments, cc_fee, project_id, transaction_id").limit(5000)),
-    all<PortalRec & { detail: { paymentSchedule?: PortalRec["schedule"] } | null }>(db.from("portal_proposals").select("id, number, name, status, total, financial, payment_requests, change_orders, change_order_details, project_id, transaction_id, detail").limit(2000)),
-    all<Data["projects"][number]>(db.from("projects").select("id, title, category, job_status, design_firm_id, builder_developer_id, general_contractor_id, referral_contact_id, referral_organization_id, commission_contact_id, commission_organization_id").is("deleted_at", null).limit(5000)),
-    all<Data["items"][number]>(db.from("proposal_items").select("transaction_id, cost, quantity, item_type").limit(50000)),
-    all<Data["organizations"][number]>(db.from("organizations").select("id, title, type").is("deleted_at", null).limit(5000)),
-    all<Data["contacts"][number]>(db.from("contacts").select("id, title").is("deleted_at", null).limit(20000)),
+    all<Tx>((a, b) => db.from("transactions").select("*").is("deleted_at", null).order("id").range(a, b)),
+    all<Data["sheet"][number]>((a, b) => db.from("sheet_proposals").select("id, number, main_number, change_order, title, customer, amount, date, designer, commission, payments, cc_fee, project_id, transaction_id").order("id").range(a, b)),
+    all<PortalRec>((a, b) => db.from("portal_proposals").select("id, number, name, status, total, financial, payment_requests, change_orders, change_order_details, project_id, transaction_id, schedule:detail->paymentSchedule").order("id").range(a, b)),
+    all<Data["projects"][number]>((a, b) => db.from("projects").select("id, title, category, job_status, design_firm_id, builder_developer_id, general_contractor_id, referral_contact_id, referral_organization_id, commission_contact_id, commission_organization_id").is("deleted_at", null).order("id").range(a, b)),
+    all<Data["items"][number]>((a, b) => db.from("proposal_items").select("transaction_id, cost, quantity, item_type").order("id").range(a, b)),
+    all<Data["organizations"][number]>((a, b) => db.from("organizations").select("id, title, type").is("deleted_at", null).order("id").range(a, b)),
+    all<Data["contacts"][number]>((a, b) => db.from("contacts").select("id, title").is("deleted_at", null).order("id").range(a, b)),
   ]);
-  for (const p of portal) p.schedule = p.detail?.paymentSchedule ?? null;
 
   // The sheet's multi-value cells (formulas with +), by month.
   const splits: Split[] = [];
