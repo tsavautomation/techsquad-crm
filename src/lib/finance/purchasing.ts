@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-const LOW_VOLTAGE = "Low Voltage"; // not imported from load.ts: that file is server-only and the table component needs the grouping
 
 // FIN-p (Fred 2026-11-03): "quanto $ tenho para comprar de cada fabricante". The lines of every Approved Proposal
 // (Portal.io items: brand, model, quantity, unit cost, sell price, MSRP, supplier) over the projects approved or
@@ -51,16 +50,8 @@ export function groupLines(items: PurchaseItem[], by: GroupKey, key: string): (P
     .sort((a, b) => a.project.localeCompare(b.project) || b.line_cost - a.line_cost);
 }
 
-/** Every buyable line of the Low Voltage projects in `statuses`, with its project; `year` = the year of the proposal (its transaction date), null = every year. */
+/** Every buyable line of the Low Voltage projects in `statuses`, with its project; `year` = the year of the proposal (its transaction date), null = every year. Read through purchasing_items() (security definer: checks the Purchasing, Finance or Transactions permission). */
 export async function loadPurchasing(db: SupabaseClient, statuses: string[], year: number | null = null): Promise<PurchaseItem[]> {
-  let q = db
-    .from("proposal_items")
-    .select("id, brand, model, name, item_type, supplier, quantity, cost, sell_price, msrp, total, transactions!inner(project_id, deleted_at, date, projects!inner(title, job_status, category))")
-    .is("transactions.deleted_at", null)
-    .eq("transactions.projects.category", LOW_VOLTAGE)
-    .in("transactions.projects.job_status", statuses);
-  if (year) q = q.gte("transactions.date", `${year}-01-01`).lte("transactions.date", `${year}-12-31`);
-  const { data } = await q.limit(20000);
-  type Row = Omit<PurchaseItem, "project_id" | "project" | "job_status"> & { transactions: { project_id: number; projects: { title: string | null; job_status: string | null } } };
-  return ((data ?? []) as unknown as Row[]).map(({ transactions: t, ...i }) => ({ ...i, quantity: Number(i.quantity ?? 1), project_id: t.project_id, project: t.projects.title ?? `Project #${t.project_id}`, job_status: t.projects.job_status }));
+  const { data } = await db.rpc("purchasing_items", { p_statuses: statuses, p_year: year });
+  return ((data ?? []) as PurchaseItem[]).map((i) => ({ ...i, quantity: Number(i.quantity ?? 1), project: i.project ?? `Project #${i.project_id}` }));
 }

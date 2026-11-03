@@ -57,6 +57,7 @@ describe("checklist", () => {
       // Ebay (F32, 20261026010000) and Finance (PI-h, 20261028010000): page keys, but the checklist lists a tab with all six actions.
       ...ACTIONS.map((a) => `inventory.ebay.${a}`),
       ...ACTIONS.map((a) => `administrative.finance.${a}`),
+      ...ACTIONS.map((a) => `administrative.purchasing.${a}`),
       ...ACTIONS.map((a) => `administrative.report-deficiencies.${a}`),
       ...ACTIONS.map((a) => `administrative.documents.${a}`),
       ...ACTIONS.map((a) => `administrative.portal-documents.${a}`),

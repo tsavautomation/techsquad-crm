@@ -8366,6 +8366,25 @@ export type Database = {
           visit_days: number
         }[]
       }
+      purchasing_items: {
+        Args: { p_statuses: string[]; p_year?: number }
+        Returns: {
+          brand: string
+          cost: number
+          id: number
+          item_type: string
+          job_status: string
+          model: string
+          msrp: number
+          name: string
+          project: string
+          project_id: number
+          quantity: number
+          sell_price: number
+          supplier: string
+          total: number
+        }[]
+      }
       restore_delete_missing: {
         Args: { p_ids: number[]; p_table: string }
         Returns: number

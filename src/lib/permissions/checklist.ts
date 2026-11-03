@@ -56,6 +56,8 @@ export const PAGE_ITEMS: ChecklistItem[] = [
   { key: "inventory.ebay.view_page", label: "Ebay sales (Inventory › Ebay)" },
   // PI-h: Fred 2026-10-28. Starts with the Transactions holders (Fred, Karina, Luana, Saulo, Uli).
   { key: "administrative.finance.view_page", label: "Finance (projects by payment status, totals by client, Portal.io)" },
+  // FIN-p: Fred 2026-11-03. Starts with the Finance holders; given to the buyers.
+  { key: "administrative.purchasing.view_page", label: "Purchasing (cost to buy by manufacturer over the open projects)" },
   // TC-h: Jessica via Fred 2026-10-29. Saulo and Jessica approve and reopen the weekly timesheets.
   { key: "administrative.timesheets.approve", label: "Approve / reopen timesheets (weekly lock)" },
 ];

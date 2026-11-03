@@ -2598,4 +2598,5 @@ export const PT: Record<string, string> = {
   "Which projects and which products": "Quais projetos e quais produtos",
   "{p} projects, {n} lines": "{p} projetos, {n} linhas",
   "Product": "Produto",
+  "What the Low Voltage projects still need from each manufacturer, from the lines of their approved proposals; a manufacturer opens into its projects and products.": "O que os projetos Low Voltage ainda precisam de cada fabricante, pelas linhas das propostas aprovadas; um fabricante abre nos seus projetos e produtos.",
 };

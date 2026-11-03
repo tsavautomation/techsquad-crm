@@ -34,7 +34,7 @@ export function PurchasingTable({ rows, scope, year, years, hrefFor }: { rows: P
   const csvGroups = groups.map((g) => ({ group: g.key, projects: g.projects, items: g.items, quantity: g.quantity, cost: g.cost, msrp: g.msrp, sell: g.sell, without_cost: g.withoutCost }));
   const csvLines = lines.map((l) => ({ project: l.project, job_status: l.job_status ?? "", brand: l.brand ?? "", model: l.model ?? "", description: l.name ?? "", supplier: l.supplier ?? "", quantity: l.quantity, unit_cost: l.cost ?? "", line_cost: l.line_cost, msrp: l.msrp ?? "", sell_price: l.sell_price ?? "" }));
   const label = (k: GroupKey) => (k === "brand" ? t("Manufacturer") : k === "supplier" ? t("Supplier") : t("Type"));
-  const href = (sc: Scope, y: number | null) => `/administrative/finance?tab=purchasing&scope=${sc}${y ? `&year=${y}` : ""}`;
+  const href = (sc: Scope, y: number | null) => `/administrative/purchasing?scope=${sc}${y ? `&year=${y}` : ""}`;
   const scopes: { id: Scope; label: string }[] = [
     { id: "open", label: t("Approved and in progress") },
     { id: "complete", label: t("Complete") },
