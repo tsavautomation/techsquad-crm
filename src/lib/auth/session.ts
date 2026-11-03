@@ -22,7 +22,13 @@ export type CurrentUser = {
   pushEvents: ReadonlySet<string>;
   /** F6: set for a customer-portal login (the Contact it belongs to); null for staff. */
   contactId: number | null;
+  /** SC-a: the Calendar view this person last chose (day / week / team / list). */
+  scheduleView: ScheduleView;
 };
+
+export type ScheduleView = "day" | "week" | "team" | "list";
+export const SCHEDULE_VIEWS: readonly ScheduleView[] = ["day", "week", "team", "list"];
+export const isScheduleView = (v: unknown): v is ScheduleView => (SCHEDULE_VIEWS as readonly unknown[]).includes(v);
 
 type SessionState = { status: "signed-out" } | { status: "inactive" } | { status: "active"; user: CurrentUser };
 
@@ -39,7 +45,7 @@ export const getSession = cache(async (): Promise<SessionState> => {
   if (!userId) return { status: "signed-out" };
 
   const [{ data: profile }, { data: permissions, error }] = await Promise.all([
-    supabase.from("profiles").select("email, first_name, last_name, active, language, palette, is_admin, contact_id, push_events").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("email, first_name, last_name, active, language, palette, is_admin, contact_id, push_events, schedule_view").eq("id", userId).maybeSingle(),
     supabase.rpc("my_permissions"),
   ]);
   if (error) throw new Error(`Could not load permissions: ${error.message}`);
@@ -58,6 +64,7 @@ export const getSession = cache(async (): Promise<SessionState> => {
       isSysadmin: Boolean(profile.is_admin),
       pushEvents: new Set((profile.push_events as string[] | null) ?? []),
       contactId: profile.contact_id ?? null,
+      scheduleView: isScheduleView(profile.schedule_view) ? profile.schedule_view : "day",
     },
   };
 });

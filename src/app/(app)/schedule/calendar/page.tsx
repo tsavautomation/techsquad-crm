@@ -21,7 +21,8 @@ export default async function CalendarPage(props: PageProps<"/schedule/calendar"
   if (!canOpen(user.permissions, t, getTable)) notFound();
   const sp = (await props.searchParams) as { week?: string; view?: string; tech?: string; day?: string };
   // F25-a (Fred 2026-10-20): Schedule opens on today's Day view; a week link keeps the Week view.
-  const view = sp.view === "team" || sp.view === "list" || sp.view === "day" || sp.view === "week" ? sp.view : sp.week ? "week" : "day";
+  // SC-a (Fred 2026-11-03): a plain link opens the view this person chose last time (profiles.schedule_view).
+  const view = sp.view === "team" || sp.view === "list" || sp.view === "day" || sp.view === "week" ? sp.view : sp.week ? "week" : user.scheduleView;
   const tech = sp.tech && /^\d+$/.test(sp.tech) ? Number(sp.tech) : null;
   // Day view (F15-e): one day, a column per technician; the week loaded is the one holding that day.
   const today = todayET();

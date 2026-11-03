@@ -3462,6 +3462,7 @@ export type Database = {
           last_name: string | null
           palette: string
           push_events: string[]
+          schedule_view: string
           updated_at: string
         }
         Insert: {
@@ -3476,6 +3477,7 @@ export type Database = {
           last_name?: string | null
           palette?: string
           push_events?: string[]
+          schedule_view?: string
           updated_at?: string
         }
         Update: {
@@ -3490,6 +3492,7 @@ export type Database = {
           last_name?: string | null
           palette?: string
           push_events?: string[]
+          schedule_view?: string
           updated_at?: string
         }
         Relationships: [

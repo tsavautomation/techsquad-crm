@@ -85,6 +85,7 @@ Phase 2 will also need a Microsoft 365 / Entra app registration (OneDrive), a Go
 | **F10** | *(built 2026-10-03; SPEC §9.1 F10-a)* Vehicle on visits: required Vehicle on each Visit; Today card and map show the van; map pills named after the day's visit, Usual driver as fallback | |
 | **F12** | *(built 2026-10-03; SPEC §9.1 F12-a)* Claude API: shared SDK client, Admin › AI status + test connection, licence reading moved onto it; AI proof-reading is phase 5 | ANTHROPIC_API_KEY from Fred (console.anthropic.com → Vercel) |
 | **F9** | *(pushed 2026-10-02; SPEC §9.1 F9-a…d)* Job hours: hours per project and per person from visit check-ins / check-outs, team credit for "Also going", Hours on this job card on Projects, Hours by project in Insights, computed **Visits** field on Projects (days with a Job Report or check-in, retroactive); pure engine in `src/lib/hours/` ready for Phase 2 job costing | |
+| **SC-a** | *(built 2026-11-03; SPEC §9.1 SC-a)* **Calendar comes back after a new visit, and each person's view (Day / Week / Team / List) is remembered on their profile.** |
 
 ---
 

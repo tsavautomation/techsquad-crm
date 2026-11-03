@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { fromDateTimeLocalET } from "@/lib/dates";
-import { moveVisitAction } from "@/lib/schedule/actions";
+import { moveVisitAction, rememberScheduleViewAction } from "@/lib/schedule/actions";
 import { addDays, clock, fromMinutes, lanes, toMinutes } from "@/lib/schedule/dates";
 import type { CalPerson, CalVisit } from "@/lib/schedule/week";
 import { cn } from "@/lib/utils";
@@ -65,7 +65,8 @@ export function Calendar({ weekStart, today, view, day, tech, visits, people, ca
   const prevLabel = view === "day" ? "Previous day" : "Previous week";
   const nextLabel = view === "day" ? "Next day" : "Next week";
   const newHref = (date: string, time = "09:00", techId?: number) => {
-    const p = new URLSearchParams({ starts_at: fromDateTimeLocalET(`${date}T${time}`), back: q({}) });
+    // SC-a: after saving a new visit the form comes back to the calendar (after=), not to the visit (Fred 2026-11-03).
+    const p = new URLSearchParams({ starts_at: fromDateTimeLocalET(`${date}T${time}`), back: q({}), after: q({}) });
     if (techId ?? tech) p.set("technician_id", String(techId ?? tech));
     return `/schedule/visits/new?${p}`;
   };
@@ -108,7 +109,7 @@ export function Calendar({ weekStart, today, view, day, tech, visits, people, ca
         <span className="grow" />
         <div className="flex rounded-lg border p-0.5 text-sm" role="tablist" aria-label={tr("View")}>
           {(["day", "week", "team", "list"] as View[]).map((v) => (
-            <Link key={v} href={q({ view: v })} role="tab" aria-selected={view === v} className={cn("rounded-md px-3 py-1.5 capitalize", view === v ? "bg-foreground text-background" : "hover:bg-muted")}>
+            <Link key={v} href={q({ view: v })} onClick={() => void rememberScheduleViewAction(v)} role="tab" aria-selected={view === v} className={cn("rounded-md px-3 py-1.5 capitalize", view === v ? "bg-foreground text-background" : "hover:bg-muted")}>
               {tr(VIEW_LABEL[v])}
             </Link>
           ))}

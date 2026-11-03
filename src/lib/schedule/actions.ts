@@ -5,7 +5,7 @@ import { financialStatus, type FinRow } from "@/lib/finance/status";
 import { loadFinanceSettings } from "@/lib/finance/settings";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth/session";
+import { isScheduleView, requireUser, type ScheduleView } from "@/lib/auth/session";
 import { getRecord, recordsDb } from "@/lib/records/data";
 import type { ActionResult } from "@/lib/records/record-actions";
 import { getTable } from "@/registry";
@@ -106,6 +106,15 @@ export async function decideProposedVisitAction(id: number, what: "approve" | "d
 }
 
 /** Drag & drop on the calendar: new start and/or technician. */
+/** SC-a: remember the Calendar view this person clicked (Day / Week / Team / List) on their profile. */
+export async function rememberScheduleViewAction(view: ScheduleView): Promise<void> {
+  if (!isScheduleView(view)) return;
+  const user = await requireUser();
+  if (user.scheduleView === view) return;
+  const db = await recordsDb();
+  await db.from("profiles").update({ schedule_view: view } as never).eq("id", user.id);
+}
+
 export async function moveVisitAction(id: number, startsAt: string, technicianId?: number): Promise<ActionResult> {
   const values: Record<string, unknown> = { starts_at: startsAt };
   if (technicianId) values.technician_id = technicianId;

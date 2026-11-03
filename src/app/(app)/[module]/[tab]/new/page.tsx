@@ -61,7 +61,7 @@ export default async function NewRecordPage(props: PageProps<"/[module]/[tab]/ne
     <div className="mx-auto max-w-5xl">
       <BackLink fallback={base} label={t.label} />
       <h1 className="mb-6 text-2xl font-semibold">{heading}</h1>
-      <RecordForm table={fieldsFor(t, user.permissions, user.isSysadmin)} recordId={null} initialValues={initial} labels={labels} baseHref={base} cancelHref={params.back?.startsWith("/") ? params.back : base} />
+      <RecordForm table={fieldsFor(t, user.permissions, user.isSysadmin)} recordId={null} initialValues={initial} labels={labels} baseHref={base} cancelHref={params.back?.startsWith("/") ? params.back : base} redirectTo={params.after?.startsWith("/") ? params.after : undefined} />
     </div>
   );
 }
