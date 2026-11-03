@@ -413,6 +413,7 @@ export const PT_REGISTRY: Record<string, string> = {
   "Report": "Relatório",
   "Reports": "Relatórios",
   "Reports and Pictures Section": "Relatórios e fotos",
+  "Reseller": "Revendedor",
   "Residential": "Residencial",
   "Result": "Resultado",
   "Outcome": "Desfecho",

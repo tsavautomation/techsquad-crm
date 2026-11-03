@@ -123,6 +123,7 @@ export function AssignProject({ ctx }: { ctx: AssignContext }) {
               <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label={t("Category")} className={BOX}>
                 <option value="Low Voltage">Low Voltage</option>
                 <option value="Electrical">Electrical</option>
+                <option value="Reseller">Reseller</option>
               </select>
               <p className="text-xs text-text-2">
                 {t("Address and contact come from the survey:")} {[ctx.address?.street, ctx.address?.city].filter(Boolean).join(", ") || "—"} · {ctx.contactName ?? "—"} {ctx.contactPhone ? `· ${ctx.contactPhone}` : ""} {ctx.contactEmail ? `· ${ctx.contactEmail}` : ""}

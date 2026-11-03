@@ -10,7 +10,7 @@ export type Department = (typeof DEPARTMENTS)[number];
 /** True when no department is asked, or the person belongs to it. */
 export const inDepartment = (departments: string[] | null | undefined, dept: Department | ""): boolean => !dept || (departments ?? []).includes(dept);
 
-/** The project Category (Low Voltage / Electrical) as a department; null when the project has none. */
+/** The project Category (Low Voltage / Electrical) as a department; null when the project has none or is a Reseller (PJ-a). */
 export function departmentOfCategory(category: string | null | undefined): Department | null {
   const c = (category ?? "").trim().toLowerCase();
   if (c === "low voltage") return "LOW VOLTAGE";

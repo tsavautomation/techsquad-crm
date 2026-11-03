@@ -140,7 +140,9 @@ export const projects: TableDef = {
           "label": "Electrical",
           "value": "Electrical",
           "color": "#c6d1a9"
-        }
+        },
+        // PJ-a (Fred 2026-11-02): clients who only buy equipment from us; no job address.
+        { "label": "Reseller", "value": "Reseller", "color": "#f5d58a", "added": true }
       ]
     },
     // F4 (not from WebAuthor, SPEC §9.1 F4-b): gets the stage auto tasks; Insights by salesperson.
@@ -871,6 +873,9 @@ export const projects: TableDef = {
     }
   ],
   "rules": [
+    // PJ-a (Fred 2026-11-02): a Reseller project is not attached to an address, so the address fields are hidden
+    // (the id sorts after WebAuthor's, so this hide wins over "Building=True").
+    { id: 900501, title: "Reseller: no job address", when: [{ field: "category", op: "equal", value: "Reseller" }], then: ["job_address", "in_building", "building_id", "apartment_or_unit"].map((field) => ({ do: "hide" as const, field })) },
     {
       "id": 3370,
       "title": "Building=True",
