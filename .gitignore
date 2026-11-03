@@ -69,3 +69,6 @@ docs/whatsapp-monitor-wiring.txt
 # FIN-o partner contact details (phones, e-mails, addresses): local only
 scripts/data/partner-details.json
 docs/finance-apply-log.json
+
+# Personal Claude Code permissions
+.claude/settings.local.json
