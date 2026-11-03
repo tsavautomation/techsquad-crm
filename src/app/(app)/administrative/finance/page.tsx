@@ -7,7 +7,7 @@ import { requireUser } from "@/lib/auth/session";
 import { todayET } from "@/lib/dates";
 import { canSeeFinance } from "@/lib/finance/access";
 import { sheetCardData, toCardData } from "@/lib/finance/cards";
-import { ALL_STATUSES, loadPurchasing, OPEN_STATUSES } from "@/lib/finance/purchasing";
+import { loadPurchasing, SCOPE_STATUSES, type Scope } from "@/lib/finance/purchasing";
 import { PurchasingTable } from "@/components/finance/purchasing-table";
 import { CLIENT_KEYS, PARTNER_KEYS, loadByClient, loadDashboard, loadFinanceProjects, loadIgnored, loadPayments, loadProposals, loadReview, loadSheetReview, type ClientKey, type PartnerKey } from "@/lib/finance/load";
 import { loadSettings } from "@/lib/portalio/client";
@@ -24,7 +24,7 @@ export async function generateMetadata() {
 // FIN-f (Fred 2026-10-28): Administrative › Finance for Low Voltage projects: what we have to receive, projects by
 // Financial Status, payments and approved proposals by period, totals by client, P&L, and the Portal.io review.
 
-type Search = { tab?: string; by?: string; from?: string; to?: string; partner?: string; sheet?: string; scope?: string };
+type Search = { tab?: string; by?: string; from?: string; to?: string; partner?: string; sheet?: string; scope?: string; year?: string };
 const TABS = ["receivables", "projects", "payments", "proposals", "clients", "pnl", "purchasing", "portal"] as const;
 type Tab = (typeof TABS)[number];
 
@@ -48,8 +48,11 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
     tab === "payments" ? loadPayments(db, projects, from, to) : [],
     tab === "proposals" ? loadProposals(db, projects, from, to, partner) : [],
   ]);
-  const scope = sp.scope === "all" ? "all" : "open";
-  const purchasing = tab === "purchasing" ? await loadPurchasing(db, scope === "all" ? ALL_STATUSES : OPEN_STATUSES) : [];
+  const scope: Scope = sp.scope === "all" || sp.scope === "complete" ? sp.scope : "open";
+  const purchaseYear = /^\d{4}$/.test(sp.year ?? "") ? Number(sp.year) : null;
+  const purchasing = tab === "purchasing" ? await loadPurchasing(db, SCOPE_STATUSES[scope], purchaseYear) : [];
+  const thisYear = Number(year);
+  const purchaseYears = [thisYear, thisYear - 1, thisYear - 2, thisYear - 3];
   const hrefFor = tableHref(getTable("projects"));
   const txHref = tableHref(getTable("transactions"));
   const tabs: { id: Tab; label: string; count?: number }[] = [
@@ -84,7 +87,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         {tab === "proposals" && <ProposalsTable rows={proposals} from={from} to={to} partner={partner} partners={PARTNER_KEYS} hrefFor={hrefFor} txHref={txHref} />}
         {tab === "clients" && <ByClientTable groups={groups} keys={CLIENT_KEYS} current={by} from={from} to={to} hrefFor={hrefFor} />}
         {tab === "pnl" && <PnLTable rows={projects} hrefFor={hrefFor} />}
-        {tab === "purchasing" && <PurchasingTable rows={purchasing} scope={scope} hrefFor={hrefFor} />}
+        {tab === "purchasing" && <PurchasingTable rows={purchasing} scope={scope} year={purchaseYear} years={purchaseYears} hrefFor={hrefFor} />}
         {tab === "portal" && (
           <div>
             {!settings && (

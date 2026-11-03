@@ -13,6 +13,8 @@ export type PurchaseGroup = { key: string; items: number; quantity: number; cost
 export const OPEN_STATUSES = ["Proposal Approved", "Infrastructure", "Installation", "Programming"];
 /** …and the ones where the money was spent already (Complete), for the whole picture. */
 export const ALL_STATUSES = [...OPEN_STATUSES, "ON HOLD", "Complete"];
+export type Scope = "open" | "complete" | "all";
+export const SCOPE_STATUSES: Record<Scope, string[]> = { open: OPEN_STATUSES, complete: ["Complete"], all: ALL_STATUSES };
 /** Only equipment and material lines are bought; labor and fees are not. */
 export const BUYABLE = new Set(["Part", "CustomItem"]);
 
@@ -49,15 +51,16 @@ export function groupLines(items: PurchaseItem[], by: GroupKey, key: string): (P
     .sort((a, b) => a.project.localeCompare(b.project) || b.line_cost - a.line_cost);
 }
 
-/** Every buyable line of the Low Voltage projects in `statuses`, with its project. */
-export async function loadPurchasing(db: SupabaseClient, statuses: string[]): Promise<PurchaseItem[]> {
-  const { data } = await db
+/** Every buyable line of the Low Voltage projects in `statuses`, with its project; `year` = the year of the proposal (its transaction date), null = every year. */
+export async function loadPurchasing(db: SupabaseClient, statuses: string[], year: number | null = null): Promise<PurchaseItem[]> {
+  let q = db
     .from("proposal_items")
-    .select("id, brand, model, name, item_type, supplier, quantity, cost, sell_price, msrp, total, transactions!inner(project_id, deleted_at, projects!inner(title, job_status, category))")
+    .select("id, brand, model, name, item_type, supplier, quantity, cost, sell_price, msrp, total, transactions!inner(project_id, deleted_at, date, projects!inner(title, job_status, category))")
     .is("transactions.deleted_at", null)
     .eq("transactions.projects.category", LOW_VOLTAGE)
-    .in("transactions.projects.job_status", statuses)
-    .limit(20000);
+    .in("transactions.projects.job_status", statuses);
+  if (year) q = q.gte("transactions.date", `${year}-01-01`).lte("transactions.date", `${year}-12-31`);
+  const { data } = await q.limit(20000);
   type Row = Omit<PurchaseItem, "project_id" | "project" | "job_status"> & { transactions: { project_id: number; projects: { title: string | null; job_status: string | null } } };
   return ((data ?? []) as unknown as Row[]).map(({ transactions: t, ...i }) => ({ ...i, quantity: Number(i.quantity ?? 1), project_id: t.project_id, project: t.projects.title ?? `Project #${t.project_id}`, job_status: t.projects.job_status }));
 }
