@@ -15,14 +15,20 @@ import { buildTitle } from "./title";
 import { isEditable, isMultiLookup, isRowField, isUpload, newRecordValues, normalize, validate, type FileItem } from "./values";
 
 import { isSelfOnly, myEmployeeIds, readableTable } from "@/lib/auth/office";
-export type SaveResult = { ok: true; id: number } | { ok: false; errors: Record<string, string>; message?: string };
+import { DUPLICATE_CHECKS, type Duplicate } from "@/lib/projects/duplicate-check";
+export type SaveResult =
+  | { ok: true; id: number; /** PJ-b: a hint after saving (e.g. "same family as …"). */ notice?: string }
+  | { ok: false; errors: Record<string, string>; message?: string; /** PJ-b: a possible duplicate; save again with a reason (`force`) to go on. */ duplicate?: Duplicate };
+
+/** Options of a save: `force` = the reason to save although a possible duplicate exists (kept in the history). */
+export type SaveOptions = { force?: string };
 
 /**
  * The single write path for records (CLAUDE.md "One write path"):
  * permission check → rules → validation → encryption → title → write → links and files.
  * The database's RLS and triggers re-check permissions and write the audit log.
  */
-export async function saveRecord(tableName: string, id: number | null, input: Values): Promise<SaveResult> {
+export async function saveRecord(tableName: string, id: number | null, input: Values, opts: SaveOptions = {}): Promise<SaveResult> {
   const user = await requireUser();
   const t: TableDef = getTable(tableName);
 
@@ -69,6 +75,19 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
     const more = await check(db, id, values);
     if (Object.keys(more).length) return { ok: false, errors: more };
   }
+  // PJ-b: the anti-duplication rule (Projects, Contacts). A hit stops the save unless a reason came with it.
+  let notice: string | undefined;
+  let forced: Duplicate | null = null;
+  const dupCheck = DUPLICATE_CHECKS[t.name];
+  if (dupCheck) {
+    const d = await dupCheck(db, id, values);
+    notice = d.notice;
+    if (d.duplicate) {
+      const force = opts.force?.trim();
+      if (!force) return { ok: false, errors: { [d.duplicate.field]: d.duplicate.message }, message: d.duplicate.message, duplicate: d.duplicate };
+      forced = d.duplicate;
+    }
+  }
 
   const row: Record<string, unknown> = {};
   for (const f of t.fields) {
@@ -100,6 +119,10 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
     }
   }
   const firstId = recordId;
+  // PJ-b: saved although it looked like a duplicate: the reason and the look-alikes go on the record's history.
+  if (forced) {
+    await db.from("audit_log").insert({ table_name: t.name, record_id: recordId, action: "update", actor: user.id, changes: { saved_anyway: [null, `${opts.force!.trim().slice(0, 300)} (possible duplicate of ${forced.existing.map((e) => `#${e.id} ${e.title}`).join(", ")})`] } });
+  }
 
   // Many-to-many links and files live in their own tables.
   try {
@@ -119,7 +142,7 @@ export async function saveRecord(tableName: string, id: number | null, input: Va
       if (r) return { ok: false, errors: {}, message: r };
     }
   }
-  return { ok: true, id: recordId };
+  return { ok: true, id: recordId, notice };
 }
 
 /**

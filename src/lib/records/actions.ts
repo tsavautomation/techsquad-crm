@@ -13,15 +13,15 @@ import type { Values } from "@/lib/rules/evaluate";
 import { getTable } from "@/registry";
 import { tableHref } from "@/registry/routes";
 import { lastChangeId } from "./record-actions";
-import { saveRecord, type SaveResult } from "./save";
+import { saveRecord, type SaveOptions, type SaveResult } from "./save";
 
 /**
  * Called by RecordForm. Validation errors come back to the form; success returns the record id and,
  * for an edit, the history entry it wrote (`undoId`) so the Saved toast can offer Undo (F7).
  * Automations run before the reply (statuses are current); their emails go after it.
  */
-export async function saveRecordAction(tableName: string, id: number | null, values: Values): Promise<SaveResult & { undoId?: number | null }> {
-  const result = await saveRecord(tableName, id, values);
+export async function saveRecordAction(tableName: string, id: number | null, values: Values, opts: SaveOptions = {}): Promise<SaveResult & { undoId?: number | null }> {
+  const result = await saveRecord(tableName, id, values, opts);
   const t = getTable(tableName);
   if (result.ok) {
     await runAutomationsNow();

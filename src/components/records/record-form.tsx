@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import type { TableDef } from "@/registry/types";
 import { FieldInput, type FieldContext } from "./field-input";
 import { VisitAddon } from "./form-addons";
+import { ProjectAddon } from "./project-addon";
+import type { Duplicate } from "@/lib/projects/duplicate-check";
 import { useT } from "@/i18n/client";
 
 type Props = {
@@ -42,6 +44,9 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
   const [values, setValues] = useState<Values>(initialValues);
   const [labels, setLabels] = useState(initialLabels);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // PJ-b: a possible duplicate came back from the save; the office may save anyway with a reason.
+  const [dup, setDup] = useState<Duplicate | null>(null);
+  const [forceReason, setForceReason] = useState("");
   const [pending, startTransition] = useTransition();
   // Files still on their way (to OneDrive or CRM storage): saving waits, leaving asks first.
   const uploading = useSyncExternalStore(onUploadsChange, uploadsInProgress, () => 0);
@@ -103,9 +108,10 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const result = await saveRecordAction(table.name, recordId, rules.values);
+      const result = await saveRecordAction(table.name, recordId, rules.values, dup && forceReason.trim() ? { force: forceReason.trim() } : {});
       if (result.ok) {
         const undoId = result.undoId;
+        if (result.notice) toast.info(result.notice, { duration: 8000 });
         toast.success(t(recordId ? "Saved" : "Created"), {
           duration: undoId ? 8000 : undefined,
           action: undoId
@@ -125,6 +131,7 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
         return;
       }
       setErrors(result.errors);
+      setDup(result.duplicate ?? null);
       const count = Object.keys(result.errors).length;
       toast.error(result.message ? t(result.message) : t(count === 1 ? "Please fix {n} field" : "Please fix {n} fields", { n: count }));
       const first = Object.keys(result.errors)[0];
@@ -182,6 +189,31 @@ export function RecordForm({ table, recordId, initialValues, baseHref, cancelHre
       {table.formAddon === "visit" && (
         <div className="lg:col-span-2">
           <VisitAddon form={rules.values} recordId={recordId} setMany={ctx.setMany} />
+        </div>
+      )}
+      {table.formAddon === "project" && (
+        <div className="lg:col-span-2">
+          <ProjectAddon form={rules.values} recordId={recordId} />
+        </div>
+      )}
+
+      {/* PJ-b: the save found a possible duplicate; link to it, or save anyway with a reason (kept in the history). */}
+      {dup && (
+        <div className="rounded-2xl border border-warn-fg/30 bg-warn-bg px-4 py-3 text-sm text-warn-fg lg:col-span-2">
+          <p className="font-semibold">{dup.level === "block" ? t("This looks like a duplicate") : t("This may be a duplicate")}</p>
+          <p>{dup.message}</p>
+          <ul className="my-1.5 grid gap-0.5">
+            {dup.existing.slice(0, 5).map((e) => (
+              <li key={e.id}>
+                <Link href={e.href} className="font-medium underline underline-offset-4" target="_blank" rel="noopener noreferrer">
+                  #{e.id} {e.title}
+                </Link>
+                <span className="text-xs"> · {t(e.why)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs">{t("Use the existing record, or say why this one is different and press Save again.")}</p>
+          <input type="text" value={forceReason} onChange={(e) => setForceReason(e.target.value)} placeholder={t("Why it is not a duplicate")} className="mt-1.5 h-11 w-full rounded-lg border bg-card px-3 text-base text-foreground" aria-label={t("Reason")} />
         </div>
       )}
 

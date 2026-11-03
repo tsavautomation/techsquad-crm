@@ -10,6 +10,7 @@ import { isRowField } from "./values";
 import { fromDateTimeLocalET } from "@/lib/dates";
 
 import { readableTable } from "@/lib/auth/office";
+import { EXCLUDED_PROJECT_FILTER } from "@/lib/projects/excluded";
 export type Row = Record<string, unknown> & { id: number; title: string | null };
 
 /** Record tables are chosen at runtime, so use an untyped client for them (RLS still applies). */
@@ -95,6 +96,8 @@ export async function listRecords(t: TableDef, p: ListParams) {
     .order(sort, { ascending: (p.dir ?? (sort === "title" ? "asc" : "desc")) === "asc", nullsFirst: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   query = p.archived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
+  // PJ-b item 6: the office's placeholder projects (TEST PROJECT, SURVEY) stay out of the list.
+  if (t.name === "projects") query = query.not("id", "in", EXCLUDED_PROJECT_FILTER);
   if (p.q?.trim()) query = query.or(await searchClause(db, t, p.q.trim()));
   // Filters (J-p): dropdowns, Yes/No and linked records as equals; dates as "<field>.from" / "<field>.to" (Eastern
   // days); a multi-link (Team) through its join table. "Records linked to X" from the Related panel use the same keys.
@@ -110,6 +113,7 @@ export async function listRecords(t: TableDef, p: ListParams) {
       if (range[2] === "from") query = query.gte(f.name, f.type === "date" ? v : fromDateTimeLocalET(`${v}T00:00`));
       else query = f.type === "date" ? query.lte(f.name, v) : query.lt(f.name, fromDateTimeLocalET(`${nextDay(v)}T00:00`));
     } else if (f.type === "lookup" && !f.multiple && v === "__none") query = query.is(k, null); // SV-b: "Surveys without a project"
+    else if (["select", "radio"].includes(f.type) && v === "__none") query = query.or(`${k}.is.null,${k}.eq.`); // PJ-b: "No Job Status"
     else if (["select", "radio"].includes(f.type) || (f.type === "lookup" && !f.multiple)) query = query.eq(k, v);
     else if (f.type === "boolean") query = query.eq(k, v === "true");
     else if (f.type === "lookup" && f.multiple && /^\d+$/.test(v)) {

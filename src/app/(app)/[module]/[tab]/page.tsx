@@ -56,7 +56,8 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
     name: f.name,
     label: f.label,
     kind: f.type === "boolean" ? "boolean" : f.type === "lookup" ? "lookup" : f.type === "date" || f.type === "datetime" ? "date" : "select",
-    options: f.options?.filter((o) => !o.retired).map(({ label, value }) => ({ label, value })),
+    // PJ-b item 6: Projects › Job Status gains "(no Job Status)".
+    options: f.options?.filter((o) => !o.retired).map(({ label, value }) => ({ label, value })).concat(t.name === "projects" && f.name === "job_status" ? [{ label: tr("(no Job Status)"), value: "__none" }] : []),
     field: f.type === "lookup" ? f : undefined,
     quick: quick.has(f.name),
   }));
@@ -98,6 +99,18 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
           <h1 className="text-2xl font-semibold">{t.label}</h1>
           <p className="text-sm text-muted-foreground">
             {tr(count === 1 ? "{n} record" : "{n} records", { n: count })}
+            {t.name === "projects" && (
+              <>
+                {" · "}
+                <Link href="/projects/duplicates" className="font-medium text-primary underline-offset-4 hover:underline">
+                  {tr("Possible duplicates")}
+                </Link>
+                {" · "}
+                <Link href="/projects/standardize" className="font-medium text-primary underline-offset-4 hover:underline">
+                  {tr("Standard names")}
+                </Link>
+              </>
+            )}
             {surveysWithoutProject > 0 && (
               <>
                 {" · "}

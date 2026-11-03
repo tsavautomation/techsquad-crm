@@ -150,7 +150,7 @@ export type TableDef = {
   /** Files and PDF copies stay in the CRM's own storage, never OneDrive (shared by everyone): permission-protected tables (SPEC §9.1 OD-e). */
   privateFiles?: boolean;
   /** Extra panel the form shows for this table (src/components/records/form-addons.tsx). */
-  formAddon?: "visit";
+  formAddon?: "visit" | "project";
   /** Extra panel on the record page (src/components/field-day/*): visit check-in + briefing, return card scheduling. */
   detailAddon?: "visit" | "task" | "project" | "contact" | "organization" | "employee" | "product" | "deficiency" | "credential";
 };

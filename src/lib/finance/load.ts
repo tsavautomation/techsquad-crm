@@ -5,6 +5,7 @@ import { reviewFrom } from "@/lib/portalio/client";
 import { proposalChanges, OPEN_REQUEST } from "@/lib/portalio/match";
 import { ACCEPTED, PROPOSAL_COLS, type PaymentRequest, type ProposalRow } from "@/lib/portalio/sync";
 import { loadFinanceSettings } from "./settings";
+import { EXCLUDED_PROJECT_FILTER } from "@/lib/projects/excluded";
 import { SHEET_COLS, type SheetRowRecord } from "./sheet-link";
 import { dueBuckets, figures, financialStatus, paymentNumbers, reliabilitySuggestion, type Figures, type FinRow, type FinancialStatus } from "./status";
 
@@ -74,14 +75,14 @@ export async function loadFinanceProjects(db: SupabaseClient): Promise<FinancePr
   const [{ data: tx }, { data: pp }, { data: later }] = await Promise.all([
     db.from("transactions").select("project_id").eq("payment_type", "Apply to Project").is("deleted_at", null).not("project_id", "is", null).limit(20000),
     db.from("portal_proposals").select("project_id").eq("link_status", "linked").not("project_id", "is", null).limit(20000),
-    db.from("projects").select("id").eq("category", LOW_VOLTAGE).in("job_status", [...APPROVED_OR_LATER]).is("deleted_at", null).limit(5000),
+    db.from("projects").select("id").eq("category", LOW_VOLTAGE).in("job_status", [...APPROVED_OR_LATER]).is("deleted_at", null).not("id", "in", EXCLUDED_PROJECT_FILTER).limit(5000),
   ]);
   const proposals = new Map<number, number>();
   for (const r of (pp ?? []) as { project_id: number }[]) proposals.set(r.project_id, (proposals.get(r.project_id) ?? 0) + 1);
   const ids = [...new Set([...((tx ?? []) as { project_id: number }[]).map((r) => r.project_id), ...proposals.keys(), ...((later ?? []) as { id: number }[]).map((r) => r.id)])];
   if (!ids.length) return [];
   const [{ data: rows }, { data: fin }, settings] = await Promise.all([
-    db.from("projects").select(PROJECT_SELECT).in("id", ids).eq("category", LOW_VOLTAGE).is("deleted_at", null).limit(20000),
+    db.from("projects").select(PROJECT_SELECT).in("id", ids).eq("category", LOW_VOLTAGE).is("deleted_at", null).not("id", "in", EXCLUDED_PROJECT_FILTER).limit(20000),
     db.rpc("project_financials", { p_project_ids: ids }),
     loadFinanceSettings(db),
   ]);

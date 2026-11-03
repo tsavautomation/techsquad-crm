@@ -9,6 +9,8 @@ export const projects: TableDef = {
   "label": "Projects",
   "module": "projects",
   "tab": "projects",
+  // PJ-b item 3: the new-project form lists the Job Owner's other projects.
+  "formAddon": "project",
   "itemLabel": "Projects",
   "newRecordLabel": "New Project",
   detailAddon: "project",
