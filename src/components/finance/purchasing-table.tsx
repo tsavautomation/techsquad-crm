@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
@@ -25,6 +25,12 @@ export function PurchasingTable({ rows, scope, year, years, hrefFor }: { rows: P
   const tot = groups.reduce((a, g) => ({ cost: a.cost + g.cost, sell: a.sell + g.sell, msrp: a.msrp + g.msrp, items: a.items + g.items }), { cost: 0, sell: 0, msrp: 0, items: 0 });
   const projects = new Set(rows.map((r) => r.project_id)).size;
   const lines = open ? groupLines(rows, by, open) : [];
+  const byProject = lines.reduce<{ id: number; title: string; status: string | null; cost: number; lines: typeof lines }[]>((acc, l) => {
+    const p = acc.find((x) => x.id === l.project_id) ?? (acc.push({ id: l.project_id, title: l.project, status: l.job_status, cost: 0, lines: [] }), acc[acc.length - 1]);
+    p.cost = Math.round((p.cost + l.line_cost) * 100) / 100;
+    p.lines.push(l);
+    return acc;
+  }, []).sort((a, b) => b.cost - a.cost);
   const csvGroups = groups.map((g) => ({ group: g.key, projects: g.projects, items: g.items, quantity: g.quantity, cost: g.cost, msrp: g.msrp, sell: g.sell, without_cost: g.withoutCost }));
   const csvLines = lines.map((l) => ({ project: l.project, job_status: l.job_status ?? "", brand: l.brand ?? "", model: l.model ?? "", description: l.name ?? "", supplier: l.supplier ?? "", quantity: l.quantity, unit_cost: l.cost ?? "", line_cost: l.line_cost, msrp: l.msrp ?? "", sell_price: l.sell_price ?? "" }));
   const label = (k: GroupKey) => (k === "brand" ? t("Manufacturer") : k === "supplier" ? t("Supplier") : t("Type"));
@@ -90,7 +96,11 @@ export function PurchasingTable({ rows, scope, year, years, hrefFor }: { rows: P
                   </button>
                   {g.withoutCost ? <span className="ml-1 text-xs text-warn-fg">{t("{n} without cost", { n: g.withoutCost })}</span> : null}
                 </td>
-                <td className={cn(TD, "text-right tabular-nums")}>{g.projects}</td>
+                <td className={cn(TD, "text-right tabular-nums")}>
+                  <button type="button" onClick={() => setOpen(open === g.key ? null : g.key)} title={t("Which projects and which products")} className="rounded-full border px-2 py-0.5 text-primary hover:bg-muted">
+                    {g.projects}
+                  </button>
+                </td>
                 <td className={cn(TD, "text-right tabular-nums")}>{g.items}</td>
                 <td className={cn(TD, "text-right tabular-nums")}>{g.quantity}</td>
                 <td className={cn(TD, "text-right tabular-nums font-medium")}>{money2(g.cost)}</td>
@@ -112,7 +122,7 @@ export function PurchasingTable({ rows, scope, year, years, hrefFor }: { rows: P
         <div className="mt-4 rounded-xl border px-3 py-2">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold">
-              {open} · {t("{n} lines", { n: lines.length })}
+              {open} · {t("{p} projects, {n} lines", { p: byProject.length, n: lines.length })}
             </h3>
             <span className="ml-auto">
               <CsvButton rows={csvLines} name={`purchasing-${open}`} columns={[{ key: "project", label: "Project" }, { key: "job_status", label: "Job Status" }, { key: "brand", label: "Brand" }, { key: "model", label: "Model" }, { key: "description", label: "Description" }, { key: "supplier", label: "Supplier" }, { key: "quantity", label: "Qty" }, { key: "unit_cost", label: "Unit cost" }, { key: "line_cost", label: "Cost" }, { key: "msrp", label: "MSRP" }, { key: "sell_price", label: "Sell price" }]} />
@@ -123,7 +133,7 @@ export function PurchasingTable({ rows, scope, year, years, hrefFor }: { rows: P
               <thead className="text-xs text-text-2">
                 <tr>
                   <th className={TH}>{t("Project")}</th>
-                  <th className={TH}>{t("Model")}</th>
+                  <th className={TH}>{t("Product")}</th>
                   <th className={TH}>{t("Supplier")}</th>
                   <th className={cn(TH, "text-right")}>{t("Qty")}</th>
                   <th className={cn(TH, "text-right")}>{t("Unit cost")}</th>
@@ -132,24 +142,35 @@ export function PurchasingTable({ rows, scope, year, years, hrefFor }: { rows: P
                 </tr>
               </thead>
               <tbody>
-                {lines.map((l) => (
-                  <tr key={l.id} className="border-t">
-                    <td className={TD}>
-                      <Link href={`${hrefFor}/${l.project_id}#finance`} className="text-primary hover:underline">
-                        {l.project}
-                      </Link>
-                      <span className="block text-xs text-text-2">{l.job_status}</span>
-                    </td>
-                    <td className={TD}>
-                      {[l.brand, l.model].filter(Boolean).join(" ")}
-                      <span className="block max-w-[320px] truncate text-xs text-text-2">{l.name}</span>
-                    </td>
-                    <td className={cn(TD, "text-xs")}>{l.supplier}</td>
-                    <td className={cn(TD, "text-right tabular-nums")}>{l.quantity}</td>
-                    <td className={cn(TD, "text-right tabular-nums")}>{l.cost === null ? "—" : money2(l.cost)}</td>
-                    <td className={cn(TD, "text-right tabular-nums font-medium")}>{money2(l.line_cost)}</td>
-                    <td className={cn(TD, "text-right tabular-nums")}>{l.msrp === null ? "—" : money2(l.msrp)}</td>
-                  </tr>
+                {byProject.map((p) => (
+                  <Fragment key={p.id}>
+                    <tr className="border-t bg-muted/40">
+                      <td colSpan={5} className={cn(TD, "font-semibold")}>
+                        <Link href={`${hrefFor}/${p.id}#finance`} className="text-primary hover:underline">
+                          {p.title}
+                        </Link>
+                        <span className="ml-2 text-xs font-normal text-text-2">
+                          {p.status} · {t("{n} lines", { n: p.lines.length })}
+                        </span>
+                      </td>
+                      <td className={cn(TD, "text-right tabular-nums font-semibold")}>{money2(p.cost)}</td>
+                      <td />
+                    </tr>
+                    {p.lines.map((l) => (
+                      <tr key={l.id} className="border-t">
+                        <td className={cn(TD, "pl-6 text-xs text-text-2")}>{l.item_type}</td>
+                        <td className={TD}>
+                          {[l.brand, l.model].filter(Boolean).join(" ")}
+                          <span className="block max-w-[320px] truncate text-xs text-text-2">{l.name}</span>
+                        </td>
+                        <td className={cn(TD, "text-xs")}>{l.supplier}</td>
+                        <td className={cn(TD, "text-right tabular-nums")}>{l.quantity}</td>
+                        <td className={cn(TD, "text-right tabular-nums")}>{l.cost === null ? "—" : money2(l.cost)}</td>
+                        <td className={cn(TD, "text-right tabular-nums font-medium")}>{money2(l.line_cost)}</td>
+                        <td className={cn(TD, "text-right tabular-nums")}>{l.msrp === null ? "—" : money2(l.msrp)}</td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

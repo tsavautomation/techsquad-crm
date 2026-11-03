@@ -2595,4 +2595,7 @@ export const PT: Record<string, string> = {
   "All years": "Todos os anos",
   "{y} (YTD)": "{y} (até hoje)",
   "Cost = unit cost × quantity as Portal.io has it; lines without a cost are counted apart. Labor and fee lines stay out. The year is the proposal's date.": "Custo = custo unitário × quantidade como está no Portal.io; linhas sem custo são contadas à parte. Linhas de mão de obra e taxas ficam fora. O ano é a data da proposta.",
+  "Which projects and which products": "Quais projetos e quais produtos",
+  "{p} projects, {n} lines": "{p} projetos, {n} linhas",
+  "Product": "Produto",
 };
