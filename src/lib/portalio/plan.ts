@@ -5,7 +5,7 @@ import { todayET } from "@/lib/dates";
 // executes it. Keys are the Portal.io ids; the numbers (1740, 3166CO1) are informative. Nothing here decides which
 // project a proposal belongs to (that is Link, PI-c, or the customer rule, FIN-l).
 
-export type PortalItem = { id?: number; itemType?: string; brand?: string | null; model?: string | null; shortDescription?: string | null; description?: string | null; quantity?: number; cost?: number | null; sellPrice?: number | null; total?: { amount?: number } | null; supplier?: string | null };
+export type PortalItem = { id?: number; itemType?: string; brand?: string | null; model?: string | null; shortDescription?: string | null; description?: string | null; quantity?: number; cost?: number | null; msrp?: number | null; sellPrice?: number | null; total?: { amount?: number } | null; supplier?: string | null };
 export type PortalArea = { options?: { status?: string; items?: PortalItem[] }[] | null };
 export type PlanRequest = { id: number | null; status: string | null; amount: number | null; dueDate: string | null; description: string | null; paymentMethod: string | null };
 export type PlanChangeOrder = { id: number; number: number | null; name: string | null; status: string | null; total: number | null; decided_at: string | null; sales_tax: number | null; areas: PortalArea[] | null };
@@ -31,7 +31,7 @@ export type ExistingTx = {
 };
 
 export type TxValues = Record<string, unknown> & { type: "Proposal" | "Invoice" | "Payment"; portal_synced: Record<string, unknown> };
-export type ItemRow = { portal_item_id: number | null; item_type: string | null; brand: string | null; model: string | null; name: string | null; description: string | null; quantity: number | null; cost: number | null; sell_price: number | null; total: number | null; supplier: string | null };
+export type ItemRow = { portal_item_id: number | null; item_type: string | null; brand: string | null; model: string | null; name: string | null; description: string | null; quantity: number | null; cost: number | null; msrp: number | null; sell_price: number | null; total: number | null; supplier: string | null };
 export type Plan = {
   /** Rows to insert (the main proposal first, so change orders can point at it). */
   create: { key: "main" | "co" | "invoice" | "payment"; values: TxValues }[];
@@ -95,6 +95,7 @@ export const itemRows = (items: PortalItem[]): ItemRow[] =>
     description: i.description ?? null,
     quantity: i.quantity ?? null,
     cost: i.cost ?? null,
+    msrp: i.msrp ?? null,
     sell_price: i.sellPrice ?? null,
     total: i.total?.amount ?? null,
     supplier: i.supplier ?? null,

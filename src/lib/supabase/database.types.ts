@@ -836,6 +836,49 @@ export type Database = {
           },
         ]
       }
+      contact_not_duplicates: {
+        Row: {
+          a: number
+          b: number
+          decided_at: string
+          decided_by: string | null
+        }
+        Insert: {
+          a: number
+          b: number
+          decided_at?: string
+          decided_by?: string | null
+        }
+        Update: {
+          a?: number
+          b?: number
+          decided_at?: string
+          decided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_not_duplicates_a_fkey"
+            columns: ["a"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_not_duplicates_b_fkey"
+            columns: ["b"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_not_duplicates_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           address: Json | null
@@ -3593,6 +3636,142 @@ export type Database = {
           },
         ]
       }
+      project_merges: {
+        Row: {
+          from_id: number
+          id: number
+          into_id: number
+          merged_at: string
+          merged_by: string | null
+          moved: Json
+          reason: string | null
+          undone_at: string | null
+          undone_by: string | null
+        }
+        Insert: {
+          from_id: number
+          id?: number
+          into_id: number
+          merged_at?: string
+          merged_by?: string | null
+          moved?: Json
+          reason?: string | null
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Update: {
+          from_id?: number
+          id?: number
+          into_id?: number
+          merged_at?: string
+          merged_by?: string | null
+          moved?: Json
+          reason?: string | null
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_merges_from_id_fkey"
+            columns: ["from_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_merges_from_id_fkey"
+            columns: ["from_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_merges_into_id_fkey"
+            columns: ["into_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_merges_into_id_fkey"
+            columns: ["into_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_merges_merged_by_fkey"
+            columns: ["merged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_merges_undone_by_fkey"
+            columns: ["undone_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_not_duplicates: {
+        Row: {
+          a: number
+          b: number
+          decided_at: string
+          decided_by: string | null
+        }
+        Insert: {
+          a: number
+          b: number
+          decided_at?: string
+          decided_by?: string | null
+        }
+        Update: {
+          a?: number
+          b?: number
+          decided_at?: string
+          decided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_not_duplicates_a_fkey"
+            columns: ["a"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_not_duplicates_a_fkey"
+            columns: ["a"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_not_duplicates_b_fkey"
+            columns: ["b"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_not_duplicates_b_fkey"
+            columns: ["b"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_not_duplicates_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_requests: {
         Row: {
           archived_at: string | null
@@ -3746,6 +3925,7 @@ export type Database = {
           maintenance_status: string | null
           maintenance_type: string | null
           maintenance_visits_included: number | null
+          merged_into_id: number | null
           older_reports: string | null
           owner_contact: string | null
           owner_contact_intl: string | null
@@ -3816,6 +3996,7 @@ export type Database = {
           maintenance_status?: string | null
           maintenance_type?: string | null
           maintenance_visits_included?: number | null
+          merged_into_id?: number | null
           older_reports?: string | null
           owner_contact?: string | null
           owner_contact_intl?: string | null
@@ -3886,6 +4067,7 @@ export type Database = {
           maintenance_status?: string | null
           maintenance_type?: string | null
           maintenance_visits_included?: number | null
+          merged_into_id?: number | null
           older_reports?: string | null
           owner_contact?: string | null
           owner_contact_intl?: string | null
@@ -3996,6 +4178,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "projects_merged_into_id_fkey"
+            columns: ["merged_into_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_merged_into_id_fkey"
+            columns: ["merged_into_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "projects_permit_id_fkey"
             columns: ["permit_id"]
             isOneToOne: false
@@ -4048,6 +4244,7 @@ export type Database = {
           id: number
           item_type: string | null
           model: string | null
+          msrp: number | null
           name: string | null
           portal_item_id: number | null
           quantity: number | null
@@ -4064,6 +4261,7 @@ export type Database = {
           id?: number
           item_type?: string | null
           model?: string | null
+          msrp?: number | null
           name?: string | null
           portal_item_id?: number | null
           quantity?: number | null
@@ -4080,6 +4278,7 @@ export type Database = {
           id?: number
           item_type?: string | null
           model?: string | null
+          msrp?: number | null
           name?: string | null
           portal_item_id?: number | null
           quantity?: number | null
@@ -6400,6 +6599,125 @@ export type Database = {
           },
         ]
       }
+      timesheet_week_events: {
+        Row: {
+          action: string
+          at: string
+          by_user: string | null
+          id: number
+          minutes: number | null
+          reason: string | null
+          week_id: number
+        }
+        Insert: {
+          action: string
+          at?: string
+          by_user?: string | null
+          id?: number
+          minutes?: number | null
+          reason?: string | null
+          week_id: number
+        }
+        Update: {
+          action?: string
+          at?: string
+          by_user?: string | null
+          id?: number
+          minutes?: number | null
+          reason?: string | null
+          week_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_week_events_by_user_fkey"
+            columns: ["by_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_week_events_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "timesheet_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheet_weeks: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          employee_id: number
+          id: number
+          minutes_at_approval: number | null
+          monday: string
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          employee_id: number
+          id?: number
+          minutes_at_approval?: number | null
+          monday: string
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          employee_id?: number
+          id?: number
+          minutes_at_approval?: number | null
+          monday?: string
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_weeks_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_weeks_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_weeks_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_weeks_reopened_by_fkey"
+            columns: ["reopened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number | null
@@ -6409,6 +6727,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           date: string | null
+          date_estimated: boolean
           deleted_at: string | null
           description: string | null
           discount: number | null
@@ -6429,11 +6748,13 @@ export type Database = {
           portal_request_id: number | null
           portal_synced: Json | null
           project_id: number | null
+          proposal_transaction_id: number | null
           reason: string | null
           reference: string | null
           sales_tax: number | null
           sheet_ref: string | null
           submitted_at: string | null
+          superseded_by_id: number | null
           tip: number | null
           title: string | null
           type: string | null
@@ -6448,6 +6769,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string | null
+          date_estimated?: boolean
           deleted_at?: string | null
           description?: string | null
           discount?: number | null
@@ -6468,11 +6790,13 @@ export type Database = {
           portal_request_id?: number | null
           portal_synced?: Json | null
           project_id?: number | null
+          proposal_transaction_id?: number | null
           reason?: string | null
           reference?: string | null
           sales_tax?: number | null
           sheet_ref?: string | null
           submitted_at?: string | null
+          superseded_by_id?: number | null
           tip?: number | null
           title?: string | null
           type?: string | null
@@ -6487,6 +6811,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string | null
+          date_estimated?: boolean
           deleted_at?: string | null
           description?: string | null
           discount?: number | null
@@ -6507,11 +6832,13 @@ export type Database = {
           portal_request_id?: number | null
           portal_synced?: Json | null
           project_id?: number | null
+          proposal_transaction_id?: number | null
           reason?: string | null
           reference?: string | null
           sales_tax?: number | null
           sheet_ref?: string | null
           submitted_at?: string | null
+          superseded_by_id?: number | null
           tip?: number | null
           title?: string | null
           type?: string | null
@@ -6566,6 +6893,34 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_proposal_transaction_id_fkey"
+            columns: ["proposal_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "portal_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_proposal_transaction_id_fkey"
+            columns: ["proposal_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_superseded_by_id_fkey"
+            columns: ["superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "portal_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_superseded_by_id_fkey"
+            columns: ["superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
           {
@@ -7957,6 +8312,10 @@ export type Database = {
         Args: { p_missing: string; p_report_id: number; p_result: string }
         Returns: boolean
       }
+      merge_project: {
+        Args: { p_from: number; p_into: number; p_reason: string }
+        Returns: number
+      }
       merge_records: {
         Args: { p_keep: number; p_merge: number[]; p_table: string }
         Returns: number
@@ -8013,6 +8372,12 @@ export type Database = {
       }
       restore_fix_sequence: { Args: { p_table: string }; Returns: undefined }
       restore_rows: { Args: { p_rows: Json; p_table: string }; Returns: number }
+      timesheet_monday: { Args: { p_at: string }; Returns: string }
+      timesheet_week_approved: {
+        Args: { p_at: string; p_employee: number }
+        Returns: boolean
+      }
+      unmerge_project: { Args: { p_merge_id: number }; Returns: undefined }
       user_last_sign_in: {
         Args: never
         Returns: {
