@@ -65,3 +65,7 @@ docs/portal-proposals.json
 docs/projects-ts-folders.json
 docs/old-invoices.json
 docs/whatsapp-monitor-wiring.txt
+
+# FIN-o partner contact details (phones, e-mails, addresses): local only
+scripts/data/partner-details.json
+docs/finance-apply-log.json

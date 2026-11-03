@@ -32,6 +32,10 @@ export type Tx = {
   parts_cost: number | null;
   invoice_status: string | null;
   created_at: string;
+  /** FIN-o columns (migration 20261103100000); undefined before it is applied. */
+  superseded_by_id?: number | null;
+  proposal_transaction_id?: number | null;
+  date_estimated?: boolean | null;
 };
 export type SheetRec = { id: number; number: string | null; main_number: number | null; change_order: number | null; title: string | null; customer: string | null; amount: number | null; date: string | null; designer: string | null; commission: boolean | null; payments: { month: string; amount: number }[] | null; cc_fee: number | null; project_id: number | null; transaction_id: number | null };
 export type Req = { id: number; amount: number; status: string | null; dueDate?: string | null; description?: string | null; paymentMethod?: string | null };
@@ -79,10 +83,12 @@ export const PARTNER_ALIASES: Record<string, string> = {
   "Giga Russo": "Benetti Services, Inc",
   "Anderson Mendes": "M2 Connexion Corp",
 };
-/** Fred 2026-11-03: partners to create (sheet name → new organization or contact). */
+/** Fred 2026-11-03: partners to create (sheet name → new organization or contact). Phones, e-mails and addresses
+ * come from scripts/data/partner-details.json (local, not in git), merged by the apply step. */
 export const PARTNER_CREATES: Record<string, { table: "organizations" | "contacts"; row: Record<string, unknown> }> = {
-  "Urban Coast": { table: "organizations", row: { title: "Urban Coast" } },
-  Newman: { table: "organizations", row: { title: "Newman Construction Group", type: "General Contractor", address: { street: "1590 NE 162nd St Suite 300", address_2: "", city: "North Miami Beach", state: "FL", zip: "33162" }, main_phone: "(305) 933-2583", main_email: "Office@newmanbc.com" } },
+  // Urban Coast (Stern #1056) stays out: the project already has The Alexander Group (Fred 2026-11-03).
+  "Mauricio Moher": { table: "contacts", row: { title: "MAURICIO MOHER", first_name: "Mauricio", last_name: "Moher" } },
+  Newman: { table: "organizations", row: { title: "Newman Construction Group", type: "General Contractor" } },
   "Jackson Cardoso": { table: "contacts", row: { title: "JACKSON CARDOSO", first_name: "Jackson", last_name: "Cardoso" } },
   "Alejandra Martinez": { table: "contacts", row: { title: "ALEJANDRA MARTINEZ", first_name: "Alejandra", last_name: "Martinez" } },
   Livia: { table: "contacts", row: { title: "LIVIA", first_name: "Livia" } },
@@ -369,41 +375,50 @@ export function buildPlan(d: Data): Plan {
     if (!designers.length) continue;
     const hasPartner = p.design_firm_id || p.builder_developer_id || p.general_contractor_id || p.referral_contact_id || p.referral_organization_id;
     const wantsCommission = rows.some((s) => s.commission);
-    if (designers.length > 1) {
-      note(p.id, "D", `Sheet names several partners: ${designers.join(" / ")}: decide by hand`);
+    // Each sheet name → an organization, a contact, or one the apply step creates ("new:<name>" until the row exists).
+    const resolve = (name: string) => {
+      const lookFor = PARTNER_ALIASES[name] ?? name;
+      let org = orgByName.get(fold(lookFor)) ?? [...orgByName.values()].find((o) => fold(o.title).startsWith(fold(lookFor)) || fold(lookFor).startsWith(fold(o.title))) ?? null;
+      let contact = org ? null : (contactByName.get(fold(lookFor)) ?? null);
+      const create = !org && !contact ? PARTNER_CREATES[name] : undefined;
+      if (create) {
+        let pc = plan.partnerCreates.find((c) => c.key === name);
+        if (!pc) plan.partnerCreates.push((pc = { key: name, table: create.table, row: create.row, projects: [] }));
+        pc.projects.push(p.id);
+        const placeholder = { id: `new:${name}` as unknown as number, title: String(create.row.title), type: (create.row.type as string | null) ?? null };
+        if (create.table === "organizations") org = placeholder;
+        else contact = placeholder;
+      }
+      if (!org && !contact) return null;
+      const field = org ? (org.type === "Design Firm" ? "design_firm_id" : org.type === "General Contractor" ? "general_contractor_id" : org.type === "Developer Builder" ? "builder_developer_id" : "referral_organization_id") : "referral_contact_id";
+      return { name, org, contact, field, label: `${create ? "NEW " : ""}${org ? `organization ${org.title}` : `contact ${contact!.title}`}` };
+    };
+    const found = designers.map(resolve);
+    const missing = designers.filter((_, i) => !found[i]);
+    if (missing.length) {
+      for (const name of missing) note(p.id, "D", `Partner "${name}" is neither an organization nor a contact: create it, then link`);
       continue;
     }
-    const name = designers[0];
-    const lookFor = PARTNER_ALIASES[name] ?? name;
-    let org = orgByName.get(fold(lookFor)) ?? [...orgByName.values()].find((o) => fold(o.title).startsWith(fold(lookFor)) || fold(lookFor).startsWith(fold(o.title))) ?? null;
-    let contact = org ? null : (contactByName.get(fold(lookFor)) ?? null);
-    const create = !org && !contact ? PARTNER_CREATES[name] : undefined;
-    if (create) {
-      // Created by the apply step; the project change carries "new:<name>" until the row exists.
-      let pc = plan.partnerCreates.find((c) => c.key === name);
-      if (!pc) plan.partnerCreates.push((pc = { key: name, table: create.table, row: create.row, projects: [] }));
-      pc.projects.push(p.id);
-      const placeholder = { id: `new:${name}` as unknown as number, title: String(create.row.title), type: (create.row.type as string | null) ?? null };
-      if (create.table === "organizations") org = placeholder;
-      else contact = placeholder;
-    }
-    if (!org && !contact) {
-      note(p.id, "D", `Partner "${name}" is neither an organization nor a contact: create it, then link`);
-      continue;
-    }
+    const partners = found as NonNullable<(typeof found)[number]>[];
     const set: Record<string, unknown> = {};
     const beforeP: Record<string, unknown> = {};
-    if (!hasPartner) {
-      if (org) set[org.type === "Design Firm" ? "design_firm_id" : org.type === "General Contractor" ? "general_contractor_id" : org.type === "Developer Builder" ? "builder_developer_id" : "referral_organization_id"] = org.id;
-      else set.referral_contact_id = contact!.id;
+    if (partners.length > 1 && new Set(partners.map((x) => x.field)).size < partners.length) {
+      note(p.id, "D", `Sheet names several partners of the same kind: ${designers.join(" / ")}: decide by hand`);
+      continue;
+    }
+    // One partner fills its field only when the project has none; two (Fred 2026-11-03: Builcore as General
+    // Contractor + the design firm) each fill their own field when it is empty.
+    for (const x of partners) {
+      const current = (p as unknown as Record<string, unknown>)[x.field];
+      if (partners.length === 1 ? !hasPartner : !current) set[x.field] = (x.org ?? x.contact)!.id;
     }
     if (wantsCommission && !p.commission_contact_id && !p.commission_organization_id) {
-      if (org) set.commission_organization_id = org.id;
-      else set.commission_contact_id = contact!.id;
+      if (partners.length > 1) note(p.id, "D", `Commission (Y) with several partners (${designers.join(" / ")}): decide who earns it`);
+      else if (partners[0].org) set.commission_organization_id = partners[0].org.id;
+      else set.commission_contact_id = partners[0].contact!.id;
     }
     for (const k of Object.keys(set)) beforeP[k] = (p as unknown as Record<string, unknown>)[k];
-    const target = org ? `organization ${org.title}` : `contact ${contact!.title}`;
-    if (Object.keys(set).length) plan.changes.push({ project_id: p.id, table: "projects", id: p.id, set, before: beforeP, why: `Sheet Indicator/Designer "${name}"${wantsCommission ? " with commission (Y)" : ""} → ${create ? `NEW ${target}` : target}`, rule: "D" });
+    if (Object.keys(set).length) plan.changes.push({ project_id: p.id, table: "projects", id: p.id, set, before: beforeP, why: `Sheet Indicator/Designer "${designers.join(" / ")}"${wantsCommission ? " with commission (Y)" : ""} → ${partners.map((x) => x.label).join(" + ")}`, rule: "D" });
   }
 
   // ---------------------------------------------------------------- lists for Luana
