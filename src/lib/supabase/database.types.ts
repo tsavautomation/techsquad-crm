@@ -1368,6 +1368,65 @@ export type Database = {
           },
         ]
       }
+      employee_pay_schedules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          employee_id: number
+          id: number
+          note: string | null
+          schedule_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_from: string
+          employee_id: number
+          id?: number
+          note?: string | null
+          schedule_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          employee_id?: number
+          id?: number
+          note?: string | null
+          schedule_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_pay_schedules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_pay_schedules_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_pay_schedules_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_pay_schedules_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "pay_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_skills: {
         Row: {
           employee_id: number
@@ -1435,7 +1494,6 @@ export type Database = {
           last_name: string | null
           locked: boolean
           must_clock_in: boolean
-          pay_frequency: string | null
           phone: string | null
           ssn: string | null
           start_date: string | null
@@ -1467,7 +1525,6 @@ export type Database = {
           last_name?: string | null
           locked?: boolean
           must_clock_in?: boolean
-          pay_frequency?: string | null
           phone?: string | null
           ssn?: string | null
           start_date?: string | null
@@ -1499,7 +1556,6 @@ export type Database = {
           last_name?: string | null
           locked?: boolean
           must_clock_in?: boolean
-          pay_frequency?: string | null
           phone?: string | null
           ssn?: string | null
           start_date?: string | null
@@ -2613,6 +2669,51 @@ export type Database = {
           },
         ]
       }
+      pay_period_overrides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          note: string | null
+          pay_day: string
+          schedule_id: number
+          starts_on: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          note?: string | null
+          pay_day: string
+          schedule_id: number
+          starts_on: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          note?: string | null
+          pay_day?: string
+          schedule_id?: number
+          starts_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_period_overrides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_period_overrides_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "pay_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pay_periods: {
         Row: {
           approved_at: string
@@ -2623,6 +2724,7 @@ export type Database = {
           id: number
           note: string | null
           pay_day: string
+          schedule_id: number
           starts_on: string
         }
         Insert: {
@@ -2634,6 +2736,7 @@ export type Database = {
           id?: number
           note?: string | null
           pay_day: string
+          schedule_id: number
           starts_on: string
         }
         Update: {
@@ -2645,12 +2748,64 @@ export type Database = {
           id?: number
           note?: string | null
           pay_day?: string
+          schedule_id?: number
           starts_on?: string
         }
         Relationships: [
           {
             foreignKeyName: "pay_periods_approved_by_fkey"
             columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_periods_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "pay_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_schedules: {
+        Row: {
+          active: boolean
+          anchor_on: string
+          created_at: string
+          created_by: string | null
+          frequency: string
+          id: number
+          name: string
+          pay_day_rule: Json
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          anchor_on: string
+          created_at?: string
+          created_by?: string | null
+          frequency: string
+          id?: number
+          name: string
+          pay_day_rule?: Json
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          anchor_on?: string
+          created_at?: string
+          created_by?: string | null
+          frequency?: string
+          id?: number
+          name?: string
+          pay_day_rule?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_schedules_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

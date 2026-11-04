@@ -72,7 +72,7 @@ export function periodCsv(rows: { name: string; frequency: string; period: strin
     const s = String(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const head = ["Name", "Pay frequency", "Period", "Hours", "PTO hours", "Rate", "Amount", "Adjustments", "Total", "Needs review", "Weeks approved", "Approved by"];
+  const head = ["Name", "Pay schedule", "Period", "Hours", "PTO hours", "Rate", "Amount", "Adjustments", "Total", "Needs review", "Weeks approved", "Approved by"];
   const lines = rows.map((r) => [r.name, r.frequency, r.period, hours(r.line.minutes), hours(r.line.ptoMinutes), r.line.rateText, r.line.amount ?? "", r.line.adjustments, r.line.total ?? "", r.line.toReview, r.weeks ?? "", r.approvedBy ?? ""].map(esc).join(","));
   return `﻿${[head.join(","), ...lines].join("\r\n")}\r\n`;
 }

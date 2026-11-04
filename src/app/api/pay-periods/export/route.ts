@@ -4,8 +4,8 @@ import { getSession } from "@/lib/auth/session";
 import { canSeeCosting } from "@/lib/costing/load";
 import { formatDate, todayET } from "@/lib/dates";
 import { hours, periodCsv } from "@/lib/payroll/engine";
-import { loadPayrollSettings, loadPeriod } from "@/lib/payroll/load";
-import { isFrequency, periodFor } from "@/lib/payroll/periods";
+import { loadOverrides, loadPeriod, loadSchedule } from "@/lib/payroll/load";
+import { periodFor } from "@/lib/payroll/periods";
 import { recordsDb } from "@/lib/records/data";
 import { addDays } from "@/lib/schedule/dates";
 import { mondayOf } from "@/lib/time-clock/timesheet";
@@ -21,12 +21,15 @@ export async function GET(req: Request) {
   if (s.status !== "active") return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   if (!canSeeCosting(s.user)) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
   const url = new URL(req.url);
-  const frequency = url.searchParams.get("frequency");
+  const scheduleId = Number(url.searchParams.get("schedule"));
   const startsOn = url.searchParams.get("period") ?? "";
   const format = url.searchParams.get("format") === "xlsx" ? "xlsx" : "csv";
-  if (!isFrequency(frequency) || !/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) return NextResponse.json({ error: "Pick a period." }, { status: 400 });
+  if (!Number.isInteger(scheduleId) || !/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) return NextResponse.json({ error: "Pick a period." }, { status: 400 });
   const db = await recordsDb();
-  const period = periodFor(frequency, startsOn, await loadPayrollSettings(db));
+  // PS-a: the period comes from the pay schedule (group) and its moved pay days.
+  const schedule = await loadSchedule(db, scheduleId);
+  if (!schedule) return NextResponse.json({ error: "Pick a period." }, { status: 400 });
+  const period = periodFor(schedule, startsOn, await loadOverrides(db, scheduleId));
   const data = await loadPeriod(db, period);
   const label = `${formatDate(period.starts_on)} – ${formatDate(period.ends_on)}`;
   // TC-h: the weekly approvals covering the period ("2/2" and who approved them).
@@ -35,9 +38,9 @@ export async function GET(req: Request) {
   const weekRows = await Promise.all(mondays.map((m) => loadWeekRows(db, m, data.lines.map((l) => l.person.id))));
   const rows = data.lines.map((l) => {
     const mine = weekRows.map((w) => w.get(l.person.id)).filter((w) => w?.status === "Approved");
-    return { name: l.person.title, frequency, period: label, line: l.line, weeks: `${mine.length}/${mondays.length}`, approvedBy: [...new Set(mine.map((w) => w!.approver).filter(Boolean))].join(", ") };
+    return { name: l.person.title, frequency: schedule.name, period: label, line: l.line, weeks: `${mine.length}/${mondays.length}`, approvedBy: [...new Set(mine.map((w) => w!.approver).filter(Boolean))].join(", ") };
   });
-  const base = `pay-period-${frequency.toLowerCase().replace(/[^a-z]/g, "")}-${period.starts_on}`;
+  const base = `pay-period-${schedule.name.toLowerCase().replace(/[^a-z0-9]/g, "")}-${period.starts_on}`;
 
   if (format === "csv") {
     return new NextResponse(periodCsv(rows), { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${base}.csv"`, "Cache-Control": "no-store" } });
@@ -47,7 +50,7 @@ export async function GET(req: Request) {
   const ws = wb.addWorksheet("Pay period");
   ws.columns = [
     { header: "Name", key: "name", width: 28 },
-    { header: "Pay frequency", key: "frequency", width: 14 },
+    { header: "Pay schedule", key: "frequency", width: 16 },
     { header: "Period", key: "period", width: 24 },
     { header: "Hours", key: "hours", width: 10 },
     { header: "PTO hours", key: "pto", width: 10 },

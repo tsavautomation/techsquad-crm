@@ -5,17 +5,46 @@ import { fromDateTimeLocalET, todayET } from "@/lib/dates";
 import { addDays } from "@/lib/schedule/dates";
 import { shiftsOf, type SheetEntry, type Shift } from "@/lib/time-clock/timesheet";
 import { payLine, type PayLine } from "./engine";
-import { parsePayrollSettings, type Frequency, type PayrollSettings, type Period } from "./periods";
+import { isFrequency, parsePayDayRule, scheduleInForce, type Assignment, type Overrides, type Period, type Schedule } from "./periods";
 
 // TC-f Pay periods: what the screen, the approval and the export read. Everything goes through the viewer's
 // own permissions: pay rates and pay periods are only readable with the Job costing key (database policies).
+// PS-a: periods come from pay schedules (groups), and each person is on a schedule from a date on.
 
-export async function loadPayrollSettings(db: SupabaseClient): Promise<PayrollSettings> {
-  const { data } = await db.from("app_settings").select("value").eq("key", "payroll").maybeSingle();
-  return parsePayrollSettings((data as { value: unknown } | null)?.value);
+type ScheduleRow = { id: number; name: string; frequency: string; anchor_on: string; pay_day_rule: unknown; active: boolean };
+const toSchedule = (r: ScheduleRow): Schedule => ({ id: r.id, name: r.name, frequency: isFrequency(r.frequency) ? r.frequency : "Biweekly", anchor_on: r.anchor_on, pay_day_rule: parsePayDayRule(r.pay_day_rule), active: r.active });
+
+/** Every schedule, active ones first, then by name. */
+export async function loadSchedules(db: SupabaseClient): Promise<Schedule[]> {
+  const { data } = await db.from("pay_schedules").select("id, name, frequency, anchor_on, pay_day_rule, active").order("active", { ascending: false }).order("name");
+  return ((data ?? []) as ScheduleRow[]).map(toSchedule);
 }
 
-export type Person = { id: number; title: string; pay_frequency: Frequency | null; status: string | null };
+export async function loadSchedule(db: SupabaseClient, id: number): Promise<Schedule | null> {
+  const { data } = await db.from("pay_schedules").select("id, name, frequency, anchor_on, pay_day_rule, active").eq("id", id).maybeSingle();
+  return data ? toSchedule(data as ScheduleRow) : null;
+}
+
+/** Moved pay days of a schedule: period first day → pay day. */
+export async function loadOverrides(db: SupabaseClient, scheduleId: number): Promise<Overrides> {
+  const { data } = await db.from("pay_period_overrides").select("starts_on, pay_day").eq("schedule_id", scheduleId);
+  return new Map(((data ?? []) as { starts_on: string; pay_day: string }[]).map((r) => [r.starts_on, r.pay_day]));
+}
+
+export type AssignmentRow = Assignment & { id: number; note: string | null; created_at: string };
+
+/** The schedule links of some people (or everyone), newest first. */
+export async function loadAssignments(db: SupabaseClient, employeeIds?: number[]): Promise<AssignmentRow[]> {
+  let q = db.from("employee_pay_schedules").select("id, employee_id, schedule_id, effective_from, note, created_at").order("effective_from", { ascending: false });
+  if (employeeIds) {
+    if (!employeeIds.length) return [];
+    q = q.in("employee_id", employeeIds);
+  }
+  const { data } = await q;
+  return (data ?? []) as AssignmentRow[];
+}
+
+export type Person = { id: number; title: string; status: string | null };
 export type LockedPeriod = { id: number; approved_by: string | null; approved_at: string; note: string | null; approver: string | null };
 export type Adjustment = { id: number; period_id: number; employee_id: number; entry_id: number | null; reason: string; delta_minutes: number; delta_amount: number | null; created_at: string; applied_period_id: number | null; period_label?: string };
 
@@ -37,7 +66,7 @@ export type PeriodData = {
   period: Period;
   locked: LockedPeriod | null;
   lines: PersonLine[];
-  /** People who clocked hours in the period but have no pay frequency yet. */
+  /** People who clocked hours in the period but are on no pay schedule on its first day. */
   unassigned: Person[];
   totals: { minutes: number; ptoMinutes: number; amount: number | null; adjustments: number; total: number | null; toReview: number };
 };
@@ -45,7 +74,7 @@ export type PeriodData = {
 type EntryRow = SheetEntry & { employee_id: number };
 
 /** Clock entries whose clock-in falls in the period (a shift belongs to its clock-in's day), per person. */
-async function periodEntries(db: SupabaseClient, period: Period): Promise<Map<number, EntryRow[]>> {
+async function periodEntries(db: SupabaseClient, period: Pick<Period, "starts_on" | "ends_on">): Promise<Map<number, EntryRow[]>> {
   const { data } = await db
     .from("time_entries")
     .select("id, employee_id, kind, at, note, reviewed_at, auto_closed")
@@ -58,23 +87,25 @@ async function periodEntries(db: SupabaseClient, period: Period): Promise<Map<nu
 }
 
 /** Shifts of the period only (an entry early on the day after the period may belong to a shift that started inside it). */
-function periodShifts(entries: SheetEntry[], period: Period, now: number, today: string): Shift[] {
+function periodShifts(entries: SheetEntry[], period: Pick<Period, "starts_on" | "ends_on">, now: number, today: string): Shift[] {
   return shiftsOf(entries, now, today).filter((s) => s.day >= period.starts_on && s.day <= period.ends_on);
 }
 
 export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.now()): Promise<PeriodData> {
   const today = todayET(new Date(now));
-  const [{ data: emp }, byPerson, { data: lockedRow }] = await Promise.all([
-    db.from("employees").select("id, title, pay_frequency, status").is("deleted_at", null).order("title"),
+  const [{ data: emp }, byPerson, links, { data: lockedRow }] = await Promise.all([
+    db.from("employees").select("id, title, status").is("deleted_at", null).order("title"),
     periodEntries(db, period),
-    db.from("pay_periods").select("id, approved_by, approved_at, note").eq("frequency", period.frequency).eq("starts_on", period.starts_on).maybeSingle(),
+    loadAssignments(db),
+    db.from("pay_periods").select("id, approved_by, approved_at, note").eq("schedule_id", period.schedule_id).eq("starts_on", period.starts_on).maybeSingle(),
   ]);
-  const people = ((emp ?? []) as { id: number; title: string | null; pay_frequency: Frequency | null; status: string | null }[]).map((p) => ({ ...p, title: p.title ?? `#${p.id}` }));
-  const inFrequency = people.filter((p) => p.pay_frequency === period.frequency && (byPerson.has(p.id) || p.status === "Active" || p.status === "Reports"));
-  const unassigned = people.filter((p) => !p.pay_frequency && byPerson.has(p.id) && periodShifts(byPerson.get(p.id)!, period, now, today).some((s) => s.minutes > 0));
+  const people: Person[] = ((emp ?? []) as { id: number; title: string | null; status: string | null }[]).map((p) => ({ ...p, title: p.title ?? `#${p.id}` }));
+  const onSchedule = (p: Person) => scheduleInForce(links, p.id, period.starts_on);
+  const inSchedule = people.filter((p) => onSchedule(p) === period.schedule_id && (byPerson.has(p.id) || p.status === "Active" || p.status === "Reports"));
+  const unassigned = people.filter((p) => onSchedule(p) === null && byPerson.has(p.id) && periodShifts(byPerson.get(p.id)!, period, now, today).some((s) => s.minutes > 0));
   const locked = lockedRow ? ({ ...(lockedRow as Omit<LockedPeriod, "approver">), approver: null } as LockedPeriod) : null;
 
-  const ids = inFrequency.map((p) => p.id);
+  const ids = inSchedule.map((p) => p.id);
   const [rates, { data: adj }, { data: snap }, names] = await Promise.all([
     loadPayRates(db, ids),
     ids.length
@@ -90,7 +121,7 @@ export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.
   const snapshots = new Map(((snap ?? []) as { employee_id: number; minutes: number; pto_minutes: number; rate_text: string | null; amount: number | string | null; adjustments: number | string; flagged: number }[]).map((s) => [s.employee_id, { ...s, amount: s.amount === null ? null : Number(s.amount), adjustments: Number(s.adjustments) }]));
   const periodLabels = await adjustmentPeriodLabels(db, adjustments);
 
-  const lines: PersonLine[] = inFrequency.map((person) => {
+  const lines: PersonLine[] = inSchedule.map((person) => {
     const shifts = periodShifts(byPerson.get(person.id) ?? [], period, now, today);
     const mine = adjustments.filter((a) => a.employee_id === person.id).map((a) => ({ ...a, period_label: periodLabels.get(a.period_id) }));
     // Open period: pending corrections of earlier periods are paid here. Locked: the ones this period paid, and the ones made after its lock.
@@ -126,13 +157,14 @@ export async function lockedPeriodOf(db: SupabaseClient, entryId: number): Promi
   const { data: e } = await db.from("time_entries").select("employee_id, pay_period_id").eq("id", entryId).maybeSingle();
   const row = e as { employee_id: number; pay_period_id: number | null } | null;
   if (!row?.pay_period_id) return null;
-  const { data: p } = await db.from("pay_periods").select("id, frequency, starts_on, ends_on, pay_day").eq("id", row.pay_period_id).maybeSingle();
+  const { data: p } = await db.from("pay_periods").select("id, schedule_id, frequency, starts_on, ends_on, pay_day").eq("id", row.pay_period_id).maybeSingle();
   if (!p) return null;
-  return { period: p as Period & { id: number }, employeeId: row.employee_id };
+  const r = p as { id: number; schedule_id: number; frequency: string; starts_on: string; ends_on: string; pay_day: string };
+  return { period: { id: r.id, schedule_id: r.schedule_id, frequency: isFrequency(r.frequency) ? r.frequency : "Biweekly", starts_on: r.starts_on, ends_on: r.ends_on, pay_day: r.pay_day, pay_day_moved: false }, employeeId: row.employee_id };
 }
 
 /** One person's current figures for a period (recomputed from the entries as they are now). */
-export async function currentLine(db: SupabaseClient, period: Period, employeeId: number, now = Date.now()): Promise<PayLine> {
+export async function currentLine(db: SupabaseClient, period: Pick<Period, "starts_on" | "ends_on">, employeeId: number, now = Date.now()): Promise<PayLine> {
   const today = todayET(new Date(now));
   const [byPerson, rates] = await Promise.all([periodEntries(db, period), loadPayRates(db, [employeeId])]);
   return payLine(periodShifts(byPerson.get(employeeId) ?? [], period, now, today), rates as PayRate[]);

@@ -1,48 +1,76 @@
-// TC-e / TC-f Pay periods (SPEC §9.1, Stage 3): period boundaries and the line per person.
+// TC-e / TC-f / PS-a Pay periods (SPEC §9.1): period boundaries per pay schedule and the line per person.
 import { describe, expect, it } from "vitest";
 import { hours, payLine, periodCsv } from "@/lib/payroll/engine";
-import { nextPeriod, parsePayrollSettings, periodDates, periodEnded, periodFor, previousPeriod, recentPeriods } from "@/lib/payroll/periods";
+import { nextPeriod, parsePayDayRule, payDayOf, periodDates, periodEnded, periodFor, previousPeriod, recentPeriods, scheduleInForce, weekdayOf, type Schedule } from "@/lib/payroll/periods";
 import type { Shift } from "@/lib/time-clock/timesheet";
 
-const S = parsePayrollSettings({ biweekly_anchor: "2026-10-05", days_after: { Biweekly: 5, "Semi-monthly": 5, Monthly: 5 } });
+const BIWEEKLY: Schedule = { id: 1, name: "Biweekly", frequency: "Biweekly", anchor_on: "2026-10-12", pay_day_rule: { kind: "days_after", days: 5 }, active: true };
+// Fred 2026-11-04: the office's 4-week cycle starts on a Friday and is paid on the Friday that completes the four weeks.
+const OFFICE: Schedule = { id: 2, name: "Every 4 weeks", frequency: "Every 4 weeks", anchor_on: "2026-10-16", pay_day_rule: { kind: "weekday", weekday: 5 }, active: true };
+const MONTHLY: Schedule = { id: 3, name: "Monthly", frequency: "Monthly calendar", anchor_on: "2026-01-01", pay_day_rule: { kind: "days_after", days: 5 }, active: true };
 
-describe("periods", () => {
-  it("biweekly runs 14 days from the anchor Monday", () => {
-    expect(periodFor("Biweekly", "2026-10-12", S)).toEqual({ frequency: "Biweekly", starts_on: "2026-10-05", ends_on: "2026-10-18", pay_day: "2026-10-23" });
-    expect(periodFor("Biweekly", "2026-10-19", S).starts_on).toBe("2026-10-19");
-    expect(periodFor("Biweekly", "2026-10-04", S)).toMatchObject({ starts_on: "2026-09-21", ends_on: "2026-10-04" });
-    expect(periodFor("Biweekly", "2026-01-01", S)).toMatchObject({ starts_on: "2025-12-29", ends_on: "2026-01-11" });
+describe("pay schedule periods", () => {
+  it("biweekly runs 14 days from the anchor, paid 5 days after", () => {
+    expect(periodFor(BIWEEKLY, "2026-10-20")).toEqual({ schedule_id: 1, frequency: "Biweekly", starts_on: "2026-10-12", ends_on: "2026-10-25", pay_day: "2026-10-30", pay_day_moved: false });
+    expect(periodFor(BIWEEKLY, "2026-10-26").starts_on).toBe("2026-10-26");
+    expect(periodFor(BIWEEKLY, "2026-10-11")).toMatchObject({ starts_on: "2026-09-28", ends_on: "2026-10-11" });
+    expect(periodFor(BIWEEKLY, "2026-01-01")).toMatchObject({ starts_on: "2025-12-22", ends_on: "2026-01-04" });
   });
 
-  it("semi-monthly is 1–15 and 16–end of month", () => {
-    expect(periodFor("Semi-monthly", "2026-10-15", S)).toMatchObject({ starts_on: "2026-10-01", ends_on: "2026-10-15", pay_day: "2026-10-20" });
-    expect(periodFor("Semi-monthly", "2026-10-16", S)).toMatchObject({ starts_on: "2026-10-16", ends_on: "2026-10-31", pay_day: "2026-11-05" });
-    expect(periodFor("Semi-monthly", "2026-02-20", S)).toMatchObject({ starts_on: "2026-02-16", ends_on: "2026-02-28" });
-    expect(periodFor("Semi-monthly", "2028-02-20", S).ends_on).toBe("2028-02-29");
+  it("every 4 weeks runs 28 days from a Friday and pays on the Friday that completes them", () => {
+    expect(weekdayOf("2026-10-16")).toBe(5);
+    const p = periodFor(OFFICE, "2026-11-04");
+    expect(p).toMatchObject({ starts_on: "2026-10-16", ends_on: "2026-11-12", pay_day: "2026-11-13" });
+    expect(weekdayOf(p.pay_day)).toBe(5);
+    expect(nextPeriod(p, OFFICE)).toMatchObject({ starts_on: "2026-11-13", ends_on: "2026-12-10", pay_day: "2026-12-11" });
+    expect(previousPeriod(p, OFFICE)).toMatchObject({ starts_on: "2026-09-18", ends_on: "2026-10-15", pay_day: "2026-10-16" });
   });
 
-  it("monthly is the calendar month", () => {
-    expect(periodFor("Monthly", "2026-10-21", S)).toMatchObject({ starts_on: "2026-10-01", ends_on: "2026-10-31", pay_day: "2026-11-05" });
-    expect(periodFor("Monthly", "2026-12-31", S).pay_day).toBe("2027-01-05");
+  it("monthly calendar is the calendar month", () => {
+    expect(periodFor(MONTHLY, "2026-10-21")).toMatchObject({ starts_on: "2026-10-01", ends_on: "2026-10-31", pay_day: "2026-11-05" });
+    expect(periodFor(MONTHLY, "2028-02-20").ends_on).toBe("2028-02-29");
+    expect(nextPeriod(periodFor(MONTHLY, "2026-12-31"), MONTHLY).starts_on).toBe("2027-01-01");
+  });
+
+  it("pay-day rules: days after, or the first weekday after the period", () => {
+    expect(payDayOf("2026-10-25", { kind: "days_after", days: 0 })).toBe("2026-10-25");
+    expect(payDayOf("2026-10-25", { kind: "weekday", weekday: 5 })).toBe("2026-10-30"); // Sunday → next Friday
+    expect(payDayOf("2026-10-29", { kind: "weekday", weekday: 5 })).toBe("2026-10-30"); // Thursday → tomorrow
+    expect(payDayOf("2026-10-30", { kind: "weekday", weekday: 5 })).toBe("2026-11-06"); // ends on a Friday → the next one
+    expect(parsePayDayRule({ kind: "weekday", weekday: 9 })).toEqual({ kind: "days_after", days: 5 });
+  });
+
+  it("a moved pay day applies to that period only", () => {
+    const moved = new Map([["2026-10-12", "2026-10-29"]]);
+    expect(periodFor(BIWEEKLY, "2026-10-20", moved)).toMatchObject({ pay_day: "2026-10-29", pay_day_moved: true });
+    expect(periodFor(BIWEEKLY, "2026-10-27", moved)).toMatchObject({ pay_day: "2026-11-13", pay_day_moved: false });
   });
 
   it("walks forward and back without gaps", () => {
-    const p = periodFor("Semi-monthly", "2026-10-10", S);
-    expect(nextPeriod(p, S).starts_on).toBe("2026-10-16");
-    expect(previousPeriod(p, S)).toMatchObject({ starts_on: "2026-09-16", ends_on: "2026-09-30" });
-    const list = recentPeriods("Biweekly", "2026-10-21", 3, S);
-    expect(list.map((x) => x.starts_on)).toEqual(["2026-10-19", "2026-10-05", "2026-09-21"]);
-    expect(periodDates(p)).toHaveLength(15);
+    const list = recentPeriods(BIWEEKLY, "2026-11-04", 3);
+    expect(list.map((x) => x.starts_on)).toEqual(["2026-10-26", "2026-10-12", "2026-09-28"]);
+    expect(periodDates(list[0])).toHaveLength(14);
+    expect(periodDates(periodFor(OFFICE, "2026-11-04"))).toHaveLength(28);
   });
 
   it("can only be approved once it has ended", () => {
-    const p = periodFor("Biweekly", "2026-10-12", S); // ends 10/18
-    expect(periodEnded(p, "2026-10-18")).toBe(false);
-    expect(periodEnded(p, "2026-10-19")).toBe(true);
+    const p = periodFor(BIWEEKLY, "2026-10-12"); // ends 10/25
+    expect(periodEnded(p, "2026-10-25")).toBe(false);
+    expect(periodEnded(p, "2026-10-26")).toBe(true);
   });
 
-  it("falls back to defaults on bad settings", () => {
-    expect(parsePayrollSettings({ biweekly_anchor: "nope" }).biweekly_anchor).toBe("2026-10-05");
+  it("the schedule in force is the latest link started by that date", () => {
+    const links = [
+      { employee_id: 7, schedule_id: 1, effective_from: "2026-10-12" },
+      { employee_id: 7, schedule_id: 2, effective_from: "2026-11-13" },
+      { employee_id: 7, schedule_id: null, effective_from: "2027-01-01" },
+      { employee_id: 8, schedule_id: 2, effective_from: "2026-10-16" },
+    ];
+    expect(scheduleInForce(links, 7, "2026-10-11")).toBeNull();
+    expect(scheduleInForce(links, 7, "2026-10-12")).toBe(1);
+    expect(scheduleInForce(links, 7, "2026-11-13")).toBe(2);
+    expect(scheduleInForce(links, 7, "2027-02-01")).toBeNull();
+    expect(scheduleInForce(links, 9, "2026-12-01")).toBeNull();
   });
 });
 
@@ -81,9 +109,9 @@ describe("the pay line", () => {
   });
 
   it("writes an Excel-friendly CSV", () => {
-    const csv = periodCsv([{ name: "Gurgel, Carlos", frequency: "Biweekly", period: "10/5/2026 – 10/18/2026", line: payLine([shift("2026-10-12", 525)], rates) }]);
-    expect(csv.startsWith("﻿Name,Pay frequency,Period,Hours,PTO hours,Rate,Amount,Adjustments,Total,Needs review,Weeks approved,Approved by\r\n")).toBe(true);
-    expect(csv).toContain('"Gurgel, Carlos",Biweekly,10/5/2026 – 10/18/2026,8.75,0,$25.00,218.75,0,218.75,0,,');
+    const csv = periodCsv([{ name: "Gurgel, Carlos", frequency: "Biweekly", period: "10/12/2026 – 10/25/2026", line: payLine([shift("2026-10-12", 525)], rates) }]);
+    expect(csv.startsWith("﻿Name,Pay schedule,Period,Hours,PTO hours,Rate,Amount,Adjustments,Total,Needs review,Weeks approved,Approved by\r\n")).toBe(true);
+    expect(csv).toContain('"Gurgel, Carlos",Biweekly,10/12/2026 – 10/25/2026,8.75,0,$25.00,218.75,0,218.75,0,,');
     expect(hours(525)).toBe(8.75);
   });
 });

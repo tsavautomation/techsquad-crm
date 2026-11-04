@@ -8,7 +8,7 @@ import { approvePeriodAction } from "@/lib/payroll/actions";
 import { useT } from "@/i18n/client";
 
 /** TC-f: Approve & lock a period that has ended and has nothing left to review. */
-export function ApproveButton({ frequency, startsOn, disabledReason }: { frequency: string; startsOn: string; disabledReason: string | null }) {
+export function ApproveButton({ scheduleId, startsOn, disabledReason }: { scheduleId: number; startsOn: string; disabledReason: string | null }) {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -37,7 +37,7 @@ export function ApproveButton({ frequency, startsOn, disabledReason }: { frequen
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
-          const r = await approvePeriodAction(frequency, startsOn, note);
+          const r = await approvePeriodAction(scheduleId, startsOn, note);
           if (!r.ok) return void toast.error(t(r.message));
           toast.success(t("Period approved and locked"));
           setOpen(false);

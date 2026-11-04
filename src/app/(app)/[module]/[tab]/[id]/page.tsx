@@ -49,6 +49,7 @@ import { ProjectHours } from "@/components/project/project-hours";
 import { JobCosting } from "@/components/project/job-costing";
 import { StockLevels } from "@/components/product/stock-levels";
 import { PayRatePanel } from "@/components/employee/pay-rate-panel";
+import { PaySchedulePanel } from "@/components/employee/pay-schedule-panel";
 import { Timeline } from "@/components/contact/timeline";
 import { loadMessagePanel } from "@/lib/messages/load";
 import { PortalPanel } from "@/components/project/portal-panel";
@@ -198,6 +199,7 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       {t.name === "job_reports" && <RealityPanel table="job_reports" id={recordId} />}
       {t.detailAddon === "project" && <ProjectHours projectId={recordId} user={user} />}
       {t.detailAddon === "project" && <JobCosting projectId={recordId} user={user} />}
+      {t.detailAddon === "employee" && <PaySchedulePanel employeeId={recordId} user={user} />}
       {t.detailAddon === "employee" && <PayRatePanel employeeId={recordId} user={user} />}
       {t.detailAddon === "product" && <StockLevels productId={recordId} user={user} />}
       <div className="order-3 mt-6 flex flex-col gap-3 xl:mt-0">
