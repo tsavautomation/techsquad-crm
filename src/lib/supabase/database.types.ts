@@ -3639,6 +3639,122 @@ export type Database = {
           },
         ]
       }
+      project_materials: {
+        Row: {
+          brand: string | null
+          created_at: string
+          created_by: string | null
+          edited: boolean
+          id: number
+          model: string | null
+          name: string | null
+          notes: string | null
+          product_id: number | null
+          project_id: number
+          proposal_item_id: number | null
+          purchased_at: string | null
+          quantity: number
+          replaces_id: number | null
+          source: string
+          status: string
+          unit_cost: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          created_by?: string | null
+          edited?: boolean
+          id?: number
+          model?: string | null
+          name?: string | null
+          notes?: string | null
+          product_id?: number | null
+          project_id: number
+          proposal_item_id?: number | null
+          purchased_at?: string | null
+          quantity?: number
+          replaces_id?: number | null
+          source?: string
+          status?: string
+          unit_cost?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          created_by?: string | null
+          edited?: boolean
+          id?: number
+          model?: string | null
+          name?: string | null
+          notes?: string | null
+          product_id?: number | null
+          project_id?: number
+          proposal_item_id?: number | null
+          purchased_at?: string | null
+          quantity?: number
+          replaces_id?: number | null
+          source?: string
+          status?: string
+          unit_cost?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_materials_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_materials_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_materials_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_materials_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_materials_proposal_item_id_fkey"
+            columns: ["proposal_item_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_materials_replaces_id_fkey"
+            columns: ["replaces_id"]
+            isOneToOne: false
+            referencedRelation: "project_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_materials_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_merges: {
         Row: {
           from_id: number
@@ -8362,6 +8478,36 @@ export type Database = {
           tip_amount: number
         }[]
       }
+      project_materials_list: {
+        Args: { p_project_id?: number; p_statuses?: string[]; p_year?: number }
+        Returns: {
+          brand: string
+          edited: boolean
+          id: number
+          item_type: string
+          job_status: string
+          locations: string
+          model: string
+          msrp: number
+          name: string
+          notes: string
+          on_hand: number
+          product: string
+          product_id: number
+          project: string
+          project_id: number
+          proposal_item_id: number
+          proposal_number: string
+          purchased_at: string
+          quantity: number
+          replaces_id: number
+          sell_price: number
+          source: string
+          status: string
+          supplier: string
+          unit_cost: number
+        }[]
+      }
       project_visit_days: {
         Args: { p_project_ids: number[] }
         Returns: {
@@ -8394,6 +8540,10 @@ export type Database = {
       }
       restore_fix_sequence: { Args: { p_table: string }; Returns: undefined }
       restore_rows: { Args: { p_rows: Json; p_table: string }; Returns: number }
+      sync_project_materials: {
+        Args: { p_project_id?: number }
+        Returns: number
+      }
       timesheet_monday: { Args: { p_at: string }; Returns: string }
       timesheet_week_approved: {
         Args: { p_at: string; p_employee: number }
