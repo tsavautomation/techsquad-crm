@@ -4,7 +4,7 @@ import { loadPayRates, type PayRate } from "@/lib/costing/load";
 import { fromDateTimeLocalET, todayET } from "@/lib/dates";
 import { addDays } from "@/lib/schedule/dates";
 import { shiftsOf, type SheetEntry, type Shift } from "@/lib/time-clock/timesheet";
-import { payLine, type PayLine } from "./engine";
+import { payLine, type PayLine, type PtoDay } from "./engine";
 import { isFrequency, parsePayDayRule, scheduleInForce, type Assignment, type Overrides, type Period, type Schedule } from "./periods";
 
 // TC-f Pay periods: what the screen, the approval and the export read. Everything goes through the viewer's
@@ -77,7 +77,7 @@ type EntryRow = SheetEntry & { employee_id: number };
 async function periodEntries(db: SupabaseClient, period: Pick<Period, "starts_on" | "ends_on">): Promise<Map<number, EntryRow[]>> {
   const { data } = await db
     .from("time_entries")
-    .select("id, employee_id, kind, at, note, reviewed_at, auto_closed")
+    .select("id, employee_id, kind, at, note, reviewed_at, auto_closed, needs_adjustment, project_id, manager_note")
     .in("kind", ["clock_in", "clock_out"])
     .gte("at", fromDateTimeLocalET(`${period.starts_on}T00:00`))
     .lt("at", fromDateTimeLocalET(`${addDays(period.ends_on, 1)}T06:00`)) // a shift may end after midnight
@@ -106,7 +106,7 @@ export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.
   const locked = lockedRow ? ({ ...(lockedRow as Omit<LockedPeriod, "approver">), approver: null } as LockedPeriod) : null;
 
   const ids = inSchedule.map((p) => p.id);
-  const [rates, { data: adj }, { data: snap }, names] = await Promise.all([
+  const [rates, { data: adj }, { data: snap }, names, { data: off }] = await Promise.all([
     loadPayRates(db, ids),
     ids.length
       ? locked
@@ -115,7 +115,10 @@ export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.
       : Promise.resolve({ data: [] }),
     locked ? db.from("pay_period_lines").select("employee_id, minutes, pto_minutes, rate_text, amount, adjustments, flagged").eq("period_id", locked.id) : Promise.resolve({ data: [] }),
     locked?.approved_by ? db.from("profiles").select("id, first_name, last_name").eq("id", locked.approved_by).maybeSingle() : Promise.resolve({ data: null }),
+    // TS-a: paid time off in the period, per person.
+    ids.length ? db.from("time_off_entries").select("employee_id, day, minutes").in("employee_id", ids).eq("paid", true).gte("day", period.starts_on).lte("day", period.ends_on).is("deleted_at", null) : Promise.resolve({ data: [] }),
   ]);
+  const ptoByPerson = Map.groupBy((off ?? []) as { employee_id: number; day: string; minutes: number }[], (r) => r.employee_id);
   if (locked && names.data) locked.approver = [(names.data as { first_name: string | null }).first_name, (names.data as { last_name: string | null }).last_name].filter(Boolean).join(" ") || null;
   const adjustments = ((adj ?? []) as Adjustment[]).map((a) => ({ ...a, delta_amount: a.delta_amount === null ? null : Number(a.delta_amount) }));
   const snapshots = new Map(((snap ?? []) as { employee_id: number; minutes: number; pto_minutes: number; rate_text: string | null; amount: number | string | null; adjustments: number | string; flagged: number }[]).map((s) => [s.employee_id, { ...s, amount: s.amount === null ? null : Number(s.amount), adjustments: Number(s.adjustments) }]));
@@ -131,7 +134,7 @@ export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.
     const snapshot = snapshots.get(person.id);
     const line = snapshot
       ? ({ minutes: snapshot.minutes, ptoMinutes: snapshot.pto_minutes, amount: snapshot.amount, rateText: snapshot.rate_text ?? "", missingRateDays: [], toReview: 0, adjustments: snapshot.adjustments, total: snapshot.amount === null ? null : Math.round((snapshot.amount + snapshot.adjustments) * 100) / 100 } satisfies PayLine)
-      : payLine(shifts, rates as PayRate[], [], pending);
+      : payLine(shifts, rates as PayRate[], (ptoByPerson.get(person.id) ?? []).map((r): PtoDay => ({ day: r.day, minutes: r.minutes })), pending);
     return { person, line, shifts, review: shifts.filter((s) => s.needsReview), adjustments: paidHere, snapshot, later };
   });
   const totals = {

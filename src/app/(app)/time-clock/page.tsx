@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight, Lock, MapPin } from "lucide-react";
 import { AlertTriangle } from "lucide-react";
 import { ClockTabs } from "@/components/time-clock/clock-tabs";
+import { AcceptSuggested } from "@/components/time-clock/accept-suggested";
 import { EntryTools } from "@/components/time-clock/entry-tools";
 import { ReviewButton } from "@/components/time-clock/review-button";
 import { requireUser } from "@/lib/auth/session";
@@ -27,7 +28,7 @@ export async function generateMetadata() {
 const KIND_LABEL: Record<EntryKind, string> = { clock_in: "Clocked in", clock_out: "Clocked out", on_way: "On my way", visit_in: "Arrived at the job", visit_out: "Left the job" };
 const PLACE_TONE: Record<Place, string> = { Office: "text-info-fg", "On site": "text-ok-fg", Elsewhere: "text-warn-fg", Unknown: "text-muted-foreground" };
 
-type Row = TimeEntry & { employee_id: number; note: string | null; reviewed_at: string | null; auto_closed: boolean; pay_period_id: number | null; corrected_at: string | null; original_at: string | null; employees: { title: string | null } | null; visits: { projects: { title: string | null } | null } | null };
+type Row = TimeEntry & { employee_id: number; note: string | null; reviewed_at: string | null; auto_closed: boolean; needs_adjustment: boolean; pay_period_id: number | null; corrected_at: string | null; original_at: string | null; employees: { title: string | null } | null; visits: { projects: { title: string | null } | null } | null };
 
 export default async function TimeClockPage(props: PageProps<"/time-clock">) {
   const tr = await getT();
@@ -41,7 +42,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
   const db = await recordsDb();
   let q = db
     .from("time_entries")
-    .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, auto_closed, pay_period_id, corrected_at, original_at, employees:employee_id(title), visits:visit_id(projects(title))")
+    .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, auto_closed, needs_adjustment, pay_period_id, corrected_at, original_at, employees:employee_id(title), visits:visit_id(projects(title))")
     .gte("at", fromDateTimeLocalET(`${day}T00:00`))
     .lt("at", fromDateTimeLocalET(`${addDays(day, 1)}T00:00`))
     .is("deleted_at", null);
@@ -134,9 +135,9 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                           </span>
                           {" · "}
                           {s.flags.map((f) => tr(FLAG_TEXT[f])).join(" · ")}
-                          {` · ${s.needsReview ? tr("Needs review") : tr("Reviewed")}`}
+                          {s.flags.includes("adjust") ? ` · ${tr("counts 0 until the real time is set below")}` : ` · ${s.needsReview ? tr("Needs review") : tr("Reviewed")}`}
                         </span>
-                        {canFix && <ReviewButton entryId={s.inId} reviewed={!s.needsReview} />}
+                        {canFix && (s.flags.includes("adjust") && s.outId !== null ? <AcceptSuggested entryId={s.outId} /> : <ReviewButton entryId={s.inId} reviewed={!s.needsReview} />)}
                       </li>
                     ))}
                   </ul>
@@ -146,12 +147,16 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                     // Time | what happened (place under it) | tools. The place sits under the text so a long project
                     // name never gets squeezed into one word per line on a phone with large text (Fred 2026-10-11).
                     <li key={e.id} className="flex items-start gap-x-3 py-2">
-                      <span className="w-[64px] shrink-0 pt-px font-medium tabular-nums">{time(e.at)}</span>
+                      <span className={cn("w-[64px] shrink-0 pt-px font-medium tabular-nums", e.needs_adjustment && "text-warn-fg")}>{e.needs_adjustment ? "—" : time(e.at)}</span>
                       <div className="min-w-0 flex-1">
                         <p>
                           {tr(KIND_LABEL[e.kind])}
                           {e.visits?.projects?.title && <span className="text-text-2"> · {e.visits.projects.title}</span>}
-                          {e.auto_closed && <span className="ml-1 rounded bg-warn-bg px-1.5 text-[11px] text-warn-fg">{tr("by the system")}</span>}
+                          {e.needs_adjustment ? (
+                            <span className="ml-1 rounded bg-warn-bg px-1.5 text-[11px] text-warn-fg">{tr("no clock-out · suggested {time}", { time: time(e.at) })}</span>
+                          ) : (
+                            e.auto_closed && <span className="ml-1 rounded bg-warn-bg px-1.5 text-[11px] text-warn-fg">{tr("by the system")}</span>
+                          )}
                           {e.corrected_at && e.original_at && <span className="ml-1 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">{tr("corrected from {time}", { time: time(e.original_at) })}</span>}
                         </p>
                         <span className={cn("mt-0.5 flex items-center gap-1 text-xs", PLACE_TONE[e.place])}>
@@ -166,7 +171,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                           )}
                         </span>
                       </div>
-                      {canFix && <EntryTools id={e.id} time={toDateTimeLocalET(e.at).slice(11, 16)} locked={e.pay_period_id !== null} admin={user.isSysadmin} weekLocked={approvedWeek.has(employeeId)} />}
+                      {canFix && <EntryTools id={e.id} time={toDateTimeLocalET(e.at).slice(11, 16)} locked={e.pay_period_id !== null} admin={user.isSysadmin} weekLocked={approvedWeek.has(employeeId)} suggested={e.needs_adjustment} />}
                     </li>
                   ))}
                 </ol>

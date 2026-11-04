@@ -6759,10 +6759,13 @@ export type Database = {
           kind: string
           lat: number | null
           lng: number | null
+          manager_note: string | null
+          needs_adjustment: boolean
           note: string | null
           original_at: string | null
           pay_period_id: number | null
           place: string
+          project_id: number | null
           reviewed_at: string | null
           reviewed_by: string | null
           user_id: string
@@ -6782,10 +6785,13 @@ export type Database = {
           kind: string
           lat?: number | null
           lng?: number | null
+          manager_note?: string | null
+          needs_adjustment?: boolean
           note?: string | null
           original_at?: string | null
           pay_period_id?: number | null
           place?: string
+          project_id?: number | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           user_id: string
@@ -6805,10 +6811,13 @@ export type Database = {
           kind?: string
           lat?: number | null
           lng?: number | null
+          manager_note?: string | null
+          needs_adjustment?: boolean
           note?: string | null
           original_at?: string | null
           pay_period_id?: number | null
           place?: string
+          project_id?: number | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           user_id?: string
@@ -6844,6 +6853,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "time_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "time_entries_reviewed_by_fkey"
             columns: ["reviewed_by"]
             isOneToOne: false
@@ -6869,6 +6892,70 @@ export type Database = {
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_off_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          day: string
+          deleted_at: string | null
+          employee_id: number
+          id: number
+          kind: string
+          minutes: number
+          note: string | null
+          paid: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          day: string
+          deleted_at?: string | null
+          employee_id: number
+          id?: number
+          kind: string
+          minutes?: number
+          note?: string | null
+          paid?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          day?: string
+          deleted_at?: string | null
+          employee_id?: number
+          id?: number
+          kind?: string
+          minutes?: number
+          note?: string | null
+          paid?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_off_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_off_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_off_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
         ]

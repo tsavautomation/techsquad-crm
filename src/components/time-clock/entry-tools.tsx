@@ -12,7 +12,8 @@ import { useT } from "@/i18n/client";
  * period shows a lock; only an administrator can still change it, and must say why (the difference is paid
  * as an adjustment in the next period).
  */
-export function EntryTools({ id, time, locked = false, admin = false, weekLocked = false }: { id: number; time: string; locked?: boolean; admin?: boolean; weekLocked?: boolean }) {
+/** TS-a: `suggested` = a clock-out the system wrote with only a suggested time; typing the real one needs no reason. */
+export function EntryTools({ id, time, locked = false, admin = false, weekLocked = false, suggested = false }: { id: number; time: string; locked?: boolean; admin?: boolean; weekLocked?: boolean; suggested?: boolean }) {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -84,7 +85,7 @@ export function EntryTools({ id, time, locked = false, admin = false, weekLocked
 
   return (
     <span className="flex items-center gap-1">
-      <button type="button" className={BTN} onClick={() => setEditing(true)} aria-label={t("Correct the time")} title={locked ? t("In an approved pay period: a reason is required") : undefined}>
+      <button type="button" className={BTN} onClick={() => setEditing(true)} aria-label={suggested ? t("Set the real clock-out time") : t("Correct the time")} title={locked ? t("In an approved pay period: a reason is required") : undefined}>
         {locked ? <Lock className="size-3.5" aria-hidden /> : <Pencil className="size-3.5" aria-hidden />}
       </button>
       {!locked && (

@@ -28,7 +28,7 @@ export async function raiseOvertimeTasks(db: SupabaseClient, today: string = tod
   if (!field.length) return { week: monday, people: 0, raised, skipped };
   const { data: ent } = await db
     .from("time_entries")
-    .select("id, employee_id, kind, at, note, reviewed_at, auto_closed")
+    .select("id, employee_id, kind, at, note, reviewed_at, auto_closed, needs_adjustment, project_id, manager_note")
     .in("employee_id", field.map((e) => e.id))
     .in("kind", ["clock_in", "clock_out"])
     .gte("at", fromDateTimeLocalET(`${monday}T00:00`))

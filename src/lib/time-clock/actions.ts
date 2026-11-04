@@ -49,19 +49,27 @@ async function lockCheck(db: Awaited<ReturnType<typeof recordsDb>>, user: Awaite
   return { locked: true };
 }
 
-/** Correct an entry's time (HH:MM, Eastern, same day). The original time is kept and the correction signed. */
+/**
+ * Correct an entry's time (HH:MM, Eastern, same day). The original time is kept and the correction signed.
+ * TS-a: on a clock-out the system wrote (needs_adjustment), the time typed is the real one: the suggestion was
+ * never a recorded time, so no reason is asked and nothing is kept as "corrected from"; the flag clears.
+ */
 export async function correctEntryAction(id: number, time: string, reason?: string): Promise<{ ok: true } | { ok: false; message: string }> {
   const user = await requireUser();
   if (!user.permissions.has("administrative.employees.modify")) return { ok: false, message: "You don't have permission to do that." };
   if (!/^\d{2}:\d{2}$/.test(time)) return { ok: false, message: "Please enter a time like 07:45." };
   const db = await recordsDb();
-  const { data: e } = await db.from("time_entries").select("id, at, original_at").eq("id", id).maybeSingle();
+  const { data: e } = await db.from("time_entries").select("id, at, original_at, needs_adjustment").eq("id", id).maybeSingle();
   if (!e) return { ok: false, message: "Entry not found." };
   const lock = await lockCheck(db, user, id, reason);
   if (lock.message) return { ok: false, message: lock.message };
   const day = toDateTimeLocalET(e.at as string).slice(0, 10);
   const at = fromDateTimeLocalET(`${day}T${time}`);
-  const { error } = await db.from("time_entries").update({ at, original_at: e.original_at ?? e.at, corrected_at: new Date().toISOString(), corrected_by: user.id, note: lock.locked ? `Corrected after the pay period was approved: ${reason!.trim()}` : undefined }).eq("id", id);
+  const suggested = Boolean(e.needs_adjustment);
+  const { error } = await db
+    .from("time_entries")
+    .update({ at, original_at: suggested ? null : (e.original_at ?? e.at), needs_adjustment: false, corrected_at: new Date().toISOString(), corrected_by: user.id, note: lock.locked ? `Corrected after the pay period was approved: ${reason!.trim()}` : suggested ? "Clock-out time set by the office (the system had only suggested one, TS-a)" : undefined })
+    .eq("id", id);
   if (error) return { ok: false, message: error.message };
   if (lock.locked) await recordLockedCorrection(db, user, id, reason!.trim());
   revalidatePath("/time-clock");
@@ -81,6 +89,43 @@ export async function removeEntryAction(id: number, reason?: string): Promise<{ 
   if (lock.locked) await recordLockedCorrection(db, user, id, reason!.trim());
   revalidatePath("/time-clock");
   revalidatePath("/");
+  return { ok: true };
+}
+
+/** TS-a: the office accepts the time the system suggested for a forgotten clock-out; the shift counts from then on. */
+export async function acceptSuggestedEndAction(id: number): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireUser();
+  if (!user.permissions.has("administrative.employees.modify")) return { ok: false, message: "You don't have permission to do that." };
+  const db = await recordsDb();
+  const lock = await lockCheck(db, user, id, undefined);
+  if (lock.message) return { ok: false, message: lock.message };
+  const { data, error } = await db
+    .from("time_entries")
+    .update({ needs_adjustment: false, corrected_at: new Date().toISOString(), corrected_by: user.id, note: "Suggested clock-out time accepted by the office (TS-a)" })
+    .eq("id", id)
+    .eq("needs_adjustment", true)
+    .select("id");
+  if (error) return { ok: false, message: error.message };
+  if (!data?.length) return { ok: false, message: "Entry not found." };
+  revalidatePath("/time-clock");
+  revalidatePath("/time-clock/timesheets");
+  return { ok: true };
+}
+
+/** TS-a: the job a shift was for, and the office's note, both on the shift's clock-in. */
+export async function setShiftDetailsAction(clockInId: number, patch: { projectId?: number | null; managerNote?: string | null }): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireUser();
+  if (!user.permissions.has("administrative.employees.modify")) return { ok: false, message: "You don't have permission to do that." };
+  const row: { project_id?: number | null; manager_note?: string | null } = {};
+  if ("projectId" in patch) row.project_id = patch.projectId && Number.isInteger(patch.projectId) ? patch.projectId : null;
+  if ("managerNote" in patch) row.manager_note = patch.managerNote?.trim().slice(0, 500) || null;
+  if (!Object.keys(row).length) return { ok: true };
+  const db = await recordsDb();
+  const { data, error } = await db.from("time_entries").update(row).eq("id", clockInId).eq("kind", "clock_in").select("id");
+  if (error) return { ok: false, message: error.message };
+  if (!data?.length) return { ok: false, message: "Entry not found." };
+  revalidatePath("/time-clock");
+  revalidatePath("/time-clock/timesheets");
   return { ok: true };
 }
 

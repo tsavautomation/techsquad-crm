@@ -1,6 +1,7 @@
 // TC Timesheets (SPEC §9.1 TC-a / TC-b): the week per person and the shifts flagged for review.
 import { describe, expect, it } from "vitest";
 import { fromDateTimeLocalET } from "@/lib/dates";
+import { clockDay } from "@/lib/time-clock/clock";
 import { formatHours, hoursDecimal, mondayOf, shiftsOf, weekDates, weekSheet, type SheetEntry } from "@/lib/time-clock/timesheet";
 
 const at = (local: string) => fromDateTimeLocalET(local);
@@ -160,5 +161,31 @@ describe("forgotten clock-outs", () => {
     const [a] = shiftsOf([e("clock_in", "2026-10-14T06:54"), e("clock_out", "2026-10-14T15:42", { auto_closed: true, note: "Auto clock-out – needs review: … (TC-d)" })], NOW, TODAY);
     expect(a.flags).toEqual(["auto"]);
     expect(a.needsReview).toBe(true);
+  });
+});
+
+// TS-a (Fred 2026-11-04, Part 2): a system clock-out is only a suggestion until the office sets or accepts it.
+describe("a clock-out that needs adjustment", () => {
+  it("counts 0, keeps the suggestion, and stays in the list even when marked reviewed", () => {
+    const [s] = shiftsOf([e("clock_in", "2026-10-14T06:54", { reviewed_at: at("2026-10-15T09:00") }), e("clock_out", "2026-10-14T15:42", { auto_closed: true, needs_adjustment: true })], NOW, TODAY);
+    expect(s.minutes).toBe(0);
+    expect(s.outAt).toBeNull();
+    expect(s.suggestedOutAt).toBe(at("2026-10-14T15:42"));
+    expect(s.flags).toEqual(["adjust"]);
+    expect(s.needsReview).toBe(true);
+  });
+
+  it("counts normally once the real time is set (the flag cleared)", () => {
+    const [s] = shiftsOf([e("clock_in", "2026-10-14T06:54", { project_id: 1061, manager_note: "left early" }), e("clock_out", "2026-10-14T15:42", { auto_closed: true, needs_adjustment: false })], NOW, TODAY);
+    expect(s.minutes).toBe(528);
+    expect(s.flags).toEqual(["auto"]);
+    expect(s.projectId).toBe(1061);
+    expect(s.managerNote).toBe("left early");
+  });
+
+  it("leaves the day's clocked minutes at 0 on the Day view too", () => {
+    const day = clockDay([{ id: 1, kind: "clock_in", at: at("2026-10-14T06:54"), visit_id: null, place: "Office", distance_m: null, lat: null, lng: null }, { id: 2, kind: "clock_out", at: at("2026-10-14T15:42"), visit_id: null, place: "Unknown", distance_m: null, lat: null, lng: null, needs_adjustment: true }], NOW);
+    expect(day.clockedMin).toBe(0);
+    expect(day.openSince).toBeNull();
   });
 });

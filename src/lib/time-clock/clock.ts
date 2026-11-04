@@ -88,7 +88,7 @@ export function tooFar(here: Geo | null, there: Geo | null): number | null {
 
 // ---------------------------------------------------------------- the day
 
-export type TimeEntry = { id: number; kind: EntryKind; at: string; visit_id: number | null; place: Place; distance_m: number | null; lat: number | null; lng: number | null };
+export type TimeEntry = { id: number; kind: EntryKind; at: string; visit_id: number | null; place: Place; distance_m: number | null; lat: number | null; lng: number | null; /** TS-a: a system clock-out whose time is only a suggestion (counts nothing). */ needs_adjustment?: boolean | null };
 
 export type ClockDay = {
   /** Open clock-in (no clock-out yet) or null. */
@@ -117,7 +117,7 @@ export function clockDay(entries: TimeEntry[], now: number = Date.now()): ClockD
       if (inAt === null) inAt = ms(e.at);
       firstIn ??= e.at;
     } else if (e.kind === "clock_out") {
-      if (inAt !== null) clocked += Math.max(0, ms(e.at) - inAt);
+      if (inAt !== null && !e.needs_adjustment) clocked += Math.max(0, ms(e.at) - inAt);
       inAt = null;
       lastOut = e.at;
     } else if (e.kind === "visit_in" && e.visit_id) {

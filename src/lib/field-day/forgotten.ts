@@ -61,8 +61,8 @@ export async function closeForgottenDay(date: string): Promise<Record<string, un
   const visits = [...touched];
 
   // 2. Time clock (TC-d): a day whose last clock entry is a clock-in is clocked out at the person's last recorded
-  //    activity after it (job arrival, leaving a job, On my way), else at the cut-off; marked auto_closed so the
-  //    timesheet shows "Auto clock-out · Needs review" until the office reviews it.
+  //    activity after it (job arrival, leaving a job, On my way), else at the cut-off. TS-a: that time is only a
+  //    suggestion (needs_adjustment): the shift counts 0 until the office types the real time or accepts it.
   const from = fromDateTimeLocalET(`${date}T00:00`);
   const { data: entries } = await db.from("time_entries").select("id, employee_id, user_id, kind, at").gte("at", from).lt("at", to).is("deleted_at", null).order("at");
   const all = (entries ?? []) as { id: number; employee_id: number; user_id: string; kind: EntryKind; at: string }[];
@@ -70,8 +70,8 @@ export async function closeForgottenDay(date: string): Promise<Record<string, un
   for (const [employeeId, e] of openClockIns(all)) {
     const activity = all.filter((x) => x.employee_id === employeeId && x.kind !== "clock_in" && x.kind !== "clock_out").map((x) => x.at);
     const closed = forgottenClockOutAt(e.at, activity, date, cutoffFor(employeeId));
-    const note = closed.reason === "last_activity" ? "Auto clock-out – needs review: the day was never closed, clocked out at the last recorded activity (TC-d)" : "Auto clock-out – needs review: the day was never closed and nothing was recorded after the clock-in, clocked out at the cut-off (TC-d)";
-    const { error } = await db.from("time_entries").insert({ employee_id: employeeId, user_id: e.user_id, kind: "clock_out", at: closed.at, place: "Unknown", note, auto_closed: true });
+    const note = closed.reason === "last_activity" ? "No clock-out – needs adjustment: the day was never closed; suggested time = the last recorded activity (TS-a)" : "No clock-out – needs adjustment: the day was never closed and nothing was recorded after the clock-in; suggested time = the cut-off (TS-a)";
+    const { error } = await db.from("time_entries").insert({ employee_id: employeeId, user_id: e.user_id, kind: "clock_out", at: closed.at, place: "Unknown", note, auto_closed: true, needs_adjustment: true });
     if (error) throw new Error(`clock-out for employee #${employeeId}: ${error.message}`);
     clockOuts++;
     warnings.push({ employee_id: employeeId, user_id: e.user_id, kind: "forgot_clock_out", day: date, visit_id: null, project: null, closed_at: closed.at });

@@ -74,7 +74,7 @@ describe("pay schedule periods", () => {
   });
 });
 
-const shift = (day: string, minutes: number, needsReview = false): Shift => ({ inId: 1, outId: 2, inAt: `${day}T11:00:00Z`, outAt: `${day}T20:00:00Z`, day, minutes, flags: needsReview ? ["long"] : [], needsReview });
+const shift = (day: string, minutes: number, needsReview = false): Shift => ({ inId: 1, outId: 2, inAt: `${day}T11:00:00Z`, outAt: `${day}T20:00:00Z`, suggestedOutAt: null, projectId: null, managerNote: null, day, minutes, flags: needsReview ? ["long"] : [], needsReview });
 
 describe("the pay line", () => {
   const rates = [

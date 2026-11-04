@@ -5,26 +5,33 @@ import { useRouter } from "next/navigation";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { addManualShiftAction } from "@/lib/time-clock/manual";
+import { setTimeOffAction } from "@/lib/time-clock/time-off";
+import { TIME_OFF_KINDS, type TimeOffKind } from "@/lib/time-clock/time-off-kinds";
 import { useT } from "@/i18n/client";
 
 // J-s: the office adds a forgotten clock-in / clock-out (or a whole shift) with a reason.
+// TS-a (2026-11-04): the same form adds a day of time off (type, paid, hours, note).
 
 export function ManualEntry({ people, defaultDay }: { people: { id: number; name: string }[]; defaultDay: string }) {
   const t = useT();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  const [mode, setMode] = useState<"shift" | "time_off">("shift");
   const [employeeId, setEmployeeId] = useState<number | "">("");
   const [day, setDay] = useState(defaultDay);
   const [inTime, setIn] = useState("");
   const [outTime, setOut] = useState("");
   const [reason, setReason] = useState("");
+  const [kind, setKind] = useState<TimeOffKind>("Day off");
+  const [paid, setPaid] = useState(true);
+  const [hours, setHours] = useState("8");
   const box = "h-11 min-w-0 rounded-[10px] border bg-background px-3 text-base";
 
   if (!open)
     return (
       <button type="button" onClick={() => setOpen(true)} className="inline-flex h-11 items-center gap-1.5 rounded-[10px] border bg-card px-3 text-sm hover:bg-muted">
-        <Plus className="size-4" aria-hidden /> {t("Add a clock entry")}
+        <Plus className="size-4" aria-hidden /> {t("Add")}
       </button>
     );
 
@@ -35,6 +42,14 @@ export function ManualEntry({ people, defaultDay }: { people: { id: number; name
         e.preventDefault();
         if (employeeId === "") return toast.error(t("Pick the person."));
         start(async () => {
+          if (mode === "time_off") {
+            const r = await setTimeOffAction({ employeeId, day, kind, paid: kind === "Unpaid" ? false : paid, hours, note: reason });
+            if (!r.ok) return void toast.error(t(r.message));
+            toast.success(t("Time off added."));
+            setReason("");
+            router.refresh();
+            return;
+          }
           const r = await addManualShiftAction({ employeeId, day, inTime, outTime, reason });
           if (!r.ok) toast.error(t(r.message));
           else {
@@ -47,8 +62,17 @@ export function ManualEntry({ people, defaultDay }: { people: { id: number; name
         });
       }}
     >
-      <p className="mb-2 text-[15px] font-semibold tracking-tight">{t("Add a clock entry")}</p>
-      <p className="mb-3 text-xs text-text-2">{t("For a forgotten clock-in or clock-out. Leave one time blank to complete a half shift; the entry is marked with your name and the reason.")}</p>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <p className="text-[15px] font-semibold tracking-tight">{t("Add")}</p>
+        <div className="flex rounded-[10px] border bg-muted p-0.5 text-[13px]" role="tablist">
+          {(["shift", "time_off"] as const).map((m) => (
+            <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={mode === m ? "rounded-lg bg-card px-3 py-1.5 font-semibold shadow-card" : "rounded-lg px-3 py-1.5 text-text-2"}>
+              {m === "shift" ? t("Clock entry") : t("Time off")}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="mb-3 text-xs text-text-2">{mode === "shift" ? t("For a forgotten clock-in or clock-out. Leave one time blank to complete a half shift; the entry is marked with your name and the reason.") : t("One day of time off. Paid hours count as PTO on Pay periods; Unpaid is never paid.")}</p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value ? Number(e.target.value) : "")} aria-label={t("Person")} className={box} required>
           <option value="">{t("Person")}</option>
@@ -59,9 +83,30 @@ export function ManualEntry({ people, defaultDay }: { people: { id: number; name
           ))}
         </select>
         <input type="date" value={day} onChange={(e) => setDay(e.target.value)} aria-label={t("Day")} className={box} required />
-        <input type="time" value={inTime} onChange={(e) => setIn(e.target.value)} aria-label={t("Clock-in time")} placeholder={t("Clock-in time")} className={box} />
-        <input type="time" value={outTime} onChange={(e) => setOut(e.target.value)} aria-label={t("Clock-out time")} placeholder={t("Clock-out time")} className={box} />
-        <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("Reason")} aria-label={t("Reason")} className={box} required maxLength={300} />
+        {mode === "shift" ? (
+          <>
+            <input type="time" value={inTime} onChange={(e) => setIn(e.target.value)} aria-label={t("Clock-in time")} placeholder={t("Clock-in time")} className={box} />
+            <input type="time" value={outTime} onChange={(e) => setOut(e.target.value)} aria-label={t("Clock-out time")} placeholder={t("Clock-out time")} className={box} />
+            <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("Reason")} aria-label={t("Reason")} className={box} required maxLength={300} />
+          </>
+        ) : (
+          <>
+            <select value={kind} onChange={(e) => setKind(e.target.value as TimeOffKind)} aria-label={t("Type")} className={box}>
+              {TIME_OFF_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {t(k)}
+                </option>
+              ))}
+            </select>
+            <label className="flex h-11 items-center gap-2 text-sm">
+              <input type="number" inputMode="decimal" min={0} max={24} step="0.5" value={hours} onChange={(e) => setHours(e.target.value)} aria-label={t("Hours")} className={`${box} w-24`} required />
+              {t("hours")}
+              <input type="checkbox" checked={kind === "Unpaid" ? false : paid} disabled={kind === "Unpaid"} onChange={(e) => setPaid(e.target.checked)} className="ml-2 size-5" />
+              {t("Paid")}
+            </label>
+            <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("Note (optional)")} aria-label={t("Note (optional)")} className={box} maxLength={300} />
+          </>
+        )}
       </div>
       <div className="mt-3 flex gap-2">
         <button type="submit" disabled={pending} className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50">

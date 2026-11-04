@@ -9,10 +9,10 @@ import { autoCloseAt } from "@/lib/field-day/day";
 import { addDays } from "@/lib/schedule/dates";
 import type { EntryKind } from "./clock";
 
-export type SheetEntry = { id: number; kind: EntryKind; at: string; note?: string | null; reviewed_at?: string | null; auto_closed?: boolean | null };
+export type SheetEntry = { id: number; kind: EntryKind; at: string; note?: string | null; reviewed_at?: string | null; auto_closed?: boolean | null; /** TS-a: a system clock-out with a suggested time; the shift counts 0 until set or accepted. */ needs_adjustment?: boolean | null; project_id?: number | null; manager_note?: string | null };
 
 /** Why a shift is flagged for review. */
-export type ShiftFlag = "short" | "same_minute" | "long" | "open" | "auto";
+export type ShiftFlag = "short" | "same_minute" | "long" | "open" | "auto" | "adjust";
 
 export type Shift = {
   /** The clock-in entry: the shift's anchor, where the review mark lives. */
@@ -20,6 +20,11 @@ export type Shift = {
   outId: number | null;
   inAt: string;
   outAt: string | null;
+  /** TS-a: no real clock-out yet; the time the system suggests (last activity of the day, or the cut-off). */
+  suggestedOutAt: string | null;
+  /** TS-a: the job the shift was for (set by hand on the clock-in) and the office's note. */
+  projectId: number | null;
+  managerNote: string | null;
   /** Eastern date of the clock-in. */
   day: string;
   minutes: number;
@@ -35,6 +40,7 @@ export const FLAG_TEXT: Record<ShiftFlag, string> = {
   long: "Shift over 14 hours",
   open: "Never clocked out",
   auto: "Auto clock-out",
+  adjust: "No clock-out: needs the real time",
 };
 
 export const SHORT_SHIFT_MIN = 5;
@@ -80,7 +86,8 @@ export function shiftsOf(entries: SheetEntry[], now: number = Date.now(), today:
       for (const s of [prev, shifts[i]]) if (!s.flags.includes("same_minute")) s.flags.push("same_minute");
     }
   }
-  for (const s of shifts) s.needsReview = s.flags.length > 0 && !reviewed(s, entries);
+  // TS-a: a shift waiting for its real end time stays in the list until the time is set or accepted; "reviewed" does not clear it.
+  for (const s of shifts) s.needsReview = s.flags.includes("adjust") || (s.flags.length > 0 && !reviewed(s, entries));
   return shifts;
 }
 
@@ -92,7 +99,12 @@ function makeShift(inE: SheetEntry, outE: SheetEntry | null, now: number, today:
   const day = toDateTimeLocalET(inE.at).slice(0, 10);
   const flags: ShiftFlag[] = [];
   let minutes = 0;
-  if (outE) {
+  let suggestedOutAt: string | null = null;
+  if (outE?.needs_adjustment) {
+    // TS-a: the system closed the day with a suggested time; nothing counts until the office sets the real one.
+    flags.push("adjust");
+    suggestedOutAt = outE.at;
+  } else if (outE) {
     minutes = Math.max(0, Math.round((ms(outE.at) - ms(inE.at)) / 60_000));
     if (minutes < SHORT_SHIFT_MIN) flags.push("short");
     if (minuteOf(inE.at) === minuteOf(outE.at)) flags.push("same_minute");
@@ -106,7 +118,7 @@ function makeShift(inE: SheetEntry, outE: SheetEntry | null, now: number, today:
     // A past day never closed: counts nothing until the office fixes it.
     flags.push("open");
   }
-  return { inId: inE.id, outId: outE?.id ?? null, inAt: inE.at, outAt: outE?.at ?? null, day, minutes, flags, needsReview: false };
+  return { inId: inE.id, outId: outE?.id ?? null, inAt: inE.at, outAt: outE && !outE.needs_adjustment ? outE.at : null, suggestedOutAt, projectId: inE.project_id ?? null, managerNote: inE.manager_note ?? null, day, minutes, flags, needsReview: false };
 }
 
 export type SheetDay = { date: string; minutes: number; shifts: Shift[]; toReview: number };

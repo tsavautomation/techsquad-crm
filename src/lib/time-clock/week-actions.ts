@@ -21,7 +21,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 async function weekEntries(db: Awaited<ReturnType<typeof recordsDb>>, employeeId: number, monday: string): Promise<SheetEntry[]> {
   const { data } = await db
     .from("time_entries")
-    .select("id, kind, at, note, reviewed_at, auto_closed")
+    .select("id, kind, at, note, reviewed_at, auto_closed, needs_adjustment, project_id, manager_note")
     .eq("employee_id", employeeId)
     .in("kind", ["clock_in", "clock_out"])
     .gte("at", fromDateTimeLocalET(`${monday}T00:00`))
