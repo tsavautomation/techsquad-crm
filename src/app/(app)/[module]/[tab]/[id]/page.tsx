@@ -56,6 +56,7 @@ import { loadPortalPanel } from "@/lib/portal/staff-data";
 import { loadTimeline } from "@/lib/records/timeline";
 import { RevealLog } from "@/components/records/reveal-log";
 import { FinanceCard } from "@/components/project/finance-card";
+import { MaterialsCard } from "@/components/project/materials-card";
 import { PaymentStatusBadge } from "@/components/finance/payment-status-badge";
 import { financialStatus, ordinal, paymentNumbers, type FinRow } from "@/lib/finance/status";
 import { loadFinanceSettings } from "@/lib/finance/settings";
@@ -288,6 +289,8 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
           </Fragment>
         ))}
       </dl>
+      {/* PU-a: the materials pick list, under the fields (left column). */}
+      {t.detailAddon === "project" && <MaterialsCard projectId={recordId} user={user} />}
       </div>
       </div>
       </div>

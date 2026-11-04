@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { MaterialRow } from "@/lib/purchasing/materials";
 
 // FIN-p (Fred 2026-11-03): "quanto $ tenho para comprar de cada fabricante". The lines of every Approved Proposal
 // (Portal.io items: brand, model, quantity, unit cost, sell price, MSRP, supplier) over the projects approved or
@@ -50,8 +50,7 @@ export function groupLines(items: PurchaseItem[], by: GroupKey, key: string): (P
     .sort((a, b) => a.project.localeCompare(b.project) || b.line_cost - a.line_cost);
 }
 
-/** Every buyable line of the Low Voltage projects in `statuses`, with its project; `year` = the year of the proposal (its transaction date), null = every year. Read through purchasing_items() (security definer: checks the Purchasing, Finance or Transactions permission). */
-export async function loadPurchasing(db: SupabaseClient, statuses: string[], year: number | null = null): Promise<PurchaseItem[]> {
-  const { data } = await db.rpc("purchasing_items", { p_statuses: statuses, p_year: year });
-  return ((data ?? []) as PurchaseItem[]).map((i) => ({ ...i, quantity: Number(i.quantity ?? 1), project: i.project ?? `Project #${i.project_id}` }));
+/** PU-a: the estimate now reads the materials pick list, so what was bought, replaced, removed or is in stock today leaves it. */
+export function toPurchaseItems(rows: MaterialRow[]): PurchaseItem[] {
+  return rows.map((m) => ({ id: m.id, project_id: m.project_id, project: m.project ?? `Project #${m.project_id}`, job_status: m.job_status, brand: m.brand, model: m.model, name: m.name, item_type: m.item_type ?? "Part", supplier: m.supplier, quantity: m.quantity, cost: m.unit_cost, sell_price: m.sell_price, msrp: m.msrp, total: null }));
 }

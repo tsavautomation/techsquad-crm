@@ -146,7 +146,7 @@ export function PurchasingTable({ rows, scope, year, years, hrefFor }: { rows: P
                   <Fragment key={p.id}>
                     <tr className="border-t bg-muted/40">
                       <td colSpan={5} className={cn(TD, "font-semibold")}>
-                        <Link href={`${hrefFor}/${p.id}#finance`} className="text-primary hover:underline">
+                        <Link href={`${hrefFor}/${p.id}#materials`} className="text-primary hover:underline">
                           {p.title}
                         </Link>
                         <span className="ml-2 text-xs font-normal text-text-2">
