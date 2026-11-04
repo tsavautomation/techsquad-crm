@@ -47,6 +47,8 @@ describe("material state", () => {
     expect(isService(row({ id: 1, brand: null, model: null, name: "Discount 10%" }))).toBe(true);
     expect(isService(row({ id: 1, name: "Labor - programming", item_type: "CustomItem" }))).toBe(true);
     expect(isService(row({ id: 1, item_type: "Fee" }))).toBe(true);
+    expect(isService(row({ id: 1, brand: null, model: "Cables and Connectors Miscellaneous", name: "Hardware, plugs, connectors, extension cord" }))).toBe(true);
+    expect(isService(row({ id: 1, brand: "Binary", model: "B6-4K2-2", name: "HDMI Cable" }))).toBe(false);
     expect(isService(row({ id: 1, brand: "Crestron", model: "CP4-R", name: "Control processor" }))).toBe(false);
     expect(isService(row({ id: 1, brand: "Lutron", model: "QSX", name: "Shading power panel" }))).toBe(false);
   });

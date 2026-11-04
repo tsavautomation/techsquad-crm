@@ -88,8 +88,8 @@ export function orderMaterials(rows: MaterialRow[]): MaterialRow[] {
   });
 }
 
-/** Fred 2026-11-03: service lines that come as items in Portal.io proposals are never material: labor, the TS Maintenance plans, permits, shades, discounts (and fees, by item type). Matched on brand, model and description, case-insensitive. */
-const EXCLUDED = /\b(labor|labour|maintenance|permit|permits|shade|shades|discount|discounts)\b/i;
+/** Fred 2026-11-03: service lines that come as items in Portal.io proposals are never material: labor, the TS Maintenance plans, permits, shades, discounts, the "Cables and Connectors Miscellaneous" allowance (any "miscellaneous" line; and fees, by item type). Matched on brand, model and description, case-insensitive. */
+const EXCLUDED = /\b(labor|labour|maintenance|permit|permits|shade|shades|discount|discounts|miscellaneous)\b/i;
 export const isService = (m: Pick<MaterialRow, "brand" | "model" | "name" | "item_type">) => (m.item_type !== null && m.item_type !== "Part" && m.item_type !== "CustomItem") || EXCLUDED.test([m.brand, m.model, m.name].filter(Boolean).join(" "));
 /** The lists only ever show material lines. */
 export const materialsOnly = (rows: MaterialRow[]) => rows.filter((m) => !isService(m));
