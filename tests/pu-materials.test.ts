@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { materialState, needsPurchasing, orderMaterials, stillToBuy, summarize, type MaterialRow } from "@/lib/purchasing/materials";
+import { isService, materialState, needsPurchasing, orderMaterials, stillToBuy, summarize, type MaterialRow } from "@/lib/purchasing/materials";
 
 // PU-a (Fred 2026-11-03): the project's materials pick list.
 
@@ -39,5 +39,15 @@ describe("material state", () => {
       row({ id: 6 }),
     ];
     expect(orderMaterials(rows).map((m) => m.id)).toEqual([6, 5, 2, 3, 4, 1]);
+  });
+  it("service lines are never material: labor, maintenance plans, permits, shades, discounts, fees", () => {
+    expect(isService(row({ id: 1, brand: null, model: null, name: "TS Maintenance Silver" }))).toBe(true);
+    expect(isService(row({ id: 1, brand: null, model: "Permits and Qualification", name: "Building Permits" }))).toBe(true);
+    expect(isService(row({ id: 1, brand: "Lutron", model: "Roller Shades", name: null }))).toBe(true);
+    expect(isService(row({ id: 1, brand: null, model: null, name: "Discount 10%" }))).toBe(true);
+    expect(isService(row({ id: 1, name: "Labor - programming", item_type: "CustomItem" }))).toBe(true);
+    expect(isService(row({ id: 1, item_type: "Fee" }))).toBe(true);
+    expect(isService(row({ id: 1, brand: "Crestron", model: "CP4-R", name: "Control processor" }))).toBe(false);
+    expect(isService(row({ id: 1, brand: "Lutron", model: "QSX", name: "Shading power panel" }))).toBe(false);
   });
 });
