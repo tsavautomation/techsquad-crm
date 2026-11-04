@@ -1,6 +1,6 @@
 // F13 Job costing: the rate in force on a day, and labour / materials / margin per project.
 import { describe, expect, it } from "vitest";
-import { jobCosting, rateAt, visitDay, type RateRow } from "@/lib/costing/engine";
+import { costedMinutes, isPast, jobCosting, rateAt, visitDay, type RateRow } from "@/lib/costing/engine";
 import type { HoursVisit } from "@/lib/hours/engine";
 
 const NOW = Date.parse("2026-10-03T20:00:00Z");
@@ -44,25 +44,41 @@ describe("job costing", () => {
         V({ id: 1, team_ids: [2] }), // tech 1 at $40 × 3 h = 120; helper 2 has no rate yet
         V({ id: 2, starts_at: "2026-10-06T13:00:00Z", technician_id: 2, checked_in_at: "2026-10-06T13:00:00Z", checked_out_at: "2026-10-06T14:30:00Z" }), // 1.5 h × 25 = 37.50
         V({ id: 3, status: "Cancelled" }),
-        V({ id: 4, checked_in_at: null, checked_out_at: null }), // planned only
+        V({ id: 4, checked_in_at: null, checked_out_at: null }), // F13-c: past, no check-in → its 120 planned minutes
+        V({ id: 5, status: "Scheduled", starts_at: "2026-10-09T13:00:00Z", checked_in_at: null, checked_out_at: null }), // still to come: nothing
       ],
       rates,
       [{ cost: "199.99" }, { cost: 50 }, { cost: null }],
       1000,
       NOW,
+      100.004, // parts of the approved proposals
     );
-    expect(c.labour.map((l) => [l.id, l.minutes, l.unratedMin, l.rate, l.cost, l.visits])).toEqual([
-      [1, 180, 0, 40, 120, 1],
-      [2, 270, 180, 25, 37.5, 2],
+    expect(c.labour.map((l) => [l.id, l.minutes, l.unratedMin, l.plannedMin, l.rate, l.cost, l.visits])).toEqual([
+      [1, 300, 0, 120, 40, 200, 2],
+      [2, 270, 180, 0, 25, 37.5, 2],
     ]);
-    expect(c.labourMin).toBe(450);
-    expect(c.labourCost).toBe(157.5);
+    expect(c.labourMin).toBe(570);
+    expect(c.labourCost).toBe(237.5);
     expect(c.unratedMin).toBe(180);
-    expect(c.materialsCost).toBe(249.99);
+    expect(c.plannedMin).toBe(120);
+    expect(c.plannedVisits).toBe(1);
+    expect(c.partsCost).toBe(100);
+    expect(c.materialsCost).toBe(349.99);
     expect(c.materialsCount).toBe(3);
-    expect(c.totalCost).toBe(407.49);
-    expect(c.margin).toBe(592.51);
-    expect(c.marginPct).toBe(59.3);
+    expect(c.totalCost).toBe(587.49);
+    expect(c.margin).toBe(412.51);
+    expect(c.marginPct).toBe(41.3);
+  });
+
+  it("F13-c: a visit is past when it is Done or its planned window has ended; a forgotten check-out falls back to the plan", () => {
+    const now = Date.parse("2026-10-02T14:30:00Z");
+    expect(isPast(V({ status: "Scheduled", starts_at: "2026-10-02T13:00:00Z", duration: "60" }), now)).toBe(true);
+    expect(isPast(V({ status: "Scheduled", starts_at: "2026-10-02T13:00:00Z", duration: "120" }), now)).toBe(false);
+    expect(isPast(V({ status: "Done", starts_at: "2026-10-02T13:00:00Z", duration: "120" }), now)).toBe(true);
+    expect(costedMinutes(V({ checked_in_at: null, checked_out_at: null, duration: "240" }), NOW)).toEqual({ min: 240, planned: true });
+    expect(costedMinutes(V({ checked_in_at: "2026-09-01T13:00:00Z", checked_out_at: null, duration: "240" }), NOW)).toEqual({ min: 240, planned: true });
+    expect(costedMinutes(V({}), NOW)).toEqual({ min: 180, planned: false });
+    expect(costedMinutes(V({ status: "Scheduled", starts_at: "2026-10-09T13:00:00Z", checked_in_at: null, checked_out_at: null }), NOW)).toEqual({ min: 0, planned: false });
   });
 
   it("has no margin without an approved amount", () => {

@@ -19,24 +19,34 @@ export async function loadPayRates(db: SupabaseClient, employeeIds: number[]): P
   return ((data ?? []) as PayRate[]).map((r) => ({ ...r, hourly_rate: Number(r.hourly_rate) }));
 }
 
-export type ProjectCosting = { costing: Costing; names: Map<number, string>; rates: PayRate[]; /** FIN-e: Σ cost × quantity of the approved proposals' parts (Portal.io), the estimate beside the real Materials. */ partsEstimate: number };
+export type ProjectCosting = { costing: Costing; names: Map<number, string>; rates: PayRate[]; /** FIN-e: Σ cost × quantity of the approved proposals' parts (Portal.io); F13-c: it is the Materials figure. */ partsEstimate: number };
 
-/** Labour (visits × rates), materials (Sale costs) and the approved amount for one project. */
+/** Labour (visits × rates), materials (proposal parts + Sale costs) and the approved amount for one project. */
 export async function loadProjectCosting(db: SupabaseClient, projectId: number): Promise<ProjectCosting | null> {
-  const { data: rows } = await db
-    .from("visits")
-    .select("id, project_id, starts_at, status, duration, technician_id, checked_in_at, checked_out_at")
-    .eq("project_id", projectId)
-    .is("deleted_at", null)
-    .limit(400);
-  const visitsRaw = (rows ?? []) as Omit<HoursVisit, "team_ids">[];
-  const [{ data: team }, { data: sales }, { data: fin }] = await Promise.all([
-    visitsRaw.length ? db.from("visits_team").select("record_id, target_id").in("record_id", visitsRaw.map((r) => r.id)) : Promise.resolve({ data: [] }),
+  // Paged: a long job has well over a thousand visits (PostgREST caps a query at 1000 rows).
+  const visitsRaw: Omit<HoursVisit, "team_ids">[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: rows } = await db
+      .from("visits")
+      .select("id, project_id, starts_at, status, duration, technician_id, checked_in_at, checked_out_at")
+      .eq("project_id", projectId)
+      .is("deleted_at", null)
+      .order("id")
+      .range(from, from + 999);
+    visitsRaw.push(...((rows ?? []) as Omit<HoursVisit, "team_ids">[]));
+    if ((rows ?? []).length < 1000) break;
+  }
+  const teamRows: { record_id: number; target_id: number }[] = [];
+  for (let i = 0; i < visitsRaw.length; i += 500) {
+    const { data } = await db.from("visits_team").select("record_id, target_id").in("record_id", visitsRaw.slice(i, i + 500).map((r) => r.id)).limit(5000);
+    teamRows.push(...((data ?? []) as { record_id: number; target_id: number }[]));
+  }
+  const [{ data: sales }, { data: fin }] = await Promise.all([
     db.from("sales").select("id, cost").eq("destination_project_id", projectId).is("deleted_at", null),
     db.rpc("project_financials", { p_project_ids: [projectId] }),
   ]);
   const teamOf = new Map<number, number[]>();
-  for (const x of (team ?? []) as { record_id: number; target_id: number }[]) teamOf.set(x.record_id, [...(teamOf.get(x.record_id) ?? []), x.target_id]);
+  for (const x of teamRows) teamOf.set(x.record_id, [...(teamOf.get(x.record_id) ?? []), x.target_id]);
   const visits: HoursVisit[] = visitsRaw.map((r) => ({ ...r, team_ids: teamOf.get(r.id) ?? [] }));
   const materials = (sales ?? []) as { id: number; cost: number | string | null }[];
   const finRow = ((fin ?? []) as { approved_amount: number | string; parts_cost: number | string }[])[0];
@@ -47,6 +57,6 @@ export async function loadProjectCosting(db: SupabaseClient, projectId: number):
   const people = [...new Set(visits.flatMap((v) => [v.technician_id, ...(v.team_ids ?? [])]).filter((x): x is number => x !== null))];
   const [rates, { data: emp }] = await Promise.all([loadPayRates(db, people), people.length ? db.from("employee_names").select("id, title").in("id", people) : Promise.resolve({ data: [] })]);
   const names = new Map(((emp ?? []) as { id: number; title: string | null }[]).map((e) => [e.id, e.title ?? `#${e.id}`]));
-  const costing = jobCosting(visits, rates as RateRow[], materials, approved, nowMs());
+  const costing = jobCosting(visits, rates as RateRow[], materials, approved, nowMs(), partsEstimate);
   return { costing, names, rates, partsEstimate };
 }

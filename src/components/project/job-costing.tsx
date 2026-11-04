@@ -10,8 +10,9 @@ import { cn } from "@/lib/utils";
 import { getT } from "@/i18n/server";
 
 // F13-b: the Job costing card on a Project page. Only for people with the job costing key (Fred
-// 2026-10-03: Lucas, Saulo, Fred, Jessica and Luana). Labour = technician-hours × each person's rate,
-// materials = Sale costs sent to the project, against the approved amount.
+// 2026-10-03: Lucas, Saulo, Fred, Jessica and Luana). Labour = technician-hours × each person's rate
+// (F13-c: the Expected duration for past visits with no check-in), materials = the parts of the approved
+// proposals and change orders (+ Sale costs), against the approved amount.
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
@@ -38,8 +39,8 @@ export async function JobCosting({ projectId, user }: { projectId: number; user:
       <h2 className="mb-2 text-[15px] font-semibold tracking-tight">{tr("Job costing")}</h2>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {stat(tr("Approved"), c.approved ? money.format(c.approved) : "—", c.approved ? undefined : tr("no approved proposal yet"))}
-        {stat(tr("Labour"), money.format(c.labourCost), tr("{t} on site", { t: formatMinutes(c.labourMin) }))}
-        {stat(tr("Materials"), money.format(c.materialsCost), partsEstimate ? tr("{n} sales · parts in the proposals {est}", { n: c.materialsCount, est: money.format(partsEstimate) }) : tr(c.materialsCount === 1 ? "{n} sale" : "{n} sales", { n: c.materialsCount }))}
+        {stat(tr("Labour"), money.format(c.labourCost), c.plannedMin ? tr("{t} on site · {p} from the planned duration", { t: formatMinutes(c.labourMin), p: formatMinutes(c.plannedMin) }) : tr("{t} on site", { t: formatMinutes(c.labourMin) }))}
+        {stat(tr("Materials"), money.format(c.materialsCost), c.materialsCount ? tr("parts in the approved proposals {est} · {n} sales", { est: money.format(partsEstimate), n: c.materialsCount }) : tr("parts in the approved proposals and change orders"))}
         {stat(tr("Margin"), c.margin === null ? "—" : money.format(c.margin), c.marginPct === null ? tr("needs an approved amount") : tr("{pct}% of approved", { pct: c.marginPct }), marginTone)}
       </div>
       <p className="mt-2 text-xs text-text-2">{tr("Total cost {t}: labour plus materials.", { t: money.format(c.totalCost) })}</p>
@@ -57,6 +58,7 @@ export async function JobCosting({ projectId, user }: { projectId: number; user:
                   <span className="text-text-2">
                     {" "}
                     · {formatMinutes(l.minutes)} · {tr(l.visits === 1 ? "{n} visit" : "{n} visits", { n: l.visits })}
+                    {l.plannedMin > 0 && <> · {tr("{t} planned", { t: formatMinutes(l.plannedMin) })}</>}
                   </span>
                 </span>
                 <span className="shrink-0 text-right tabular-nums">
@@ -74,9 +76,10 @@ export async function JobCosting({ projectId, user }: { projectId: number; user:
             ))}
           </ul>
           {c.unratedMin > 0 && <p className="mt-1 text-xs text-warn-fg">{tr("{t} not costed: set the pay rate on the employee's page (Pay rate).", { t: formatMinutes(c.unratedMin) })}</p>}
+          {c.plannedVisits > 0 && <p className="mt-1 text-xs text-text-2">{tr("{n} past visits had no check-in (calendar history, forgotten check-outs): their Expected duration was used.", { n: c.plannedVisits })}</p>}
         </>
       )}
-      <p className="mt-2 text-xs text-muted-foreground">{tr("Labour is each person's time on site × their hourly rate on that day. Materials are the Cost of Sale records sent to this project. Only people with the Job costing permission see this.")}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{tr("Labour is each person's time on site × their hourly rate on that day (the Expected duration when a past visit has no check-in). Materials are the parts and custom items of the approved proposals and change orders at their Portal.io cost. Only people with the Job costing permission see this.")}</p>
     </section>
   );
 }
