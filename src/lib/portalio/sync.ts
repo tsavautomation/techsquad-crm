@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminDb } from "@/lib/supabase/admin";
 import { getProposal, listProposals, loadSettings, patchSettings, reviewFrom, type PortalSettings, type ProposalDetail, type ProposalSummary } from "./client";
 import { matchContacts, suggestProjects, OPEN_REQUEST, type ContactLite, type ContactMatch, type PortalCustomer, type PortalLocation, type Suggestion } from "./match";
-import { autoLinkCandidate, numberLinkCandidate } from "./plan";
+import { acceptedItems, autoLinkCandidate, itemRows, numberLinkCandidate, type PortalArea } from "./plan";
 import { syncLinkedProposal, type TxSyncSummary } from "./transactions";
 import { loadProjectIndex } from "./project-index";
 import { linkSheetRowsByNumber } from "@/lib/finance/sheet-link";
@@ -37,7 +37,7 @@ export type ProposalRow = {
   synced_total: number | null;
   synced_name: string | null;
   synced_change_orders: ChangeOrder[] | null;
-  link_status: "new" | "linked" | "ignored";
+  link_status: "new" | "linked" | "ignored" | "materials"; // materials (PU-b): only the lines were attached to an existing transaction
   linked_at: string | null;
   suggestions: Suggestion[] | null;
   fetched_at: string;
@@ -128,6 +128,7 @@ async function upsertDetail(db: SupabaseClient, d: ProposalDetail, archived: boo
   if (error) throw new Error(`Proposal ${d.id}: ${error.message}`);
   // FIN Part 2: a linked proposal's Transactions follow; a new accepted one may link itself (FIN-l).
   if (status === "linked") tally(tx, await syncLinkedProposal(db, d.id, { settings: s }));
+  else if (status === "materials") await refreshMaterials(db, d.id);
   else if (suggestions && !archived && index && (await autoLink(db, { id: d.id, number: row.number, customer: row.customer, accepted_at: row.accepted_at }, suggestions, index, s))) {
     if (tx) tx.autoLinked++;
     tally(tx, await syncLinkedProposal(db, d.id, { settings: s }));
@@ -139,9 +140,10 @@ async function upsertDetail(db: SupabaseClient, d: ProposalDetail, archived: boo
  * and nothing stronger points elsewhere. Only proposals within the review window (PI-i); the History and Timeline say
  * it was automatic, so the office can undo it like any link (Replace, or delete the Transaction).
  */
-async function autoLink(db: SupabaseClient, p: { id: number; number: number | null; customer: PortalCustomer | null; accepted_at: string | null }, suggestions: Suggestion[], index: Index, s: PortalSettings | null): Promise<boolean> {
+async function autoLink(db: SupabaseClient, p: { id: number; number: number | null; customer: PortalCustomer | null; accepted_at: string | null; archived?: boolean }, suggestions: Suggestion[], index: Index, s: PortalSettings | null): Promise<boolean> {
   // PU-b: a Transaction of a project already carries this proposal number (sheet import / hand-typed): certain, any date.
   const byNumber = numberLinkCandidate(p.number, index.txByNumber);
+  if (byNumber && p.archived) return attachMaterials(db, p, byNumber);
   const customerId = p.customer?.id ?? null;
   let projectId: number | null = byNumber;
   let why = `a Transaction of the project already carries Portal #${p.number}`;
@@ -161,7 +163,7 @@ async function autoLink(db: SupabaseClient, p: { id: number; number: number | nu
   const { data: row } = await db.from("portal_proposals").select("total, name, change_orders").eq("id", p.id).maybeSingle();
   const r = row as { total: number | null; name: string | null; change_orders: ChangeOrder[] } | null;
   // synced_* follow the mirror, so no "changed in Portal.io" card appears for what the sync itself wrote.
-  const { error } = await db.from("portal_proposals").update({ project_id: projectId, link_status: "linked", linked_at: new Date().toISOString(), auto_linked: true, synced_total: r?.total ?? null, synced_name: r?.name ?? null, synced_change_orders: r?.change_orders ?? [] }).eq("id", p.id).eq("link_status", "new");
+  const { error } = await db.from("portal_proposals").update({ project_id: projectId, transaction_id: byNumber ? await carryingTransaction(db, projectId, p.number) : null, link_status: "linked", linked_at: new Date().toISOString(), auto_linked: true, synced_total: r?.total ?? null, synced_name: r?.name ?? null, synced_change_orders: r?.change_orders ?? [] }).eq("id", p.id).eq("link_status", "new");
   if (error) return false;
   await db.from("audit_log").insert({ table_name: "projects", record_id: projectId, action: "update", actor: null, changes: { portal_proposal: [null, `Portal.io proposal #${p.number ?? p.id} linked automatically: ${why}`] } });
   await db.from("project_events").insert({ project_id: projectId, channel: "portal", source_table: "portal_proposals", source_id: p.id, source_ref: `portal:${p.id}`, occurred_at: new Date().toISOString(), actor: "Portal.io", title: `Portal.io: proposal #${p.number ?? p.id} accepted`, body: `${r?.name ?? ""}\nLinked automatically to ${title} (${byNumber ? "a Transaction already carried this number" : "same Portal.io customer"})`, attachments: [], created_by: null });
@@ -170,16 +172,60 @@ async function autoLink(db: SupabaseClient, p: { id: number; number: number | nu
   return true;
 }
 
+/** A "materials" proposal read again: its transaction's lines follow the detail. */
+async function refreshMaterials(db: SupabaseClient, proposalId: number): Promise<void> {
+  const { data } = await db.from("portal_proposals").select("transaction_id, detail").eq("id", proposalId).maybeSingle();
+  const r = data as { transaction_id: number | null; detail: { areas?: PortalArea[] | null } | null } | null;
+  if (!r?.transaction_id) return;
+  const rows = itemRows(acceptedItems(r.detail?.areas ?? null));
+  await db.from("proposal_items").delete().eq("transaction_id", r.transaction_id);
+  if (rows.length) await db.from("proposal_items").insert(rows.map((x) => ({ ...x, transaction_id: r.transaction_id })));
+}
+
+/** The project's Approved Proposal transaction that carries this Portal number (the one with the proposal's total when several do). */
+async function carryingTransaction(db: SupabaseClient, projectId: number, number: number | null): Promise<number | null> {
+  if (number === null) return null;
+  const { data } = await db.from("transactions").select("id, portal_number, amount").eq("project_id", projectId).eq("type", "Proposal").eq("payment_type", "Apply to Project").is("deleted_at", null).limit(500);
+  const rows = ((data ?? []) as { id: number; portal_number: string | null; amount: number | null }[]).filter((t) => (t.portal_number ?? "").replace(/[^0-9]/g, "") === String(number));
+  return rows[0]?.id ?? null;
+}
+
+/**
+ * PU-b: an archived (Completed) proposal whose number a project's Transaction carries gives that transaction its lines
+ * and nothing else: link_status "materials" keeps it out of the review cards, the money sync and project_financials
+ * (its payment requests predate the integration; the sheet already has the payments).
+ */
+async function attachMaterials(db: SupabaseClient, p: { id: number; number: number | null }, projectId: number): Promise<boolean> {
+  const txId = await carryingTransaction(db, projectId, p.number);
+  if (!txId) return false;
+  const { data } = await db.from("portal_proposals").select("detail").eq("id", p.id).maybeSingle();
+  const areas = ((data as { detail: { areas?: PortalArea[] | null } | null } | null)?.detail?.areas ?? null);
+  const rows = itemRows(acceptedItems(areas));
+  const { error } = await db.from("portal_proposals").update({ project_id: projectId, transaction_id: txId, link_status: "materials", linked_at: new Date().toISOString(), auto_linked: true, tx_synced_at: new Date().toISOString() }).eq("id", p.id).eq("link_status", "new");
+  if (error) return false;
+  await db.from("proposal_items").delete().eq("transaction_id", txId);
+  if (rows.length) await db.from("proposal_items").insert(rows.map((r) => ({ ...r, transaction_id: txId })));
+  await db.from("audit_log").insert({ table_name: "projects", record_id: projectId, action: "update", actor: null, changes: { portal_proposal: [null, `Portal.io proposal #${p.number ?? p.id}: ${rows.length} lines attached to the Approved Proposal that carries its number (materials only; archived in Portal.io, its money is not synced)`] } });
+  return true;
+}
+
 /** PU-b: accepted proposals still "new" whose number a project's Transaction carries link themselves (whatever their date), and their lines follow. Exported for the one-off script. */
 export async function linkByNumber(db: SupabaseClient, index: Index, s: PortalSettings | null, tx?: TxTally): Promise<number> {
-  const { data } = await db.from("portal_proposals").select("id, number, customer, accepted_at, status, suggestions").eq("link_status", "new").eq("archived", false).not("number", "is", null).limit(2000);
+  // Only the numbers one project carries are asked for, in chunks (PostgREST caps an answer at 1000 rows).
+  const numbers = [...index.txByNumber.keys()].filter((k) => /^\d+$/.test(k) && numberLinkCandidate(Number(k), index.txByNumber));
+  type Row = { id: number; number: number | null; customer: PortalCustomer | null; accepted_at: string | null; status: string | null; suggestions: Suggestion[] | null; archived: boolean };
+  const rows: Row[] = [];
+  for (let i = 0; i < numbers.length; i += 200) {
+    const { data } = await db.from("portal_proposals").select("id, number, customer, accepted_at, status, suggestions, archived").eq("link_status", "new").in("number", numbers.slice(i, i + 200).map(Number)).in("status", ACCEPTED);
+    rows.push(...((data ?? []) as Row[]));
+  }
   let n = 0;
-  for (const p of (data ?? []) as { id: number; number: number | null; customer: PortalCustomer | null; accepted_at: string | null; status: string | null; suggestions: Suggestion[] | null }[]) {
-    if (!ACCEPTED.includes(p.status ?? "") || !numberLinkCandidate(p.number, index.txByNumber)) continue;
+  for (const p of rows) {
+    if (!numberLinkCandidate(p.number, index.txByNumber)) continue;
     if (await autoLink(db, p, p.suggestions ?? [], index, s)) {
       n++;
       if (tx) tx.autoLinked++;
-      tally(tx, await syncLinkedProposal(db, p.id, { settings: s }));
+      if (!p.archived) tally(tx, await syncLinkedProposal(db, p.id, { settings: s }));
     }
   }
   return n;
