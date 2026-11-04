@@ -106,9 +106,14 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
             return (
               <section key={employeeId} className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
                 <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                  <Link href={recordHref(employeesT, employeeId)} className="text-[15px] font-semibold tracking-tight hover:underline">
-                    {entries[0].employees?.title ?? `#${employeeId}`}
-                  </Link>
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <Link href={recordHref(employeesT, employeeId)} className="text-[15px] font-semibold tracking-tight hover:underline">
+                      {entries[0].employees?.title ?? `#${employeeId}`}
+                    </Link>
+                    <Link href={`/time-clock/people/${employeeId}?day=${day}#d-${day}`} className="text-xs text-primary hover:underline">
+                      {tr("Timesheet")}
+                    </Link>
+                  </span>
                   <span className="text-xs text-text-2">
                     {sum.openSince ? tr("Still clocked in · {clocked}", { clocked: formatMinutes(sum.clockedMin) }) : tr("Clocked {clocked}", { clocked: formatMinutes(sum.clockedMin) })}
                     {sum.onSiteMin > 0 && ` · ${tr("on site {time}", { time: formatMinutes(sum.onSiteMin) })}`}

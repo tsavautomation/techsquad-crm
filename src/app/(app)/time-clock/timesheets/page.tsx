@@ -14,8 +14,6 @@ import { DEPARTMENTS, inDepartment, periodSheet, type Department } from "@/lib/t
 import { FLAG_TEXT, formatHours, mondayOf, weekSheet, type SheetEntry, type WeekSheet } from "@/lib/time-clock/timesheet";
 import { weekBlockers, weekEnded, weekStatusOf, type Blocker, type WeekStatus } from "@/lib/time-clock/week-approval";
 import { canApproveWeeks, loadWeekPending, loadWeekRows, type WeekRowWithNames } from "@/lib/time-clock/week-status";
-import { getTable } from "@/registry";
-import { recordHref } from "@/registry/routes";
 import { cn } from "@/lib/utils";
 import { getT } from "@/i18n/server";
 
@@ -92,8 +90,9 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
   const toReview = (period ? periods.flatMap(({ person, sheet }) => sheet.days.flatMap((d) => d.shifts.filter((s) => s.needsReview).map((s) => ({ person, day: d.date, shift: s })))) : sheets.flatMap(({ person, sheet }) => sheet.days.flatMap((d) => d.shifts.filter((s) => s.needsReview).map((s) => ({ person, day: d.date, shift: s })))));
   const grand = sheets.reduce((n, s) => n + s.sheet.totalMinutes, 0);
 
-  const employeesT = getTable("employees");
-  const dayHref = (employeeId: number, day: string) => `/time-clock?day=${day}&employee=${employeeId}`;
+  // TS-b: a name or a day cell opens the person's panel (their pay period, or the week), at that day's row.
+  const personHref = (employeeId: number, day: string) => `/time-clock/people/${employeeId}?day=${day}${group ? `&group=${group}` : ""}`;
+  const dayHref = (employeeId: number, day: string) => `${personHref(employeeId, day)}#d-${day}`;
   const q = (o: { week?: string; group?: string; dept?: string; from?: string; to?: string; status?: string }) => {
     const p = new URLSearchParams();
     const merged = { week: period ? "" : monday, group, dept, from: period?.from ?? "", to: period?.to ?? "", status: statusFilter, ...o };
@@ -184,7 +183,7 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
               </li>
             ))}
           </ul>
-          <p className="mt-1 text-xs text-text-2">{tr("Open the day to correct the times or mark the shift as reviewed. These shifts stay listed until then.")}</p>
+          <p className="mt-1 text-xs text-text-2">{tr("Open the person's day to set the real time, correct it or mark the shift as reviewed. These shifts stay listed until then.")}</p>
         </section>
       )}
 
@@ -200,7 +199,7 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
             {periods.map(({ person, sheet }) => (
               <section key={person.id} className="rounded-2xl border bg-card px-[18px] py-3 shadow-card">
                 <div className="flex items-baseline justify-between gap-2">
-                  <Link href={recordHref(employeesT, person.id)} className="font-semibold tracking-tight hover:underline">
+                  <Link href={personHref(person.id, period ? period.from : monday)} className="font-semibold tracking-tight hover:underline">
                     {person.title ?? `#${person.id}`}
                   </Link>
                   <span className="font-semibold tabular-nums">{formatHours(sheet.totalMinutes)} h</span>
@@ -231,7 +230,7 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
             {sheets.map(({ person, sheet, status, blockers, approver }) => (
               <section key={person.id} className="rounded-2xl border bg-card px-3 py-3 shadow-card">
                 <div className="mb-2 flex items-baseline justify-between gap-2 px-1">
-                  <Link href={recordHref(employeesT, person.id)} className="truncate text-[15px] font-semibold tracking-tight hover:underline">
+                  <Link href={personHref(person.id, monday)} className="truncate text-[15px] font-semibold tracking-tight hover:underline">
                     {person.title ?? `#${person.id}`}
                   </Link>
                   <span className="shrink-0 text-sm font-semibold tabular-nums">{formatHours(sheet.totalMinutes)}</span>
@@ -265,7 +264,7 @@ export default async function TimesheetsPage(props: PageProps<"/time-clock/times
                 {sheets.map(({ person, sheet, status, blockers, approver }) => (
                   <tr key={person.id}>
                     <td className="px-4 py-2">
-                      <Link href={recordHref(employeesT, person.id)} className="font-medium hover:underline">
+                      <Link href={personHref(person.id, monday)} className="font-medium hover:underline">
                         {person.title ?? `#${person.id}`}
                       </Link>
                       {group === "" && <span className="ml-1.5 text-xs text-text-2">{tr(person.clock_group ?? "Field")}</span>}

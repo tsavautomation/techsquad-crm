@@ -72,7 +72,7 @@ export function ManualEntry({ people, defaultDay }: { people: { id: number; name
           ))}
         </div>
       </div>
-      <p className="mb-3 text-xs text-text-2">{mode === "shift" ? t("For a forgotten clock-in or clock-out. Leave one time blank to complete a half shift; the entry is marked with your name and the reason.") : t("One day of time off. Paid hours count as PTO on Pay periods; Unpaid is never paid.")}</p>
+      <p className="mb-3 text-xs text-text-2">{mode === "shift" ? t("For a forgotten clock-in or clock-out. Leave one time blank to complete a half shift; the entry is marked with your name.") : t("One day of time off. Paid hours count as PTO on Pay periods; Unpaid is never paid.")}</p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value ? Number(e.target.value) : "")} aria-label={t("Person")} className={box} required>
           <option value="">{t("Person")}</option>
@@ -87,7 +87,7 @@ export function ManualEntry({ people, defaultDay }: { people: { id: number; name
           <>
             <input type="time" value={inTime} onChange={(e) => setIn(e.target.value)} aria-label={t("Clock-in time")} placeholder={t("Clock-in time")} className={box} />
             <input type="time" value={outTime} onChange={(e) => setOut(e.target.value)} aria-label={t("Clock-out time")} placeholder={t("Clock-out time")} className={box} />
-            <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("Reason")} aria-label={t("Reason")} className={box} required maxLength={300} />
+            <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("Note (optional)")} aria-label={t("Note (optional)")} className={box} maxLength={300} />
           </>
         ) : (
           <>

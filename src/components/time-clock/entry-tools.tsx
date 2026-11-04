@@ -12,7 +12,7 @@ import { useT } from "@/i18n/client";
  * period shows a lock; only an administrator can still change it, and must say why (the difference is paid
  * as an adjustment in the next period).
  */
-/** TS-a: `suggested` = a clock-out the system wrote with only a suggested time; typing the real one needs no reason. */
+/** TS-a: `suggested` = a clock-out the system wrote with only a suggested time; typing the real one needs no reason. TS-b: every other time change asks why. */
 export function EntryTools({ id, time, locked = false, admin = false, weekLocked = false, suggested = false }: { id: number; time: string; locked?: boolean; admin?: boolean; weekLocked?: boolean; suggested?: boolean }) {
   const t = useT();
   const router = useRouter();
@@ -41,14 +41,14 @@ export function EntryTools({ id, time, locked = false, admin = false, weekLocked
     return (
       <span className="flex flex-wrap items-center justify-end gap-1">
         <input type="time" value={value} onChange={(e) => setValue(e.target.value)} className="h-9 rounded-md border bg-card px-2 text-base" aria-label={t("New time")} />
-        {locked && <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("Why (pay period approved)")} className="h-9 w-full rounded-md border bg-card px-2 text-base sm:w-56" aria-label={t("Reason")} />}
+        {(locked || !suggested) && <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={locked ? t("Why (pay period approved)") : t("Why is the recorded time changing?")} className="h-9 w-full rounded-md border bg-card px-2 text-base sm:w-56" aria-label={t("Reason")} required />}
         <button
           type="button"
           className={BTN}
           disabled={pending}
           onClick={() =>
             start(async () => {
-              const r = await correctEntryAction(id, value, locked ? reason : undefined);
+              const r = await correctEntryAction(id, value, locked || !suggested ? reason : undefined);
               if (!r.ok) return void toast.error(t(r.message));
               toast.success(t("Time corrected"));
               setEditing(false);

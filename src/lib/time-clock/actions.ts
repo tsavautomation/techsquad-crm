@@ -59,16 +59,21 @@ export async function correctEntryAction(id: number, time: string, reason?: stri
   if (!user.permissions.has("administrative.employees.modify")) return { ok: false, message: "You don't have permission to do that." };
   if (!/^\d{2}:\d{2}$/.test(time)) return { ok: false, message: "Please enter a time like 07:45." };
   const db = await recordsDb();
-  const { data: e } = await db.from("time_entries").select("id, at, original_at, needs_adjustment").eq("id", id).maybeSingle();
+  const { data: e } = await db.from("time_entries").select("id, at, original_at, needs_adjustment, note").eq("id", id).maybeSingle();
   if (!e) return { ok: false, message: "Entry not found." };
   const lock = await lockCheck(db, user, id, reason);
   if (lock.message) return { ok: false, message: lock.message };
   const day = toDateTimeLocalET(e.at as string).slice(0, 10);
   const at = fromDateTimeLocalET(`${day}T${time}`);
   const suggested = Boolean(e.needs_adjustment);
+  // TS-b (brief item 7): changing a recorded time needs a reason; it is kept on the entry with the original time.
+  if (!suggested && !reason?.trim()) return { ok: false, message: "Say why you are changing a recorded time." };
+  if (at === e.at && !suggested) return { ok: true };
+  const who = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
+  const note = lock.locked ? `Corrected after the pay period was approved: ${reason!.trim()}` : suggested ? "Clock-out time set by the office (the system had only suggested one, TS-a)" : [e.note, `Corrected by ${who}: ${reason!.trim()}`].filter(Boolean).join(" · ").slice(0, 1000);
   const { error } = await db
     .from("time_entries")
-    .update({ at, original_at: suggested ? null : (e.original_at ?? e.at), needs_adjustment: false, corrected_at: new Date().toISOString(), corrected_by: user.id, note: lock.locked ? `Corrected after the pay period was approved: ${reason!.trim()}` : suggested ? "Clock-out time set by the office (the system had only suggested one, TS-a)" : undefined })
+    .update({ at, original_at: suggested ? null : (e.original_at ?? e.at), needs_adjustment: false, corrected_at: new Date().toISOString(), corrected_by: user.id, note })
     .eq("id", id);
   if (error) return { ok: false, message: error.message };
   if (lock.locked) await recordLockedCorrection(db, user, id, reason!.trim());

@@ -14,6 +14,7 @@ import { weekApprovedFor } from "./week-status";
 // period is refused. Hours follow from the entries, so totals recalculate by themselves.
 // TC-h (2026-10-29): a day in an approved week is refused until the week is reopened, and a day may hold
 // several shifts as long as they do not overlap (shiftSequenceProblem).
+// TS-b (Fred 2026-11-04, item 7): the reason is optional here: filling an empty field asks none.
 
 export type ManualResult = { ok: true; added: ("clock_in" | "clock_out")[] } | { ok: false; message: string };
 
@@ -33,7 +34,6 @@ export async function addManualShiftAction(input: { employeeId: number; day: str
   if (!Number.isInteger(employeeId) || !DAY.test(day)) return { ok: false, message: "Pick the person and the day." };
   if (!inTime && !outTime) return { ok: false, message: "Enter the clock-in time, the clock-out time, or both." };
   if ((inTime && !TIME.test(inTime)) || (outTime && !TIME.test(outTime))) return { ok: false, message: "Times must be hh:mm." };
-  if (!reason) return { ok: false, message: "Say why (for the record)." };
   const db = await recordsDb();
   const { data: person } = await db.from("employees").select("id, title").eq("id", employeeId).is("deleted_at", null).maybeSingle();
   if (!person) return { ok: false, message: "That employee was not found." };
@@ -75,7 +75,7 @@ export async function addManualShiftAction(input: { employeeId: number; day: str
   const who = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const stamp = new Date().toISOString();
   const { error } = await db.from("time_entries").insert(
-    rows.map((r) => ({ employee_id: employeeId, user_id: user.id, kind: r.kind, at: r.at, place: "Unknown", note: `Added by ${who}: ${reason}`, corrected_at: stamp, corrected_by: user.id })),
+    rows.map((r) => ({ employee_id: employeeId, user_id: user.id, kind: r.kind, at: r.at, place: "Unknown", note: reason ? `Added by ${who}: ${reason}` : `Added by ${who}`, corrected_at: stamp, corrected_by: user.id })),
   );
   if (error) return { ok: false, message: error.message };
   revalidatePath("/time-clock");
