@@ -10,6 +10,7 @@ import { canDo, canOpen } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
 import { cn } from "@/lib/utils";
 import { getT } from "@/i18n/server";
+import { projectLabel } from "@/lib/projects/label";
 
 export async function generateMetadata() {
   return { title: (await getT())("Data") };
@@ -74,7 +75,7 @@ export default async function DataPage(props: PageProps<"/data">) {
   const gaps: Gap[] = [
     ...contacts.map((x) => ({ href: `/projects/contacts/${x.id}`, title: x.title ?? `Contact #${x.id}`, missing: [!x.main_phone && "phone", !x.email && "email"].filter(Boolean) as string[] })),
     ...orgs.map((x) => ({ href: `/projects/organizations/${x.id}`, title: x.title ?? `Organization #${x.id}`, missing: [!x.main_phone && "phone", !x.main_email && "email"].filter(Boolean) as string[] })),
-    ...projects.map((x) => ({ href: `/projects/projects/${x.id}`, title: x.title ?? `Project #${x.id}`, missing: [!x.job_address?.street && "job address"].filter(Boolean) as string[] })),
+    ...projects.map((x) => ({ href: `/projects/projects/${x.id}`, title: projectLabel(x.title, x.id), missing: [!x.job_address?.street && "job address"].filter(Boolean) as string[] })),
   ].filter((g) => g.missing.length);
   const slots = contacts.length * 2 + orgs.length * 2 + projects.length;
   const filled = slots - gaps.reduce((n, g) => n + g.missing.length, 0);
@@ -246,7 +247,7 @@ export default async function DataPage(props: PageProps<"/data">) {
               <li key={ids.join()} className="rounded-xl border bg-muted px-3 py-2">
                 {ids.map((id) => (
                   <Link key={id} href={`/projects/projects/${id}`} className="block text-sm text-primary hover:underline">
-                    {projectById.get(id)?.title ?? `Project #${id}`}
+                    {projectLabel(projectById.get(id)?.title, id)}
                   </Link>
                 ))}
               </li>

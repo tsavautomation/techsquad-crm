@@ -7,6 +7,7 @@ import { addDays } from "@/lib/schedule/dates";
 import { CLOCK_GROUPS, type EntryKind, type Place } from "./clock";
 import { personDays, type DayOff, type PersonDay } from "./person-sheet";
 import { mondayOf, type SheetEntry } from "./timesheet";
+import { projectLabel } from "@/lib/projects/label";
 
 // TS-b Person panel: what the page reads for one person. The period is the person's pay-schedule period
 // containing the asked day (PS-a); with no schedule in force, the Monday-to-Sunday week.
@@ -55,7 +56,7 @@ export type EntryRow = SheetEntry & {
   pay_period_id: number | null;
   corrected_at: string | null;
   original_at: string | null;
-  visits: { projects: { title: string | null } | null } | null;
+  visits: { projects: { id: number; title: string | null } | null } | null;
 };
 
 /** One day's "On my way" / "Arrived at the job" / "Left the job" events (never part of the total). */
@@ -78,7 +79,7 @@ export async function loadPanel(db: SupabaseClient, employeeId: number, range: P
   const [{ data: ent }, { data: off }, { data: weeks }] = await Promise.all([
     db
       .from("time_entries")
-      .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, auto_closed, needs_adjustment, project_id, manager_note, pay_period_id, corrected_at, original_at, visits:visit_id(projects(title))")
+      .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, auto_closed, needs_adjustment, project_id, manager_note, pay_period_id, corrected_at, original_at, visits:visit_id(projects(id, title))")
       .eq("employee_id", employeeId)
       .gte("at", fromDateTimeLocalET(`${range.from}T00:00`))
       .lt("at", fromDateTimeLocalET(`${addDays(range.to, 1)}T06:00`)) // a shift may end after midnight
@@ -94,7 +95,7 @@ export async function loadPanel(db: SupabaseClient, employeeId: number, range: P
     if (e.kind === "clock_in" || e.kind === "clock_out") continue;
     const day = toDateTimeLocalET(e.at).slice(0, 10);
     const list = events.get(day) ?? [];
-    list.push({ id: e.id, kind: e.kind, at: e.at, project: e.visits?.projects?.title ?? null, place: e.place, lat: e.lat, lng: e.lng, distance_m: e.distance_m });
+    list.push({ id: e.id, kind: e.kind, at: e.at, project: e.visits?.projects ? projectLabel(e.visits.projects.title, e.visits.projects.id) : null, place: e.place, lat: e.lat, lng: e.lng, distance_m: e.distance_m });
     events.set(day, list);
   }
   const projectIds = [...new Set(rows.map((r) => r.project_id).filter((x): x is number => typeof x === "number"))];
@@ -104,6 +105,6 @@ export async function loadPanel(db: SupabaseClient, employeeId: number, range: P
     entries: new Map(rows.map((r) => [r.id, r])),
     events,
     approvedMondays: new Set(((weeks ?? []) as { monday: string }[]).map((w) => w.monday)),
-    projectTitles: new Map(((projects ?? []) as { id: number; title: string | null }[]).map((p) => [p.id, p.title ?? `#${p.id}`])),
+    projectTitles: new Map(((projects ?? []) as { id: number; title: string | null }[]).map((p) => [p.id, projectLabel(p.title, p.id)])),
   };
 }

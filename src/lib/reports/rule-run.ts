@@ -9,6 +9,7 @@ import { deliverQueuedSms, queueSms } from "@/lib/sms/twilio";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { getTable } from "@/registry";
 import { planLate, planMissing, planReminders, statusFor, visitCounts, type LateFinding, type MissingDeficiency, type RuleEmployee, type RuleMode, type RuleReport, type RuleVisit, type Skipped } from "./rule";
+import { projectLabel } from "@/lib/projects/label";
 
 // F18 Visit = Report rule (SPEC §9.1 F18): the server side. Loads a day's visits, reports and people,
 // hands them to the pure engine (rule.ts) and acts on the plan: SMS through the outbox, deficiencies
@@ -27,7 +28,7 @@ function toRuleVisit(v: VisitRow): RuleVisit {
   return {
     id: v.id,
     project_id: v.project_id,
-    project: v.projects?.title ?? (v.project_id ? `Project #${v.project_id}` : `Visit #${v.id}`),
+    project: v.project_id ? projectLabel(v.projects?.title, v.project_id) : `Visit #${v.id}`,
     date: toDateTimeLocalET(v.starts_at).slice(0, 10),
     people: [...new Set([v.technician_id, ...v.visits_team.map((t) => t.target_id)].filter((x): x is number => x !== null))],
     // J-k: an internal event (warehouse, training…) owes no report, so it counts as cancelled for the rule.

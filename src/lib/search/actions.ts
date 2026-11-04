@@ -11,6 +11,7 @@ import type { Address } from "@/lib/records/values";
 import { matchLine, orFilters, searchColumns, searchWords, selectColumns } from "./query";
 import { getLang } from "@/i18n/server";
 import { localizeTable } from "@/i18n/registry";
+import { projectLabel } from "@/lib/projects/label";
 
 export type SearchHit = {
   href: string;
@@ -65,7 +66,7 @@ export async function globalSearchAction(q: string): Promise<SearchGroup[]> {
         href: t.parent ? undefined : `${tableHref(page)}?q=${encodeURIComponent(q.trim())}`,
         hits: rows.map((r) => ({
           href: t.parent ? recordHref(page, String(r[t.parent.field])) : recordHref(t, Number(r.id)),
-          title: String(r.title ?? "") || `${localizeTable(t, lang).itemLabel} ${r.id}`,
+          title: t.name === "projects" ? projectLabel(r.title as string | null, Number(r.id)) : String(r.title ?? "") || `${localizeTable(t, lang).itemLabel} ${r.id}`,
           line: matchLine(r, cols, words),
           archived: Boolean(r.archived_at),
           address: t.name === "projects" ? mapAddress((r.job_address as Address | null) ?? null) : undefined,

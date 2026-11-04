@@ -11,6 +11,7 @@ import { canDo } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
 import { connectWithPassword, disconnect } from "./client";
 import { fileMessage, ignoreMessage, reassignMessage, syncMail, type SyncSummary } from "./sync";
+import { projectLabel } from "@/lib/projects/label";
 
 // F26-2: Admin › Gmail intake (connect, check now, disconnect) and the Assign list on Today (assign / ignore).
 
@@ -114,5 +115,5 @@ export async function searchProjectsAction(query: string): Promise<{ id: number;
   let req = db.from("projects").select("id, title").is("deleted_at", null).order("updated_at", { ascending: false }).limit(8);
   req = byId ? req.eq("id", byId) : req.ilike("title", `%${q}%`);
   const { data } = await req;
-  return ((data ?? []) as { id: number; title: string | null }[]).map((p) => ({ id: p.id, label: `${p.title ?? "Project"} (#${p.id})` }));
+  return ((data ?? []) as { id: number; title: string | null }[]).map((p) => ({ id: p.id, label: projectLabel(p.title, p.id) }));
 }

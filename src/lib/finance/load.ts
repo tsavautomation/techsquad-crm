@@ -8,6 +8,7 @@ import { loadFinanceSettings } from "./settings";
 import { EXCLUDED_PROJECT_FILTER } from "@/lib/projects/excluded";
 import { SHEET_COLS, type SheetRowRecord } from "./sheet-link";
 import { dueBuckets, figures, financialStatus, paymentNumbers, reliabilitySuggestion, type Figures, type FinRow, type FinancialStatus } from "./status";
+import { projectLabel } from "@/lib/projects/label";
 
 // FIN (SPEC §9.1 FIN-a…FIN-h, Fred 2026-10-28): what Administrative › Finance and the project's Finance card read, with
 // the signed-in person's client (RLS applies). Only Low Voltage projects are in the module (Electrical has its own
@@ -109,7 +110,7 @@ export async function loadFinanceProjects(db: SupabaseClient): Promise<FinancePr
       return {
         ...fig,
         id: p.id,
-        title: p.title ?? `Project #${p.id}`,
+        title: projectLabel(p.title, p.id),
         owner: p.owner?.title ?? null,
         owner_id: p.owner?.id ?? null,
         owner_org: p.owner?.organizations?.title ?? null,
@@ -305,7 +306,7 @@ export async function loadReview(db: SupabaseClient, projectId?: number): Promis
   if (pids.length) {
     const { data: pr } = await db.from("projects").select("id, title").in("id", pids);
     const titles = new Map(((pr ?? []) as { id: number; title: string | null }[]).map((p) => [p.id, p.title]));
-    for (const c of cards) if (c.proposal.project_id) c.projectTitle = titles.get(c.proposal.project_id) ?? null;
+    for (const c of cards) if (c.proposal.project_id) c.projectTitle = projectLabel(titles.get(c.proposal.project_id), c.proposal.project_id);
   }
   return cards;
 }

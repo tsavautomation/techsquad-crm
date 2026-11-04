@@ -16,6 +16,7 @@ import type { Geo } from "@/lib/time-clock/clock";
 import { personStatus } from "./day";
 import { openPendingByProject } from "./pending";
 import { loadFieldDay } from "./return-card";
+import { projectLabel } from "@/lib/projects/label";
 
 // F2 Field day: what the Today screen and the visit page show. Reads through the signed-in
 // user's session, so row-level security applies.
@@ -218,7 +219,7 @@ export async function loadMyDay(user: CurrentUser): Promise<MyDay | null> {
   });
   const reportsDue = past
     .filter((v) => v.checked_out_at && v.kind !== "Internal" && !reportOf.has(v.id)) // J-k: no report for an internal event
-    .map((v) => ({ id: v.id, project: v.projects?.title ?? (isSurvey(v.kind) ? visitLabel(v, null) : `Visit #${v.id}`), projectId: v.project_id, checked_out_at: v.checked_out_at! }));
+    .map((v) => ({ id: v.id, project: v.project_id ? projectLabel(v.projects?.title, v.project_id) : isSurvey(v.kind) ? visitLabel(v, null) : `Visit #${v.id}`, projectId: v.project_id, checked_out_at: v.checked_out_at! }));
   return { visits, reportsDue };
 }
 

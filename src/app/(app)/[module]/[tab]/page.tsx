@@ -14,6 +14,7 @@ import { formatDate } from "@/lib/dates";
 import { canModule } from "@/lib/records/extras";
 import { getLang, getT } from "@/i18n/server";
 import { localized } from "@/i18n/registry";
+import { projectLabel } from "@/lib/projects/label";
 
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]">) {
@@ -85,6 +86,8 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
   const sortIcon = (name: string) =>
     sort === name ? dir === "asc" ? <ArrowUp className="size-3" aria-label="ascending" /> : <ArrowDown className="size-3" aria-label="descending" /> : null;
 
+  // PJ-c: projects are named "Title (number)" everywhere.
+  const titleOf = (r: { id: number; title?: string | null }) => (t.name === "projects" ? projectLabel(r.title, r.id) : (r.title ?? `#${r.id}`));
   const cell = (row: (typeof rows)[number], name: string) => {
     const f = cols.find((c) => c.name === name)!;
     const v = row[name];
@@ -150,7 +153,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
                 <Link href={recordHref(t, r.id)} className="block rounded-2xl border bg-card shadow-card p-3 active:bg-muted">
                   <div className="flex items-center gap-2 font-medium">
                     {r.locked === true && <Lock className="size-3.5 text-muted-foreground" aria-label={tr("Submitted")} />}
-                    {r.title ?? `#${r.id}`}
+                    {titleOf(r)}
                   </div>
                   <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
                     {cols.map((c) => (
@@ -195,7 +198,7 @@ export default async function ListPage(props: PageProps<"/[module]/[tab]">) {
                     <td className="px-3 py-2">
                       <Link href={recordHref(t, r.id)} className="inline-flex items-center gap-1.5 font-medium underline-offset-4 hover:underline">
                         {r.locked === true && <Lock className="size-3.5 text-muted-foreground" aria-label={tr("Submitted")} />}
-                        {r.title ?? `#${r.id}`}
+                        {titleOf(r)}
                       </Link>
                     </td>
                     {cols.map((c) => (

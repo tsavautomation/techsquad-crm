@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CurrentUser } from "@/lib/auth/session";
 import { CATEGORIES, compareCards, type Category, type Priority, type Status } from "./triage-engine";
+import { projectLabel } from "@/lib/projects/label";
 
 // F28: what the /whatsapp board reads. The signed-in user's client, so RLS (the WhatsApp permission) applies.
 
@@ -71,7 +72,7 @@ export async function loadBoard(db: SupabaseClient, days: number, finished = fal
     byConv.set(m.conversation_id, list);
   }
   const titles = new Map(((projects ?? []) as { id: number; title: string | null }[]).map((p) => [p.id, p.title]));
-  const cards: WaCard[] = rows.map((r) => ({ ...r, project_title: r.project_id ? (titles.get(r.project_id) ?? null) : null, messages: byConv.get(r.id) ?? [] })).sort(compareCards);
+  const cards: WaCard[] = rows.map((r) => ({ ...r, project_title: r.project_id ? projectLabel(titles.get(r.project_id), r.project_id) : null, messages: byConv.get(r.id) ?? [] })).sort(compareCards);
   const counts = Object.fromEntries(CATEGORIES.map((c) => [c, 0])) as Record<Category, number>;
   let urgentOpen = 0;
   for (const c of cards) {

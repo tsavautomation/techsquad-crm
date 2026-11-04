@@ -17,6 +17,7 @@ import { POD_FIELD } from "./values";
 import { BUCKET, displayNames } from "./relations";
 
 import { isSelfOnly, myEmployeeIds, readableTable } from "@/lib/auth/office";
+import { projectLabel, searchedId } from "@/lib/projects/label";
 export type Choice = { id: string; label: string; hint?: string };
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // CRM storage (Supabase Free plan limit); OneDrive takes the big files
@@ -65,7 +66,10 @@ export async function searchChoicesAction(tableName: string, fieldName: string, 
   if (f.type !== "lookup" || !f.lookup) return [];
   // Employees and vehicles come from the name views, so technicians get the lists too (SPEC §9.1 UI-h).
   let req = db.from(readableTable(f.lookup.table)).select("id,title").is("deleted_at", null).is("archived_at", null).order("title").limit(20);
-  if (q) req = req.ilike("title", `%${q}%`);
+  // PJ-c: a project is also found by its number ("1195" or "#1195").
+  const idq = f.lookup.table === "projects" ? searchedId(q) : null;
+  if (idq !== null) req = req.or(`title.ilike.%${q}%,id.eq.${idq}`);
+  else if (q) req = req.ilike("title", `%${q}%`);
   if (isSelfOnly(tableName, fieldName, user)) {
     const mine = await myEmployeeIds(db, user);
     if (!mine.length) return [];
@@ -82,7 +86,8 @@ export async function searchChoicesAction(tableName: string, fieldName: string, 
   }
   const { data, error } = await req;
   if (error) throw new Error(error.message);
-  return ((data ?? []) as { id: number; title: string | null }[]).map((r) => ({ id: String(r.id), label: r.title ?? `#${r.id}` }));
+  const project = f.lookup.table === "projects";
+  return ((data ?? []) as { id: number; title: string | null }[]).map((r) => ({ id: String(r.id), label: project ? projectLabel(r.title, r.id) : (r.title ?? `#${r.id}`) }));
 }
 
 /** Values to copy into the form when a lookup is picked (SPEC §2.2 auto-fill), plus labels for copied links. */

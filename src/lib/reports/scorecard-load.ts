@@ -5,6 +5,7 @@ import { loadFieldDay } from "@/lib/field-day/return-card";
 import { addDays } from "@/lib/schedule/dates";
 import { statusFor, visitCounts, type RuleReport, type RuleVisit } from "./rule";
 import { inPeriod, periods, scorecard, type Period, type Scorecard, type ScoreReport } from "./scorecard";
+import { projectLabel } from "@/lib/projects/label";
 
 // F19-e Tech scorecards: the rows behind one person's (or everyone's) scorecard, read with the
 // viewer's client (RLS applies). One visit owed = one row; the Visit = Report rule gives its status.
@@ -30,7 +31,7 @@ async function load(db: SupabaseClient, from: string, to: string, people: number
     .map((v) => ({
       id: v.id,
       project_id: v.project_id,
-      project: v.projects?.title ?? "",
+      project: v.project_id ? projectLabel(v.projects?.title, v.project_id) : "",
       date: toDateTimeLocalET(v.starts_at).slice(0, 10),
       people: [...new Set([v.technician_id, ...v.visits_team.map((t) => t.target_id)].filter((x): x is number => x !== null))],
       cancelled: v.status === "Cancelled" || v.kind === "Internal", // J-k: internal events owe no report

@@ -7,6 +7,7 @@ import { addDays } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
 import { getT } from "@/i18n/server";
+import { projectLabel } from "@/lib/projects/label";
 
 // F18-b: the employee's report deficiencies (last 90 days) on their page, for the people who may see
 // the list. As with performance (P2-d), nobody but an administrator sees their own.
@@ -45,7 +46,7 @@ export async function EmployeeDeficiencies({ employeeId, user }: { employeeId: n
           {open.slice(0, 8).map((r) => (
             <li key={r.id} className="flex items-baseline justify-between gap-3 py-1.5">
               <Link href={recordHref(t, r.id)} className="min-w-0 truncate hover:underline">
-                {r.projects?.title ?? (r.project_id ? `Project #${r.project_id}` : tr("No project"))}
+                {r.project_id ? projectLabel(r.projects?.title, r.project_id) : tr("No project")}
               </Link>
               <span className={`shrink-0 text-xs ${r.type === "Missing" ? "text-bad-fg" : "text-warn-fg"}`}>
                 {tr(r.type)} · {formatDate(r.date)}

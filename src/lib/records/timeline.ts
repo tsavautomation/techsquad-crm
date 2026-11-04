@@ -7,6 +7,7 @@ import { clock } from "@/lib/schedule/dates";
 import { getTable } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
+import { projectLabel } from "@/lib/projects/label";
 
 // F4 client timeline (docs/portal-features-merge.md §G, SPEC §9.1 F4-c): one list of everything that
 // happened with a client or project — calls / texts / emails logged, notes, stage changes, visits,
@@ -79,7 +80,7 @@ export async function loadTimeline(db: SupabaseClient, perms: ReadonlySet<string
   if (table === "projects") projectIds = [id];
   else if (can("projects")) {
     const { data } = await db.from("projects").select("id, title").eq("job_owner_id", id).is("deleted_at", null);
-    for (const p of (data ?? []) as { id: number; title: string | null }[]) projectName.set(p.id, p.title ?? `#${p.id}`);
+    for (const p of (data ?? []) as { id: number; title: string | null }[]) projectName.set(p.id, projectLabel(p.title, p.id));
     projectIds = [...projectName.keys()];
   }
   const onProject = (pid: number | null) => (table === "contacts" && pid ? projectName.get(pid) : undefined);

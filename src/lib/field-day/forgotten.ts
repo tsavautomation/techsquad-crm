@@ -8,6 +8,7 @@ import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import type { EntryKind } from "@/lib/time-clock/clock";
 import { forgottenClockOutAt, openClockIns } from "@/lib/time-clock/timesheet";
 import { autoCloseAt } from "./day";
+import { projectLabel } from "@/lib/projects/label";
 
 // F20 Forgotten check-outs (SPEC §9.1 F20): after midnight, whoever is still "On site" is checked out at the
 // day's cut-off (4 PM, 5 PM for the late list), an open time-clock day is clocked out the same way, and each
@@ -39,12 +40,12 @@ export async function closeForgottenDay(date: string): Promise<Record<string, un
   //    attendance row is closed at that person's cut-off and the visit's team summary is recomputed.
   const { data: open } = await db
     .from("visit_attendance")
-    .select("id, visit_id, employee_id, checked_in_at, visits!inner(deleted_at, status, projects(title))")
+    .select("id, visit_id, employee_id, checked_in_at, visits!inner(deleted_at, status, projects(id, title))")
     .lt("checked_in_at", to)
     .is("checked_out_at", null)
     .is("visits.deleted_at", null)
     .neq("visits.status", "Cancelled");
-  const openRows = (open ?? []) as unknown as { id: number; visit_id: number; employee_id: number; checked_in_at: string; visits: { projects: { title: string | null } | null } | null }[];
+  const openRows = (open ?? []) as unknown as { id: number; visit_id: number; employee_id: number; checked_in_at: string; visits: { projects: { id: number; title: string | null } | null } | null }[];
   const touched = new Set<number>();
   for (const a of openRows) {
     const day = toDateTimeLocalET(a.checked_in_at).slice(0, 10);
@@ -52,7 +53,7 @@ export async function closeForgottenDay(date: string): Promise<Record<string, un
     const { error } = await db.from("visit_attendance").update({ checked_out_at: closedAt, auto_closed_at: new Date().toISOString(), auto_closed_reason: "end_of_day", updated_at: new Date().toISOString() }).eq("id", a.id);
     if (error) throw new Error(`attendance #${a.id}: ${error.message}`);
     touched.add(a.visit_id);
-    warnings.push({ employee_id: a.employee_id, user_id: null, kind: "forgot_checkout", day, visit_id: a.visit_id, project: a.visits?.projects?.title ?? null, closed_at: closedAt });
+    warnings.push({ employee_id: a.employee_id, user_id: null, kind: "forgot_checkout", day, visit_id: a.visit_id, project: a.visits?.projects ? projectLabel(a.visits.projects.title, a.visits.projects.id) : null, closed_at: closedAt });
   }
   for (const id of touched) {
     const { error } = await db.rpc("visit_recompute", { p_id: id });

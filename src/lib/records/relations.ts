@@ -7,6 +7,7 @@ import { isPendingOneDrive, pathOf } from "@/lib/files/paths";
 import { isMultiLookup, isUpload, type FileItem } from "./values";
 
 import { readableTable } from "@/lib/auth/office";
+import { projectLabel } from "@/lib/projects/label";
 export { BUCKET } from "@/lib/files/store";
 
 /** Link table for a many-to-many field, e.g. job_reports.team_ids → job_reports_team (see M4 schema). */
@@ -136,7 +137,7 @@ export async function displayNames(db: SupabaseClient, t: TableDef, values: Valu
       if (f.type === "lookup" && f.lookup) {
         // Employee and vehicle names come from the name views (SPEC §9.1 UI-h), so technicians see "Carlos Gurgel", not "#1002".
         const { data } = await db.from(readableTable(f.lookup.table)).select("id,title").in("id", ids);
-        out[f.name] = Object.fromEntries(((data ?? []) as { id: number; title: string | null }[]).map((r) => [String(r.id), r.title ?? `#${r.id}`]));
+        out[f.name] = Object.fromEntries(((data ?? []) as { id: number; title: string | null }[]).map((r) => [String(r.id), f.lookup!.table === "projects" ? projectLabel(r.title, r.id) : (r.title ?? `#${r.id}`)]));
       } else if (f.type === "user") {
         const { data } = await db.from("profiles").select("id,first_name,last_name,email").in("id", ids);
         out[f.name] = Object.fromEntries(

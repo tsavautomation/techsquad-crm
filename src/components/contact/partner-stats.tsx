@@ -6,6 +6,7 @@ import { getTable } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { recordHref } from "@/registry/routes";
 import { getT } from "@/i18n/server";
+import { projectLabel } from "@/lib/projects/label";
 
 // F4 partner stats on an Organization (docs/portal-features-merge.md §H, SPEC §9.1 F4-e): projects it
 // worked on as designer, GC, builder or referrer, and (for people who see money) their approved value.
@@ -65,7 +66,7 @@ export async function PartnerStats({ orgId, user }: { orgId: number; user: Curre
         {rows.slice(0, 8).map((r) => (
           <li key={r.id} className="flex items-center justify-between gap-2 px-1 py-1.5 text-sm">
             <Link href={recordHref(pt, r.id)} className="min-w-0 truncate hover:underline">
-              {r.title ?? tr("Project #{id}", { id: r.id })}
+              {projectLabel(r.title, r.id)}
             </Link>
             <span className="shrink-0 text-xs text-text-2">
               {[r.job_status ? tr(r.job_status) : null, showMoney && approved.get(r.id) ? money.format(approved.get(r.id)!) : null].filter(Boolean).join(" · ")}

@@ -16,6 +16,7 @@ import { recordHref } from "@/registry/routes";
 import { getT } from "@/i18n/server";
 import { pendingForMe } from "@/lib/requests/engine";
 import { isRecipient, loadAcks } from "@/lib/requests/load";
+import { projectLabel } from "@/lib/projects/label";
 
 // The alerts bell in the top bar: what is waiting for the signed-in person, each linking to its record.
 // Tags in notes stay until the record is opened (or "Mark tags read"); the rest are live: they drop out
@@ -256,7 +257,7 @@ export async function alertsAction(): Promise<Alerts> {
     return rows.map((r) => ({
       key: `request:${r.id}`,
       href: `${recordHref(projects, r.project_id)}/sub/service_requests/${r.id}/edit`,
-      title: `${tr(r.kind ?? "Other")} · ${r.projects?.title ?? `#${r.project_id}`}`,
+      title: `${tr(r.kind ?? "Other")} · ${projectLabel(r.projects?.title, r.project_id)}`,
       meta: `${formatDate(r.created_at)} · ${(r.description ?? "").length > 80 ? `${(r.description ?? "").slice(0, 80)}…` : r.description ?? ""}`,
       urgent: Date.now() - new Date(r.created_at).getTime() > 2 * 24 * 3600_000,
     }));
@@ -278,7 +279,7 @@ export async function alertsAction(): Promise<Alerts> {
     return mine.map((r) => ({
       key: `preq:${r.id}`,
       href: `${recordHref(projects, r.project_id)}#requests`,
-      title: `${tr(r.type)} · ${r.projects?.title ?? `#${r.project_id}`}`,
+      title: `${tr(r.type)} · ${projectLabel(r.projects?.title, r.project_id)}`,
       meta: `${formatDate(r.date)} · ${(r.description ?? "").length > 80 ? `${(r.description ?? "").slice(0, 80)}…` : (r.description ?? "")}`,
       urgent: Date.now() - new Date(r.created_at).getTime() > 2 * 24 * 3600_000,
       ack: r.id,

@@ -11,6 +11,7 @@ import { fromDateTimeLocalET } from "@/lib/dates";
 
 import { readableTable } from "@/lib/auth/office";
 import { EXCLUDED_PROJECT_FILTER } from "@/lib/projects/excluded";
+import { projectLabel, searchedId } from "@/lib/projects/label";
 export type Row = Record<string, unknown> & { id: number; title: string | null };
 
 /** Record tables are chosen at runtime, so use an untyped client for them (RLS still applies). */
@@ -141,10 +142,17 @@ const TEXT_TYPES = new Set(["text", "textarea", "richtext", "email", "phone", "u
 async function searchClause(db: SupabaseClient, t: TableDef, q: string): Promise<string> {
   const safe = q.replace(/[%_]/g, "\\$&").replace(/["\\,()]/g, " ").trim();
   const like = `ilike."%${safe}%"`;
-  const parts = [`title.${like}`];
+  // PJ-c: a number finds the record itself, and the records linked to the project with that number.
+  const idq = searchedId(safe);
+  const parts = [`title.${like}`, ...(idq !== null ? [`id.eq.${idq}`] : [])];
   for (const f of t.fields) if (isRowField(f) && TEXT_TYPES.has(f.type) && !f.sensitive) parts.push(`${f.name}.${like}`);
   const lookups = t.fields.filter((f) => f.type === "lookup" && !f.multiple && f.lookup && isRowField(f));
-  const hits = await Promise.all(lookups.map((f) => db.from(readableTable(f.lookup!.table)).select("id").ilike("title", `%${safe}%`).is("deleted_at", null).limit(300)));
+  const hits = await Promise.all(
+    lookups.map((f) => {
+      const req = db.from(readableTable(f.lookup!.table)).select("id").is("deleted_at", null).limit(300);
+      return idq !== null && f.lookup!.table === "projects" ? req.or(`title.ilike.%${safe}%,id.eq.${idq}`) : req.ilike("title", `%${safe}%`);
+    }),
+  );
   lookups.forEach((f, i) => {
     const ids = ((hits[i].data ?? []) as { id: number }[]).map((r) => r.id);
     if (ids.length) parts.push(`${f.name}.in.(${ids.join(",")})`);
@@ -180,7 +188,7 @@ export async function lookupTitles(t: TableDef, rows: Record<string, unknown>[],
         if (!ids.length) return;
         // Employee and vehicle names are visible to everyone (name views); the tables keep their own permissions.
         const { data } = await db.from(readableTable(f.lookup!.table)).select("id,title").in("id", ids);
-        for (const r of (data ?? []) as { id: number; title: string | null }[]) out[f.name].set(r.id, r.title ?? `#${r.id}`);
+        for (const r of (data ?? []) as { id: number; title: string | null }[]) out[f.name].set(r.id, f.lookup!.table === "projects" ? projectLabel(r.title, r.id) : (r.title ?? `#${r.id}`));
       }),
   );
   return out;

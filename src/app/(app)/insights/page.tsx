@@ -12,6 +12,7 @@ import { getTable } from "@/registry";
 import { canOpen } from "@/registry/permissions";
 import { cn } from "@/lib/utils";
 import { getT } from "@/i18n/server";
+import { projectLabel } from "@/lib/projects/label";
 
 export async function generateMetadata() {
   return { title: (await getT())("Insights") };
@@ -186,7 +187,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
       const per = [...hoursByProject(v.map((x) => ({ ...x, starts_at: x.starts_at ?? "" }))).entries()].filter(([, e]) => e.onSiteMin > 0).sort((a, b) => b[1].onSiteMin - a[1].onSiteMin).slice(0, 8);
       const pids = per.map(([id]) => id).filter((x): x is number => x !== null);
       const { data: pr } = pids.length ? await db.from("projects").select("id, title").in("id", pids) : { data: [] };
-      const pn = new Map(((pr ?? []) as { id: number; title: string | null }[]).map((p) => [p.id, p.title ?? `#${p.id}`]));
+      const pn = new Map(((pr ?? []) as { id: number; title: string | null }[]).map((p) => [p.id, projectLabel(p.title, p.id)]));
       byProject = per.map(([id, e]) => ({ id, name: id === null ? tr("No project") : (pn.get(id) ?? `#${id}`), visits: e.visits, min: e.onSiteMin, plannedMin: e.plannedMin }));
     }
     ops = {

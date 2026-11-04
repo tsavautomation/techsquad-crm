@@ -15,6 +15,15 @@
  *   npx tsx --conditions=react-server --env-file=.env.local scripts/move-projects-ts.ts               # dry run → docs/projects-ts-move.xlsx
  *   npx tsx --conditions=react-server --env-file=.env.local scripts/move-projects-ts.ts --apply       # move the certain ones
  *   npx tsx --conditions=react-server --env-file=.env.local scripts/move-projects-ts.ts --from-sheet  # move what Fred decided in the sheet
+ *   npx tsx --conditions=react-server --env-file=.env.local scripts/move-projects-ts.ts --decided [--apply]
+ *       OD-h (Fred 2026-11-04): ONLY the folders decided on Admin › Report archive (round 2 decided every
+ *       folder that is a project). Name matching and file counts are not used. Folders named Warehouse / Van
+ *       and anything confidential never move. A folder already moved into the WRONG project folder (its
+ *       decision changed since) is moved again, from where it is now. Each folder's file count is listed, and
+ *       the list (origin → destination) is written to docs/projects-ts-move-decided.md for Fred's OK.
+ *       Special: inside "RODRIGUEZ, PAUL - CORAL GABLES" (project Mahaffy Residence - Coral Gables, the folder
+ *       was mislabelled) every file and folder name with "Paul Rodriguez" / "Rodriguez Paul" is renamed to
+ *       "Mahaffy", and the CRM's stored file names follow.
  *
  * A move keeps the OneDrive item ids, so the archive Job Reports' file links keep working. The folder
  * paths the CRM stores (attachments.provider_folder, record_pdfs.folder, the onedrive_folders cache)
@@ -25,7 +34,8 @@ import ExcelJS from "exceljs";
 import { folderKey } from "@/lib/archive/match";
 import { parseClientFolder } from "@/lib/archive/parse";
 import { loadDecisions } from "@/lib/archive/sync";
-import { getItem, listChildren, moveIntoFolder } from "@/lib/files/onedrive";
+import { writeFileSync } from "node:fs";
+import { getItem, listChildren, moveIntoFolder, renameItem } from "@/lib/files/onedrive";
 import { safeName } from "@/lib/files/paths";
 import { norm } from "@/lib/google/match";
 import { adminDb } from "@/lib/supabase/admin";
@@ -38,6 +48,17 @@ const SHEET = "docs/projects-ts-move.xlsx";
 const MIN_FILES = 3;
 const apply = process.argv.includes("--apply");
 const fromSheet = process.argv.includes("--from-sheet");
+/** OD-h: decisions only (see the header). */
+const decidedOnly = process.argv.includes("--decided");
+const LIST = "docs/projects-ts-move-decided.md";
+/** Tech Squad's own warehouse and van folders stay where they are (Fred 2026-11-04), whatever the decision says. */
+const HOLD_BACK = /\b(warehouse|vans?)\b/i;
+/** Nothing confidential is ever touched (memory confidential-onedrive, SPEC §9.1 OD-e). */
+const CONFIDENTIAL = /payroll|transactions?|pay\s*rates?|staff\s*performance/i;
+/** The mislabelled folder: its files are named after the real client (Fred 2026-11-04). */
+const RENAME_IN = folderKey("RODRIGUEZ, PAUL - CORAL GABLES");
+const RENAME_FROM = /paul\s*rodrigue[sz]|rodrigue[sz],?\s*paul/gi;
+const RENAME_TO = "Mahaffy";
 
 type Candidate = { id: number; title: string; score: number; why: string };
 type Plan = {
@@ -51,6 +72,10 @@ type Plan = {
   reason: string;
   /** OD-g: the likeliest projects when the folder is not certain. */
   candidates: Candidate[];
+  /** Where the folder is now (OD-h: a folder moved earlier into the wrong project folder is not under PROJECTS TS). */
+  from?: string;
+  /** OD-h: every file inside, counted for the dry-run list. */
+  fileCount?: number;
 };
 type Move = { itemId: string; from: string; to: string; name: string; movedAt: string };
 type Db = ReturnType<typeof adminDb>;
@@ -96,7 +121,19 @@ async function main() {
       let reason: string;
       let candidates: Candidate[] = [];
       const answer = answers.get(c.id);
-      if (answer !== undefined) {
+      if (decidedOnly) {
+        // OD-h: the decision on Admin › Report archive, and nothing else.
+        projectId = decisions.get(key) ?? null;
+        reason = !decisions.has(key) ? "not decided on Admin › Report archive" : projectId ? "decided by hand on Admin › Report archive" : "decided by hand: no project";
+        if (projectId && HOLD_BACK.test(c.name)) {
+          reason = `held back: warehouse / van folder (decided → project #${projectId})`;
+          projectId = null;
+        }
+        if (CONFIDENTIAL.test(c.name)) {
+          reason = "held back: confidential";
+          projectId = null;
+        }
+      } else if (answer !== undefined) {
         projectId = answer === "skip" ? null : answer;
         reason = answer === "skip" ? "Fred: skip" : "Fred's answer in the sheet";
       } else if (decisions.has(key)) {
@@ -128,18 +165,62 @@ async function main() {
       plan.push({ gc: gc.name, folder: c.name, itemId: c.id, files: stats?.files ?? 0, projectId, project: p?.title ?? null, dest: p ? destOf(p) : null, reason, candidates });
     }
   }
+  const log: Move[] = [];
+  const failed: string[] = [];
+  const { data: prev } = await db.from("app_integrations").select("data").eq("key", LOG_KEY).maybeSingle();
+  log.push(...(((prev as { data: { moves?: Move[] } } | null)?.data?.moves ?? []) as Move[]));
+
+  // OD-h: folders moved earlier whose decision now names another project move again, from where they are.
+  if (decidedOnly) {
+    const latest = new Map<string, Move>();
+    for (const m of log) latest.set(m.itemId, m);
+    for (const m of latest.values()) {
+      const inProject = m.to.match(/^TechSquad CRM\/Projects\/.+ \((\d+)\)\/[^/]+$/);
+      if (!inProject) continue;
+      const wanted = decisions.get(folderKey(m.name));
+      if (!wanted || wanted === Number(inProject[1])) continue;
+      const p = byId.get(wanted);
+      if (!p) continue;
+      // Make sure it still is where the log says.
+      let item: Awaited<ReturnType<typeof getItem>>;
+      try {
+        item = await getItem(m.itemId);
+      } catch {
+        plan.push({ gc: "(moved earlier)", folder: m.name, itemId: m.itemId, files: 0, projectId: null, project: null, dest: null, reason: `decided → ${p.title} (${wanted}) but the folder is gone from OneDrive`, candidates: [], from: m.to });
+        continue;
+      }
+      const here = `${decodeURIComponent(item.parentReference?.path ?? "").replace(/^\/drive\/root:\//, "")}/${item.name}`;
+      if (here === `${destOf(p)}/${item.name}`) continue; // already right
+      plan.push({ gc: "(moved earlier, wrong project)", folder: item.name, itemId: m.itemId, files: 0, projectId: wanted, project: p.title, dest: destOf(p), reason: `now in ${here.replace(/\/[^/]+$/, "")}; decided → ${p.title} (${wanted})`, candidates: [], from: here });
+    }
+  }
+
   const moving = plan.filter((p) => p.dest);
   const review = plan.filter((p) => !p.dest && p.candidates.length);
   const staying = plan.filter((p) => !p.dest && !p.candidates.length);
   console.log(`${plan.length} client folders in ${gcs.length} designer / GC folders: ${moving.length} to move, ${review.length} to review, ${staying.length} stay.`);
 
-  const log: Move[] = [];
-  const failed: string[] = [];
-  const { data: prev } = await db.from("app_integrations").select("data").eq("key", LOG_KEY).maybeSingle();
-  log.push(...(((prev as { data: { moves?: Move[] } } | null)?.data?.moves ?? []) as Move[]));
+  // OD-h: count the files inside every folder that moves (a few at a time; OneDrive lists 999 per call).
+  if (decidedOnly) {
+    let done = 0;
+    const queue = [...moving];
+    await Promise.all(
+      Array.from({ length: 4 }, async () => {
+        for (let p = queue.shift(); p; p = queue.shift()) {
+          p.fileCount = await countFiles(p.from ?? `${OLD_ROOT}/${p.gc}/${p.folder}`);
+          if (++done % 25 === 0) console.log(`${done}/${moving.length} folders counted`);
+        }
+      }),
+    );
+    const rn = moving.find((p) => folderKey(p.folder) === RENAME_IN);
+    const renames = rn ? await listRenames(rn.from ?? `${OLD_ROOT}/${rn.gc}/${rn.folder}`, rn.itemId) : [];
+    writeList(moving, staying, renames);
+    console.log(`List: ${LIST}`);
+  }
+
   if (apply || fromSheet) {
     for (const [i, p] of moving.entries()) {
-      const from = `${OLD_ROOT}/${p.gc}/${p.folder}`;
+      const from = p.from ?? `${OLD_ROOT}/${p.gc}/${p.folder}`;
       try {
         const moved = await moveIntoFolder(p.itemId, p.dest!, p.folder);
         const name = moved?.name ?? (await settle(p.itemId, p.dest!));
@@ -148,6 +229,7 @@ async function main() {
         log.push({ itemId: p.itemId, from, to, name, movedAt: new Date().toISOString() });
         await db.from("app_integrations").upsert({ key: LOG_KEY, data: { moves: log }, updated_at: new Date().toISOString() });
         console.log(`${i + 1}/${moving.length} moved: ${from} → ${to}`);
+        if (decidedOnly && folderKey(p.folder) === RENAME_IN) await applyRenames(db, to, p.itemId);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         failed.push(`${from}: ${msg}`);
@@ -158,6 +240,78 @@ async function main() {
 
   await writeSheet(plan, log, failed);
   console.log(apply || fromSheet ? `Moved ${log.length} in all (this run and before), ${failed.length} failed. ` : "Dry run; nothing moved. ", `Sheet: ${SHEET}`);
+}
+
+// ---------------------------------------------------------------- OD-h helpers
+
+/** Every file under a folder path, at any depth. */
+async function countFiles(path: string): Promise<number> {
+  let n = 0;
+  for (const k of await listChildren(path)) {
+    if (k.file) n++;
+    else if (k.folder) n += await countFiles(`${path}/${k.name}`);
+  }
+  return n;
+}
+
+type Rename = { id: string; path: string; name: string; newName: string; isFolder: boolean };
+
+/** Files and folders inside `path` whose name carries the wrong client, deepest first (children before their folder). */
+async function listRenames(root: string, selfId: string): Promise<Rename[]> {
+  const out: Rename[] = [];
+  async function walk(p: string) {
+    for (const k of await listChildren(p)) {
+      if (k.folder) await walk(`${p}/${k.name}`);
+      RENAME_FROM.lastIndex = 0;
+      if (RENAME_FROM.test(k.name)) out.push({ id: k.id, path: p, name: k.name, newName: k.name.replace(RENAME_FROM, RENAME_TO), isFolder: Boolean(k.folder) });
+    }
+  }
+  await walk(root);
+  // The client folder itself, last of all.
+  const self = await getItem(selfId);
+  RENAME_FROM.lastIndex = 0;
+  if (RENAME_FROM.test(self.name)) out.push({ id: self.id, path: root.replace(/\/[^/]+$/, ""), name: self.name, newName: self.name.replace(RENAME_FROM, RENAME_TO), isFolder: true });
+  return out;
+}
+
+/** Rename in OneDrive and in the CRM's stored names (attachments.file_name, report_files.name, provider_folder paths). */
+async function applyRenames(db: Db, folderPath: string, itemId: string) {
+  const renames = await listRenames(folderPath, itemId);
+  for (const r of renames) {
+    const item = await renameItem(r.id, r.newName);
+    const oldPath = `${r.path}/${r.name}`;
+    const newPath = `${r.path}/${item.name}`;
+    if (r.isFolder) await rewritePaths(db, oldPath, newPath);
+    else {
+      await db.from("attachments").update({ file_name: item.name }).eq("provider", "onedrive").eq("provider_path", r.id);
+      await db.from("report_files").update({ name: item.name }).eq("id", r.id);
+    }
+    console.log(`renamed: ${oldPath} → ${item.name}`);
+  }
+  console.log(`${renames.length} names changed to ${RENAME_TO}.`);
+}
+
+/** The dry-run list for Fred's OK: origin → destination with the file count, then what stays and why. */
+function writeList(moving: Plan[], staying: Plan[], renames: Rename[]) {
+  const lines: string[] = [];
+  const total = moving.reduce((n, p) => n + (p.fileCount ?? 0), 0);
+  lines.push(`# PROJECTS TS → TechSquad CRM / Projects (decided folders)`, "", `${moving.length} folders to move, ${total} files in all. Dry run on ${new Date().toISOString().slice(0, 10)}.`, "", "## To move", "", "| # | From | To | Files |", "|---|---|---|---|");
+  for (const [i, p] of moving.entries()) lines.push(`| ${i + 1} | ${p.from ?? `${OLD_ROOT}/${p.gc}/${p.folder}`} | ${p.dest}/ | ${p.fileCount ?? "?"} |`);
+  if (renames.length) {
+    lines.push("", `## Names changed to ${RENAME_TO} (inside RODRIGUEZ, PAUL - CORAL GABLES)`, "", "| Old name | New name |", "|---|---|");
+    for (const r of renames) lines.push(`| ${r.isFolder ? "📁 " : ""}${r.name} | ${r.newName} |`);
+  }
+  const held = staying.filter((p) => p.reason.startsWith("held back"));
+  if (held.length) {
+    lines.push("", "## Held back (decided, but a warehouse / van or confidential folder)", "");
+    for (const p of held) lines.push(`- ${OLD_ROOT}/${p.gc}/${p.folder}: ${p.reason}`);
+  }
+  const rest = staying.filter((p) => !p.reason.startsWith("held back"));
+  const byReason = new Map<string, number>();
+  for (const p of rest) byReason.set(p.reason, (byReason.get(p.reason) ?? 0) + 1);
+  lines.push("", `## Stays (${rest.length})`, "");
+  for (const [r, n] of byReason) lines.push(`- ${n}: ${r}`);
+  writeFileSync(LIST, lines.join("\n") + "\n");
 }
 
 // ---------------------------------------------------------------- OD-g deep match

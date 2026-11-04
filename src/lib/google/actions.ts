@@ -10,6 +10,7 @@ import { getTable } from "@/registry";
 import { canDo } from "@/registry/permissions";
 import { disconnect, listCalendars, loadSettings, patchSettings, type GCalendar, type ImportState } from "./client";
 import { importBusy, runImport, startCreating, startReading, syncNow, type SyncSummary } from "./sync";
+import { projectLabel, searchedId } from "@/lib/projects/label";
 
 // Server actions for Admin › Google Calendar and for Schedule › Needs a project (F15).
 
@@ -186,10 +187,12 @@ export async function searchProjectsAction(q: string): Promise<ProjectHit[]> {
   const text = q.trim();
   if (text.length < 2) return [];
   const db = await recordsDb();
-  const { data } = await db.from("projects").select("id, title, job_address").is("deleted_at", null).ilike("title", `%${text.replace(/[%_]/g, "")}%`).order("title").limit(8);
+  const idq = searchedId(text);
+  const req = db.from("projects").select("id, title, job_address").is("deleted_at", null).order("title").limit(8);
+  const { data } = await (idq !== null ? req.or(`title.ilike.%${text.replace(/[%_,()]/g, "")}%,id.eq.${idq}`) : req.ilike("title", `%${text.replace(/[%_]/g, "")}%`));
   return ((data ?? []) as { id: number; title: string | null; job_address: { street?: string; city?: string } | null }[]).map((p) => ({
     id: p.id,
-    title: p.title ?? `Project #${p.id}`,
+    title: projectLabel(p.title, p.id),
     address: [p.job_address?.street, p.job_address?.city].filter(Boolean).join(", ") || null,
   }));
 }

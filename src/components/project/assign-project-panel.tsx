@@ -5,6 +5,7 @@ import { isSurvey } from "@/lib/schedule/survey";
 import { getTable } from "@/registry";
 import { canDo } from "@/registry/permissions";
 import { AssignProject, type AssignContext } from "./assign-project";
+import { projectLabel } from "@/lib/projects/label";
 
 // SV-c: the Assign to project / Change project box on a visit or a job report. Loads what the box needs: the
 // project today, the visit's type and the survey's address and contact (for a new project).
@@ -23,7 +24,7 @@ export async function AssignProjectPanel({ table, id }: { table: "visits" | "job
     const r = data as unknown as { project_id: number | null; visit_id: number | null; projects: { title: string | null } | null } | null;
     if (!r) return null;
     projectId = r.project_id;
-    projectTitle = r.projects?.title ?? null;
+    projectTitle = r.project_id ? projectLabel(r.projects?.title, r.project_id) : null;
     if (r.visit_id) {
       const { data: v } = await db.from("visits").select("id, project_id, kind, address, contact_name, contact_phone, contact_email, projects(title)").eq("id", r.visit_id).maybeSingle();
       visit = v as unknown as VisitRow | null;
@@ -33,7 +34,7 @@ export async function AssignProjectPanel({ table, id }: { table: "visits" | "job
     visit = v as unknown as VisitRow | null;
     if (!visit) return null;
     projectId = visit.project_id;
-    projectTitle = visit.projects?.title ?? null;
+    projectTitle = visit.project_id ? projectLabel(visit.projects?.title, visit.project_id) : null;
   }
   const survey = isSurvey(visit?.kind);
   // Only a survey (or a report / visit with no project at all) gets the box; ordinary client visits keep the Edit form.

@@ -15,8 +15,8 @@ describe("SV-a the survey's label", () => {
     expect(surveyLabel({ street: "9701 Collins Ave" }, null)).toBe("SURVEY – 9701 Collins Ave");
   });
   it("labels a visit by project, survey place, internal subject or the old fallback", () => {
-    expect(visitLabel({ kind: "Visit", project_id: 5 }, "Roth Residence")).toBe("Roth Residence");
-    expect(visitLabel({ kind: "Visit", project_id: 5 }, null)).toBe("Project #5");
+    expect(visitLabel({ kind: "Visit", project_id: 5 }, "Roth Residence")).toBe("Roth Residence (5)"); // PJ-c: the project number follows the title
+    expect(visitLabel({ kind: "Visit", project_id: 5 }, null)).toBe("Project (5)");
     expect(visitLabel({ kind: "Survey", project_id: null, address: { street: "1 Beach Rd" } }, null)).toBe("SURVEY – 1 Beach Rd");
     expect(visitLabel({ kind: "Internal", project_id: null, subject: "Warehouse" }, null)).toBe("Warehouse");
     expect(visitLabel({ kind: "Visit", project_id: null, title: "Google: Smith" }, null)).toBe("Google: Smith");

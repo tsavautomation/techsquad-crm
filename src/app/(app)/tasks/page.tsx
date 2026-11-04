@@ -7,6 +7,7 @@ import { departmentOfCategory, DEPARTMENTS, type Department } from "@/lib/time-c
 import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
 import { getT } from "@/i18n/server";
+import { projectLabel } from "@/lib/projects/label";
 
 export async function generateMetadata() {
   return { title: (await getT())("Tasks") };
@@ -24,6 +25,7 @@ type Row = {
   ai_done_report_id: number | null;
   ai_done_quote: string | null;
   ai_done_at: string | null;
+  project_id: number | null;
   projects: { title: string | null; category: string | null; contacts: { title: string | null } | null } | null;
 };
 
@@ -43,7 +45,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
 
   let q = db
     .from("tasks")
-    .select("id, details, member_id, due_date, priority, status, labels, private, ai_done_report_id, ai_done_quote, ai_done_at, projects(title, category, contacts:job_owner_id(title))")
+    .select("id, details, member_id, due_date, priority, status, labels, private, ai_done_report_id, ai_done_quote, ai_done_at, project_id, projects(title, category, contacts:job_owner_id(title))")
     .is("deleted_at", null)
     .is("archived_at", null)
     .order("due_date", { ascending: true, nullsFirst: false })
@@ -93,7 +95,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
     status: columns.some((c) => c.value === r.status) ? r.status! : first,
     checklist: progress.get(r.id) ?? { done: 0, total: 0 },
     labels: (r.labels ?? []).map((v) => labelOptions.find((o) => o.value === v) ?? { value: v, label: v }).map((o) => ({ label: o.label, color: ("color" in o && o.color) || "#64748b" })),
-    project: r.projects?.title ?? null,
+    project: r.project_id ? projectLabel(r.projects?.title, r.project_id) : null,
     notes: noteCount.get(r.id) ?? 0,
     private: r.private,
     aiDone: r.ai_done_at && r.ai_done_report_id && r.status !== "Completed" ? { reportId: r.ai_done_report_id, reportDate: reportDate.get(r.ai_done_report_id) ? formatDate(reportDate.get(r.ai_done_report_id)!) : null, quote: r.ai_done_quote ?? "" } : null,

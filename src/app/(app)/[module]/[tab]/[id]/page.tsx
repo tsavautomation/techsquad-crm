@@ -62,6 +62,7 @@ import { PaymentStatusBadge } from "@/components/finance/payment-status-badge";
 import { financialStatus, ordinal, paymentNumbers, type FinRow } from "@/lib/finance/status";
 import { loadFinanceSettings } from "@/lib/finance/settings";
 import { todayET } from "@/lib/dates";
+import { projectLabel } from "@/lib/projects/label";
 
 
 export async function generateMetadata(props: PageProps<"/[module]/[tab]/[id]">) {
@@ -69,7 +70,7 @@ export async function generateMetadata(props: PageProps<"/[module]/[tab]/[id]">)
   const t = tableFromRoute(module, tab);
   const tr = await getT();
   const row = t && Number.isInteger(Number(id)) ? await getRecord(t, Number(id)) : null;
-  return { title: row?.title ?? (t ? `${tr(t.itemLabel)} #${id}` : tr("Not found")) };
+  return { title: t?.name === "projects" && row ? projectLabel(row.title, row.id) : (row?.title ?? (t ? `${tr(t.itemLabel)} #${id}` : tr("Not found"))) };
 }
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -147,9 +148,10 @@ export default async function RecordPage(props: PageProps<"/[module]/[tab]/[id]"
       <BackLink fallback={tableHref(t)} label={t.label} />
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold break-words">{row.title ?? `${t.itemLabel} #${row.id}`}</h1>
+          {/* PJ-c: a project's title carries its number. */}
+          <h1 className="text-2xl font-semibold break-words">{t.name === "projects" ? projectLabel(row.title, row.id) : (row.title ?? `${t.itemLabel} #${row.id}`)}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span>#{row.id}</span>
+            {t.name !== "projects" && <span>#{row.id}</span>}
             {locked && (
               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5">
                 <Lock className="size-3" aria-hidden /> {tr("Submitted")}

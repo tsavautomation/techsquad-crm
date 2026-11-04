@@ -17,6 +17,7 @@ import { getT } from "@/i18n/server";
 import type { T } from "@/i18n/core";
 import { financialStatus, type FinRow } from "@/lib/finance/status";
 import { loadFinanceSettings } from "@/lib/finance/settings";
+import { projectLabel } from "@/lib/projects/label";
 
 // "Today" sections from the Portal design (docs/portal-features-merge.md §I), built on what exists now.
 // F4: follow-ups count logged calls / messages (Interactions) as contact, and call-backs.
@@ -150,7 +151,7 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
             const over = Math.round((now - Date.parse(x.checked_in_at ?? x.starts_at)) / 60_000 - Number(x.duration ?? 60));
             return {
               href: recordHref(visitsT, x.id),
-              title: x.projects?.title ?? tr("Visit #{id}", { id: x.id }),
+              title: x.project_id ? projectLabel(x.projects?.title, x.project_id) : tr("Visit #{id}", { id: x.id }),
               meta: over > 0 ? tr("{who} · {min} min over the planned time", { who: x.employees?.title ?? tr("No technician"), min: over }) : tr("{who} · started {when}", { who: x.employees?.title ?? tr("No technician"), when: when(x.checked_in_at ?? x.starts_at) }),
               tone: over > 0 ? ("warn" as const) : undefined,
             };
@@ -163,7 +164,7 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
           .filter((x) => x.status === "Scheduled" && new Date(x.starts_at).getTime() + 15 * 60_000 < now && x.starts_at >= dayStart)
           .map((x) => ({
             href: recordHref(visitsT, x.id),
-            title: x.projects?.title ?? tr("Visit #{id}", { id: x.id }),
+            title: x.project_id ? projectLabel(x.projects?.title, x.project_id) : tr("Visit #{id}", { id: x.id }),
             meta: tr("Should have started {when} · {who}", { when: when(x.starts_at), who: x.employees?.title ?? tr("no technician") }),
             tone: "bad" as const,
             action: x.employees?.phone ? { href: `tel:${x.employees.phone.replace(/[^\d+]/g, "")}`, label: tr("Call {name}", { name: x.employees.title?.split(" ")[0] ?? "" }) } : undefined,
@@ -172,12 +173,12 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
       Promise.all([upcoming, delinquentProjects]).then(([v, bad]) => ({
         id: "delinquent",
         title: tr("Delinquent clients with visits in the next 14 days"),
-        rows: v.filter((x) => x.project_id !== null && bad.has(x.project_id)).map((x) => ({ href: recordHref(visitsT, x.id), title: x.projects?.title ?? tr("Visit #{id}", { id: x.id }), meta: tr("{when} · check with accounting before going", { when: when(x.starts_at) }), tone: "bad" as const })),
+        rows: v.filter((x) => x.project_id !== null && bad.has(x.project_id)).map((x) => ({ href: recordHref(visitsT, x.id), title: x.project_id ? projectLabel(x.projects?.title, x.project_id) : tr("Visit #{id}", { id: x.id }), meta: tr("{when} · check with accounting before going", { when: when(x.starts_at) }), tone: "bad" as const })),
       })),
       upcoming.then((v) => ({
         id: "no-address",
         title: tr("Visits without an address"),
-        rows: v.filter((x) => x.project_id && !x.projects?.job_address?.street).map((x) => ({ href: `/projects/projects/${x.project_id}`, title: x.projects?.title ?? tr("Project #{id}", { id: x.project_id }), meta: tr("{when} · add the job address so maps work", { when: when(x.starts_at) }), tone: "warn" as const })),
+        rows: v.filter((x) => x.project_id && !x.projects?.job_address?.street).map((x) => ({ href: `/projects/projects/${x.project_id}`, title: projectLabel(x.projects?.title, x.project_id!), meta: tr("{when} · add the job address so maps work", { when: when(x.starts_at) }), tone: "warn" as const })),
       })),
     );
   }
@@ -197,7 +198,7 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
           title: tr("Approved, no visit scheduled"),
           rows: ((approved ?? []) as { id: number; title: string | null }[])
             .filter((p) => !has.has(p.id))
-            .map((p) => ({ href: `/projects/projects/${p.id}`, title: p.title ?? tr("Project #{id}", { id: p.id }), meta: tr("Proposal approved and nothing on the calendar"), action: canBook ? { href: newVisit(p.id), label: tr("Schedule visit") } : undefined })),
+            .map((p) => ({ href: `/projects/projects/${p.id}`, title: projectLabel(p.title, p.id), meta: tr("Proposal approved and nothing on the calendar"), action: canBook ? { href: newVisit(p.id), label: tr("Schedule visit") } : undefined })),
         };
       })(),
       (async () => {
@@ -209,7 +210,7 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
           title: tr("Maintenance plan renewals"),
           rows: ((data ?? []) as { id: number; title: string | null; maintenance_status: string; maintenance_type: string | null; maintenance_amount: number | null }[]).map((p) => ({
             href: `/projects/projects/${p.id}`,
-            title: p.title ?? tr("Project #{id}", { id: p.id }),
+            title: projectLabel(p.title, p.id),
             meta: `${tr(p.maintenance_status === "Expired" ? "Plan expired, offer renewal" : "Renewal due soon")} · ${p.maintenance_type ? tr(p.maintenance_type) : tr("plan")}${p.maintenance_amount ? ` · ${money.format(Number(p.maintenance_amount))}` : ""}`,
             tone: p.maintenance_status === "Expired" ? ("bad" as const) : ("warn" as const),
             action: canBook ? { href: newVisit(p.id), label: tr("Schedule visit") } : undefined,
@@ -264,9 +265,9 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
         for (const p of projects) {
           const last = lastNote.get(p.id);
           if (p.job_status === "Surveying" && !last && daysAgo(p.created_at) >= 2) {
-            rows.push({ days: daysAgo(p.created_at), href: `/projects/projects/${p.id}#message`, title: p.title ?? tr("Project #{id}", { id: p.id }), meta: tr("New {n} days ago, no contact noted yet", { n: daysAgo(p.created_at) }), tone: "warn" });
+            rows.push({ days: daysAgo(p.created_at), href: `/projects/projects/${p.id}#message`, title: projectLabel(p.title, p.id), meta: tr("New {n} days ago, no contact noted yet", { n: daysAgo(p.created_at) }), tone: "warn" });
           } else if (p.job_status === "Proposal Sent" && daysAgo(last ?? p.updated_at) >= 7) {
-            rows.push({ days: daysAgo(last ?? p.updated_at), href: `/projects/projects/${p.id}#message`, title: p.title ?? tr("Project #{id}", { id: p.id }), meta: tr("Proposal sent, no contact for {n} days", { n: daysAgo(last ?? p.updated_at) }), tone: "warn" });
+            rows.push({ days: daysAgo(last ?? p.updated_at), href: `/projects/projects/${p.id}#message`, title: projectLabel(p.title, p.id), meta: tr("Proposal sent, no contact for {n} days", { n: daysAgo(last ?? p.updated_at) }), tone: "warn" });
           }
         }
         return { id: "contact", title: tr("Follow up with the client"), rows: rows.sort((a, b) => b.days - a.days) };
@@ -300,7 +301,7 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
             .map((d) => ({
               href: d.project_id ? `/projects/projects/${d.project_id}#message` : `${recordHref(contactsT, d.contact_id)}#message`,
               title: d.contacts?.title ?? tr("Contact #{id}", { id: d.contact_id }),
-              meta: [d.projects?.title, d.type ? tr(d.type) : null, d.result ? tr(d.result) : null, d.follow_up_date < today ? tr("since {date}", { date: formatDate(d.follow_up_date) }) : tr("today")].filter(Boolean).join(" · "),
+              meta: [d.project_id ? projectLabel(d.projects?.title, d.project_id) : null, d.type ? tr(d.type) : null, d.result ? tr(d.result) : null, d.follow_up_date < today ? tr("since {date}", { date: formatDate(d.follow_up_date) }) : tr("today")].filter(Boolean).join(" · "),
               tone: d.follow_up_date < today ? ("bad" as const) : ("warn" as const),
             })),
         };
@@ -325,9 +326,9 @@ export async function TodaySections({ user, now }: { user: CurrentUser; now: num
         return {
           id: "returns",
           title: tr("Returns needed"),
-          rows: ((data ?? []) as unknown as { id: number; due_date: string | null; priority: string | null; details: string | null; projects: { title: string | null } | null }[]).map((r) => ({
+          rows: ((data ?? []) as unknown as { id: number; due_date: string | null; priority: string | null; details: string | null; project_id: number | null; projects: { title: string | null } | null }[]).map((r) => ({
             href: recordHref(tasksT, r.id),
-            title: r.projects?.title ?? tr("Task #{id}", { id: r.id }),
+            title: r.project_id ? projectLabel(r.projects?.title, r.project_id) : tr("Task #{id}", { id: r.id }),
             meta: [r.priority === "Urgent" ? tr("2nd visit in a row not finished") : null, r.due_date ? tr("due {date}", { date: formatDate(r.due_date) }) : null].filter(Boolean).join(" · "),
             tone: r.priority === "Urgent" || (r.due_date && r.due_date < today) ? ("bad" as const) : ("warn" as const),
             action: { href: recordHref(tasksT, r.id), label: tr("Schedule") },

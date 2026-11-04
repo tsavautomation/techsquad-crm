@@ -8,6 +8,7 @@ import { getTable } from "@/registry";
 import { canDo, canOpen } from "@/registry/permissions";
 import { getT } from "@/i18n/server";
 import { EXCLUDED_PROJECT_FILTER } from "@/lib/projects/excluded";
+import { projectLabel } from "@/lib/projects/label";
 
 export async function generateMetadata() {
   return { title: (await getT())("Pipeline") };
@@ -65,7 +66,7 @@ export default async function PipelinePage(props: PageProps<"/pipeline">) {
       hidden++;
       continue;
     }
-    cards.push({ id: r.id, title: r.title ?? tr("Project #{id}", { id: r.id }), client: r.contacts?.title ?? null, salesperson: r.employees?.title ?? null, type: r.type, level, days, value: null });
+    cards.push({ id: r.id, title: projectLabel(r.title, r.id), client: r.contacts?.title ?? null, salesperson: r.employees?.title ?? null, type: r.type, level, days, value: null });
   }
 
   // Approved value per project, for people who can see money (as on Insights).

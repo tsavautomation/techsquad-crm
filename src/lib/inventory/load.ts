@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { STATUSES, type StockStatus } from "./engine";
 import type { ProductChoice } from "./rules";
+import { projectLabel } from "@/lib/projects/label";
 
 // INV-d "Estoque em Campo": what the stock screens read. Through the viewer's session, so the Stock
 // permissions apply (row-level security on stock_items; stock_movements readable by Stock viewers).
@@ -121,7 +122,7 @@ export async function loadPickLists(db: SupabaseClient, productTypes: string[] =
     db.from("suppliers").select("id, name").is("deleted_at", null).is("archived_at", null).order("name"),
   ]);
   return {
-    projects: (pr ?? []) as Named[],
+    projects: ((pr ?? []) as Named[]).map((p) => ({ ...p, title: projectLabel(p.title, p.id) })), // PJ-c
     employees: (em ?? []) as Named[],
     products,
     locations: ((loc ?? []) as { id: number; name: string; kind: string; employee_id: number | null }[]).map((l) => ({ id: l.id, name: l.name, kind: l.kind, employeeId: l.employee_id })),

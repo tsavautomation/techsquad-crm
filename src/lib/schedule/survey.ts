@@ -1,4 +1,5 @@
 import type { Address } from "@/lib/records/values";
+import { projectLabel } from "@/lib/projects/label";
 
 // SV Survey visits (Fred 2026-10-26): the pure parts. A survey has no project; its label on the calendar,
 // Today, the map and the titles is "SURVEY – <address or contact>". Tests: tests/sv-survey.test.ts.
@@ -21,8 +22,8 @@ export function surveyLabel(address: Address | null | undefined, contactName: st
 
 /** The visit's or the report's label: a survey's place, the project's title, or the old fallbacks. */
 export function visitLabel(v: { kind?: string | null; project_id: number | null; subject?: string | null; address?: Address | null; contact_name?: string | null; title?: string | null }, projectTitle: string | null | undefined, fallback = "No project"): string {
+  if (v.project_id) return projectLabel(projectTitle, v.project_id); // PJ-c: "Title (1195)"
   if (projectTitle) return projectTitle;
-  if (v.project_id) return `Project #${v.project_id}`;
   if (isSurvey(v.kind)) return surveyLabel(v.address, v.contact_name);
   if (v.kind === "Internal") return v.subject || "Internal";
   return v.title || fallback;
