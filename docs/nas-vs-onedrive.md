@@ -1,0 +1,561 @@
+# NAS vs OneDrive (2026-11-04)
+
+OneDrive: 256187 items. NAS: 202884 items (0 lines unparsed). Cut-off: 10/21/2026 21:28 (last Cloud Sync log line).
+
+## A. On the NAS only, from before the break, and the same name exists elsewhere in OneDrive → MOVED in OneDrive → delete from NAS
+67 top entries, 4317 items, 14.94 GB
+
+- PROJECTS TS/CLIENTS: 32 entries
+- TechSquad CRM/Projects: 9 entries
+- PROJECTS TS/GUIMAR URBINA INTERIORS: 6 entries
+- PROJECTS TS/MC DECOR: 3 entries
+- PROJECTS TS/AVANT DESIGN GROUP: 2 entries
+- PROJECTS TS/CH CONSTRUCTION GROUP - MIAMI: 2 entries
+- PROJECTS TS/DESIGN SOLUTIONS MIAMI: 2 entries
+- PROJECTS TS/NAVICON: 2 entries
+- PROJECTS TS/STEVEN G INTERIORS DESIGN: 2 entries
+- PROJECTS TS/2 ID INTERIORS: 1 entries
+- PROJECTS TS/ALEXANDER GROUP: 1 entries
+- PROJECTS TS/ELITE SMART GROUP - NEW YORK: 1 entries
+- PROJECTS TS/MSTYLE: 1 entries
+- PROJECTS TS/SALATIEL LEITE - GG RENOVATION: 1 entries
+- PROJECTS TS/STUDIO KAZA: 1 entries
+- PROJECTS TS/TOMA DESIGN GROUP: 1 entries
+
+## B. On the NAS only, from before the break, name not found anywhere in OneDrive → DELETED in OneDrive → delete from NAS
+365 top entries, 0.54 GB
+
+- TechSquad CRM/Products: 187 entries, 0 MB
+- TechSquad CRM/Projects: 76 entries, 2 MB
+- PROJECTS TS/CLIENTS: 52 entries, 0 MB
+- TechSquad CRM/Contacts: 18 entries, 0 MB
+- TechSquad CRM/_Uploading: 8 entries, 536 MB
+- PROJECTS TS/ELITE SMART GROUP - NEW YORK: 4 entries, 0 MB
+- PROJECTS TS/DESIGN SOLUTIONS MIAMI: 3 entries, 0 MB
+- PROJECTS TS/GUIMAR URBINA INTERIORS: 3 entries, 0 MB
+- PROJECTS TS/STEVEN G INTERIORS DESIGN: 3 entries, 0 MB
+- PROJECTS TS/CH CONSTRUCTION GROUP - MIAMI: 2 entries, 0 MB
+- PROJECTS TS/INFINITY DESIGN: 2 entries, 0 MB
+- PROJECTS TS/STUDIO KAZA: 2 entries, 0 MB
+- PROJECTS TS/2 ID INTERIORS: 1 entries, 0 MB
+- PROJECTS TS/ALEX CORREA: 1 entries, 0 MB
+- PROJECTS TS/ANDY CABRAL: 1 entries, 0 MB
+- PROJECTS TS/JULIANA SABO INTERIOR DESIGN: 1 entries, 0 MB
+- PROJECTS TS/MARIS RAFFA - TAUPE DECOR: 1 entries, 0 MB
+
+## C. On the NAS only, created after the break → new local work → keep, will upload
+57 items (21 top entries), 0.07 GB
+
+- 📁 CLAUDE  (10/21/2026)
+- ELECTRICAL PROJECTS/BUSS CONSTRUCTION (PYERMO)/148 BAL BAY DR. - BAL HARBOR/3 - Plans, permit and COI/Permit Application_Contract.pdf  (10/23/2026)
+- 📁 JESSICA/Crestron Holiday Event 2025  (11/2/2026)
+- OFFICE/RMA's/BLACK NOVA/Sebaaly/Master Bed_Black nova (1).jpeg  (11/3/2026)
+- OFFICE/RMA's/BLACK NOVA/Sebaaly/Master Bed_Black nova (2).jpeg  (11/3/2026)
+- OFFICE/RMA's/BLACK NOVA/Sebaaly/Master Bed_Black nova (3).mp4  (11/3/2026)
+- OFFICE/RMA's/CRESTRON/RMA #62097148   CONFIRMATION - GL.pdf  (11/2/2026)
+- OFFICE/RMA's/CRESTRON/RMA #62097151  CONFIRMATION - BRAD BEIDNER.pdf  (11/2/2026)
+- OFFICE/Vehicles/TSAV5 - NISSAN - NV2500 (2015)/2 - Plate/MyEasyGov $165.52 11-02-26.pdf  (11/2/2026)
+- OFFICE/Vehicles/TSAV6 - HYUNDAI - SONATA (2022)/6 - Tickets/Penn Credit Payment Portal $11.94 10-23-26.pdf  (10/23/2026)
+- OFFICE/Vehicles/TSAV6 - HYUNDAI - SONATA (2022)/6 - Tickets/Penn Credit Payment Portal $278.25 10-30-26.pdf  (10/30/2026)
+- PROJECTS TS/NAVICON/O'REILLY - UNA RESIDENCE #3001/1 - Documents/3. Waiver and Release Upon Progress Payment - OReilly Final Payment.pdf  (10/30/2026)
+- 📁 TechSquad CRM/Projects/Roca, Fernanda - Pinecrest (1279)/ROCA, FERNANDA - CASA 63 PINECREST/3 - Plans, permit and COI/permit application  (10/28/2026)
+- TechSquad CRM/Projects/Roca, Fernanda - Pinecrest (1279)/ROCA, FERNANDA - CASA 63 PINECREST/3 - Plans, permit and COI/Scanned Document 2.pdf  (10/23/2026)
+- TechSquad CRM/Projects/Roca, Fernanda - Pinecrest (1279)/ROCA, FERNANDA - CASA 63 PINECREST/3 - Plans, permit and COI/Scanned Document.pdf  (10/23/2026)
+- TechSquad CRM/Projects/Roca, Fernanda - Pinecrest (1279)/ROCA, FERNANDA - CASA 63 PINECREST/3 - Plans, permit and COI/63 Ave Plans/63 Ave - Low Voltage 1st Floor - v1 - Notarized.pdf  (10/23/2026)
+- TechSquad CRM/Projects/Roca, Fernanda - Pinecrest (1279)/ROCA, FERNANDA - CASA 63 PINECREST/3 - Plans, permit and COI/63 Ave Plans/63 Ave - Low Voltage 2nd Floor - v1 - Notarized.pdf  (10/23/2026)
+- TechSquad CRM/Projects/441 E Rivo Alto Dr (1198)/RIVO ALTO RESIDENCE/1 - Documents/Shades/Rivo Alto_Curves_TS.pdf  (10/29/2026)
+- TechSquad CRM/Projects/441 E Rivo Alto Dr (1198)/RIVO ALTO RESIDENCE/3 - Plans, Permit and COI/TECH SQUAD/DELTA 3/LV_E1_Conduit_JB_Plan.pdf  (11/3/2026)
+- TechSquad CRM/Projects/Fergie, Jorge - 7742 Fisher Island (1282)/Project files/Fergie_FisherIsland_TV_Checklist.docx  (10/30/2026)
+- 📁 TechSquad CRM/Projects/Roth, Michael - Miami Shores (1278)/Meetings  (11/4/2026)
+
+## D. On the NAS only, names Cloud Sync could never upload (accents stored decomposed, or < > : " | ? *) → keep, nothing to do
+5 items, 0.00 GB
+
+- OFFICE/Jessica TS: 5 items
+
+## E. Junk on the NAS only (ignored): 617 items
+
+## F. In OneDrive only → will download to the NAS: 16452 items, 43.61 GB
+
+- TechSquad CRM/Projects: 12906 items, 800285 MB
+- TechSquad CRM/Backups: 1301 items, 2977 MB
+- PROJECTS TS/CLIENTS: 919 items, 33868 MB
+- PROJECTS TS/BRASIL: 568 items, 6670 MB
+- TechSquad CRM/Contacts: 356 items, 1 MB
+- TechSquad CRM/Products: 301 items, 1 MB
+- TechSquad CRM/Tasks: 24 items, 0 MB
+- ELECTRICAL PROJECTS/JL BUILDING CONCEPT (LUCAS): 14 items, 21 MB
+- ELECTRICAL PROJECTS/#SURVEY: 8 items, 302 MB
+- TechSquad CRM/_Uploading: 7 items, 20 MB
+- OLD GOOGLEDRIVE/Ighor desktop: 6 items, 0 MB
+- TechSquad CRM/Job Report: 6 items, 183 MB
+- TechSquad CRM/Buildings - Developments: 3 items, 0 MB
+- PROJECTS TS/SCOTT TAO: 2 items, 0 MB
+- PROJECTS TS/NAVICON: 2 items, 43 MB
+- ELECTRICAL PROJECTS/NAVICON CONSTRUCTION: 2 items, 153 MB
+- TechSquad CRM/Organizations: 2 items, 0 MB
+- OLD GOOGLEDRIVE/Planilha de contas Tech Squad.ods.gsheet: 1 items, 0 MB
+- OLD GOOGLEDRIVE/Planilha de contas Tech Squad.ods-TechSquad-PC.gsheet: 1 items, 0 MB
+- OLD GOOGLEDRIVE/planilha de contas tech squad.gsheet: 1 items, 0 MB
+- OLD GOOGLEDRIVE/planilha de contas tech squad-TechSquad-PC.gsheet: 1 items, 0 MB
+- OLD GOOGLEDRIVE/crestron po 2001 leith revised.gsheet: 1 items, 0 MB
+- OLD GOOGLEDRIVE/crestron po 2001 leith revised (2).gsheet: 1 items, 0 MB
+- OLD GOOGLEDRIVE/crestron po 2001 leith revised-TechSquad-PC.gsheet: 1 items, 0 MB
+- OLD GOOGLEDRIVE/crestron po 2001 leith revised (2)-TechSquad-PC.gsheet: 1 items, 0 MB
+- OLD GOOGLEDRIVE/crestron po 2001 leith revised (1).gsheet: 1 items, 0 MB
+- OLD GOOGLEDRIVE/crestron po 2001 leith revised (1)-TechSquad-PC.gsheet: 1 items, 0 MB
+- OLD GOOGLEDRIVE/CC Form.docx.gdoc: 1 items, 0 MB
+- OLD GOOGLEDRIVE/CC Form.docx-TechSquad-PC.gdoc: 1 items, 0 MB
+- OLD GOOGLEDRIVE/160307 Punch List - Murano #2602 V2.docx.gdoc: 1 items, 0 MB
+- OLD GOOGLEDRIVE/160307 Punch List - Murano #2602 V2.docx-TechSquad-PC.gdoc: 1 items, 0 MB
+- PROJECTS TS/JC INTERIORS: 1 items, 0 MB
+- PROJECTS TS/FANNY HAIM: 1 items, 0 MB
+- PROJECTS TS/ACTA DEVELOPMENT - SCOTT: 1 items, 0 MB
+- PROJECTS TS/EZ PRO - ALBERTO: 1 items, 0 MB
+- PROJECTS TS/Projects TS - Shortcut.lnk: 1 items, 0 MB
+- PROJECTS TS/BRYANT RODRIGUEZ - METRICO BUILDING: 1 items, 0 MB
+- PROJECTS TS/STUDIO MOZ: 1 items, 0 MB
+- PROJECTS TS/New folder: 1 items, 0 MB
+- OFFICE/Vehicles: 1 items, 0 MB
+- New folder: 1 items, 0 MB
+- FUNCIONARIOS/Funcionarios_Aniversarios.xlsx: 1 items, 0 MB
+
+## Full lists
+
+### A (moved)
+
+- 📁 PROJECTS TS/2 ID INTERIORS/120 W RIVO ALTO
+- 📁 PROJECTS TS/ALEXANDER GROUP/ALEXANDER, ALON - SHLOMY SON
+- 📁 PROJECTS TS/AVANT DESIGN GROUP/SOUZA, MONICA - AVANT - CASA
+- 📁 PROJECTS TS/AVANT DESIGN GROUP/SOUZA, MONICA - AVANT - CASA - 00100
+- 📁 PROJECTS TS/CH CONSTRUCTION GROUP - MIAMI/BOAT
+- 📁 PROJECTS TS/CH CONSTRUCTION GROUP - MIAMI/BOAT - 00054
+- 📁 PROJECTS TS/CLIENTS/ABEDROP, MILO - MARINA PALMS
+- 📁 PROJECTS TS/CLIENTS/ACTA DEVELOPMENT - SCOTT
+- 📁 PROJECTS TS/CLIENTS/AMERICAN TOP TEAM - SAPATO
+- 📁 PROJECTS TS/CLIENTS/BERMAN, BEN - BOCA RATON
+- 📁 PROJECTS TS/CLIENTS/CANECA, MARITZA
+- 📁 PROJECTS TS/CLIENTS/CANECA, MARITZA - 00168
+- 📁 PROJECTS TS/CLIENTS/CASA DE MONTECRISTO - BOCA RATON
+- 📁 PROJECTS TS/CLIENTS/CORINNE - 5170 LAGORCE
+- 📁 PROJECTS TS/CLIENTS/EISEN, RICHARD - AVENTURA
+- 📁 PROJECTS TS/CLIENTS/FENDI CHATEAU BUILDING - JOSE
+- 📁 PROJECTS TS/CLIENTS/FRAGULIS - MIAMI BEACH
+- 📁 PROJECTS TS/CLIENTS/HARDWICK, OMARI - PARKLAND HOUSE - NEW OWNER
+- 📁 PROJECTS TS/CLIENTS/HUANG, WANZI AND WILLIAM - COCOPLUM
+- 📁 PROJECTS TS/CLIENTS/JIMENEZ, UBALDO - PINECREST
+- 📁 PROJECTS TS/CLIENTS/LOH, DAE - BOCA RATON OLD MR. MELTON
+- 📁 PROJECTS TS/CLIENTS/LUTZ, MARCO - SANCTUARY LN - BOCA RATON
+- 📁 PROJECTS TS/CLIENTS/MARC (Old Mary Ann MeshkinGuilherme)
+- 📁 PROJECTS TS/CLIENTS/MATOS, LUIS CARLOS - LAKE AZURE
+- 📁 PROJECTS TS/CLIENTS/MEJIAS RESIDENCE - CORAL GABLES
+- 📁 PROJECTS TS/CLIENTS/NEGRAO, CARLOS - CASA NOVA
+- 📁 PROJECTS TS/CLIENTS/NEGRAO, FILHO - AVENTURA
+- 📁 PROJECTS TS/CLIENTS/OLAYO - OFL
+- 📁 PROJECTS TS/CLIENTS/OMAIR - INDEPENDENCE OFFICE - FORT LAUDERDALE
+- 📁 PROJECTS TS/CLIENTS/PANARELLO, ALEX. - MAE DELE
+- 📁 PROJECTS TS/CLIENTS/PAPP, MICHAEL - BOCA RATON
+- 📁 PROJECTS TS/CLIENTS/PIQUET ENTERTAINMENT RACE PARK
+- 📁 PROJECTS TS/CLIENTS/ROSSETTO, JOSE LUIZ - TRUMP II 4204
+- 📁 PROJECTS TS/CLIENTS/SMITH, NICHOLAS
+- 📁 PROJECTS TS/CLIENTS/SOUSA, MONICA - AVANT DESIG GROUP - OFFICE
+- 📁 PROJECTS TS/CLIENTS/SOUZA, CRISTINA - AVANT - CASA
+- 📁 PROJECTS TS/CLIENTS/TIAGO WAREHOUSE
+- 📁 PROJECTS TS/CLIENTS/ZUCCA BAMBINI - NORTH MIAMI - SALA 206
+- 📁 PROJECTS TS/DESIGN SOLUTIONS MIAMI/CHAOUL, OCEANA BH
+- 📁 PROJECTS TS/DESIGN SOLUTIONS MIAMI/SABO, TANIA - ORLANDO TOWNHOUSE
+- 📁 PROJECTS TS/ELITE SMART GROUP - NEW YORK/WEST PALM BEACH - 225 VALENCIA RD
+- 📁 PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR - HOUSE SOUTH MIAMI
+- 📁 PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR - HOUSE SOUTH MIAMI - 00225
+- 📁 PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR - ONATE
+- 📁 PROJECTS TS/GUIMAR URBINA INTERIORS/KAUFMAN, CHERYL - GUIMAR PROJECT MIAMI BEACH
+- 📁 PROJECTS TS/GUIMAR URBINA INTERIORS/THE WALL PAPER COMPANY - BOCA RATON - 00135
+- 📁 PROJECTS TS/GUIMAR URBINA INTERIORS/THE WALLPAPER COMPANY - BOCA RATON
+- 📁 PROJECTS TS/MC DECOR/CONTINUUM 3303
+- 📁 PROJECTS TS/MC DECOR/MONICA WAREHOUSE
+- 📁 PROJECTS TS/MC DECOR/TURK PROJECT
+- 📁 PROJECTS TS/MSTYLE/BATES, FREDERICK - CORAL GABLES
+- 📁 PROJECTS TS/NAVICON/TORRES, ANTONIO - NEW OFFICE NAVICON - 20TH FLOOR
+- 📁 PROJECTS TS/NAVICON/TORRES, ANTONIO - OFFICE NAVICON
+- 📁 PROJECTS TS/SALATIEL LEITE - GG RENOVATION/MR. NAWAS - BOCA RATON
+- 📁 PROJECTS TS/STEVEN G INTERIORS DESIGN/AVENTURA PARK SQUARE
+- 📁 PROJECTS TS/STEVEN G INTERIORS DESIGN/AVENTURA PARK SQUARE - 00130
+- 📁 PROJECTS TS/STUDIO KAZA/EISEN, RICHARD - AVENTURA
+- 📁 PROJECTS TS/TOMA DESIGN GROUP/BALL, JUAN - OCEANA
+- 📁 TechSquad CRM/Projects/Zion - Miami House Ch (1426)/CH NEW OFFICE - MIAMI
+- 📁 TechSquad CRM/Projects/Zion - Miami House Ch (1426)/CH NEW OFFICE - MIAMI - 00093
+- 📁 TechSquad CRM/Projects/Roth, Michael - Miami Shores (1278)/Email
+- 📁 TechSquad CRM/Projects/Roth, Michael - Miami Shores (1278)/Job Report
+- 📁 TechSquad CRM/Projects/Roth, Michael - Miami Shores (1278)/Project files
+- 📁 TechSquad CRM/Projects/Roth, Michael - Miami Shores (1278)/Tasks
+- 📁 TechSquad CRM/Projects/Ch - Jade Signature - 2103 (1388)/CH NEW OFFICE - WEST PALM BEACH
+- 📁 TechSquad CRM/Projects/Ch - Jade Signature - 2103 (1388)/CH NEW OFFICE - WEST PALM BEACH - 00192
+- 📁 TechSquad CRM/Projects/Steve - Hallandale Beach (1459)/LANDAU, STEVEN
+
+### B (deleted)
+
+- 📁 PROJECTS TS/2 ID INTERIORS/RAFAELA - NORTH MIAMI BEACH #19441  (6/21/2022)
+- 📁 PROJECTS TS/ALEX CORREA/RANDY FORMAN - 4001 N OCEAN BLVD #1708  (6/21/2022)
+- 📁 PROJECTS TS/ANDY CABRAL/Brickell #800  (1/29/2024)
+- 📁 PROJECTS TS/CH CONSTRUCTION GROUP - MIAMI/COSTA, FERNANDO - BEACH HOUSE #400  (6/22/2022)
+- 📁 PROJECTS TS/CH CONSTRUCTION GROUP - MIAMI/COSTA, FERNANDO - BEACH HOUSE #400 - 00012  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/ALVES, RODRIGO - ECHO # 408  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/ANA - 1900 PURDY AVE - NORTH TOWER # TS2  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/ARMANI #4900  (7/18/2023)
+- 📁 PROJECTS TS/CLIENTS/BAPTISTELLA, BRUNO - CAPOBELLA # 2309  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/BETTAMIO, BEATRIZ - FENDI CHATEAU # 602  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/BLY - DEL REY #4001  (2/2/2023)
+- 📁 PROJECTS TS/CLIENTS/CARAN, MARIANA - OCEANA # 511 N  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/CARRERA, DANIEL - MARINA PALMS # 2301  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/CASCAVITA, HUGO - WILLIAMS ISLAND 7000 # 1702  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/CHIU, BERNARD - PINETREE #5369  (5/16/2024)
+- 📁 PROJECTS TS/CLIENTS/COHEN, ALMA - DELREY # 15841  (9/19/2022)
+- 📁 PROJECTS TS/CLIENTS/ECHO BRICKELL # 1018  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/ECHO BRICKELL # 1018 - 00113  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/ESTATES ACQUALINA #2001n  (8/23/2023)
+- 📁 PROJECTS TS/CLIENTS/GERBAULD, RONALD AND ANDREA - MIAMI BEACH # 2C  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/GRACIELE - ST TROPEZ # 505  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/GUTIERREZ, ALEX - BISCAYNE 900 # 3406  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/HURTADO, AUGUSTO - MARINA PALMS #1603  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/JUNIOR ELETRICA - MARGATE #7605  (1/11/2024)
+- 📁 PROJECTS TS/CLIENTS/KARIANNA DESIGNER - CASSA BRICKELL #812  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/KARIANNA DESIGNER - CENTRO #2608  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/KOVALTCHOUK, IGOR - JADE SIGNATURE # 3301  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/LAS OLAS BEACH CLUB #2105  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/MARINA PALMS #2010  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/MARINA PALMS #310  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/MARINA PALMS #700  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/MARINHO, HELIO - MARQUIS # 6003  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/MAZZUCCHELLI  -  MARINA PALMS #1104  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/MELOHN, LEON - ST REGIS #601  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/MIDTOWN MIAMI # PH1  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/NAGEM, CARLOS - MP#1601  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/NISAN, STEVE - OCEAN FOUR #3908  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/OPERA TOWER # PH4  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/PALAU SUNSET HARBOR #PH2  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/PENINSULA #2509  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/PENINSULA I #2104  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/PORTOFINO # 1501  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/ROUX, ALAN - GROVE HILL #1600  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/ROYOS, ADRIANA LACRUZ - MUSE # 3801  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/RUTH - JADE OCEAN #3601  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/SCHWEBEL, KEN - LE HAVRE #13725  (10/12/2023)
+- 📁 PROJECTS TS/CLIENTS/SERENO - BAY HARBOR #302  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/SIROSTKY, JAYME - MIZNER GRAND # 903S  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/SOUZA, FABIO - PARKWAY #G - BOCA RATON  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/TEQUESTA II # 1404  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/TRUMP # 2501  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/TRUMP HOLLYWOOD #2602  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/TRUMP II # 3803 - STEVEN G  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/TRUMP II #507  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/TUMA, ROBSON - BAL HARBOUR # 1210  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/UCHI - GREEN DIAMOND # 2603  (6/22/2022)
+- 📁 PROJECTS TS/CLIENTS/VIAMONT, MANUEL - ASIA # 1604  (6/22/2022)
+- 📁 PROJECTS TS/DESIGN SOLUTIONS MIAMI/ROCA, CEZAR - ONE PARK GROVE # 15A  (6/22/2022)
+- 📁 PROJECTS TS/DESIGN SOLUTIONS MIAMI/SABO, TANIA - ORLANDO TOWNHOUSE -  00062  (6/22/2022)
+- 📁 PROJECTS TS/DESIGN SOLUTIONS MIAMI/SUN, LILY #505  (10/19/2022)
+- 📁 PROJECTS TS/ELITE SMART GROUP - NEW YORK/BUFFARA, GILBERTO - UNIT #1604  (6/22/2022)
+- 📁 PROJECTS TS/ELITE SMART GROUP - NEW YORK/BUFFARA, GILBERTO - UNIT #1604 - 00064  (6/22/2022)
+- 📁 PROJECTS TS/ELITE SMART GROUP - NEW YORK/ROMERO, CARLOS - COCONUT GROVE #1002S  (6/22/2022)
+- 📁 PROJECTS TS/ELITE SMART GROUP - NEW YORK/ROMERO, CARLOS - COCONUT GROVE #1002S - 00018  (6/22/2022)
+- 📁 PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR APARTAMENTO - BRICKELL 500 #2803  (6/22/2022)
+- 📁 PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR APARTAMENTO - BRICKELL 500 #2803 - 00167  (6/22/2022)
+- 📁 PROJECTS TS/GUIMAR URBINA INTERIORS/JULIEN, BRUCE - PLAZA AT PARKSIDE # 911  (6/22/2022)
+- 📁 PROJECTS TS/INFINITY DESIGN/BARRETO, CRISTIANO - EDEN HOUSE PH#8  (6/22/2022)
+- 📁 PROJECTS TS/INFINITY DESIGN/JIMMY - 1040 BISCAYNE BLVD #1504  (6/22/2022)
+- 📁 PROJECTS TS/JULIANA SABO INTERIOR DESIGN/MR.C #1705  (9/16/2024)
+- 📁 PROJECTS TS/MARIS RAFFA - TAUPE DECOR/MONTEIRO, EDUARDO - CHATEAU BEACH #1501  (6/22/2022)
+- 📁 PROJECTS TS/STEVEN G INTERIORS DESIGN/MENA, MANUEL - BRICKELL FLATIRON #3705  (6/22/2022)
+- 📁 PROJECTS TS/STEVEN G INTERIORS DESIGN/MERCADO, ALEX - JACKSON TOWER CONDO # 2503  (6/22/2022)
+- 📁 PROJECTS TS/STEVEN G INTERIORS DESIGN/MICHANIE - BAL HARBOUR # 308 - 00207  (6/22/2022)
+- 📁 PROJECTS TS/STUDIO KAZA/ONE PARAISO # 1606 - 00236  (6/22/2022)
+- 📁 PROJECTS TS/STUDIO KAZA/RAMOS, LOUISE - JADE SIGNATURE #2503  (6/22/2022)
+- TechSquad CRM/Contacts/Ana Guimaraes (1314)/Contacts – Ana Guimaraes – 10-05-2026 (1314).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Antonio -1002 N Andrade (1320)/Contacts – Antonio -1002 N Andrade – 10-05-2026 (1320).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Carlos -Trump Royale -1106 Bastos (1316)/Contacts – Carlos -Trump Royale -1106 Bastos – 10-05-2026 (1316).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Durango And Kelly -505 Duarte (1321)/Contacts – Durango And Kelly -505 Duarte – 10-05-2026 (1321).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Eli Friedman (1327)/Contacts – Eli Friedman – 10-12-2026 (1327).pdf  (10/12/2026)
+- TechSquad CRM/Contacts/Gabriela Faria (1324)/Contacts – Gabriela Faria – 10-05-2026 (1324).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Gray Hudkins (1328)/Contacts – Gray Hudkins – 10-16-2026 (1328).pdf  (10/16/2026)
+- TechSquad CRM/Contacts/Henrique Borowski (1329)/Contacts – Henrique Borowski – 10-20-2026 (1329).pdf  (10/20/2026)
+- TechSquad CRM/Contacts/Jorge Escobar (1322)/Contacts – Jorge Escobar – 10-05-2026 (1322).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Leo Birov (1323)/Contacts – Leo Birov – 10-05-2026 (1323).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Lorena E David Rodriguez (1312)/Contacts – Lorena E David Rodriguez – 10-05-2026 (1312).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Michael Ashworth (1326)/Contacts – Michael Ashworth – 10-12-2026 (1326).pdf  (10/12/2026)
+- TechSquad CRM/Contacts/Michael Brooks (1319)/Contacts – Michael Brooks – 10-05-2026 (1319).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Monad -3a (1315)/Contacts – Monad -3a – 10-05-2026 (1315).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Portal Test (1325)/Contacts – Portal Test – 10-10-2026 (1325).pdf  (10/12/2026)
+- TechSquad CRM/Contacts/Renata Klein (1313)/Contacts – Renata Klein – 10-05-2026 (1313).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Spencer Residence (1317)/Contacts – Spencer Residence – 10-05-2026 (1317).pdf  (10/6/2026)
+- TechSquad CRM/Contacts/Tiffany Warehouse (1318)/Contacts – Tiffany Warehouse – 10-05-2026 (1318).pdf  (10/6/2026)
+- TechSquad CRM/Products/U7-Pro-Wall (2306)/Products – U7-Pro-Wall – 10-07-2026 (2306).pdf  (10/12/2026)
+- TechSquad CRM/Products/WATTBOX 2 - WB-150-IPW-1B-2 (1858)/Products – WATTBOX 2 - WB-150-IPW-1B-2 – 10-05-2026 (1858).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CAEN-4X1 (6500408) (1006)/Products – Crestron CAEN-4X1 (6500408) – 10-05-2026 (1006).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron INET-IOEX-RYIO (6507142) (1173)/Products – Crestron INET-IOEX-RYIO (6507142) – 10-05-2026 (1173).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron DIN-IO8 (2148)/Products – Crestron DIN-IO8 – 10-05-2026 (2148).pdf  (10/12/2026)
+- TechSquad CRM/Products/HZ2-KPCN-B (2316)/Products – HZ2-KPCN-B – 10-07-2026 (2316).pdf  (10/12/2026)
+- TechSquad CRM/Products/Binary B-240-HDSWTCH-5X1 (842822036276) (1311)/Products – Binary B-240-HDSWTCH-5X1 (842822036276) – 10-05-2026 (1311).pdf  (10/12/2026)
+- TechSquad CRM/Products/B-540-EXT-330-RS-IP (2451)/Products – B-540-EXT-330-RS-IP – 10-07-2026 (2451).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron GLS-OIR-C-CN (6510224) (1187)/Products – Crestron GLS-OIR-C-CN (6510224) – 10-05-2026 (1187).pdf  (10/12/2026)
+- TechSquad CRM/Products/C4-SW120277-WH (2516)/Products – C4-SW120277-WH – 10-07-2026 (2516).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-250-IPW-2 (842822041010) (1180)/Products – WattBox WB-250-IPW-2 (842822041010) – 10-05-2026 (1180).pdf  (10/12/2026)
+- TechSquad CRM/Products/HZ2-DIMUEX-W (2313)/Products – HZ2-DIMUEX-W – 10-07-2026 (2313).pdf  (10/12/2026)
+- TechSquad CRM/Products/U6-Pro (2331)/Products – U6-Pro – 10-07-2026 (2331).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-800-IPVM-6 (842822041249) (1003)/Products – WattBox WB-800-IPVM-6 (842822041249) – 10-05-2026 (1003).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron TSW-1070-W-S (6510818) (1043)/Products – Crestron TSW-1070-W-S (6510818) – 10-05-2026 (1043).pdf  (10/12/2026)
+- TechSquad CRM/Products/SONOS SUB 4 (2349)/Products – SONOS SUB 4 – 10-07-2026 (2349).pdf  (10/12/2026)
+- TechSquad CRM/Products/CM2-KPCN-W-S (2529)/Products – CM2-KPCN-W-S – 10-07-2026 (2529).pdf  (10/12/2026)
+- TechSquad CRM/Products/WATTBOX - WB-150-IPW-1B-2 (1834)/Products – WATTBOX - WB-150-IPW-1B-2 – 10-05-2026 (1834).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-150-IPW-1B-2 (842822041003) (1013)/Products – WattBox WB-150-IPW-1B-2 (842822041003) – 10-05-2026 (1013).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-CORE3 (842822053617) (1244)/Products – Control4 C4-CORE3 (842822053617) – 10-05-2026 (1244).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLT-2DIM8 (6500782) (1231)/Products – Crestron CLT-2DIM8 (6500782) – 10-05-2026 (1231).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron DIN-THSTAT (6509627) (1377)/Products – Crestron DIN-THSTAT (6509627) – 10-05-2026 (1377).pdf  (10/12/2026)
+- TechSquad CRM/Products/USW-Pro-Max-24-PoE (2507)/Products – USW-Pro-Max-24-PoE – 10-07-2026 (2507).pdf  (10/12/2026)
+- TechSquad CRM/Products/USW-Ultra-210W (2325)/Products – USW-Ultra-210W – 10-07-2026 (2325).pdf  (10/12/2026)
+- TechSquad CRM/Products/CEN-IO-RY-104 (2421)/Products – CEN-IO-RY-104 – 10-07-2026 (2421).pdf  (10/12/2026)
+- TechSquad CRM/Products/Episode EE-IR-RCVR-SM (1999)/Products – Episode EE-IR-RCVR-SM – 10-05-2026 (1999).pdf  (10/12/2026)
+- TechSquad CRM/Products/Episode ES-SUB-WIRELESS-KIT (842822034821) (1271)/Products – Episode ES-SUB-WIRELESS-KIT (842822034821) – 10-05-2026 (1271).pdf  (10/12/2026)
+- TechSquad CRM/Products/UCK-G2-SSD (2301)/Products – UCK-G2-SSD – 10-07-2026 (2301).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron DIN-PWS60 (6507733) (1310)/Products – Crestron DIN-PWS60 (6507733) – 10-05-2026 (1310).pdf  (10/12/2026)
+- TechSquad CRM/Products/UCG-Fiber (2467)/Products – UCG-Fiber – 10-07-2026 (2467).pdf  (10/12/2026)
+- TechSquad CRM/Products/Episode ES-500-AW-6-WHT (842822036191) (1389)/Products – Episode ES-500-AW-6-WHT (842822036191) – 10-05-2026 (1389).pdf  (10/12/2026)
+- TechSquad CRM/Products/WB-820-IPVM-12 (2523)/Products – WB-820-IPVM-12 – 10-07-2026 (2523).pdf  (10/12/2026)
+- TechSquad CRM/Products/Araknis Networks AN-820-AP-I (842822056151) (1133)/Products – Araknis Networks AN-820-AP-I (842822056151) – 10-05-2026 (1133).pdf  (10/12/2026)
+- TechSquad CRM/Products/ES-LS-STAKE-12 (0842822023900) (1713)/Products – ES-LS-STAKE-12 (0842822023900) – 10-05-2026 (1713).pdf  (10/12/2026)
+- TechSquad CRM/Products/C4-APD120-WH (2515)/Products – C4-APD120-WH – 10-07-2026 (2515).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron MC4-R (6510226) (1237)/Products – Crestron MC4-R (6510226) – 10-05-2026 (1237).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CP4-R (6512254) (1026)/Products – Crestron CP4-R (6512254) – 10-05-2026 (1026).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CEN-IO-IR-104 (6507970) (1065)/Products – Crestron CEN-IO-IR-104 (6507970) – 10-05-2026 (1065).pdf  (10/12/2026)
+- TechSquad CRM/Products/Binary B-540-EXT-230-IR (842822036085) (1099)/Products – Binary B-540-EXT-230-IR (842822036085) – 10-05-2026 (1099).pdf  (10/12/2026)
+- TechSquad CRM/Products/ES-LS-MOUNT-TREE (1793)/Products – ES-LS-MOUNT-TREE – 10-05-2026 (1793).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CHV-RTS (6500380) (1424)/Products – Crestron CHV-RTS (6500380) – 10-05-2026 (1424).pdf  (10/12/2026)
+- TechSquad CRM/Products/UCG-Max (2332)/Products – UCG-Max – 10-07-2026 (2332).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-800-IPVM-12 (842822045032) (1160)/Products – WattBox WB-800-IPVM-12 (842822045032) – 10-05-2026 (1160).pdf  (10/12/2026)
+- TechSquad CRM/Products/UVC-G6-Turret (2344)/Products – UVC-G6-Turret – 10-07-2026 (2344).pdf  (10/12/2026)
+- TechSquad CRM/Products/Sonos BM1WMWW1BLK (878269004479) (1365)/Products – Sonos BM1WMWW1BLK (878269004479) – 10-05-2026 (1365).pdf  (10/12/2026)
+- TechSquad CRM/Products/Araknis Networks AN-110-SW-F-8 (842822034074) (1335)/Products – Araknis Networks AN-110-SW-F-8 (842822034074) – 10-05-2026 (1335).pdf  (10/12/2026)
+- TechSquad CRM/Products/USW-Flex-2.5G-5 (2345)/Products – USW-Flex-2.5G-5 – 10-07-2026 (2345).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-SW120277-SW (2107)/Products – Control4 C4-SW120277-SW – 10-05-2026 (2107).pdf  (10/12/2026)
+- TechSquad CRM/Products/UACC-Lock-Strike-Secure-15mm (2348)/Products – UACC-Lock-Strike-Secure-15mm – 10-07-2026 (2348).pdf  (10/12/2026)
+- TechSquad CRM/Products/Episode ES-500-AW-8-BLK (842822036160) (1067)/Products – Episode ES-500-AW-8-BLK (842822036160) – 10-05-2026 (1067).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-HALO-TS-AS (842822056670) (1308)/Products – Control4 C4-HALO-TS-AS (842822056670) – 10-05-2026 (1308).pdf  (10/12/2026)
+- TechSquad CRM/Products/C4-CKFPDAPD-WH (2426)/Products – C4-CKFPDAPD-WH – 10-07-2026 (2426).pdf  (10/12/2026)
+- TechSquad CRM/Products/Binary HDMI Extender B-540-EXT-230-IR (1595)/Products – Binary HDMI Extender B-540-EXT-230-IR – 10-05-2026 (1595).pdf  (10/12/2026)
+- TechSquad CRM/Products/SONOS PORT (1880)/Products – SONOS PORT – 10-05-2026 (1880).pdf  (10/12/2026)
+- TechSquad CRM/Products/HZ2-KPCN-DRK-NKL-ENGRAVED (2391)/Products – HZ2-KPCN-DRK-NKL-ENGRAVED – 10-07-2026 (2391).pdf  (10/12/2026)
+- TechSquad CRM/Products/Sonos SUBM1US1BLK (840136804031) (1411)/Products – Sonos SUBM1US1BLK (840136804031) – 10-05-2026 (1411).pdf  (10/12/2026)
+- TechSquad CRM/Products/CM2-DIMUEX-RKR-W-S (2390)/Products – CM2-DIMUEX-RKR-W-S – 10-07-2026 (2390).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLT-1DIMU4 (6506745) (1121)/Products – Crestron CLT-1DIMU4 (6506745) – 10-05-2026 (1121).pdf  (10/12/2026)
+- TechSquad CRM/Products/DIN-AP4 (2431)/Products – DIN-AP4 – 10-07-2026 (2431).pdf  (10/12/2026)
+- TechSquad CRM/Products/AN-320-SW-R-8 (2359)/Products – AN-320-SW-R-8 – 10-07-2026 (2359).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron HZ-THSTAT-W (6511011) (1096)/Products – Crestron HZ-THSTAT-W (6511011) – 10-05-2026 (1096).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron DIN-BLOCK (6501750) (1041)/Products – Crestron DIN-BLOCK (6501750) – 10-05-2026 (1041).pdf  (10/12/2026)
+- TechSquad CRM/Products/USW-FLEX MINI (2328)/Products – USW-FLEX MINI – 10-07-2026 (2328).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLWI-KPLEX-BATT-W (6504988) (1200)/Products – Crestron CLWI-KPLEX-BATT-W (6504988) – 10-05-2026 (1200).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CP4 (6511816) (1238)/Products – Crestron CP4 (6511816) – 10-05-2026 (1238).pdf  (10/12/2026)
+- TechSquad CRM/Products/SONOS AMP (AMPG1US1BLK) (1508)/Products – SONOS AMP (AMPG1US1BLK) – 10-05-2026 (1508).pdf  (10/12/2026)
+- TechSquad CRM/Products/Araknis Networks AN-520-AP-O (842822060479) (1288)/Products – Araknis Networks AN-520-AP-O (842822060479) – 10-05-2026 (1288).pdf  (10/12/2026)
+- TechSquad CRM/Products/CEN-GW1 (2310)/Products – CEN-GW1 – 10-07-2026 (2310).pdf  (10/12/2026)
+- TechSquad CRM/Products/CM2-DIMUEX-W-S (2319)/Products – CM2-DIMUEX-W-S – 10-07-2026 (2319).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-THERM-WH (876389014750) (1243)/Products – Control4 C4-THERM-WH (876389014750) – 10-05-2026 (1243).pdf  (10/12/2026)
+- TechSquad CRM/Products/C4-KD120-WH (2518)/Products – C4-KD120-WH – 10-07-2026 (2518).pdf  (10/12/2026)
+- TechSquad CRM/Products/AN-320-SW-R-24 (2363)/Products – AN-320-SW-R-24 – 10-07-2026 (2363).pdf  (10/12/2026)
+- TechSquad CRM/Products/SONOS ARC ULTRA (2514)/Products – SONOS ARC ULTRA – 10-07-2026 (2514).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLX-2DIMU8 (6510757) (1086)/Products – Crestron CLX-2DIMU8 (6510757) – 10-05-2026 (1086).pdf  (10/12/2026)
+- TechSquad CRM/Products/U7-Outdoor (2305)/Products – U7-Outdoor – 10-07-2026 (2305).pdf  (10/12/2026)
+- TechSquad CRM/Products/Araknis Networks AN-110-SW-R-8 (842822033695) (1143)/Products – Araknis Networks AN-110-SW-R-8 (842822033695) – 10-05-2026 (1143).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-800VPS-IPVM-12 (842822038836) (1046)/Products – WattBox WB-800VPS-IPVM-12 (842822038836) – 10-05-2026 (1046).pdf  (10/12/2026)
+- TechSquad CRM/Products/B-260-SWTCH-4x1 (2450)/Products – B-260-SWTCH-4x1 – 10-07-2026 (2450).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLX-4HSW4 (6500680) (1039)/Products – Crestron CLX-4HSW4 (6500680) – 10-05-2026 (1039).pdf  (10/12/2026)
+- TechSquad CRM/Products/USW-Flex-2.5G-8-PoE (2526)/Products – USW-Flex-2.5G-8-PoE – 10-07-2026 (2526).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CAEN 7 x 2 (1583)/Products – Crestron CAEN 7 x 2 – 10-05-2026 (1583).pdf  (10/12/2026)
+- TechSquad CRM/Products/Araknis Networks AN-110-SW-R-16 (842822033701) (1030)/Products – Araknis Networks AN-110-SW-R-16 (842822033701) – 10-05-2026 (1030).pdf  (10/12/2026)
+- TechSquad CRM/Products/UA-Hub-Door (2334)/Products – UA-Hub-Door – 10-07-2026 (2334).pdf  (10/12/2026)
+- TechSquad CRM/Products/UP-Chime (2300)/Products – UP-Chime – 10-07-2026 (2300).pdf  (10/12/2026)
+- TechSquad CRM/Products/Araknis Networks AN-320-SW-R-16 (842822063715) (1298)/Products – Araknis Networks AN-320-SW-R-16 (842822063715) – 10-05-2026 (1298).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-SR260 (876389016013) (1270)/Products – Control4 C4-SR260 (876389016013) – 10-05-2026 (1270).pdf  (10/12/2026)
+- TechSquad CRM/Products/HR-150-B (1750)/Products – HR-150-B – 10-05-2026 (1750).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron C2N-HBLOCK (6500129) (1103)/Products – Crestron C2N-HBLOCK (6500129) – 10-05-2026 (1103).pdf  (10/12/2026)
+- TechSquad CRM/Products/U7-Pro-Outdoor (2346)/Products – U7-Pro-Outdoor – 10-07-2026 (2346).pdf  (10/12/2026)
+- TechSquad CRM/Products/DMF-CI-8 (1535)/Products – DMF-CI-8 – 10-05-2026 (1535).pdf  (10/12/2026)
+- TechSquad CRM/Products/Sonos PORT1US1BLK (878269008828) (1033)/Products – Sonos PORT1US1BLK (878269008828) – 10-05-2026 (1033).pdf  (10/12/2026)
+- TechSquad CRM/Products/TSR-310-B (2532)/Products – TSR-310-B – 10-07-2026 (2532).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-OVRC-UPS-350-6 (842822040952) (1251)/Products – WattBox WB-OVRC-UPS-350-6 (842822040952) – 10-05-2026 (1251).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLX-2DIM8 (6500750) (1131)/Products – Crestron CLX-2DIM8 (6500750) – 10-05-2026 (1131).pdf  (10/12/2026)
+- TechSquad CRM/Products/CEN-IO-COM-102 (2389)/Products – CEN-IO-COM-102 – 10-07-2026 (2389).pdf  (10/12/2026)
+- TechSquad CRM/Products/USW-ULTRA-60W (2324)/Products – USW-ULTRA-60W – 10-07-2026 (2324).pdf  (10/12/2026)
+- TechSquad CRM/Products/ECS-800-PND6-WHT (1699)/Products – ECS-800-PND6-WHT – 10-05-2026 (1699).pdf  (10/12/2026)
+- TechSquad CRM/Products/HZ2-KPCN-W (2315)/Products – HZ2-KPCN-W – 10-07-2026 (2315).pdf  (10/12/2026)
+- TechSquad CRM/Products/WATTBOX - WB-300VB-IP-5 (1681)/Products – WATTBOX - WB-300VB-IP-5 – 10-05-2026 (1681).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLF-LDIMUEX-W (6506789) (1263)/Products – Crestron CLF-LDIMUEX-W (6506789) – 10-05-2026 (1263).pdf  (10/12/2026)
+- TechSquad CRM/Products/Episode EA-RSP-8D-100 (842822043274) (1409)/Products – Episode EA-RSP-8D-100 (842822043274) – 10-05-2026 (1409).pdf  (10/12/2026)
+- TechSquad CRM/Products/Binary B-520-RX-230-IR (842822031417) (1055)/Products – Binary B-520-RX-230-IR (842822031417) – 10-05-2026 (1055).pdf  (10/12/2026)
+- TechSquad CRM/Products/UAP AC LITE (2351)/Products – UAP AC LITE – 10-07-2026 (2351).pdf  (10/12/2026)
+- TechSquad CRM/Products/HR-CV-MINI (2416)/Products – HR-CV-MINI – 10-07-2026 (2416).pdf  (10/12/2026)
+- TechSquad CRM/Products/Binary B-260-ARC (842822053082) (1110)/Products – Binary B-260-ARC (842822053082) – 10-05-2026 (1110).pdf  (10/12/2026)
+- TechSquad CRM/Products/Episode ES-500-AW-8-WHT (842822036177) (1158)/Products – Episode ES-500-AW-8-WHT (842822036177) – 10-05-2026 (1158).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-OVRC-UPS-1500-1 (842822034630) (1250)/Products – WattBox WB-OVRC-UPS-1500-1 (842822034630) – 10-05-2026 (1250).pdf  (10/12/2026)
+- TechSquad CRM/Products/SONOS ULTRA (2336)/Products – SONOS ULTRA – 10-07-2026 (2336).pdf  (10/12/2026)
+- TechSquad CRM/Products/Araknis Networks AN-520-RT (842822060684) (1161)/Products – Araknis Networks AN-520-RT (842822060684) – 10-05-2026 (1161).pdf  (10/12/2026)
+- TechSquad CRM/Products/SONOS AMP MULT - RACK MOUNT (2513)/Products – SONOS AMP MULT - RACK MOUNT – 10-07-2026 (2513).pdf  (10/12/2026)
+- TechSquad CRM/Products/Araknis Networks AN-320-SW-R-16-POE (842822063647) (1392)/Products – Araknis Networks AN-320-SW-R-16-POE (842822063647) – 10-05-2026 (1392).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-300VB-IP-5 (842822034203) (1252)/Products – WattBox WB-300VB-IP-5 (842822034203) – 10-05-2026 (1252).pdf  (10/12/2026)
+- TechSquad CRM/Products/C2N-RTHS (1666)/Products – C2N-RTHS – 10-05-2026 (1666).pdf  (10/12/2026)
+- TechSquad CRM/Products/CM2-KPFCN-ENGRAVED (2535)/Products – CM2-KPFCN-ENGRAVED – 10-07-2026 (2535).pdf  (10/12/2026)
+- TechSquad CRM/Products/Strong SR-CS-RACK-21U (842822019323) (1330)/Products – Strong SR-CS-RACK-21U (842822019323) – 10-05-2026 (1330).pdf  (10/12/2026)
+- TechSquad CRM/Products/AN-620-SW-R-24-POE (2361)/Products – AN-620-SW-R-24-POE – 10-07-2026 (2361).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron INET-IOEX-IRCOM (6507143) (1240)/Products – Crestron INET-IOEX-IRCOM (6507143) – 10-05-2026 (1240).pdf  (10/12/2026)
+- TechSquad CRM/Products/SnapAV WB-OVRC-UPS-1100-1 (1615)/Products – SnapAV WB-OVRC-UPS-1100-1 – 10-05-2026 (1615).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron GLS-OIR-CSM-EX-BATT (6505232) (1264)/Products – Crestron GLS-OIR-CSM-EX-BATT (6505232) – 10-05-2026 (1264).pdf  (10/12/2026)
+- TechSquad CRM/Products/Strong SR-WMS-12U (842822027472) (1443)/Products – Strong SR-WMS-12U (842822027472) – 10-05-2026 (1443).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CAEN-7X1 (6500438) (1010)/Products – Crestron CAEN-7X1 (6500438) – 10-05-2026 (1010).pdf  (10/12/2026)
+- TechSquad CRM/Products/USW-Flex-2.5G-8 (2340)/Products – USW-Flex-2.5G-8 – 10-07-2026 (2340).pdf  (10/12/2026)
+- TechSquad CRM/Products/USW-Lite-8-PoE (2329)/Products – USW-Lite-8-PoE – 10-07-2026 (2329).pdf  (10/12/2026)
+- TechSquad CRM/Products/WATTBOX 5 - WB-300VB-IP-5 (1649)/Products – WATTBOX 5 - WB-300VB-IP-5 – 10-05-2026 (1649).pdf  (10/12/2026)
+- TechSquad CRM/Products/CAEN-4X2 (1730)/Products – CAEN-4X2 – 10-05-2026 (1730).pdf  (10/12/2026)
+- TechSquad CRM/Products/UVC-G6-Turret-B (2505)/Products – UVC-G6-Turret-B – 10-07-2026 (2505).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLX-2DIMFLV8 (6507762) (1166)/Products – Crestron CLX-2DIMFLV8 (6507762) – 10-05-2026 (1166).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CNTBLOCK (6500279) (1008)/Products – Crestron CNTBLOCK (6500279) – 10-05-2026 (1008).pdf  (10/12/2026)
+- TechSquad CRM/Products/Sonos AMPG1US1BLK (878269007104) (1019)/Products – Sonos AMPG1US1BLK (878269007104) – 10-05-2026 (1019).pdf  (10/12/2026)
+- TechSquad CRM/Products/AN-620-SW-R-8-POE (2360)/Products – AN-620-SW-R-8-POE – 10-07-2026 (2360).pdf  (10/12/2026)
+- TechSquad CRM/Products/CM2-DIMUEX- ENGRAVED (2534)/Products – CM2-DIMUEX- ENGRAVED – 10-07-2026 (2534).pdf  (10/12/2026)
+- TechSquad CRM/Products/Strong SR-WMS-16U (842822027489) (1137)/Products – Strong SR-WMS-16U (842822027489) – 10-05-2026 (1137).pdf  (10/12/2026)
+- TechSquad CRM/Products/G6 ENTRY (2524)/Products – G6 ENTRY – 10-07-2026 (2524).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLW-EXPEX-GD-W-T (2139)/Products – Crestron CLW-EXPEX-GD-W-T – 10-05-2026 (2139).pdf  (10/12/2026)
+- TechSquad CRM/Products/SONOS AMP MULTI (2519)/Products – SONOS AMP MULTI – 10-07-2026 (2519).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron FP-G1-B-S (1498)/Products – Crestron FP-G1-B-S – 10-05-2026 (1498).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLC-1LEDPWM-RGBW-EX (6507653) (1036)/Products – Crestron CLC-1LEDPWM-RGBW-EX (6507653) – 10-05-2026 (1036).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron C2N-IO (6505209) (1100)/Products – Crestron C2N-IO (6505209) – 10-05-2026 (1100).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-KD120-C-WH (842822050234) (1179)/Products – Control4 C4-KD120-C-WH (842822050234) – 10-05-2026 (1179).pdf  (10/12/2026)
+- TechSquad CRM/Products/SONOS MOVE 2 (2769)/Products – SONOS MOVE 2 – 10-19-2026 (2769).pdf  (10/19/2026)
+- TechSquad CRM/Products/WattBox WB-OVRC-UPS-2000-1 (842822034647) (1435)/Products – WattBox WB-OVRC-UPS-2000-1 (842822034647) – 10-05-2026 (1435).pdf  (10/12/2026)
+- TechSquad CRM/Products/E7 (2307)/Products – E7 – 10-07-2026 (2307).pdf  (10/12/2026)
+- TechSquad CRM/Products/CNXHUB (2415)/Products – CNXHUB – 10-07-2026 (2415).pdf  (10/12/2026)
+- TechSquad CRM/Products/UVC-G6-Turret-W (2343)/Products – UVC-G6-Turret-W – 10-07-2026 (2343).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLF-LDIMUEX-W-CORD (6505400) (1326)/Products – Crestron CLF-LDIMUEX-W-CORD (6505400) – 10-05-2026 (1326).pdf  (10/12/2026)
+- TechSquad CRM/Products/DM-NVX-D30 (1534)/Products – DM-NVX-D30 – 10-05-2026 (1534).pdf  (10/12/2026)
+- TechSquad CRM/Products/U7-Pro (2339)/Products – U7-Pro – 10-07-2026 (2339).pdf  (10/12/2026)
+- TechSquad CRM/Products/USW-ULTRA (2322)/Products – USW-ULTRA – 10-07-2026 (2322).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLW-LDIMEX-2GD-W-T (6503141) (1064)/Products – Crestron CLW-LDIMEX-2GD-W-T (6503141) – 10-05-2026 (1064).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-APD120-C-WH (842822049917) (1073)/Products – Control4 C4-APD120-C-WH (842822049917) – 10-05-2026 (1073).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLT-4HSW4 (6500872) (1164)/Products – Crestron CLT-4HSW4 (6500872) – 10-05-2026 (1164).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron DIN-HUB (6501751) (1092)/Products – Crestron DIN-HUB (6501751) – 10-05-2026 (1092).pdf  (10/12/2026)
+- TechSquad CRM/Products/DM-NAX-4ZSA-50 (2438)/Products – DM-NAX-4ZSA-50 – 10-07-2026 (2438).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron TSW-770-W-S (6510817) (1076)/Products – Crestron TSW-770-W-S (6510817) – 10-05-2026 (1076).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-ACC-300VB-RM (842822034845) (1313)/Products – WattBox WB-ACC-300VB-RM (842822034845) – 10-05-2026 (1313).pdf  (10/12/2026)
+- TechSquad CRM/Products/AN-220-SW-R-8-POE (2358)/Products – AN-220-SW-R-8-POE – 10-07-2026 (2358).pdf  (10/12/2026)
+- TechSquad CRM/Products/UDM-Pro (2327)/Products – UDM-Pro – 10-07-2026 (2327).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-300-IP-3 (842822031158) (1123)/Products – WattBox WB-300-IP-3 (842822031158) – 10-05-2026 (1123).pdf  (10/12/2026)
+- TechSquad CRM/Products/Sonos FIVE1US1 (878269009887) (1193)/Products – Sonos FIVE1US1 (878269009887) – 10-05-2026 (1193).pdf  (10/12/2026)
+- TechSquad CRM/Products/CAEN BLOCK CENCN 2 POE (2387)/Products – CAEN BLOCK CENCN 2 POE – 10-07-2026 (2387).pdf  (10/12/2026)
+- TechSquad CRM/Products/UDB-Switch (2341)/Products – UDB-Switch – 10-07-2026 (2341).pdf  (10/12/2026)
+- TechSquad CRM/Products/Strong SR-SHELF-FIXED-1U (842822018562) (1066)/Products – Strong SR-SHELF-FIXED-1U (842822018562) – 10-05-2026 (1066).pdf  (10/12/2026)
+- TechSquad CRM/Products/UNVR (2330)/Products – UNVR – 10-07-2026 (2330).pdf  (10/12/2026)
+- TechSquad CRM/Products/WattBox WB-800VPS-IPVM-18 (842822038843) (1249)/Products – WattBox WB-800VPS-IPVM-18 (842822038843) – 10-05-2026 (1249).pdf  (10/12/2026)
+- TechSquad CRM/Products/INETS-IOEX-DOOR-BATT-W (1539)/Products – INETS-IOEX-DOOR-BATT-W – 10-05-2026 (1539).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLX-1DIMU4-HP (6509616) (1091)/Products – Crestron CLX-1DIMU4-HP (6509616) – 10-05-2026 (1091).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-KD120-SW (2106)/Products – Control4 C4-KD120-SW – 10-05-2026 (2106).pdf  (10/12/2026)
+- TechSquad CRM/Products/Sonos BEAM2US1BLK (840136802327) (1005)/Products – Sonos BEAM2US1BLK (840136802327) – 10-05-2026 (1005).pdf  (10/12/2026)
+- TechSquad CRM/Products/CLX-1FAN4 (2433)/Products – CLX-1FAN4 – 10-07-2026 (2433).pdf  (10/12/2026)
+- TechSquad CRM/Products/SONOS ULTRA BRANCA (2337)/Products – SONOS ULTRA BRANCA – 10-07-2026 (2337).pdf  (10/12/2026)
+- TechSquad CRM/Products/Binary B-660-MTRX-4X2 (842822042697) (1341)/Products – Binary B-660-MTRX-4X2 (842822042697) – 10-05-2026 (1341).pdf  (10/12/2026)
+- TechSquad CRM/Products/NEW Binary B-260-ARC ARC-SPDIF Extender Audio Return Extender (2026)/Products – NEW Binary B-260-ARC ARC SPDIF Extender Audio Return Extender – 10-05-2026 (2026).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLT-1FAN4 (6500720) (1214)/Products – Crestron CLT-1FAN4 (6500720) – 10-05-2026 (1214).pdf  (10/12/2026)
+- TechSquad CRM/Products/Crestron CLT-2DIMU8 (6506910) (1017)/Products – Crestron CLT-2DIMU8 (6506910) – 10-05-2026 (1017).pdf  (10/12/2026)
+- TechSquad CRM/Products/OVRC-300-PRO (1889)/Products – OVRC-300-PRO – 10-05-2026 (1889).pdf  (10/12/2026)
+- TechSquad CRM/Products/UACC-Adapter-AC-210W (2347)/Products – UACC-Adapter-AC-210W – 10-07-2026 (2347).pdf  (10/12/2026)
+- TechSquad CRM/Products/WB-800CH1U-IPVM-8 (2533)/Products – WB-800CH1U-IPVM-8 – 10-07-2026 (2533).pdf  (10/12/2026)
+- TechSquad CRM/Products/UA-Intercom-Viewer (2333)/Products – UA-Intercom-Viewer – 10-07-2026 (2333).pdf  (10/12/2026)
+- TechSquad CRM/Products/DIN-AO8 (2388)/Products – DIN-AO8 – 10-07-2026 (2388).pdf  (10/12/2026)
+- TechSquad CRM/Products/DIN-AP4-R (2312)/Products – DIN-AP4-R – 10-07-2026 (2312).pdf  (10/12/2026)
+- TechSquad CRM/Products/USW-Pro-Max-16-PoE (2326)/Products – USW-Pro-Max-16-PoE – 10-07-2026 (2326).pdf  (10/12/2026)
+- TechSquad CRM/Products/Sonos FIVE1US1BLK (878269009894) (1234)/Products – Sonos FIVE1US1BLK (878269009894) – 10-05-2026 (1234).pdf  (10/12/2026)
+- TechSquad CRM/Products/c4-ka-wh (2517)/Products – c4-ka-wh – 10-07-2026 (2517).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-APD120-SW (2105)/Products – Control4 C4-APD120-SW – 10-05-2026 (2105).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-MSW-10PK-WH (876389034031) (1379)/Products – Control4 C4-MSW-10PK-WH (876389034031) – 10-05-2026 (1379).pdf  (10/12/2026)
+- TechSquad CRM/Products/Control4 C4-CORE1 (842822053600) (1253)/Products – Control4 C4-CORE1 (842822053600) – 10-05-2026 (1253).pdf  (10/12/2026)
+- TechSquad CRM/Products/CAEN 1X1 (1665)/Products – CAEN 1X1 – 10-05-2026 (1665).pdf  (10/12/2026)
+- 📁 TechSquad CRM/Projects/Miejia Residence - Verona -1201 (1214)  (10/5/2026)
+- TechSquad CRM/Projects/Henrique Borowski (1313)/Project files/2026-10-19/Project – Henrique Borowski (Lux Solar) – Equipment sales – 10-19-2026 (1313).pdf  (10/20/2026)
+- TechSquad CRM/Projects/Seguev, Patrick (1411)/SEGUEV, PATRICK/5- 17875 Collins Avenue_Reports/Job Report – Seguev, Patrick – Carlos Gurgel, Rinaldo, Roberto Pizini – 08-03-2022 (7612).pdf  (10/20/2026)
+- TechSquad CRM/Projects/Seguev, Patrick (1411)/SEGUEV, PATRICK/5- 17875 Collins Avenue_Reports/Job Report – Seguev, Patrick – Frederico Smiliansky – 08-09-2022 (7613).pdf  (10/20/2026)
+- TechSquad CRM/Projects/Womack, Chloe - Miami Beach (Elec) (1265)/Tasks/2026-10-15/Tasks – Womack, Chloe - Miami Beach (Elec) – Jessica Villegas – 10-18-2026 (1064).pdf  (10/18/2026)
+- TechSquad CRM/Projects/Womack, Chloe - Miami Beach (Elec) (1265)/Tasks/2026-10-16/Tasks – Womack, Chloe - Miami Beach (Elec) – Jessica Villegas – 10-19-2026 (1068).pdf  (10/19/2026)
+- TechSquad CRM/Projects/Roca, Fernanda - Pinecrest (1279)/ROCA, FERNANDA - CASA 63 PINECREST/3 - Plans, permit and COI/63 Ave Plans/63 Ave - Low Voltage 2nd Floor - v1.pdf  (6/19/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 01-24-2019 (6272).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 01-26-2018 (6283).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 01-29-2018 (6285).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 02-01-2018 (6282).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 02-12-2018 (6281).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 02-25-2020 (6277).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 04-18-2019 (6269).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 07-23-2018 (6287).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 08-15-2018 (6261).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 08-15-2019 (6273).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 09-07-2018 (6265).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 09-11-2019 (6275).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 09-25-2018 (6266).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 10-23-2018 (6270).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 10-30-2018 (6271).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel – 12-13-2019 (6274).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel, Daniel Sousa – 05-15-2019 (6276).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel, Fernando – 07-26-2017 (6258).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel, Roberto Pizini – 08-09-2018 (6260).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel, Roberto Pizini – 08-16-2018 (6262).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel, Rodolfo Oliveira – 07-13-2020 (6279).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Carlos Gurgel, Saulo da Silva – 09-20-2021 (6280).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Frederico Smiliansky – 10-05-2018 (6268).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Frederico Smiliansky, Carlos Gurgel – 05-18-2020 (6278).p  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Frederico Smiliansky, Carlos Gurgel – 08-30-2018 (6264).p  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Frederico Smiliansky, Carlos Gurgel, Roberto Pizini – 08-  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Roberto Pizini – 09-28-2018 (6267).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Rodolfo Oliveira – 07-24-2017 (6257).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Rodolfo Oliveira, Roberto Pizini – 10-09-2017 (6259).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Rodrigo – 01-30-2018 (6286).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Rodriguez, Lorena E David - Chateau Beach -1402 (1290)/RODRIGUEZ, LORENA E DAVID - CHATEAU BEACH -1402/5- ChateauBeach#1402_Reports/Job Report – Rodriguez, Lorena E David - Chateau Beach -1402 – Ulisses Dias Filho – 02-27-2018 (6284).pdf  (10/6/2026)
+- TechSquad CRM/Projects/Eli - Oceana -1002N (1478)/ELI - OCEANA -1002N/5- Oceana #1002N_Reports/Job Report – Eli - Oceana -1002N – Daniel Sousa – 11-27-2019 (6922).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Eli - Oceana -1002N (1478)/ELI - OCEANA -1002N/5- Oceana #1002N_Reports/Job Report – Eli - Oceana -1002N – Daniel Sousa, Ulisses Dias Filho – 10-21-2019 (6921).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Guimar (Parents House) - Miami (1172)/Project files/2026-10-05/Project – Guimar (Parents House) - Miami – 08-16-2025 (1172).pdf  (10/5/2026)
+- 📁 TechSquad CRM/Projects/Rodriguez, Paul - Davie (1358)/RODRIGUEZ, PAUL - CORAL GABLES  (10/21/2026)
+- TechSquad CRM/Projects/Wagner, Richard (1461)/WAGNER, RICHARD/5- Richard DS_Reports/Job Report – Wagner, Richard – Roberto Pizini – 06-11-2018 (7836).pdf  (10/20/2026)
+- TechSquad CRM/Projects/Wagner, Richard (1461)/WAGNER, RICHARD/5- Richard DS_Reports/Job Report – Wagner, Richard – Rodrigo – 03-19-2018 (7837).pdf  (10/20/2026)
+- TechSquad CRM/Projects/Rodrigo Costa - Pompano Beach (1130)/Tasks/2026-10-06/Tasks – Rodrigo Costa - Pompano Beach – Jessica Villegas – 10-08-2026 (1029).pdf  (10/12/2026)
+- TechSquad CRM/Projects/Rodrigo Costa - Pompano Beach (1130)/Tasks/2026-10-09/Tasks – Rodrigo Costa - Pompano Beach – Jessica Villegas – 10-10-2026 (1034).pdf  (10/12/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Carlos Gurgel – 02-28-2019 (7013).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Carlos Gurgel – 04-02-2024 (7018).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Carlos Gurgel – 05-02-2019 (7012).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Carlos Gurgel – 05-07-2019 (7010).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Carlos Gurgel – 08-19-2020 (7011).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Carlos Gurgel – 10-08-2020 (7014).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Carlos Gurgel – 10-09-2020 (7015).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Carlos Gurgel – 10-11-2021 (7017).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Carlos Gurgel – 12-03-2020 (7016).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Carlos Gurgel, Roberto Pizini – 11-08-2024 (7021).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Frederico Smiliansky – 02-08-2019 (7009).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Leonardo Rodriguez – 10-30-2024 (7020).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Leonardo Rodriguez, Carlos Gurgel – 06-21-2023 (7019).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Gonzales, Jose Francisco - Trump I - 3504 (1331)/GONZALES, JOSE FRANCISCO - TRUMP I - 3504/5- Trump I #3504_Reports/Job Report – Gonzales, Jose Francisco - Trump I - 3504 – Leonardo Rodriguez, Carlos Gurgel – 06-21-2023 (7022).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Doukeris - Oceana -701 S (1448)/DOUKERIS - OCEANA -701 S - 00041/5- Oceana # 701 S_Reports/Job Report – Doukeris - Oceana -701 S – Carlos Gurgel – 06-07-2018 (6854).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Doukeris - Oceana -701 S (1448)/DOUKERIS - OCEANA -701 S - 00041/5- Oceana # 701 S_Reports/Job Report – Doukeris - Oceana -701 S – Carlos Gurgel, Rodolfo Oliveira – 06-29-2017 (6856).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Doukeris - Oceana -701 S (1448)/DOUKERIS - OCEANA -701 S - 00041/5- Oceana # 701 S_Reports/Job Report – Doukeris - Oceana -701 S – Carlos Gurgel, Rodolfo Oliveira – 07-07-2017 (6855).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Alexander, Shlomy - St Regis - 1401 (1332)/ALEXANDER, SHLOMY - ST REGIS - 1401/5- St Regis # 1401S_Reports/Job Report – Alexander, Shlomy - St Regis - 1401 – Carlos Gurgel – 12-30-2019 (6556).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Alexander, Shlomy - St Regis - 1401 (1332)/ALEXANDER, SHLOMY - ST REGIS - 1401/5- St Regis # 1401S_Reports/Job Report – Alexander, Shlomy - St Regis - 1401 – Carlos Gurgel, Rodolfo Oliveira, Ulisses Dias Filho, Roberto Pizini –  (10/21/2026)
+- TechSquad CRM/Projects/Alexander, Shlomy - St Regis - 1401 (1332)/ALEXANDER, SHLOMY - ST REGIS - 1401/5- St Regis # 1401S_Reports/Job Report – Alexander, Shlomy - St Regis - 1401 – Daniel Sousa, Rodolfo Oliveira – 05-13-2020 (6560).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Alexander, Shlomy - St Regis - 1401 (1332)/ALEXANDER, SHLOMY - ST REGIS - 1401/5- St Regis # 1401S_Reports/Job Report – Alexander, Shlomy - St Regis - 1401 – Frederico Smiliansky – 12-02-2019 (6555).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Alexander, Shlomy - St Regis - 1401 (1332)/ALEXANDER, SHLOMY - ST REGIS - 1401/5- St Regis # 1401S_Reports/Job Report – Alexander, Shlomy - St Regis - 1401 – Frederico Smiliansky, Carlos Gurgel – 12-16-2019 (6557).pdf  (10/21/2026)
+- TechSquad CRM/Projects/Alexander, Shlomy - St Regis - 1401 (1332)/ALEXANDER, SHLOMY - ST REGIS - 1401/5- St Regis # 1401S_Reports/Job Report – Alexander, Shlomy - St Regis - 1401 – Frederico Smiliansky, Carlos Gurgel, Daniel Sousa – 11-26-2019 (6558)  (10/21/2026)
+- TechSquad CRM/Projects/Alexander, Shlomy - St Regis - 1401 (1332)/ALEXANDER, SHLOMY - ST REGIS - 1401/5- St Regis # 1401S_Reports/Job Report – Alexander, Shlomy - St Regis - 1401 – Frederico Smiliansky, Daniel Sousa – 01-08-2020 (6559).pdf  (10/21/2026)
+- TechSquad CRM/Projects/741 Enfield - Boca Raton (1154)/Tasks/2026-10-06/Tasks – 741 Enfield - Boca Raton – Jessica Villegas – 10-08-2026 (1030).pdf  (10/12/2026)
+- TechSquad CRM/Projects/741 Enfield - Boca Raton (1154)/Tasks/2026-10-09/Tasks – 741 Enfield - Boca Raton – Jessica Villegas – 10-11-2026 (1039).pdf  (10/12/2026)
+- TechSquad CRM/Projects/741 Enfield - Boca Raton (1154)/Tasks/2026-10-09/Tasks – 741 Enfield - Boca Raton – Jessica Villegas – 10-14-2026 (1046).pdf  (10/14/2026)
+- TechSquad CRM/Projects/741 Enfield - Boca Raton (1154)/Tasks/2026-10-12/Tasks – 741 Enfield - Boca Raton – Jessica Villegas – 10-17-2026 (1048).pdf  (10/17/2026)
+- TechSquad CRM/Projects/Federico, Guilherme - Casa Nova Pinecrest (1294)/FEDERICO, GUILHERME - CASA NOVA PINECREST/5- Guilherme Pinecrest__Reports/Job Report – Federico, Guilherme - Casa Nova Pinecrest – Leonardo Rodriguez, Carlos Gurgel, Saulo da Silva, Otavio – 11- 1  (10/7/2026)
+- TechSquad CRM/Projects/Federico, Guilherme - Casa Nova Pinecrest (1294)/FEDERICO, GUILHERME - CASA NOVA PINECREST/5- Guilherme Pinecrest__Reports/Job Report – Federico, Guilherme - Casa Nova Pinecrest – Lucas Oliveira, Roberto Pizini – 02-26-2024 (5996).pdf  (10/7/2026)
+- TechSquad CRM/_Uploading/03f4b54e-d03f-4634-a3a6-8a5e4aa43d71-IMG_3096.mov  (10/21/2026)
+- TechSquad CRM/_Uploading/47947b17-a0a7-4797-9699-6fa267194e12-IMG_1533.png  (10/21/2026)
+- TechSquad CRM/_Uploading/4d4433cd-3e65-430a-83db-c569adcecf53-IMG_1178.mov  (10/20/2026)
+- TechSquad CRM/_Uploading/53ac181e-cee6-4f05-9123-d4f19da4e496-IMG_2686.jpeg  (10/20/2026)
+- TechSquad CRM/_Uploading/5c205c32-dbf0-4649-a617-74ac0479d1eb-IMG_2718.jpeg  (10/20/2026)
+- TechSquad CRM/_Uploading/6f0623b1-e55e-4b96-8c7a-00f25639fbc5-IMG_2739.mov  (10/21/2026)
+- TechSquad CRM/_Uploading/eba728e1-6c78-48ba-9196-dea54586bd36-IMG_2676.jpeg  (10/20/2026)
+- TechSquad CRM/_Uploading/fa392e8e-a59d-4980-8c19-50c339d471a0-IMG_1492.jpeg  (10/21/2026)

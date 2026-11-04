@@ -353,3 +353,25 @@ export async function renameItem(itemId: string, name: string): Promise<DriveIte
   return graph<DriveItem>(`/me/drive/items/${encodeURIComponent(itemId)}`, { method: "PATCH", body: JSON.stringify({ name: safeName(name), "@microsoft.graph.conflictBehavior": "rename" }) });
 }
 
+
+/** Every item in the drive (files and folders) through the delta feed: path, name, size, kind. Used by audits and the NAS reconcile. */
+export async function listDrive(onPage?: (n: number) => void): Promise<{ id: string; path: string; file: boolean; size: number; modified: string }[]> {
+  const out: { id: string; path: string; file: boolean; size: number; modified: string }[] = [];
+  let next: string | undefined = "/me/drive/root/delta?$select=id,name,size,file,folder,parentReference,lastModifiedDateTime,deleted&$top=1000";
+  while (next) {
+    const page: { value?: { id: string; name: string; size?: number; file?: unknown; folder?: unknown; deleted?: unknown; parentReference?: { path?: string }; lastModifiedDateTime?: string }[]; "@odata.nextLink"?: string; "@odata.deltaLink"?: string } = await graph(next.startsWith("http") ? next.slice(GRAPH.length) : next);
+    for (const it of page.value ?? []) {
+      if (it.deleted || !it.parentReference?.path) continue; // the root itself has no parent path
+      // A name with a bare "%" ("100% paid") makes decodeURIComponent throw; keep such a path as it came.
+      let parent = it.parentReference.path;
+      try {
+        parent = decodeURIComponent(parent);
+      } catch {}
+      parent = parent.replace(/^\/drive\/root:\/?/, "");
+      out.push({ id: it.id, path: parent ? `${parent}/${it.name}` : it.name, file: Boolean(it.file), size: it.size ?? 0, modified: it.lastModifiedDateTime ?? "" });
+    }
+    onPage?.(out.length);
+    next = page["@odata.nextLink"];
+  }
+  return out;
+}
