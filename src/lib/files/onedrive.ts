@@ -145,11 +145,50 @@ export async function folderFor(t: TableDef, recordId: number): Promise<string> 
   }
   if (projectId) {
     const { data: p } = await db.from("projects").select("title").eq("id", projectId).maybeSingle();
-    const project = safeName(`${(p as { title: string | null } | null)?.title ?? "Project"} (${projectId})`);
+    const project = await projectFolderName(projectId, (p as { title: string | null } | null)?.title ?? null);
     const where = t.name === "projects" ? "Project files" : safeName(t.label);
     return `${ROOT}/Projects/${project}/${where}/${todayET()}`;
   }
   return `${ROOT}/${safeName(t.label)}/${safeName(recordTitle ? `${recordTitle} (${recordId})` : `${t.itemLabel} ${recordId}`)}`;
+}
+
+/**
+ * The project's folder name, "<title> (<id>)". A project that was renamed keeps ONE folder: the folder that
+ * already carries its "(id)" is renamed to the new title instead of a second one being made (Fred 2026-11-04,
+ * Carole Olshan's files split between "Carole Olshan (1541)" and "Carole Olshan - Oceana 701S (1541)").
+ */
+async function projectFolderName(projectId: number, title: string | null): Promise<string> {
+  const wanted = safeName(`${title ?? "Project"} (${projectId})`);
+  const prefix = `${ROOT}/Projects/`;
+  const db = adminDb();
+  const { data: cached } = await db.from("onedrive_folders").select("path, item_id").like("path", `${prefix}% (${projectId})`);
+  const rows = (cached ?? []) as { path: string; item_id: string }[];
+  if (rows.some((r) => r.path === `${prefix}${wanted}`)) return wanted;
+  let old = rows.find((r) => r.path !== `${prefix}${wanted}`) ?? null;
+  if (!old) {
+    // Not cached: ask the drive whether a folder for this id exists under any name.
+    try {
+      const found = await graph<{ value: { id: string; name: string; folder?: unknown }[] }>(`/me/drive/root:/${enc(`${ROOT}/Projects`)}:/search(q='(${projectId})')`);
+      const hit = found.value.find((v) => v.folder && v.name.endsWith(`(${projectId})`));
+      if (hit && hit.name !== wanted) old = { path: `${prefix}${hit.name}`, item_id: hit.id };
+      else if (hit) {
+        await db.from("onedrive_folders").upsert({ path: `${prefix}${wanted}`, item_id: hit.id });
+        return wanted;
+      }
+    } catch (e) {
+      console.error("project folder search:", (e as Error).message);
+    }
+  }
+  if (old) {
+    await renameItem(old.item_id, wanted);
+    // Cached paths under the old name now point at the renamed folder.
+    const { data: under } = await db.from("onedrive_folders").select("path, item_id").like("path", `${old.path}%`);
+    for (const r of (under ?? []) as { path: string; item_id: string }[]) {
+      await db.from("onedrive_folders").delete().eq("path", r.path);
+      await db.from("onedrive_folders").upsert({ path: `${prefix}${wanted}${r.path.slice(old.path.length)}`, item_id: r.item_id });
+    }
+  }
+  return wanted;
 }
 
 // ---------------------------------------------------------------- uploads
