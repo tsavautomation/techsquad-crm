@@ -17,8 +17,8 @@
  *   npx tsx --conditions=react-server --env-file=.env.local scripts/move-projects-ts.ts --from-sheet  # move what Fred decided in the sheet
  *   npx tsx --conditions=react-server --env-file=.env.local scripts/move-projects-ts.ts --decided [--apply]
  *       OD-h (Fred 2026-11-04): ONLY the folders decided on Admin › Report archive (round 2 decided every
- *       folder that is a project). Name matching and file counts are not used. Folders named Warehouse / Van
- *       and anything confidential never move. A folder already moved into the WRONG project folder (its
+ *       folder that is a project). Name matching and file counts are not used. Nothing confidential ever moves (Fred's "Warehouse / vans" are the
+ *       inventory locations, not client folders). A folder already moved into the WRONG project folder (its
  *       decision changed since) is moved again, from where it is now. Each folder's file count is listed, and
  *       the list (origin → destination) is written to docs/projects-ts-move-decided.md for Fred's OK.
  *       Special: inside "RODRIGUEZ, PAUL - CORAL GABLES" (project Mahaffy Residence - Coral Gables, the folder
@@ -51,8 +51,6 @@ const fromSheet = process.argv.includes("--from-sheet");
 /** OD-h: decisions only (see the header). */
 const decidedOnly = process.argv.includes("--decided");
 const LIST = "docs/projects-ts-move-decided.md";
-/** Tech Squad's own warehouse and van folders stay where they are (Fred 2026-11-04), whatever the decision says. */
-const HOLD_BACK = /\b(warehouse|vans?)\b/i;
 /** Nothing confidential is ever touched (memory confidential-onedrive, SPEC §9.1 OD-e). */
 const CONFIDENTIAL = /payroll|transactions?|pay\s*rates?|staff\s*performance/i;
 /** The mislabelled folder: its files are named after the real client (Fred 2026-11-04). */
@@ -125,10 +123,6 @@ async function main() {
         // OD-h: the decision on Admin › Report archive, and nothing else.
         projectId = decisions.get(key) ?? null;
         reason = !decisions.has(key) ? "not decided on Admin › Report archive" : projectId ? "decided by hand on Admin › Report archive" : "decided by hand: no project";
-        if (projectId && HOLD_BACK.test(c.name)) {
-          reason = `held back: warehouse / van folder (decided → project #${projectId})`;
-          projectId = null;
-        }
         if (CONFIDENTIAL.test(c.name)) {
           reason = "held back: confidential";
           projectId = null;
@@ -303,7 +297,7 @@ function writeList(moving: Plan[], staying: Plan[], renames: Rename[]) {
   }
   const held = staying.filter((p) => p.reason.startsWith("held back"));
   if (held.length) {
-    lines.push("", "## Held back (decided, but a warehouse / van or confidential folder)", "");
+    lines.push("", "## Held back (confidential)", "");
     for (const p of held) lines.push(`- ${OLD_ROOT}/${p.gc}/${p.folder}: ${p.reason}`);
   }
   const rest = staying.filter((p) => !p.reason.startsWith("held back"));

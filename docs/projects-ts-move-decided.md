@@ -1,6 +1,6 @@
 # PROJECTS TS → TechSquad CRM / Projects (decided folders)
 
-138 folders to move, 7575 files in all. Dry run on 2026-11-04.
+140 folders to move, 7626 files in all. Dry run on 2026-11-04.
 
 ## To move
 
@@ -18,11 +18,11 @@
 | 10 | PROJECTS TS/CH CONSTRUCTION GROUP - MIAMI/COSTA, FERNANDO - BEACH HOUSE #400 | TechSquad CRM/Projects/Costa, Fernando - Beach House -400 (1557)/ | 439 |
 | 11 | PROJECTS TS/CH CONSTRUCTION GROUP - MIAMI/COSTA, FERNANDO - BEACH HOUSE #400 - 00012 | TechSquad CRM/Projects/Costa, Fernando - Beach House -400 (1557)/ | 439 |
 | 12 | PROJECTS TS/CLIENTS/ABEDROP, MILO - MARINA PALMS | TechSquad CRM/Projects/Abedrop, Milo - Marina Palms (1277)/ | 2 |
-| 13 | PROJECTS TS/CLIENTS/ACTA DEVELOPMENT - SCOTT | TechSquad CRM/Projects/Acta I - Miami (1170)/ | 621 |
+| 13 | PROJECTS TS/CLIENTS/ACTA DEVELOPMENT - SCOTT | TechSquad CRM/Projects/Gray Hudkins - 7217 SW 52nd Ct (1170)/ | 621 |
 | 14 | PROJECTS TS/CLIENTS/ALVES, RODRIGO - ECHO # 408 | TechSquad CRM/Projects/Alves, Rodrigo - Echo - 408 (1609)/ | 6 |
 | 15 | PROJECTS TS/CLIENTS/AMERICAN TOP TEAM - SAPATO | TechSquad CRM/Projects/American Top Team - Sapato (1572)/ | 64 |
 | 16 | PROJECTS TS/CLIENTS/ANA - 1900 PURDY AVE - NORTH TOWER # TS2 | TechSquad CRM/Projects/Ana - 1900 Purdy Ave - North Tower - Ts2 (1590)/ | 3 |
-| 17 | PROJECTS TS/CLIENTS/ARMANI #4900 | TechSquad CRM/Projects/Acqualina -802 (1364)/ | 15 |
+| 17 | PROJECTS TS/CLIENTS/ARMANI #4900 | TechSquad CRM/Projects/Acqualina -802 - 17749 Collins Avenue -802 (1364)/ | 15 |
 | 18 | PROJECTS TS/CLIENTS/BAPTISTELLA, BRUNO - CAPOBELLA # 2309 | TechSquad CRM/Projects/Baptistella, Bruno - Capobella - 2309 (1591)/ | 33 |
 | 19 | PROJECTS TS/CLIENTS/BERMAN, BEN - BOCA RATON | TechSquad CRM/Projects/Berman, Ben - Boca Raton (1610)/ | 7 |
 | 20 | PROJECTS TS/CLIENTS/BETTAMIO, BEATRIZ - FENDI CHATEAU # 602 | TechSquad CRM/Projects/Bettamio, Beatriz - Fendi Chateau - 602 (1592)/ | 11 |
@@ -92,58 +92,60 @@
 | 84 | PROJECTS TS/CLIENTS/SOUZA, CRISTINA - AVANT - CASA | TechSquad CRM/Projects/Souza, Cristina - 533 NE 52nd Terrace (1552)/ | 48 |
 | 85 | PROJECTS TS/CLIENTS/SOUZA, FABIO - PARKWAY #G - BOCA RATON | TechSquad CRM/Projects/Souza, Fabio - Parkway -G - Boca Raton (1576)/ | 90 |
 | 86 | PROJECTS TS/CLIENTS/TEQUESTA II # 1404 | TechSquad CRM/Projects/Tequesta II - 1404 (1646)/ | 29 |
-| 87 | PROJECTS TS/CLIENTS/TRUMP # 2501 | TechSquad CRM/Projects/Trump -2501 - 18001 Collins Ave (1649)/ | 4 |
-| 88 | PROJECTS TS/CLIENTS/TRUMP HOLLYWOOD #2602 | TechSquad CRM/Projects/Trump Hollywood -2602 (1650)/ | 4 |
-| 89 | PROJECTS TS/CLIENTS/TRUMP II # 3803 - STEVEN G | TechSquad CRM/Projects/Trump II - 3803 - Steven G (1651)/ | 7 |
-| 90 | PROJECTS TS/CLIENTS/TRUMP II #507 | TechSquad CRM/Projects/Trump II -507 (1652)/ | 13 |
-| 91 | PROJECTS TS/CLIENTS/TUMA, ROBSON - BAL HARBOUR # 1210 | TechSquad CRM/Projects/Tuma, Robson - 10155 Collins Ave -1210 (1653)/ | 93 |
-| 92 | PROJECTS TS/CLIENTS/UCHI - GREEN DIAMOND # 2603 | TechSquad CRM/Projects/Uchi - Green Diamond - 2603 (1608)/ | 17 |
-| 93 | PROJECTS TS/CLIENTS/VIAMONT, MANUEL - ASIA # 1604 | TechSquad CRM/Projects/Viamont, Manuel - Asia - 1604 (1654)/ | 4 |
-| 94 | PROJECTS TS/CLIENTS/ZUCCA BAMBINI - NORTH MIAMI - SALA 206 | TechSquad CRM/Projects/Zucca Bambini - North Miami - Sala 206 (1581)/ | 23 |
-| 95 | PROJECTS TS/DESIGN SOLUTIONS MIAMI/CHAOUL, OCEANA BH | TechSquad CRM/Projects/Klein, Renata - Chaoul Project - Oceana -2302N (1292)/ | 2 |
-| 96 | PROJECTS TS/DESIGN SOLUTIONS MIAMI/ROCA, CEZAR - ONE PARK GROVE # 15A | TechSquad CRM/Projects/Pam Gelsomini - One Park Grove -15A (1179)/ | 203 |
-| 97 | PROJECTS TS/DESIGN SOLUTIONS MIAMI/SABO, TANIA - ORLANDO TOWNHOUSE | TechSquad CRM/Projects/Sabo, Tania - Orlando Townhouse (1642)/ | 25 |
-| 98 | PROJECTS TS/DESIGN SOLUTIONS MIAMI/SABO, TANIA - ORLANDO TOWNHOUSE -  00062 | TechSquad CRM/Projects/Sabo, Tania - Orlando Townhouse (1642)/ | 25 |
-| 99 | PROJECTS TS/DESIGN SOLUTIONS MIAMI/SUN, LILY #505 | TechSquad CRM/Projects/Duarte, Durango And Kelly -505 (1303)/ | 234 |
-| 100 | PROJECTS TS/ELITE SMART GROUP - NEW YORK/BUFFARA, GILBERTO - UNIT #1604 | TechSquad CRM/Projects/Buffara, Gilberto - Elite Smart Group - 400 S Pointe Dr -1604 (1582)/ | 58 |
-| 101 | PROJECTS TS/ELITE SMART GROUP - NEW YORK/BUFFARA, GILBERTO - UNIT #1604 - 00064 | TechSquad CRM/Projects/Buffara, Gilberto - Elite Smart Group - 400 S Pointe Dr -1604 (1582)/ | 58 |
-| 102 | PROJECTS TS/ELITE SMART GROUP - NEW YORK/ROMERO, CARLOS - COCONUT GROVE #1002S | TechSquad CRM/Projects/Romero, Carlos - Coconut Grove -1002S (1589)/ | 364 |
-| 103 | PROJECTS TS/ELITE SMART GROUP - NEW YORK/ROMERO, CARLOS - COCONUT GROVE #1002S - 00018 | TechSquad CRM/Projects/Romero, Carlos - Coconut Grove -1002S (1589)/ | 363 |
-| 104 | PROJECTS TS/ELITE SMART GROUP - NEW YORK/WEST PALM BEACH - 225 VALENCIA RD | TechSquad CRM/Projects/Libby - West Palm Beach (1518)/ | 12 |
-| 105 | PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR - HOUSE SOUTH MIAMI | TechSquad CRM/Projects/Guimar (Parents House) - Brickell 500 -2803 (1172)/ | 16 |
-| 106 | PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR - HOUSE SOUTH MIAMI - 00225 | TechSquad CRM/Projects/Guimar (Parents House) - Brickell 500 -2803 (1172)/ | 16 |
-| 107 | PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR - ONATE | TechSquad CRM/Projects/Onate - Fisher Island -7634 (1597)/ | 13 |
-| 108 | PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR APARTAMENTO - BRICKELL 500 #2803 | TechSquad CRM/Projects/Guimar (Parents House) - Brickell 500 -2803 (1172)/ | 70 |
-| 109 | PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR APARTAMENTO - BRICKELL 500 #2803 - 00167 | TechSquad CRM/Projects/Guimar (Parents House) - Brickell 500 -2803 (1172)/ | 36 |
-| 110 | PROJECTS TS/GUIMAR URBINA INTERIORS/JULIEN, BRUCE - PLAZA AT PARKSIDE # 911 | TechSquad CRM/Projects/Julien, Bruce - Plaza At Parkside - 911 (1599)/ | 31 |
-| 111 | PROJECTS TS/GUIMAR URBINA INTERIORS/KAUFMAN, CHERYL - GUIMAR PROJECT MIAMI BEACH | TechSquad CRM/Projects/Kaufmans Residence - 2301 Sunset Dr. (1148)/ | 18 |
-| 112 | PROJECTS TS/GUIMAR URBINA INTERIORS/THE WALL PAPER COMPANY - BOCA RATON - 00135 | TechSquad CRM/Projects/The Wallpaper Company - Boca Raton (1647)/ | 11 |
-| 113 | PROJECTS TS/GUIMAR URBINA INTERIORS/THE WALLPAPER COMPANY - BOCA RATON | TechSquad CRM/Projects/The Wallpaper Company - Boca Raton (1647)/ | 11 |
-| 114 | PROJECTS TS/INFINITY DESIGN/BARRETO, CRISTIANO - EDEN HOUSE PH#8 | TechSquad CRM/Projects/Barreto, Cristiano - Eden House PH-8 (1579)/ | 22 |
-| 115 | PROJECTS TS/INFINITY DESIGN/JIMMY - 1040 BISCAYNE BLVD #1504 | TechSquad CRM/Projects/Jimmy - 1040 Biscayne Blvd -1504 (1598)/ | 20 |
-| 116 | PROJECTS TS/JULIANA SABO INTERIOR DESIGN/MR.C #1705 | TechSquad CRM/Projects/Mr. C -1705 - 2640 S Bayshore (1553)/ | 4 |
-| 117 | PROJECTS TS/MARIS RAFFA - TAUPE DECOR/MONTEIRO, EDUARDO - CHATEAU BEACH #1501 | TechSquad CRM/Projects/Monteiro, Eduardo - Chateau Beach -1501 (1564)/ | 62 |
-| 118 | PROJECTS TS/MC DECOR/CONTINUUM 3303 | TechSquad CRM/Projects/MC Studio - Continuum -3303 (1556)/ | 122 |
-| 119 | PROJECTS TS/MC DECOR/TURK PROJECT | TechSquad CRM/Projects/Turk - 2218 NE 16th St, Fort Lauderdale (1607)/ | 24 |
-| 120 | PROJECTS TS/MSTYLE/BATES, FREDERICK - CORAL GABLES | TechSquad CRM/Projects/Bates - 516 Caligula (1197)/ | 17 |
-| 121 | PROJECTS TS/NAVICON/TORRES, ANTONIO - NEW OFFICE NAVICON - 20TH FLOOR | TechSquad CRM/Projects/Navicon - New Office 20th Floor - 175 SW 7th St (1562)/ | 88 |
-| 122 | PROJECTS TS/NAVICON/TORRES, ANTONIO - OFFICE NAVICON | TechSquad CRM/Projects/Navicon - New Office 20th Floor - 175 SW 7th St (1562)/ | 5 |
-| 123 | PROJECTS TS/SALATIEL LEITE - GG RENOVATION/MR. NAWAS - BOCA RATON | TechSquad CRM/Projects/Nawas - 8751 Horseshoe Ln (1630)/ | 4 |
-| 124 | PROJECTS TS/STEVEN G INTERIORS DESIGN/AVENTURA PARK SQUARE | TechSquad CRM/Projects/Aventura Park Square (1569)/ | 265 |
-| 125 | PROJECTS TS/STEVEN G INTERIORS DESIGN/AVENTURA PARK SQUARE - 00130 | TechSquad CRM/Projects/Aventura Park Square (1569)/ | 265 |
-| 126 | PROJECTS TS/STEVEN G INTERIORS DESIGN/MENA, MANUEL - BRICKELL FLATIRON #3705 | TechSquad CRM/Projects/Mena, Manuel - Brickell Flatiron -3705 (1628)/ | 10 |
-| 127 | PROJECTS TS/STEVEN G INTERIORS DESIGN/MERCADO, ALEX - JACKSON TOWER CONDO # 2503 | TechSquad CRM/Projects/Mercado, Alex - Jackson Tower Condo - 2503 (1585)/ | 25 |
-| 128 | PROJECTS TS/STEVEN G INTERIORS DESIGN/MICHANIE - BAL HARBOUR # 308 - 00207 | TechSquad CRM/Projects/Michanie - Bal Harbour - 308 (1566)/ | 133 |
-| 129 | PROJECTS TS/STUDIO KAZA/EISEN, RICHARD - AVENTURA | TechSquad CRM/Projects/Eisen, Richard - 2320 Bayview (1211)/ | 2 |
-| 130 | PROJECTS TS/STUDIO KAZA/ONE PARAISO # 1606 - 00236 | TechSquad CRM/Projects/One Paraiso -1606 (1635)/ | 10 |
-| 131 | PROJECTS TS/STUDIO KAZA/RAMOS, LOUISE - JADE SIGNATURE #2503 | TechSquad CRM/Projects/Ramos, Louise - Jade Signature -2503 (1588)/ | 42 |
-| 132 | PROJECTS TS/TOMA DESIGN GROUP/BALL, JUAN - OCEANA | TechSquad CRM/Projects/Ball, Juan - Oceana Key Biscayne (1224)/ | 3 |
-| 133 | TechSquad CRM/Projects/Zion - Miami House Ch (1426)/CH NEW OFFICE - MIAMI | TechSquad CRM/Projects/CH Construction - New Office Brickell (1580)/ | 46 |
-| 134 | TechSquad CRM/Projects/Zion - Miami House Ch (1426)/CH NEW OFFICE - MIAMI - 00093 | TechSquad CRM/Projects/CH Construction - New Office Brickell (1580)/ | 34 |
-| 135 | TechSquad CRM/Projects/Ch - Jade Signature - 2103 (1388)/CH NEW OFFICE - WEST PALM BEACH | TechSquad CRM/Projects/CH Construction - New Office West Palm Beach (1595)/ | 13 |
-| 136 | TechSquad CRM/Projects/Ch - Jade Signature - 2103 (1388)/CH NEW OFFICE - WEST PALM BEACH - 00192 | TechSquad CRM/Projects/CH Construction - New Office West Palm Beach (1595)/ | 13 |
-| 137 | TechSquad CRM/Projects/Steve - Hallandale Beach (1459)/LANDAU, STEVEN | TechSquad CRM/Projects/Landau, Steven (1601)/ | 10 |
-| 138 | TechSquad CRM/Projects/Rodriguez, Paul - Davie (1358)/RODRIGUEZ, PAUL - CORAL GABLES | TechSquad CRM/Projects/Mahaffy Residence - Coral Gables (1112)/ | 56 |
+| 87 | PROJECTS TS/CLIENTS/TIAGO WAREHOUSE | TechSquad CRM/Projects/Tiago Warehouse - 1963 NE 149th St (1648)/ | 7 |
+| 88 | PROJECTS TS/CLIENTS/TRUMP # 2501 | TechSquad CRM/Projects/Trump -2501 - 18001 Collins Ave (1649)/ | 4 |
+| 89 | PROJECTS TS/CLIENTS/TRUMP HOLLYWOOD #2602 | TechSquad CRM/Projects/Trump Hollywood -2602 (1650)/ | 4 |
+| 90 | PROJECTS TS/CLIENTS/TRUMP II # 3803 - STEVEN G | TechSquad CRM/Projects/Trump II - 3803 - Steven G (1651)/ | 7 |
+| 91 | PROJECTS TS/CLIENTS/TRUMP II #507 | TechSquad CRM/Projects/Trump II -507 (1652)/ | 13 |
+| 92 | PROJECTS TS/CLIENTS/TUMA, ROBSON - BAL HARBOUR # 1210 | TechSquad CRM/Projects/Tuma, Robson - 10155 Collins Ave -1210 (1653)/ | 93 |
+| 93 | PROJECTS TS/CLIENTS/UCHI - GREEN DIAMOND # 2603 | TechSquad CRM/Projects/Uchi - Green Diamond - 2603 (1608)/ | 17 |
+| 94 | PROJECTS TS/CLIENTS/VIAMONT, MANUEL - ASIA # 1604 | TechSquad CRM/Projects/Viamont, Manuel - Asia - 1604 (1654)/ | 4 |
+| 95 | PROJECTS TS/CLIENTS/ZUCCA BAMBINI - NORTH MIAMI - SALA 206 | TechSquad CRM/Projects/Zucca Bambini - North Miami - Sala 206 (1581)/ | 23 |
+| 96 | PROJECTS TS/DESIGN SOLUTIONS MIAMI/CHAOUL, OCEANA BH | TechSquad CRM/Projects/Klein, Renata - Chaoul Project - Oceana -2302N (1292)/ | 2 |
+| 97 | PROJECTS TS/DESIGN SOLUTIONS MIAMI/ROCA, CEZAR - ONE PARK GROVE # 15A | TechSquad CRM/Projects/Pam Gelsomini - One Park Grove -15A (1179)/ | 203 |
+| 98 | PROJECTS TS/DESIGN SOLUTIONS MIAMI/SABO, TANIA - ORLANDO TOWNHOUSE | TechSquad CRM/Projects/Sabo, Tania - Orlando Townhouse (1642)/ | 25 |
+| 99 | PROJECTS TS/DESIGN SOLUTIONS MIAMI/SABO, TANIA - ORLANDO TOWNHOUSE -  00062 | TechSquad CRM/Projects/Sabo, Tania - Orlando Townhouse (1642)/ | 25 |
+| 100 | PROJECTS TS/DESIGN SOLUTIONS MIAMI/SUN, LILY #505 | TechSquad CRM/Projects/Duarte, Durango And Kelly -505 (1303)/ | 234 |
+| 101 | PROJECTS TS/ELITE SMART GROUP - NEW YORK/BUFFARA, GILBERTO - UNIT #1604 | TechSquad CRM/Projects/Buffara, Gilberto - Elite Smart Group - 400 S Pointe Dr -1604 (1582)/ | 58 |
+| 102 | PROJECTS TS/ELITE SMART GROUP - NEW YORK/BUFFARA, GILBERTO - UNIT #1604 - 00064 | TechSquad CRM/Projects/Buffara, Gilberto - Elite Smart Group - 400 S Pointe Dr -1604 (1582)/ | 58 |
+| 103 | PROJECTS TS/ELITE SMART GROUP - NEW YORK/ROMERO, CARLOS - COCONUT GROVE #1002S | TechSquad CRM/Projects/Romero, Carlos - Coconut Grove -1002S (1589)/ | 364 |
+| 104 | PROJECTS TS/ELITE SMART GROUP - NEW YORK/ROMERO, CARLOS - COCONUT GROVE #1002S - 00018 | TechSquad CRM/Projects/Romero, Carlos - Coconut Grove -1002S (1589)/ | 363 |
+| 105 | PROJECTS TS/ELITE SMART GROUP - NEW YORK/WEST PALM BEACH - 225 VALENCIA RD | TechSquad CRM/Projects/Libby - West Palm Beach (1518)/ | 12 |
+| 106 | PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR - HOUSE SOUTH MIAMI | TechSquad CRM/Projects/Guimar (Parents House) - Brickell 500 -2803 (1172)/ | 16 |
+| 107 | PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR - HOUSE SOUTH MIAMI - 00225 | TechSquad CRM/Projects/Guimar (Parents House) - Brickell 500 -2803 (1172)/ | 16 |
+| 108 | PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR - ONATE | TechSquad CRM/Projects/Onate - Fisher Island -7634 (1597)/ | 13 |
+| 109 | PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR APARTAMENTO - BRICKELL 500 #2803 | TechSquad CRM/Projects/Guimar (Parents House) - Brickell 500 -2803 (1172)/ | 70 |
+| 110 | PROJECTS TS/GUIMAR URBINA INTERIORS/GUIMAR APARTAMENTO - BRICKELL 500 #2803 - 00167 | TechSquad CRM/Projects/Guimar (Parents House) - Brickell 500 -2803 (1172)/ | 36 |
+| 111 | PROJECTS TS/GUIMAR URBINA INTERIORS/JULIEN, BRUCE - PLAZA AT PARKSIDE # 911 | TechSquad CRM/Projects/Julien, Bruce - Plaza At Parkside - 911 (1599)/ | 31 |
+| 112 | PROJECTS TS/GUIMAR URBINA INTERIORS/KAUFMAN, CHERYL - GUIMAR PROJECT MIAMI BEACH | TechSquad CRM/Projects/Kaufmans Residence - 2301 Sunset Dr. (1148)/ | 18 |
+| 113 | PROJECTS TS/GUIMAR URBINA INTERIORS/THE WALL PAPER COMPANY - BOCA RATON - 00135 | TechSquad CRM/Projects/The Wallpaper Company - Boca Raton (1647)/ | 11 |
+| 114 | PROJECTS TS/GUIMAR URBINA INTERIORS/THE WALLPAPER COMPANY - BOCA RATON | TechSquad CRM/Projects/The Wallpaper Company - Boca Raton (1647)/ | 11 |
+| 115 | PROJECTS TS/INFINITY DESIGN/BARRETO, CRISTIANO - EDEN HOUSE PH#8 | TechSquad CRM/Projects/Barreto, Cristiano - Eden House PH-8 (1579)/ | 22 |
+| 116 | PROJECTS TS/INFINITY DESIGN/JIMMY - 1040 BISCAYNE BLVD #1504 | TechSquad CRM/Projects/Jimmy - 1040 Biscayne Blvd -1504 (1598)/ | 20 |
+| 117 | PROJECTS TS/JULIANA SABO INTERIOR DESIGN/MR.C #1705 | TechSquad CRM/Projects/Mr. C -1705 - 2640 S Bayshore (1553)/ | 4 |
+| 118 | PROJECTS TS/MARIS RAFFA - TAUPE DECOR/MONTEIRO, EDUARDO - CHATEAU BEACH #1501 | TechSquad CRM/Projects/Monteiro, Eduardo - Chateau Beach -1501 (1564)/ | 62 |
+| 119 | PROJECTS TS/MC DECOR/CONTINUUM 3303 | TechSquad CRM/Projects/MC Studio - Continuum -3303 (1556)/ | 122 |
+| 120 | PROJECTS TS/MC DECOR/MONICA WAREHOUSE | TechSquad CRM/Projects/Waterbox Miami (1204)/ | 44 |
+| 121 | PROJECTS TS/MC DECOR/TURK PROJECT | TechSquad CRM/Projects/Turk - 2218 NE 16th St, Fort Lauderdale (1607)/ | 24 |
+| 122 | PROJECTS TS/MSTYLE/BATES, FREDERICK - CORAL GABLES | TechSquad CRM/Projects/Bates - 516 Caligula (1197)/ | 17 |
+| 123 | PROJECTS TS/NAVICON/TORRES, ANTONIO - NEW OFFICE NAVICON - 20TH FLOOR | TechSquad CRM/Projects/Navicon - New Office 20th Floor - 175 SW 7th St (1562)/ | 88 |
+| 124 | PROJECTS TS/NAVICON/TORRES, ANTONIO - OFFICE NAVICON | TechSquad CRM/Projects/Navicon - New Office 20th Floor - 175 SW 7th St (1562)/ | 5 |
+| 125 | PROJECTS TS/SALATIEL LEITE - GG RENOVATION/MR. NAWAS - BOCA RATON | TechSquad CRM/Projects/Nawas - 8751 Horseshoe Ln (1630)/ | 4 |
+| 126 | PROJECTS TS/STEVEN G INTERIORS DESIGN/AVENTURA PARK SQUARE | TechSquad CRM/Projects/Aventura Park Square (1569)/ | 265 |
+| 127 | PROJECTS TS/STEVEN G INTERIORS DESIGN/AVENTURA PARK SQUARE - 00130 | TechSquad CRM/Projects/Aventura Park Square (1569)/ | 265 |
+| 128 | PROJECTS TS/STEVEN G INTERIORS DESIGN/MENA, MANUEL - BRICKELL FLATIRON #3705 | TechSquad CRM/Projects/Mena, Manuel - Brickell Flatiron -3705 (1628)/ | 10 |
+| 129 | PROJECTS TS/STEVEN G INTERIORS DESIGN/MERCADO, ALEX - JACKSON TOWER CONDO # 2503 | TechSquad CRM/Projects/Mercado, Alex - Jackson Tower Condo - 2503 (1585)/ | 25 |
+| 130 | PROJECTS TS/STEVEN G INTERIORS DESIGN/MICHANIE - BAL HARBOUR # 308 - 00207 | TechSquad CRM/Projects/Michanie - Bal Harbour - 308 (1566)/ | 133 |
+| 131 | PROJECTS TS/STUDIO KAZA/EISEN, RICHARD - AVENTURA | TechSquad CRM/Projects/Eisen, Richard - 2320 Bayview (1211)/ | 2 |
+| 132 | PROJECTS TS/STUDIO KAZA/ONE PARAISO # 1606 - 00236 | TechSquad CRM/Projects/One Paraiso -1606 (1635)/ | 10 |
+| 133 | PROJECTS TS/STUDIO KAZA/RAMOS, LOUISE - JADE SIGNATURE #2503 | TechSquad CRM/Projects/Ramos, Louise - Jade Signature -2503 (1588)/ | 42 |
+| 134 | PROJECTS TS/TOMA DESIGN GROUP/BALL, JUAN - OCEANA | TechSquad CRM/Projects/Ball, Juan - Oceana Key Biscayne (1224)/ | 3 |
+| 135 | TechSquad CRM/Projects/Zion - Miami House Ch (1426)/CH NEW OFFICE - MIAMI | TechSquad CRM/Projects/CH Construction - New Office Brickell (1580)/ | 46 |
+| 136 | TechSquad CRM/Projects/Zion - Miami House Ch (1426)/CH NEW OFFICE - MIAMI - 00093 | TechSquad CRM/Projects/CH Construction - New Office Brickell (1580)/ | 34 |
+| 137 | TechSquad CRM/Projects/Ch - Jade Signature - 2103 (1388)/CH NEW OFFICE - WEST PALM BEACH | TechSquad CRM/Projects/CH Construction - New Office West Palm Beach (1595)/ | 13 |
+| 138 | TechSquad CRM/Projects/Ch - Jade Signature - 2103 (1388)/CH NEW OFFICE - WEST PALM BEACH - 00192 | TechSquad CRM/Projects/CH Construction - New Office West Palm Beach (1595)/ | 13 |
+| 139 | TechSquad CRM/Projects/Steve - Hallandale Beach (1459)/LANDAU, STEVEN | TechSquad CRM/Projects/Landau, Steven (1601)/ | 10 |
+| 140 | TechSquad CRM/Projects/Rodriguez, Paul - Davie (1358)/RODRIGUEZ, PAUL - CORAL GABLES | TechSquad CRM/Projects/Mahaffy Residence - Coral Gables (1112)/ | 56 |
 
 ## Names changed to Mahaffy (inside RODRIGUEZ, PAUL - CORAL GABLES)
 
@@ -212,11 +214,6 @@
 | 2021-10-22 - Paul Rodriguez_Service Call_Lucas_Ulisses.pdf | 2021-10-22 - Mahaffy_Service Call_Lucas_Ulisses.pdf |
 | 📁 5- Paul Rodrigues_Reports | 5- Mahaffy_Reports |
 | 📁 RODRIGUEZ, PAUL - CORAL GABLES | Mahaffy - CORAL GABLES |
-
-## Held back (decided, but a warehouse / van or confidential folder)
-
-- PROJECTS TS/CLIENTS/TIAGO WAREHOUSE: held back: warehouse / van folder (decided → project #1648)
-- PROJECTS TS/MC DECOR/MONICA WAREHOUSE: held back: warehouse / van folder (decided → project #1204)
 
 ## Stays (231)
 
