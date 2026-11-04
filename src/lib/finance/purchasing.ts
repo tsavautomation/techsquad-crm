@@ -1,4 +1,4 @@
-import type { MaterialRow } from "@/lib/purchasing/materials";
+import { toBuyQuantity, type MaterialRow } from "@/lib/purchasing/materials";
 
 // FIN-p (Fred 2026-11-03): "quanto $ tenho para comprar de cada fabricante". The lines of every Approved Proposal
 // (Portal.io items: brand, model, quantity, unit cost, sell price, MSRP, supplier) over the projects approved or
@@ -50,7 +50,7 @@ export function groupLines(items: PurchaseItem[], by: GroupKey, key: string): (P
     .sort((a, b) => a.project.localeCompare(b.project) || b.line_cost - a.line_cost);
 }
 
-/** PU-a: the estimate now reads the materials pick list, so what was bought, replaced, removed or is in stock today leaves it. */
+/** PU-a: the estimate now reads the materials pick list, so what was bought, replaced, removed or is in stock today leaves it. PU-d: the quantity is what the job doesn't have yet. */
 export function toPurchaseItems(rows: MaterialRow[]): PurchaseItem[] {
-  return rows.map((m) => ({ id: m.id, project_id: m.project_id, project: m.project ?? `Project #${m.project_id}`, job_status: m.job_status, brand: m.brand, model: m.model, name: m.name, item_type: m.item_type ?? "Part", supplier: m.supplier, quantity: m.quantity, cost: m.unit_cost, sell_price: m.sell_price, msrp: m.msrp, total: null }));
+  return rows.map((m) => ({ id: m.id, project_id: m.project_id, project: m.project ?? `Project #${m.project_id}`, job_status: m.job_status, brand: m.brand, model: m.model, name: m.name, item_type: m.item_type ?? "Part", supplier: m.supplier, quantity: toBuyQuantity(m), cost: m.unit_cost, sell_price: m.sell_price, msrp: m.msrp, total: null }));
 }

@@ -131,3 +131,61 @@ export async function searchProductsAction(query: string): Promise<(ProductChoic
   const cost = new Map(((data ?? []) as { id: number; cost: number | string | null }[]).map((r) => [r.id, r.cost === null ? null : Number(r.cost)]));
   return hits.map((h) => ({ ...h, cost: cost.get(h.id) ?? null }));
 }
+
+// PU-d: the units on the job the list has no line for (red): put them on the list, or leave them out.
+
+export type ExtraRef = { productId: number | null; model: string | null };
+
+/** A manual line for the extra: the product (or its model), quantity = the units on the job, cost from the product. */
+export async function addExtraToListAction(projectId: number, extra: ExtraRef & { count: number; title: string | null }): Promise<Result<{ id: number }>> {
+  const b = await buyer();
+  if (!b.ok) return b;
+  if (!extra.productId && !extra.model?.trim()) return { ok: false, message: "This unit has no product and no model." };
+  if (!Number.isFinite(extra.count) || extra.count <= 0) return { ok: false, message: "Quantity must be more than zero." };
+  let brand: string | null = null;
+  let model = extra.model?.trim() || null;
+  let name = extra.title?.trim() || null;
+  let cost: number | null = null;
+  if (extra.productId) {
+    const { data } = await b.db.from("products").select("title, model, cost, brands:brand_id(title)").eq("id", extra.productId).maybeSingle();
+    const p = data as unknown as { title: string | null; model: string | null; cost: number | string | null; brands: { title: string | null } | null } | null;
+    if (p) {
+      brand = p.brands?.title ?? null;
+      model = p.model ?? model;
+      name = p.title ?? name;
+      cost = p.cost === null ? null : Number(p.cost);
+    }
+  }
+  const { data, error } = await b.db
+    .from("project_materials")
+    .insert({ project_id: projectId, product_id: extra.productId, brand, model, name, quantity: extra.count, unit_cost: cost, source: "manual", edited: true, notes: "Installed on the job, added from the equipment list", created_by: b.me, updated_by: b.me })
+    .select("id")
+    .single();
+  if (error) return { ok: false, message: error.message };
+  refresh(projectId);
+  return { ok: true, id: (data as { id: number }).id };
+}
+
+/** Leave the extra out: it stops showing in red (undo with unignoreExtraAction). */
+export async function ignoreExtraAction(projectId: number, extra: ExtraRef): Promise<Result<{ id: number }>> {
+  const b = await buyer();
+  if (!b.ok) return b;
+  if (!extra.productId && !extra.model?.trim()) return { ok: false, message: "This unit has no product and no model." };
+  const { data, error } = await b.db
+    .from("project_material_ignores")
+    .insert({ project_id: projectId, product_id: extra.productId, model: extra.productId ? null : extra.model!.trim(), created_by: b.me })
+    .select("id")
+    .single();
+  if (error) return { ok: false, message: error.message };
+  refresh(projectId);
+  return { ok: true, id: (data as { id: number }).id };
+}
+
+export async function unignoreExtraAction(id: number, projectId: number): Promise<Result> {
+  const b = await buyer();
+  if (!b.ok) return b;
+  const { error } = await b.db.from("project_material_ignores").delete().eq("id", id).eq("project_id", projectId);
+  if (error) return { ok: false, message: error.message };
+  refresh(projectId);
+  return { ok: true };
+}

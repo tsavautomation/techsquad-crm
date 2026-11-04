@@ -29,24 +29,35 @@ export type MaterialRow = {
   proposal_number: string | null;
   on_hand: number;
   locations: string | null;
+  /** PU-d: units of this product whose destination is the project (Stock), laid over the line by allocate(). */
+  installed: number;
+  staged: number;
+  allocated: number;
 };
-/** What the line shows: the stored status, with open lines split by today's stock. */
-export type MaterialState = "to_buy" | "in_stock" | "purchased" | "replaced" | "removed";
+/** What the line shows: the stored status, with open lines split by today's stock; allocated = the job already has every unit (PU-d). */
+export type MaterialState = "to_buy" | "in_stock" | "allocated" | "purchased" | "replaced" | "removed";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 export const lineCost = (m: Pick<MaterialRow, "quantity" | "unit_cost">) => r2(Number(m.unit_cost ?? 0) * Number(m.quantity ?? 1));
 
-/** Open + enough on hand = in stock; otherwise an open line is to buy. */
-export function materialState(m: Pick<MaterialRow, "status" | "quantity" | "on_hand">): MaterialState {
-  if (m.status !== "open") return m.status;
-  return Number(m.on_hand) >= Number(m.quantity) && Number(m.quantity) > 0 ? "in_stock" : "to_buy";
+/** PU-d: what the job still needs after the units installed / staged on it: the line's quantity less what is allocated. */
+export const toBuyQuantity = (m: Pick<MaterialRow, "quantity" | "allocated">) => Math.max(0, Number(m.quantity) - Number(m.allocated ?? 0));
+export const toBuyCost = (m: Pick<MaterialRow, "quantity" | "unit_cost" | "allocated">) => r2(Number(m.unit_cost ?? 0) * toBuyQuantity(m));
+
+/** Every unit on the job = allocated (open or purchased alike); open + enough on hand for the rest = in stock; otherwise an open line is to buy. */
+export function materialState(m: Pick<MaterialRow, "status" | "quantity" | "on_hand" | "allocated">): MaterialState {
+  if (m.status === "replaced" || m.status === "removed") return m.status;
+  const need = toBuyQuantity(m);
+  if (Number(m.quantity) > 0 && need === 0) return "allocated";
+  if (m.status === "purchased") return "purchased";
+  return Number(m.on_hand) >= need && Number(m.quantity) > 0 ? "in_stock" : "to_buy";
 }
 
-export type MaterialSummary = { lines: number; toBuy: number; toBuyCost: number; inStock: number; inStockCost: number; purchased: number; purchasedCost: number; withoutCost: number };
+export type MaterialSummary = { lines: number; toBuy: number; toBuyCost: number; inStock: number; inStockCost: number; allocated: number; allocatedCost: number; purchased: number; purchasedCost: number; withoutCost: number };
 
-/** The card's header line: how many lines and dollars are still to buy, covered by stock, or bought. Replaced and removed lines count nowhere. */
+/** The card's header line: how many lines and dollars are still to buy (the part the job doesn't have yet), covered by stock, on the job, or bought. Replaced and removed lines count nowhere. */
 export function summarize(rows: MaterialRow[]): MaterialSummary {
-  const s: MaterialSummary = { lines: 0, toBuy: 0, toBuyCost: 0, inStock: 0, inStockCost: 0, purchased: 0, purchasedCost: 0, withoutCost: 0 };
+  const s: MaterialSummary = { lines: 0, toBuy: 0, toBuyCost: 0, inStock: 0, inStockCost: 0, allocated: 0, allocatedCost: 0, purchased: 0, purchasedCost: 0, withoutCost: 0 };
   for (const m of rows) {
     const st = materialState(m);
     if (st === "replaced" || st === "removed") continue;
@@ -55,10 +66,13 @@ export function summarize(rows: MaterialRow[]): MaterialSummary {
     const c = lineCost(m);
     if (st === "to_buy") {
       s.toBuy++;
-      s.toBuyCost = r2(s.toBuyCost + c);
+      s.toBuyCost = r2(s.toBuyCost + toBuyCost(m));
     } else if (st === "in_stock") {
       s.inStock++;
-      s.inStockCost = r2(s.inStockCost + c);
+      s.inStockCost = r2(s.inStockCost + toBuyCost(m));
+    } else if (st === "allocated") {
+      s.allocated++;
+      s.allocatedCost = r2(s.allocatedCost + c);
     } else {
       s.purchased++;
       s.purchasedCost = r2(s.purchasedCost + c);
@@ -73,9 +87,9 @@ export const needsPurchasing = (rows: MaterialRow[]) => rows.some((m) => materia
 /** Only what still has to be bought: open lines the stock does not cover. */
 export const stillToBuy = (rows: MaterialRow[]) => rows.filter((m) => materialState(m) === "to_buy");
 
-/** Display order: open lines first (to buy before in stock), then purchased, then replaced / removed at the bottom; a replacement sits right after the line it replaced. */
+/** Display order: open lines first (to buy before in stock), then purchased, then allocated (the job has them), then replaced / removed at the bottom; a replacement sits right after the line it replaced. */
 export function orderMaterials(rows: MaterialRow[]): MaterialRow[] {
-  const rank: Record<MaterialState, number> = { to_buy: 0, in_stock: 1, purchased: 2, replaced: 3, removed: 4 };
+  const rank: Record<MaterialState, number> = { to_buy: 0, in_stock: 1, purchased: 2, allocated: 3, replaced: 4, removed: 5 };
   const byId = new Map(rows.map((m) => [m.id, m]));
   const key = (m: MaterialRow): [number, number] => {
     const root = m.replaces_id && byId.has(m.replaces_id) ? byId.get(m.replaces_id)! : m;

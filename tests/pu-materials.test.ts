@@ -6,7 +6,7 @@ import { isService, materialState, needsPurchasing, orderMaterials, stillToBuy, 
 const row = (o: Partial<MaterialRow> & { id: number }): MaterialRow => ({
   project_id: 1, project: "A", job_status: "Installation", proposal_item_id: null, product_id: null, product: null, brand: "Crestron", model: "CP4-R", name: null,
   quantity: 1, unit_cost: 1100, status: "open", replaces_id: null, source: "portal", edited: false, notes: null, purchased_at: null,
-  item_type: "Part", supplier: null, msrp: null, sell_price: null, proposal_number: null, on_hand: 0, locations: null, ...o,
+  item_type: "Part", supplier: null, msrp: null, sell_price: null, proposal_number: null, on_hand: 0, locations: null, installed: 0, staged: 0, allocated: 0, ...o,
 });
 
 describe("material state", () => {
@@ -24,7 +24,7 @@ describe("material state", () => {
       row({ id: 4, quantity: 1, unit_cost: 99, status: "removed" }),
       row({ id: 5, quantity: 10, unit_cost: null }),
     ];
-    expect(summarize(rows)).toEqual({ lines: 4, toBuy: 2, toBuyCost: 2200, inStock: 1, inStockCost: 1350, purchased: 1, purchasedCost: 700, withoutCost: 1 });
+    expect(summarize(rows)).toEqual({ lines: 4, toBuy: 2, toBuyCost: 2200, inStock: 1, inStockCost: 1350, allocated: 0, allocatedCost: 0, purchased: 1, purchasedCost: 700, withoutCost: 1 });
     expect(needsPurchasing(rows)).toBe(true);
     expect(stillToBuy(rows).map((m) => m.id)).toEqual([1, 5]);
     expect(needsPurchasing([rows[1], rows[2], rows[3]])).toBe(false);

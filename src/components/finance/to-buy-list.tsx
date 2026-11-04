@@ -8,7 +8,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 import { markPurchasedAction } from "@/lib/purchasing/actions";
-import { lineCost, productLabel, type MaterialRow } from "@/lib/purchasing/materials";
+import { productLabel, toBuyCost as lineCost, toBuyQuantity, type MaterialRow } from "@/lib/purchasing/materials";
 import { CsvButton } from "./csv-button";
 
 // PU-a: Administrative › Purchasing › To buy. Every line still to buy over the projects in scope, grouped by project
@@ -56,7 +56,7 @@ export function ToBuyList({ rows, hrefFor }: { rows: MaterialRow[]; hrefFor: str
         router.refresh();
       }
     });
-  const csv = shown.map((m) => ({ project: m.project, job_status: m.job_status ?? "", brand: m.brand ?? "", model: m.model ?? "", description: m.name ?? "", supplier: m.supplier ?? "", quantity: m.quantity, on_hand: m.on_hand, unit_cost: m.unit_cost ?? "", line_cost: lineCost(m), proposal: m.proposal_number ?? "" }));
+  const csv = shown.map((m) => ({ project: m.project, job_status: m.job_status ?? "", brand: m.brand ?? "", model: m.model ?? "", description: m.name ?? "", supplier: m.supplier ?? "", quantity: toBuyQuantity(m), on_the_job: m.allocated, on_hand: m.on_hand, unit_cost: m.unit_cost ?? "", line_cost: lineCost(m), proposal: m.proposal_number ?? "" }));
 
   return (
     <div>
@@ -71,7 +71,7 @@ export function ToBuyList({ rows, hrefFor }: { rows: MaterialRow[]; hrefFor: str
           <button type="button" disabled={!picked.size || pending} onClick={mark} className={cn(CHIP, "min-h-11 gap-1 border-ok-fg/30 text-ok-fg disabled:opacity-50")}>
             <Check className="size-4" aria-hidden /> {t("Mark purchased ({n})", { n: picked.size })}
           </button>
-          <CsvButton rows={csv} name="to-buy" columns={[{ key: "project", label: "Project" }, { key: "job_status", label: "Job Status" }, { key: "brand", label: "Brand" }, { key: "model", label: "Model" }, { key: "description", label: "Description" }, { key: "supplier", label: "Supplier" }, { key: "quantity", label: "Qty" }, { key: "on_hand", label: "In stock" }, { key: "unit_cost", label: "Unit cost" }, { key: "line_cost", label: "Cost" }, { key: "proposal", label: "Proposal" }]} />
+          <CsvButton rows={csv} name="to-buy" columns={[{ key: "project", label: "Project" }, { key: "job_status", label: "Job Status" }, { key: "brand", label: "Brand" }, { key: "model", label: "Model" }, { key: "description", label: "Description" }, { key: "supplier", label: "Supplier" }, { key: "quantity", label: "Qty to buy" }, { key: "on_the_job", label: "On the job" }, { key: "on_hand", label: "In stock" }, { key: "unit_cost", label: "Unit cost" }, { key: "line_cost", label: "Cost" }, { key: "proposal", label: "Proposal" }]} />
         </span>
       </div>
       <p className="mb-3 text-xs text-text-2">{t("{n} lines to buy over {p} projects · {c}", { n: shown.length, p: new Set(shown.map((m) => m.project_id)).size, c: money(total) })} · {t("A line leaves this list when it is marked purchased, replaced or removed on the project, or when the stock covers it.")}</p>
@@ -111,9 +111,10 @@ export function ToBuyList({ rows, hrefFor }: { rows: MaterialRow[]; hrefFor: str
                         {m.name && productLabel(m) !== m.name ? m.name : ""}
                         {m.supplier ? ` · ${m.supplier}` : ""}
                         {m.on_hand > 0 ? ` · ${t("only {n} in stock", { n: m.on_hand })}` : ""}
+                        {m.allocated > 0 ? ` · ${t("{n} of {q} already on the job", { n: m.allocated, q: m.quantity })}` : ""}
                       </span>
                     </td>
-                    <td className={cn(TD, "text-right tabular-nums")}>{m.quantity}</td>
+                    <td className={cn(TD, "text-right tabular-nums")}>{toBuyQuantity(m)}</td>
                     <td className={cn(TD, "text-right tabular-nums")}>{m.unit_cost === null ? "—" : money(m.unit_cost)}</td>
                     <td className={cn(TD, "text-right tabular-nums font-medium")}>{m.unit_cost === null ? "—" : money(lineCost(m))}</td>
                   </tr>

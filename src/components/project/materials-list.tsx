@@ -3,22 +3,26 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Package, Plus, RotateCcw, Trash2, Repeat, Pencil } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, EyeOff, Package, Plus, RotateCcw, Trash2, Repeat, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
-import { addMaterialAction, editMaterialAction, replaceMaterialAction, searchProductsAction, setMaterialStatusAction, type NewLine } from "@/lib/purchasing/actions";
-import { lineCost, materialState, orderMaterials, productLabel, summarize, type MaterialRow, type MaterialState } from "@/lib/purchasing/materials";
+import { addExtraToListAction, addMaterialAction, editMaterialAction, ignoreExtraAction, replaceMaterialAction, searchProductsAction, setMaterialStatusAction, unignoreExtraAction, type NewLine } from "@/lib/purchasing/actions";
+import type { Extra } from "@/lib/purchasing/allocation";
+import { lineCost, materialState, orderMaterials, productLabel, summarize, toBuyQuantity, type MaterialRow, type MaterialState } from "@/lib/purchasing/materials";
 
 // PU-a: the Materials card of a project. One row per line of the linked proposals (and every line added by hand):
 // quantity, product, cost, and its state: To buy / In stock (today's ledger covers it) / Purchased / Replaced /
 // Removed. Buttons: Purchased, Replace (pick or type another product), Remove, Undo, Edit qty / cost, Add material.
+// PU-d: under each line, live: how many units of it are installed / staged on the job and how many are still
+// needed; a line the job has in full is "On the job" (green, check). Units on the job that no line covers are
+// listed in red at the bottom: Add to the list / Ignore (undo).
 
 const money = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 const BTN = "inline-flex min-h-9 items-center gap-1 rounded-full border px-3 text-xs font-medium hover:bg-muted disabled:opacity-50";
 type Res = { ok: true } | { ok: false; message: string };
 type Choice = Awaited<ReturnType<typeof searchProductsAction>>[number];
 
-export function MaterialsList({ rows, projectId }: { rows: MaterialRow[]; projectId: number }) {
+export function MaterialsList({ rows, extras = [], projectId }: { rows: MaterialRow[]; extras?: Extra[]; projectId: number }) {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -26,6 +30,9 @@ export function MaterialsList({ rows, projectId }: { rows: MaterialRow[]; projec
   const [replacing, setReplacing] = useState<number | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
   const [showDone, setShowDone] = useState(false);
+  const [showIgnored, setShowIgnored] = useState(false);
+  const warnings = extras.filter((e) => !e.ignored_id);
+  const ignored = extras.filter((e) => e.ignored_id);
   const s = summarize(rows);
   const ordered = orderMaterials(rows);
   const hidden = ordered.filter((m) => ["replaced", "removed"].includes(materialState(m))).length;
@@ -45,13 +52,25 @@ export function MaterialsList({ rows, projectId }: { rows: MaterialRow[]; projec
     });
 
   const stateLabel = (m: MaterialRow, st: MaterialState) => {
-    if (st === "to_buy") return m.on_hand > 0 ? t("To buy · only {n} in stock ({where})", { n: m.on_hand, where: m.locations ?? "" }) : t("To buy");
-    if (st === "in_stock") return t("In stock · {where}", { where: m.locations ?? "" });
+    const need = toBuyQuantity(m);
+    if (st === "to_buy") {
+      if (m.allocated > 0) return m.on_hand > 0 ? t("To buy {n} · only {s} in stock ({where})", { n: need, s: m.on_hand, where: m.locations ?? "" }) : t("To buy {n}", { n: need });
+      return m.on_hand > 0 ? t("To buy · only {n} in stock ({where})", { n: m.on_hand, where: m.locations ?? "" }) : t("To buy");
+    }
+    if (st === "in_stock") return m.allocated > 0 ? t("{n} in stock · {where}", { n: need, where: m.locations ?? "" }) : t("In stock · {where}", { where: m.locations ?? "" });
+    if (st === "allocated") return t("On the job");
     if (st === "purchased") return t("Purchased");
     if (st === "replaced") return t("Replaced");
     return t("Removed");
   };
-  const TONE: Record<MaterialState, string> = { to_buy: "bg-warn-bg text-warn-fg", in_stock: "bg-ok-bg text-ok-fg", purchased: "bg-info-bg text-info-fg", replaced: "bg-muted text-text-2", removed: "bg-muted text-text-2" };
+  const TONE: Record<MaterialState, string> = { to_buy: "bg-warn-bg text-warn-fg", in_stock: "bg-ok-bg text-ok-fg", allocated: "bg-ok-fg text-white", purchased: "bg-info-bg text-info-fg", replaced: "bg-muted text-text-2", removed: "bg-muted text-text-2" };
+  /** PU-d, under the line: what the job has of it, live from Stock. */
+  const liveLine = (m: MaterialRow, st: MaterialState) => {
+    if (!m.allocated || st === "replaced" || st === "removed") return null;
+    const parts = [m.installed ? t("installed {n}", { n: m.installed }) : null, m.staged ? t("staged {n}", { n: m.staged }) : null, st !== "allocated" ? t("still needed {n}", { n: toBuyQuantity(m) }) : null].filter(Boolean);
+    return parts.join(" · ");
+  };
+  const extraLabel = (e: Extra) => [e.installed ? t("installed {n}", { n: e.installed }) : null, e.staged ? t("staged {n}", { n: e.staged }) : null].filter(Boolean).join(" · ");
 
   return (
     <div>
@@ -60,6 +79,8 @@ export function MaterialsList({ rows, projectId }: { rows: MaterialRow[]; projec
         <span className={cn(s.toBuy && "font-medium text-warn-fg")}>{t("to buy {n} · {c}", { n: s.toBuy, c: money(s.toBuyCost) })}</span>
         <span>{t("in stock {n} · {c}", { n: s.inStock, c: money(s.inStockCost) })}</span>
         <span>{t("purchased {n} · {c}", { n: s.purchased, c: money(s.purchasedCost) })}</span>
+        {s.allocated ? <span className="font-medium text-ok-fg">{t("on the job {n} · {c}", { n: s.allocated, c: money(s.allocatedCost) })}</span> : null}
+        {warnings.length ? <span className="font-medium text-bad-fg">{t("{n} on the job but not on the list", { n: warnings.length })}</span> : null}
         {s.withoutCost ? <span>{t("{n} without cost", { n: s.withoutCost })}</span> : null}
       </p>
       <ul className="divide-y">
@@ -82,7 +103,11 @@ export function MaterialsList({ rows, projectId }: { rows: MaterialRow[]; projec
                       {m.replaces_id ? ` · ${t("replacement")}` : ""}
                     </p>
                   ) : null}
-                  <span className={cn("mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium", TONE[st])}>{stateLabel(m, st)}</span>
+                  <span className={cn("mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium", TONE[st])}>
+                    {st === "allocated" && <CheckCircle2 className="size-3" aria-hidden />}
+                    {stateLabel(m, st)}
+                  </span>
+                  {liveLine(m, st) && <p className="mt-0.5 text-xs text-text-2">{liveLine(m, st)}</p>}
                 </div>
                 <div className="shrink-0 text-right text-sm tabular-nums">
                   <p className="font-medium">{m.unit_cost === null ? "—" : money(lineCost(m))}</p>
@@ -91,7 +116,7 @@ export function MaterialsList({ rows, projectId }: { rows: MaterialRow[]; projec
               </div>
               {!dim && replacing !== m.id && editing !== m.id && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {st !== "purchased" ? (
+                  {st === "allocated" ? null : st !== "purchased" ? (
                     <button type="button" disabled={pending} onClick={() => run(() => setMaterialStatusAction(m.id, projectId, "purchased"), t("Marked purchased."))} className={cn(BTN, "border-ok-fg/30 text-ok-fg")}>
                       <Check className="size-3.5" aria-hidden /> {t("Purchased")}
                     </button>
@@ -127,6 +152,54 @@ export function MaterialsList({ rows, projectId }: { rows: MaterialRow[]; projec
         })}
         {!visible.length && <li className="py-4 text-center text-sm text-text-2">{t("No materials yet. They come from the proposals linked to the project (Portal.io), or add them here.")}</li>}
       </ul>
+      {warnings.length > 0 && (
+        <div className="mt-3 rounded-xl border border-bad-fg/30 bg-bad-bg/40 p-3">
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-bad-fg">
+            <AlertTriangle className="size-4" aria-hidden /> {t("On the job but not on the list")}
+          </p>
+          <p className="mb-2 text-xs text-text-2">{t("Units in Stock whose destination is this project, with no line for their product in the list.")}</p>
+          <ul className="divide-y divide-bad-fg/15">
+            {warnings.map((e) => (
+              <li key={e.key} className="py-2">
+                <p className="text-sm font-medium">
+                  <span className="tabular-nums">{e.count} ×</span> {e.title || e.model || t("(no description)")}
+                </p>
+                <p className="text-xs text-text-2">{extraLabel(e)}</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <button type="button" disabled={pending} onClick={() => run(() => addExtraToListAction(projectId, { productId: e.product_id, model: e.model, count: e.count, title: e.title }), t("Added to the list."))} className={cn(BTN, "border-primary text-primary")}>
+                    <Plus className="size-3.5" aria-hidden /> {t("Add to the list")}
+                  </button>
+                  <button type="button" disabled={pending} onClick={() => run(() => ignoreExtraAction(projectId, { productId: e.product_id, model: e.model }), t("Ignored."))} className={BTN}>
+                    <EyeOff className="size-3.5" aria-hidden /> {t("Ignore")}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {ignored.length > 0 && (
+        <div className="mt-2">
+          <button type="button" onClick={() => setShowIgnored((v) => !v)} className="min-h-11 text-xs text-text-2 underline underline-offset-4">
+            {showIgnored ? t("Hide ignored") : t("Show {n} ignored (on the job, not on the list)", { n: ignored.length })}
+          </button>
+          {showIgnored && (
+            <ul className="divide-y text-sm opacity-70">
+              {ignored.map((e) => (
+                <li key={e.key} className="flex flex-wrap items-center gap-2 py-1.5">
+                  <span>
+                    <span className="tabular-nums">{e.count} ×</span> {e.title || e.model || t("(no description)")}
+                    <span className="ml-1 text-xs text-text-2">{extraLabel(e)}</span>
+                  </span>
+                  <button type="button" disabled={pending} onClick={() => run(() => unignoreExtraAction(e.ignored_id!, projectId))} className={cn(BTN, "ml-auto")}>
+                    <RotateCcw className="size-3.5" aria-hidden /> {t("Undo")}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {!adding && (
           <button type="button" onClick={() => (setAdding(true), setReplacing(null), setEditing(null))} className={cn(BTN, "min-h-11 border-primary text-primary")}>

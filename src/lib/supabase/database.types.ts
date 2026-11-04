@@ -3794,6 +3794,62 @@ export type Database = {
           },
         ]
       }
+      project_material_ignores: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          model: string | null
+          product_id: number | null
+          project_id: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          model?: string | null
+          product_id?: number | null
+          project_id: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          model?: string | null
+          product_id?: number | null
+          project_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_material_ignores_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_material_ignores_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_material_ignores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_material_ignores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_materials: {
         Row: {
           brand: string | null

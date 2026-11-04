@@ -11,11 +11,12 @@ import { MaterialsList } from "./materials-list";
 // PU-a (Fred 2026-11-03): the Materials card under the project's fields, for the people with Administrative ›
 // Purchasing (Finance / Transactions too): the pick list of everything the linked proposals say the project needs,
 // what the stock already covers, what was bought, replaced or removed, and the "Needs purchasing" flag.
+// PU-d: the units installed / staged on the job (Stock) are laid over the lines: only the rest is still to buy.
 
 export async function MaterialsCard({ projectId, user }: { projectId: number; user: CurrentUser }) {
   if (!canSeePurchasing(user)) return null;
   const tr = await getT();
-  const rows = await loadProjectMaterials(await recordsDb(), projectId);
+  const { rows, extras } = await loadProjectMaterials(await recordsDb(), projectId);
   const flag = needsPurchasing(rows);
   return (
     <section id="materials" className="mt-4 rounded-2xl border bg-card px-4 py-3 shadow-card">
@@ -30,7 +31,7 @@ export async function MaterialsCard({ projectId, user }: { projectId: number; us
           {tr("Everything to buy")}
         </Link>
       </div>
-      <MaterialsList rows={rows} projectId={projectId} />
+      <MaterialsList rows={rows} extras={extras} projectId={projectId} />
     </section>
   );
 }
