@@ -245,3 +245,13 @@ export function autoLinkCandidate(customerId: number | null | undefined, project
   if (suggestions.some((s) => s.id !== only && s.score >= 85)) return null;
   return only;
 }
+
+/**
+ * PU-b (Fred 2026-11-03, Shair Residence): a mirror proposal whose number a project's Transaction already carries
+ * (sheet import, hand-typed) belongs to that project, whatever its date: exactly one project, or nothing.
+ */
+export function numberLinkCandidate(number: number | null | undefined, txByNumber: Map<string, number[]>): number | null {
+  if (number === null || number === undefined) return null;
+  const ids = [...new Set(txByNumber.get(String(number)) ?? [])];
+  return ids.length === 1 ? ids[0] : null;
+}

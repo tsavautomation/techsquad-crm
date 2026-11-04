@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acceptedItems, autoLinkCandidate, changeOrderNumber, dateET, mapMethod, partsCost, planTransactions, syncOwns, type ExistingTx, type PlanChangeOrder, type PlanProposal, type PlanRequest, type PortalArea } from "@/lib/portalio/plan";
+import { acceptedItems, autoLinkCandidate, numberLinkCandidate, changeOrderNumber, dateET, mapMethod, partsCost, planTransactions, syncOwns, type ExistingTx, type PlanChangeOrder, type PlanProposal, type PlanRequest, type PortalArea } from "@/lib/portalio/plan";
 
 // FIN Part 2 (Fred 2026-10-28, SPEC §9.1 FIN-i…FIN-l): the Portal.io sync as a pure plan. The cases Fred asked for in
 // the second brief: proposals with items, change orders, invoices from payment requests, payments from paid requests,
@@ -169,6 +169,11 @@ describe("FIN-l automatic link only with a single candidate", () => {
     expect(autoLinkCandidate(37748, [1040], [])).toBe(1040);
     expect(autoLinkCandidate(37748, [1040], [{ id: 1040, score: 100 }, { id: 2, score: 60 }])).toBe(1040);
     expect(autoLinkCandidate(37748, [], [])).toBeNull();
+    // PU-b: a Transaction already carrying the number decides, one project only
+    expect(numberLinkCandidate(2527, new Map([["2527", [1029, 1029]]]))).toBe(1029);
+    expect(numberLinkCandidate(2527, new Map([["2527", [1029, 1040]]]))).toBeNull();
+    expect(numberLinkCandidate(2527, new Map())).toBeNull();
+    expect(numberLinkCandidate(null, new Map([["2527", [1029]]]))).toBeNull();
     expect(autoLinkCandidate(37748, [1040, 1041], [])).toBeNull();
     expect(autoLinkCandidate(37748, [1040], [{ id: 2, score: 100 }])).toBeNull(); // a Transaction elsewhere already carries the Portal #
     expect(autoLinkCandidate(null, [1040], [])).toBeNull();
