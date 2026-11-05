@@ -7016,15 +7016,15 @@ export type Database = {
           },
         ]
       }
-      timesheet_week_events: {
+      timesheet_period_events: {
         Row: {
           action: string
           at: string
           by_user: string | null
           id: number
           minutes: number | null
+          period_id: number
           reason: string | null
-          week_id: number
         }
         Insert: {
           action: string
@@ -7032,8 +7032,8 @@ export type Database = {
           by_user?: string | null
           id?: number
           minutes?: number | null
+          period_id: number
           reason?: string | null
-          week_id: number
         }
         Update: {
           action?: string
@@ -7041,38 +7041,40 @@ export type Database = {
           by_user?: string | null
           id?: number
           minutes?: number | null
+          period_id?: number
           reason?: string | null
-          week_id?: number
         }
         Relationships: [
           {
-            foreignKeyName: "timesheet_week_events_by_user_fkey"
+            foreignKeyName: "timesheet_period_events_by_user_fkey"
             columns: ["by_user"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "timesheet_week_events_week_id_fkey"
-            columns: ["week_id"]
+            foreignKeyName: "timesheet_period_events_period_id_fkey"
+            columns: ["period_id"]
             isOneToOne: false
-            referencedRelation: "timesheet_weeks"
+            referencedRelation: "timesheet_periods"
             referencedColumns: ["id"]
           },
         ]
       }
-      timesheet_weeks: {
+      timesheet_periods: {
         Row: {
           approved_at: string | null
           approved_by: string | null
           created_at: string
           employee_id: number
+          ends_on: string
           id: number
           minutes_at_approval: number | null
-          monday: string
           reopen_reason: string | null
           reopened_at: string | null
           reopened_by: string | null
+          schedule_id: number
+          starts_on: string
           status: string
           updated_at: string
         }
@@ -7081,12 +7083,14 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           employee_id: number
+          ends_on: string
           id?: number
           minutes_at_approval?: number | null
-          monday: string
           reopen_reason?: string | null
           reopened_at?: string | null
           reopened_by?: string | null
+          schedule_id: number
+          starts_on: string
           status: string
           updated_at?: string
         }
@@ -7095,42 +7099,51 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           employee_id?: number
+          ends_on?: string
           id?: number
           minutes_at_approval?: number | null
-          monday?: string
           reopen_reason?: string | null
           reopened_at?: string | null
           reopened_by?: string | null
+          schedule_id?: number
+          starts_on?: string
           status?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "timesheet_weeks_approved_by_fkey"
+            foreignKeyName: "timesheet_periods_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "timesheet_weeks_employee_id_fkey"
+            foreignKeyName: "timesheet_periods_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employee_names"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "timesheet_weeks_employee_id_fkey"
+            foreignKeyName: "timesheet_periods_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "timesheet_weeks_reopened_by_fkey"
+            foreignKeyName: "timesheet_periods_reopened_by_fkey"
             columns: ["reopened_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_periods_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "pay_schedules"
             referencedColumns: ["id"]
           },
         ]
@@ -8842,8 +8855,7 @@ export type Database = {
         Args: { p_project_id?: number }
         Returns: number
       }
-      timesheet_monday: { Args: { p_at: string }; Returns: string }
-      timesheet_week_approved: {
+      timesheet_period_approved: {
         Args: { p_at: string; p_employee: number }
         Returns: boolean
       }

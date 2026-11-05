@@ -13,7 +13,7 @@ import { recordsDb } from "@/lib/records/data";
 import { addDays, clock } from "@/lib/schedule/dates";
 import { clockDay, formatDistance, type EntryKind, type Place, type TimeEntry } from "@/lib/time-clock/clock";
 import { FLAG_TEXT, mondayOf, shiftsOf } from "@/lib/time-clock/timesheet";
-import { approvedEmployeesFor } from "@/lib/time-clock/week-status";
+import { approvedEmployeesFor } from "@/lib/time-clock/approval-status";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
 import { cn } from "@/lib/utils";
@@ -48,8 +48,8 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
     .lt("at", fromDateTimeLocalET(`${addDays(day, 1)}T00:00`))
     .is("deleted_at", null);
   if (onlyEmployee !== null) q = q.eq("employee_id", onlyEmployee);
-  // TC-h: people whose week (containing this day) is approved: their entries are locked.
-  const [{ data }, approvedWeek] = await Promise.all([q.order("at"), approvedEmployeesFor(db, mondayOf(day))]);
+  // TS-c: people whose approved pay period contains this day: their entries are locked.
+  const [{ data }, approvedWeek] = await Promise.all([q.order("at"), approvedEmployeesFor(db, day)]);
   const rows = (data ?? []) as unknown as Row[];
   const byPerson = Map.groupBy(rows, (r) => r.employee_id);
   const employeesT = getTable("employees");
@@ -123,9 +123,9 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                 {approvedWeek.has(employeeId) && (
                   <p className="mb-2 flex items-center gap-1.5 rounded-lg bg-ok-bg px-2.5 py-1.5 text-[13px] text-ok-fg">
                     <Lock className="size-4 shrink-0" aria-hidden />
-                    {tr("This week is approved and locked.")}{" "}
-                    <Link href={`/time-clock/timesheets?week=${mondayOf(day)}`} className="underline underline-offset-4">
-                      {tr("Reopen it on Timesheets")}
+                    {tr("This period is approved and locked.")}{" "}
+                    <Link href={`/time-clock/people/${employeeId}?day=${day}`} className="underline underline-offset-4">
+                      {tr("Reopen it on the timesheet")}
                     </Link>
                   </p>
                 )}

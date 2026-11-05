@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { parseTaskDone, taskDonePrompt } from "@/lib/ai/task-done-engine";
 import { pickScheduler } from "@/lib/field-day/day";
 import { departmentOfCategory, inDepartment, periodSheet } from "@/lib/time-clock/period";
-import { overtimeDays, overtimeDetails, overtimeMarker } from "@/lib/time-clock/overtime-engine";
 
 // Jessica's third round (via Fred 2026-10-26), SPEC §9.1 J-s … J-z: the pure parts.
 
@@ -12,26 +11,7 @@ const shift = (id: number, day: string, inHm: string, outHm: string) => [
   { id: id + 1, kind: "clock_out" as const, at: et(day, outHm) },
 ];
 const now = Date.parse("2026-10-26T12:00:00Z");
-
-describe("J-t overtime: days over 9 hours in the week, one task per person", () => {
-  it("finds the days over 9 h with the excess, ignoring other weeks and normal days", () => {
-    const entries = [...shift(1, "2026-10-19", "07:00", "17:30"), ...shift(3, "2026-10-20", "08:00", "16:00"), ...shift(5, "2026-10-21", "06:30", "12:00"), ...shift(7, "2026-10-21", "13:00", "18:30"), ...shift(9, "2026-10-12", "06:00", "19:00")];
-    const days = overtimeDays(entries, "2026-10-19", now);
-    expect(days.map((d) => [d.date, d.minutes, d.excess])).toEqual([
-      ["2026-10-19", 630, 90],
-      ["2026-10-21", 660, 120],
-    ]);
-    expect(days[1].from).toBe(et("2026-10-21", "06:30"));
-    expect(days[1].to).toBe(et("2026-10-21", "18:30"));
-  });
-  it("writes the task text with each day, and a marker that keeps the week from being raised twice", () => {
-    const text = overtimeDetails("Daniel Sousa", "2026-10-19", overtimeDays(shift(1, "2026-10-19", "07:00", "17:30"), "2026-10-19", now));
-    expect(text).toContain("Daniel Sousa, week of 10/19/2026 – 10/25/2026");
-    expect(text).toContain("10/19/2026: 7:00 AM – 5:30 PM · 10:30 h worked, 1:30 h over 9");
-    expect(text).toContain("Total over 9 h/day: 1:30 h");
-    expect(overtimeMarker(1017, "2026-10-19")).toBe("[overtime:1017:2026-10-19]");
-  });
-});
+// J-t (overtime tasks) was retired by TS-c (2026-11-05): the approval per pay period replaces it.
 
 describe("J-v / J-w departments and periods", () => {
   it("filters by department and reads the project category", () => {

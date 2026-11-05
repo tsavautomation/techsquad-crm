@@ -31,6 +31,8 @@ export async function approvePeriodAction(scheduleId: number, startsOn: string, 
   const data = await loadPeriod(db, period);
   if (data.locked) return { ok: false, message: "This period is already approved." };
   if (data.totals.toReview > 0) return { ok: false, message: "Some shifts still need a review. Open each one from the list and correct it or mark it reviewed." };
+  // TS-c: the Field enters the period only once each person's timesheet is approved.
+  if (data.totals.unapproved > 0) return { ok: false, message: "Some timesheets are not approved yet. Approve them on Time clock › Timesheets first." };
   if (!data.lines.length) return { ok: false, message: "Nobody is on this pay schedule." };
 
   const { data: created, error } = await db.from("pay_periods").insert({ schedule_id: scheduleId, frequency: schedule.frequency, starts_on: period.starts_on, ends_on: period.ends_on, pay_day: period.pay_day, approved_by: me.id, note: note.trim() || null }).select("id").single();

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AlertTriangle, ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { ClockTabs } from "@/components/time-clock/clock-tabs";
 import { ManualEntry } from "@/components/time-clock/manual-entry";
+import { PeriodApproval } from "@/components/time-clock/period-approval";
 import { DayRow } from "@/components/time-clock/person/day-row";
 import type { DayView, EventView, Loc, ShiftView } from "@/components/time-clock/person/types";
 import { requireUser } from "@/lib/auth/session";
@@ -10,6 +11,8 @@ import { formatDate, nowMs, toDateTimeLocalET, todayET } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
 import { addDays } from "@/lib/schedule/dates";
 import { formatDistance } from "@/lib/time-clock/clock";
+import { approvalGroups, canApproveTimesheets, loadPendingCorrections } from "@/lib/time-clock/approval-status";
+import { approvalBlockers, approvalStatusOf, needsApproval } from "@/lib/time-clock/period-approval";
 import { loadPanel, panelPeople, panelRange, type EntryRow } from "@/lib/time-clock/person-load";
 import { personTotals, weekBlocks } from "@/lib/time-clock/person-sheet";
 import { formatHours, mondayOf, type Shift } from "@/lib/time-clock/timesheet";
@@ -25,7 +28,7 @@ export async function generateMetadata() {
 // TS-b Person panel (Fred 2026-11-04, Part 3 of the Pay periods / Time clock brief, Connecteam style): one
 // person's timesheet over their pay-schedule period (PS-a; the week when they are on no schedule), one row
 // per day grouped by week with a subtotal, inline edits, the totals at the top and Previous / Next person.
-// Part 4 adds the approval per period by department here.
+// TS-c (Part 4): the approval of the period by department sits at the top: Approve / Reopen for the Field's approvers.
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -43,12 +46,18 @@ export default async function PersonPanelPage(props: PageProps<"/time-clock/peop
   const group = sp.group === "Field" || sp.group === "Office" ? sp.group : "";
   const db = await recordsDb();
 
-  const [{ data: emp }, range, people] = await Promise.all([db.from("employees").select("id, title, clock_group, status").eq("id", employeeId).is("deleted_at", null).maybeSingle(), panelRange(db, employeeId, day), panelPeople(db, group)]);
+  const { data: emp } = await db.from("employees").select("id, title, clock_group, status").eq("id", employeeId).is("deleted_at", null).maybeSingle();
   if (!emp) notFound();
   const person = emp as { id: number; title: string | null; clock_group: string | null; status: string | null };
   const name = person.title ?? `#${person.id}`;
   const now = nowMs();
-  const data = await loadPanel(db, employeeId, range, now, today);
+  // TS-c: Previous / Next walk the person's own group (an approver walks the Field).
+  const [range, people, groups] = await Promise.all([panelRange(db, employeeId, day), panelPeople(db, group || (person.clock_group ?? "Field")), approvalGroups(db)]);
+  const [data, corrections] = await Promise.all([loadPanel(db, employeeId, range, now, today), loadPendingCorrections(db, [employeeId], range.from, range.to)]);
+  const required = needsApproval(person.clock_group, groups);
+  const status = approvalStatusOf(data.approval);
+  const locked = status === "Approved";
+  const canApprove = canApproveTimesheets(user);
   const totals = personTotals(data.days);
   const blocks = weekBlocks(data.days);
   const employeesT = getTable("employees");
@@ -62,7 +71,7 @@ export default async function PersonPanelPage(props: PageProps<"/time-clock/peop
   const dow = (date: string) => new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(new Date(`${date}T12:00:00Z`));
   const loc = (e: EntryRow | undefined): Loc => ({ place: e?.place ?? "Unknown", lat: e?.lat ?? null, lng: e?.lng ?? null, distance: e && e.place !== "Office" && e.place !== "On site" ? formatDistance(e.distance_m) : "" });
   const periodLocked = (s: Shift) => Boolean(data.entries.get(s.inId)?.pay_period_id || (s.outId !== null && data.entries.get(s.outId)?.pay_period_id));
-  const toView = (s: Shift, weekLocked: boolean): ShiftView => {
+  const toView = (s: Shift): ShiftView => {
     const inE = data.entries.get(s.inId);
     const outE = s.outId === null ? undefined : data.entries.get(s.outId);
     return {
@@ -84,16 +93,16 @@ export default async function PersonPanelPage(props: PageProps<"/time-clock/peop
       projectId: s.projectId,
       projectTitle: s.projectId !== null ? (data.projectTitles.get(s.projectId) ?? `#${s.projectId}`) : null,
       managerNote: s.managerNote,
-      lock: weekLocked ? "week" : periodLocked(s) ? "period" : null,
+      lock: locked ? "approved" : periodLocked(s) ? "period" : null,
       openNow: s.outAt === null && s.suggestedOutAt === null && !s.flags.includes("open"),
     };
   };
   const views: DayView[] = data.days.map((d) => {
-    const weekLocked = data.approvedMondays.has(mondayOf(d.date));
     const events: EventView[] = (data.events.get(d.date) ?? []).map((e) => ({ id: e.id, kind: e.kind, time: hhmm(e.at), project: e.project, loc: { place: e.place, lat: e.lat, lng: e.lng, distance: e.place !== "Office" && e.place !== "On site" ? formatDistance(e.distance_m) : "" } }));
-    return { date: d.date, dow: dow(d.date), label: formatDate(d.date).replace(/\/\d{4}$/, ""), minutes: d.minutes, shifts: d.shifts.map((s) => toView(s, weekLocked)), timeOff: d.timeOff, events, weekLocked, isToday: d.date === today, isFuture: d.date > today };
+    return { date: d.date, dow: dow(d.date), label: formatDate(d.date).replace(/\/\d{4}$/, ""), minutes: d.minutes, shifts: d.shifts.map(toView), timeOff: d.timeOff, events, locked, isToday: d.date === today, isFuture: d.date > today };
   });
-  const lockedWeeks = blocks.filter((b) => data.approvedMondays.has(b.monday)).length;
+  const totalsAfter = personTotals(data.days);
+  const blockers = !required || locked ? [] : approvalBlockers({ toReview: totalsAfter.toReview, pendingCorrections: corrections.get(employeeId) ?? 0, endsOn: range.period?.ends_on ?? null, today });
   const addDay = today >= range.from && today <= range.to ? today : range.to < today ? range.to : range.from;
 
   return (
@@ -180,15 +189,26 @@ export default async function PersonPanelPage(props: PageProps<"/time-clock/peop
           </div>
         ))}
       </dl>
-      {lockedWeeks > 0 && (
-        <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-ok-bg px-2.5 py-1.5 text-[13px] text-ok-fg">
-          <Lock className="size-4 shrink-0" aria-hidden />
-          {tr("{n} approved weeks in this period are locked.", { n: lockedWeeks })}{" "}
-          <Link href={`/time-clock/timesheets?week=${mondayOf(range.from)}`} className="underline underline-offset-4">
-            {tr("Reopen on Timesheets")}
-          </Link>
-        </p>
-      )}
+      {/* TS-c: the approval of this period (the Field's approvers; the Office needs none). */}
+      <div className={cn("mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3 py-2 shadow-card", locked ? "border-ok-fg/30 bg-ok-bg" : "bg-card")}>
+        <div className="min-w-0 text-[13px]">
+          {required ? (
+            locked ? (
+              <span className="flex items-center gap-1.5 text-ok-fg">
+                <Lock className="size-4 shrink-0" aria-hidden />
+                {tr("Timesheet approved by {who} on {when}: the period is locked.", { who: data.approval?.approver ?? tr("Someone"), when: data.approval?.approved_at ? formatDate(data.approval.approved_at) : "" })}
+              </span>
+            ) : status === "Reopened" ? (
+              <span>{tr("Reopened by {who}: {reason}", { who: data.approval?.reopener ?? tr("Someone"), reason: data.approval?.reopen_reason ?? "" })}</span>
+            ) : (
+              <span className="text-text-2">{tr("Timesheet approval for this period: once it ends and nothing is left to look at, an approver approves it here; Pay periods take the hours after that.")}</span>
+            )
+          ) : (
+            <span className="text-text-2">{tr("No approval needed for the {group}: Pay periods take these hours directly.", { group: tr(person.clock_group ?? "Field") })}</span>
+          )}
+        </div>
+        {required && range.period && <PeriodApproval employeeId={person.id} startsOn={range.period.starts_on} status={status} blockers={blockers} canApprove={canApprove} approver={data.approval?.approver ?? null} big />}
+      </div>
       {totals.toReview > 0 && (
         <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-warn-bg px-2.5 py-1.5 text-[13px] text-warn-fg">
           <AlertTriangle className="size-4 shrink-0" aria-hidden />
@@ -203,7 +223,6 @@ export default async function PersonPanelPage(props: PageProps<"/time-clock/peop
             <header className="flex items-center justify-between gap-2 border-b bg-muted/50 px-3 py-2 text-[13px] md:px-4">
               <span className="font-semibold">
                 {tr("Week of {date}", { date: formatDate(b.monday) })}
-                {data.approvedMondays.has(b.monday) && <Lock className="ml-1.5 inline size-3.5 text-ok-fg" aria-label={tr("Week approved")} />}
               </span>
               <span className="tabular-nums text-text-2">
                 {b.ptoMinutes > 0 && `${tr("PTO")} ${formatHours(b.ptoMinutes)} · `}

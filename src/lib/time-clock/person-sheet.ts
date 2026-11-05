@@ -3,8 +3,10 @@
 // subtotal, and the totals at the top (regular, overtime over 9 h/day, PTO, days worked).
 // Tests: tests/ts-person-sheet.test.ts.
 import { addDays } from "@/lib/schedule/dates";
-import { OVERTIME_DAY_MIN } from "./overtime-engine";
 import { mondayOf, shiftsOf, type SheetEntry, type Shift } from "./timesheet";
+
+/** Minutes of a day past which the rest is overtime (9 h; the Overtime spec makes it per group). */
+export const OVERTIME_DAY_MIN = 9 * 60;
 
 /** A day of time off (time_off_entries) as the panel shows it. */
 export type DayOff = { id: number; day: string; kind: string; paid: boolean; minutes: number; note: string | null };

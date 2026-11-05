@@ -15,8 +15,8 @@ export const FieldDaySchema = z.object({
   scheduler_employee_id: z.number().int().positive().nullable().default(null),
   /** J-x: who receives the return cards of Electrical projects (Saulo); blank = the same person as above. */
   scheduler_employee_id_electrical: z.number().int().positive().nullable().default(null),
-  /** J-t: who approves overtime (one task per person per week when a day passes 9 hours). */
-  overtime_approver_employee_id: z.number().int().positive().nullable().default(null),
+  /** TS-c: the time-clock groups whose timesheets need the approval before Pay periods take them (the Field). */
+  approval_groups: z.array(z.enum(["Field", "Office"])).default(["Field"]),
   /** Days until a return card is due, by Job Report › Reason. */
   return_days: z.record(z.string(), z.number().int().min(0).max(90)).default({}),
   /** Per Visit › Service type: checklist added to the visit at check-in, and tools to bring. */

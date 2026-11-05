@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth/session";
 import { canSeeCosting } from "@/lib/costing/load";
 import { formatDate, formatDateTime, nowMs, todayET } from "@/lib/dates";
 import { money } from "@/lib/payroll/engine";
-import { loadOverrides, loadPeriod, loadSchedules } from "@/lib/payroll/load";
+import { loadOverrides, loadPeriod, loadSchedules, type LineApproval } from "@/lib/payroll/load";
 import { describeRule, nextPeriod, payDayOf, periodEnded, periodFor, previousPeriod, recentPeriods } from "@/lib/payroll/periods";
 import { recordsDb } from "@/lib/records/data";
 import { formatHours } from "@/lib/time-clock/timesheet";
@@ -58,7 +58,7 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
   const label = `${formatDate(period.starts_on)} – ${formatDate(period.ends_on)}`;
   const current = periodFor(schedule, today, overrides);
   const ended = periodEnded(period, today);
-  const disabledReason = data.locked ? null : !ended ? tr("Ends {date}: approve it after that", { date: formatDate(period.ends_on) }) : data.totals.toReview > 0 ? tr("{n} shifts still need a review", { n: data.totals.toReview }) : data.lines.length === 0 ? tr("Nobody on this pay schedule") : null;
+  const disabledReason = data.locked ? null : !ended ? tr("Ends {date}: approve it after that", { date: formatDate(period.ends_on) }) : data.totals.toReview > 0 ? tr("{n} shifts still need a review", { n: data.totals.toReview }) : data.totals.unapproved > 0 ? tr("{n} timesheets not approved yet", { n: data.totals.unapproved }) : data.lines.length === 0 ? tr("Nobody on this pay schedule") : null;
   const amount = (v: number | null) => (v === null ? "—" : money.format(v));
   const exportHref = (format: "csv" | "xlsx") => `/api/pay-periods/export?schedule=${schedule.id}&period=${period.starts_on}&format=${format}`;
 
@@ -190,6 +190,9 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
                   {l.line.rateText && ` · ${l.line.rateText}`}
                   {l.line.adjustments !== 0 && ` · ${tr("adjustments {amount}", { amount: money.format(l.line.adjustments) })}`}
                 </p>
+                <p className="mt-1">
+                  <TimesheetCell approval={l.approval} tr={tr} />
+                </p>
                 <LineNotes line={l} tr={tr} />
               </section>
             ))}
@@ -201,6 +204,7 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
               <thead>
                 <tr className="border-b text-left text-xs text-text-2">
                   <th className="px-4 py-2.5 font-medium">{tr("Person")}</th>
+                  <th className="px-3 py-2.5 font-medium">{tr("Timesheet")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{tr("Hours")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{tr("PTO")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{tr("Rate")}</th>
@@ -218,6 +222,9 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
                       </Link>
                       <LineNotes line={l} tr={tr} />
                     </td>
+                    <td className="px-3 py-2">
+                      <TimesheetCell approval={l.approval} tr={tr} />
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums">{formatHours(l.line.minutes)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{l.line.ptoMinutes ? formatHours(l.line.ptoMinutes) : "–"}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{l.line.rateText || <span className="text-warn-fg">{tr("no rate")}</span>}</td>
@@ -230,6 +237,7 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
               <tfoot>
                 <tr className="border-t text-xs text-text-2">
                   <td className="px-4 py-2">{tr("{n} people", { n: data.lines.length })}</td>
+                  <td className="px-3 py-2">{data.totals.unapproved > 0 ? <span className="text-warn-fg">{tr("{n} not approved", { n: data.totals.unapproved })}</span> : null}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{formatHours(data.totals.minutes)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{data.totals.ptoMinutes ? formatHours(data.totals.ptoMinutes) : "–"}</td>
                   <td />
@@ -244,6 +252,20 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
       )}
     </div>
   );
+}
+
+/** TS-c: the person's timesheet approval for the period (the Field needs it before the lock; the Office does not). */
+function TimesheetCell({ approval: a, tr }: { approval: LineApproval; tr: (s: string, v?: Record<string, string | number>) => string }) {
+  if (!a.required) return <span className="text-xs text-text-2">{tr("Not required")}</span>;
+  if (a.status === "Approved")
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-ok-fg">
+        <Lock className="size-3.5" aria-hidden />
+        {a.approver ? tr("Approved by {name}", { name: a.approver }) : tr("Approved")}
+        {a.approved_at && <span className="text-text-2"> · {formatDate(a.approved_at)}</span>}
+      </span>
+    );
+  return <span className="text-xs font-medium text-warn-fg">{tr("Not approved")}</span>;
 }
 
 /** Under a person: days without a rate, shifts to review, adjustments paid here, corrections made after the lock. */

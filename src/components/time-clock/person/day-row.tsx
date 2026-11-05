@@ -35,7 +35,7 @@ export function DayRow({ employeeId, day, canFix, admin }: Props) {
   const [adding, setAdding] = useState(false);
   const [showEvents, setShowEvents] = useState(false);
   const empty = day.shifts.length === 0 && !day.timeOff;
-  const editable = canFix && !day.weekLocked && !day.isFuture;
+  const editable = canFix && !day.locked && !day.isFuture;
   return (
     <li id={`d-${day.date}`} className={cn("scroll-mt-24 px-3 py-2.5 md:px-4", day.isToday && "bg-primary/5")}>
       <div className="md:grid md:grid-cols-[88px_minmax(0,1fr)] md:gap-x-3">
@@ -44,7 +44,7 @@ export function DayRow({ employeeId, day, canFix, admin }: Props) {
             {t(day.dow)} {day.label}
           </span>
           <span className="text-[13px] font-semibold tabular-nums md:hidden">{day.minutes > 0 ? formatHours(day.minutes) : empty ? "" : "0:00"}</span>
-          {day.weekLocked && <Lock className="ml-1 inline size-3.5 text-ok-fg" aria-label={t("Week approved")} />}
+          {day.locked && <Lock className="ml-1 inline size-3.5 text-ok-fg" aria-label={t("Period approved")} />}
         </div>
         <div className="min-w-0">
           {empty && !adding && <p className="text-[13px] text-muted-foreground">{day.isFuture ? "" : "–"}</p>}
@@ -52,7 +52,7 @@ export function DayRow({ employeeId, day, canFix, admin }: Props) {
             {day.shifts.map((s) => (
               <ShiftRow key={s.inId} employeeId={employeeId} s={s} editable={editable} admin={admin} />
             ))}
-            {day.timeOff && <TimeOffRow employeeId={employeeId} day={day.date} off={day.timeOff} editable={canFix && !day.weekLocked} />}
+            {day.timeOff && <TimeOffRow employeeId={employeeId} day={day.date} off={day.timeOff} editable={canFix && !day.locked} />}
           </ul>
           {adding && <AddShift employeeId={employeeId} day={day.date} onDone={() => setAdding(false)} />}
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">

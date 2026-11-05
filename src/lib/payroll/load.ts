@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadPayRates, type PayRate } from "@/lib/costing/load";
 import { fromDateTimeLocalET, todayET } from "@/lib/dates";
 import { addDays } from "@/lib/schedule/dates";
+import { approvalGroups, loadApprovalsAt } from "@/lib/time-clock/approval-status";
+import { approvalStatusOf, needsApproval, type ApprovalStatus } from "@/lib/time-clock/period-approval";
 import { shiftsOf, type SheetEntry, type Shift } from "@/lib/time-clock/timesheet";
 import { payLine, type PayLine, type PtoDay } from "./engine";
 import { isFrequency, parsePayDayRule, scheduleInForce, type Assignment, type Overrides, type Period, type Schedule } from "./periods";
@@ -10,6 +12,7 @@ import { isFrequency, parsePayDayRule, scheduleInForce, type Assignment, type Ov
 // TC-f Pay periods: what the screen, the approval and the export read. Everything goes through the viewer's
 // own permissions: pay rates and pay periods are only readable with the Job costing key (database policies).
 // PS-a: periods come from pay schedules (groups), and each person is on a schedule from a date on.
+// TS-c: a person of a group that needs the approval (the Field) enters the period only once their timesheet is approved.
 
 type ScheduleRow = { id: number; name: string; frequency: string; anchor_on: string; pay_day_rule: unknown; active: boolean };
 const toSchedule = (r: ScheduleRow): Schedule => ({ id: r.id, name: r.name, frequency: isFrequency(r.frequency) ? r.frequency : "Biweekly", anchor_on: r.anchor_on, pay_day_rule: parsePayDayRule(r.pay_day_rule), active: r.active });
@@ -44,7 +47,9 @@ export async function loadAssignments(db: SupabaseClient, employeeIds?: number[]
   return (data ?? []) as AssignmentRow[];
 }
 
-export type Person = { id: number; title: string; status: string | null };
+export type Person = { id: number; title: string; status: string | null; clock_group: string | null };
+/** TS-c: the person's timesheet approval for this period. */
+export type LineApproval = { required: boolean; status: ApprovalStatus; approver: string | null; approved_at: string | null };
 export type LockedPeriod = { id: number; approved_by: string | null; approved_at: string; note: string | null; approver: string | null };
 export type Adjustment = { id: number; period_id: number; employee_id: number; entry_id: number | null; reason: string; delta_minutes: number; delta_amount: number | null; created_at: string; applied_period_id: number | null; period_label?: string };
 
@@ -60,6 +65,7 @@ export type PersonLine = {
   snapshot?: { minutes: number; pto_minutes: number; rate_text: string | null; amount: number | null; adjustments: number; flagged: number };
   /** Corrections made to this person's entries after the lock (paid in a later period). */
   later: Adjustment[];
+  approval: LineApproval;
 };
 
 export type PeriodData = {
@@ -68,7 +74,7 @@ export type PeriodData = {
   lines: PersonLine[];
   /** People who clocked hours in the period but are on no pay schedule on its first day. */
   unassigned: Person[];
-  totals: { minutes: number; ptoMinutes: number; amount: number | null; adjustments: number; total: number | null; toReview: number };
+  totals: { minutes: number; ptoMinutes: number; amount: number | null; adjustments: number; total: number | null; toReview: number; /** TS-c: lines that still wait for the timesheet approval. */ unapproved: number };
 };
 
 type EntryRow = SheetEntry & { employee_id: number };
@@ -94,19 +100,19 @@ function periodShifts(entries: SheetEntry[], period: Pick<Period, "starts_on" | 
 export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.now()): Promise<PeriodData> {
   const today = todayET(new Date(now));
   const [{ data: emp }, byPerson, links, { data: lockedRow }] = await Promise.all([
-    db.from("employees").select("id, title, status").is("deleted_at", null).order("title"),
+    db.from("employees").select("id, title, status, clock_group").is("deleted_at", null).order("title"),
     periodEntries(db, period),
     loadAssignments(db),
     db.from("pay_periods").select("id, approved_by, approved_at, note").eq("schedule_id", period.schedule_id).eq("starts_on", period.starts_on).maybeSingle(),
   ]);
-  const people: Person[] = ((emp ?? []) as { id: number; title: string | null; status: string | null }[]).map((p) => ({ ...p, title: p.title ?? `#${p.id}` }));
+  const people: Person[] = ((emp ?? []) as { id: number; title: string | null; status: string | null; clock_group: string | null }[]).map((p) => ({ ...p, title: p.title ?? `#${p.id}` }));
   const onSchedule = (p: Person) => scheduleInForce(links, p.id, period.starts_on);
   const inSchedule = people.filter((p) => onSchedule(p) === period.schedule_id && (byPerson.has(p.id) || p.status === "Active" || p.status === "Reports"));
   const unassigned = people.filter((p) => onSchedule(p) === null && byPerson.has(p.id) && periodShifts(byPerson.get(p.id)!, period, now, today).some((s) => s.minutes > 0));
   const locked = lockedRow ? ({ ...(lockedRow as Omit<LockedPeriod, "approver">), approver: null } as LockedPeriod) : null;
 
   const ids = inSchedule.map((p) => p.id);
-  const [rates, { data: adj }, { data: snap }, names, { data: off }] = await Promise.all([
+  const [rates, { data: adj }, { data: snap }, names, { data: off }, approvals, groups] = await Promise.all([
     loadPayRates(db, ids),
     ids.length
       ? locked
@@ -117,6 +123,9 @@ export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.
     locked?.approved_by ? db.from("profiles").select("id, first_name, last_name").eq("id", locked.approved_by).maybeSingle() : Promise.resolve({ data: null }),
     // TS-a: paid time off in the period, per person.
     ids.length ? db.from("time_off_entries").select("employee_id, day, minutes").in("employee_id", ids).eq("paid", true).gte("day", period.starts_on).lte("day", period.ends_on).is("deleted_at", null) : Promise.resolve({ data: [] }),
+    // TS-c: the timesheet approvals of the period, per person.
+    loadApprovalsAt(db, ids, period.starts_on),
+    approvalGroups(db),
   ]);
   const ptoByPerson = Map.groupBy((off ?? []) as { employee_id: number; day: string; minutes: number }[], (r) => r.employee_id);
   if (locked && names.data) locked.approver = [(names.data as { first_name: string | null }).first_name, (names.data as { last_name: string | null }).last_name].filter(Boolean).join(" ") || null;
@@ -135,7 +144,9 @@ export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.
     const line = snapshot
       ? ({ minutes: snapshot.minutes, ptoMinutes: snapshot.pto_minutes, amount: snapshot.amount, rateText: snapshot.rate_text ?? "", missingRateDays: [], toReview: 0, adjustments: snapshot.adjustments, total: snapshot.amount === null ? null : Math.round((snapshot.amount + snapshot.adjustments) * 100) / 100 } satisfies PayLine)
       : payLine(shifts, rates as PayRate[], (ptoByPerson.get(person.id) ?? []).map((r): PtoDay => ({ day: r.day, minutes: r.minutes })), pending);
-    return { person, line, shifts, review: shifts.filter((s) => s.needsReview), adjustments: paidHere, snapshot, later };
+    const row = approvals.get(person.id);
+    const approval: LineApproval = { required: needsApproval(person.clock_group, groups), status: approvalStatusOf(row), approver: row?.approver ?? null, approved_at: row?.approved_at ?? null };
+    return { person, line, shifts, review: shifts.filter((s) => s.needsReview), adjustments: paidHere, snapshot, later, approval };
   });
   const totals = {
     minutes: lines.reduce((n, l) => n + l.line.minutes, 0),
@@ -144,6 +155,7 @@ export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.
     adjustments: Math.round(lines.reduce((n, l) => n + l.line.adjustments, 0) * 100) / 100,
     total: lines.some((l) => l.line.total === null) ? null : Math.round(lines.reduce((n, l) => n + (l.line.total ?? 0), 0) * 100) / 100,
     toReview: lines.reduce((n, l) => n + l.line.toReview, 0),
+    unapproved: lines.filter((l) => l.approval.required && l.approval.status !== "Approved").length,
   };
   return { period, locked, lines, unassigned, totals };
 }

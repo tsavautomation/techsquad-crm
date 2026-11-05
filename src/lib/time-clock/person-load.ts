@@ -7,6 +7,7 @@ import { addDays } from "@/lib/schedule/dates";
 import { CLOCK_GROUPS, type EntryKind, type Place } from "./clock";
 import { personDays, type DayOff, type PersonDay } from "./person-sheet";
 import { mondayOf, type SheetEntry } from "./timesheet";
+import { loadApprovalsAt, type ApprovalRowWithNames } from "./approval-status";
 import { projectLabel } from "@/lib/projects/label";
 
 // TS-b Person panel: what the page reads for one person. The period is the person's pay-schedule period
@@ -38,7 +39,7 @@ export async function panelRange(db: SupabaseClient, employeeId: number, day: st
   return { from: monday, to: addDays(monday, 6), schedule: null, period: null, prevDay: addDays(monday, -7), nextDay: addDays(monday, 7) };
 }
 
-/** The people the panel walks through with Previous / Next: everyone who must clock in and still works, by name. Part 4 narrows it per approver. */
+/** The people the panel walks through with Previous / Next: everyone of the group who must clock in and still works, by name (TS-c: the queue follows the person's group, so an approver walks the Field). */
 export async function panelPeople(db: SupabaseClient, group: string): Promise<PanelPerson[]> {
   let q = db.from("employees").select("id, title, clock_group, status, must_clock_in").is("deleted_at", null).in("status", ["Active", "Reports"]).eq("must_clock_in", true).order("title");
   if ((CLOCK_GROUPS as readonly string[]).includes(group)) q = q.eq("clock_group", group);
@@ -67,16 +68,14 @@ export type PanelData = {
   /** Every clock entry of the range by id (for the locations, corrections and notes of a shift). */
   entries: Map<number, EntryRow>;
   events: Map<string, DayEvent[]>;
-  /** Mondays of the range whose week is approved (TC-h): those days are locked. */
-  approvedMondays: Set<string>;
+  /** TS-c: the approval of this period (Approved = every day locked), or null while Open. */
+  approval: ApprovalRowWithNames | null;
   /** Titles of the jobs set on the shifts. */
   projectTitles: Map<number, string>;
 };
 
 export async function loadPanel(db: SupabaseClient, employeeId: number, range: PanelRange, now: number, today: string): Promise<PanelData> {
-  const mondays = new Set<string>();
-  for (let d = range.from; d <= range.to; d = addDays(d, 1)) mondays.add(mondayOf(d));
-  const [{ data: ent }, { data: off }, { data: weeks }] = await Promise.all([
+  const [{ data: ent }, { data: off }, approvals] = await Promise.all([
     db
       .from("time_entries")
       .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, auto_closed, needs_adjustment, project_id, manager_note, pay_period_id, corrected_at, original_at, visits:visit_id(projects(id, title))")
@@ -86,7 +85,7 @@ export async function loadPanel(db: SupabaseClient, employeeId: number, range: P
       .is("deleted_at", null)
       .order("at"),
     db.from("time_off_entries").select("id, day, kind, paid, minutes, note").eq("employee_id", employeeId).gte("day", range.from).lte("day", range.to).is("deleted_at", null),
-    db.from("timesheet_weeks").select("monday").eq("employee_id", employeeId).eq("status", "Approved").in("monday", [...mondays]),
+    range.period ? loadApprovalsAt(db, [employeeId], range.from) : Promise.resolve(new Map<number, ApprovalRowWithNames>()),
   ]);
   const rows = (ent ?? []) as unknown as EntryRow[];
   const days = personDays(rows, range.from, range.to, (off ?? []) as DayOff[], now, today);
@@ -104,7 +103,7 @@ export async function loadPanel(db: SupabaseClient, employeeId: number, range: P
     days,
     entries: new Map(rows.map((r) => [r.id, r])),
     events,
-    approvedMondays: new Set(((weeks ?? []) as { monday: string }[]).map((w) => w.monday)),
+    approval: approvals.get(employeeId) ?? null,
     projectTitles: new Map(((projects ?? []) as { id: number; title: string | null }[]).map((p) => [p.id, projectLabel(p.title, p.id)])),
   };
 }

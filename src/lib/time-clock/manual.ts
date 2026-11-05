@@ -5,14 +5,14 @@ import { requireUser } from "@/lib/auth/session";
 import { fromDateTimeLocalET } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
 import { addDays } from "@/lib/schedule/dates";
-import { shiftSequenceProblem } from "./week-approval";
-import { weekApprovedFor } from "./week-status";
+import { periodApprovedFor } from "./approval-status";
+import { shiftSequenceProblem } from "./period-approval";
 
 // J-s Manual clock entries (Jessica via Fred 2026-10-26, "when someone forgets to clock in or out"): the office
 // adds a shift (person, day, in, out) or completes a half shift. Each row carries who did it, when and why
 // (note + corrected_by / corrected_at), so the day view shows it as a correction; a day in an approved pay
 // period is refused. Hours follow from the entries, so totals recalculate by themselves.
-// TC-h (2026-10-29): a day in an approved week is refused until the week is reopened, and a day may hold
+// TS-c: a day in an approved period is refused until the period is reopened, and a day may hold
 // several shifts as long as they do not overlap (shiftSequenceProblem).
 // TS-b (Fred 2026-11-04, item 7): the reason is optional here: filling an empty field asks none.
 
@@ -49,7 +49,7 @@ export async function addManualShiftAction(input: { employeeId: number; day: str
     .order("at");
   const entries = (data ?? []) as Entry[];
   if (entries.some((e) => e.pay_period_id)) return { ok: false, message: "This day is in an approved pay period. Ask an administrator to reopen it." };
-  if (await weekApprovedFor(db, employeeId, day)) return { ok: false, message: "This week's timesheet is approved. Reopen it on Timesheets first." };
+  if (await periodApprovedFor(db, employeeId, day)) return { ok: false, message: "This timesheet is approved. Reopen the period first." };
 
   const inAt = inTime ? fromDateTimeLocalET(`${day}T${inTime}`) : null;
   let outAt = outTime ? fromDateTimeLocalET(`${day}T${outTime}`) : null;

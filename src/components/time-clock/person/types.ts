@@ -30,7 +30,8 @@ export type ShiftView = {
   projectTitle: string | null;
   managerNote: string | null;
   /** TC-h approved week, or TC-f approved pay period (an administrator may still change it, with a reason). */
-  lock: "week" | "period" | null;
+  /** "approved" = the timesheet is approved (TS-c, read-only); "period" = in a locked pay period (TC-f, administrators only). */
+  lock: "approved" | "period" | null;
   /** Still clocked in right now. */
   openNow: boolean;
 };
@@ -47,7 +48,8 @@ export type DayView = {
   shifts: ShiftView[];
   timeOff: DayOff | null;
   events: EventView[];
-  weekLocked: boolean;
+  /** TS-c: the period is approved → read-only. */
+  locked: boolean;
   isToday: boolean;
   isFuture: boolean;
 };

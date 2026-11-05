@@ -58,8 +58,8 @@ export const PAGE_ITEMS: ChecklistItem[] = [
   { key: "administrative.finance.view_page", label: "Finance (projects by payment status, totals by client, Portal.io)" },
   // FIN-p: Fred 2026-11-03. Starts with the Finance holders; given to the buyers.
   { key: "administrative.purchasing.view_page", label: "Purchasing (cost to buy by manufacturer over the open projects)" },
-  // TC-h: Jessica via Fred 2026-10-29. Saulo and Jessica approve and reopen the weekly timesheets.
-  { key: "administrative.timesheets.approve", label: "Approve / reopen timesheets (weekly lock)" },
+  // TC-h / TS-c: Saulo and Jessica approve and reopen the Field's timesheets, one pay period at a time.
+  { key: "administrative.timesheets.approve", label: "Approve / reopen timesheets" },
 ];
 
 export const ADMIN_ITEMS: ChecklistItem[] = [

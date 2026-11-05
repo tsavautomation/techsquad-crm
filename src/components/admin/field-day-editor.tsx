@@ -60,17 +60,19 @@ export function FieldDayEditor({ initial, people, reasons, services }: { initial
             ))}
           </select>
         </label>
-        <label className="mt-3 block text-sm font-medium">
-          {t("Who approves overtime (a day over 9 hours)")}
-          <select className={`${BOX} mt-1 h-11`} value={s.overtime_approver_employee_id ?? ""} onChange={(e) => setS({ ...s, overtime_approver_employee_id: e.target.value ? Number(e.target.value) : null })}>
-            <option value="">{t("Nobody (the task is only on the Tasks board)")}</option>
-            {people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
+        {/* TS-c: which time-clock groups go through the timesheet approval before Pay periods take their hours. */}
+        <fieldset className="mt-3">
+          <legend className="text-sm font-medium">{t("Timesheets approved before pay (by the people with \"Approve / reopen timesheets\")")}</legend>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {(["Field", "Office"] as const).map((g) => (
+              <label key={g} className="inline-flex h-11 items-center gap-2 rounded-lg border px-3 text-sm">
+                <input type="checkbox" className="size-5" checked={s.approval_groups.includes(g)} onChange={(e) => setS({ ...s, approval_groups: e.target.checked ? [...s.approval_groups, g] : s.approval_groups.filter((x) => x !== g) })} />
+                {t(g)}
+              </label>
             ))}
-          </select>
-        </label>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("The other groups go to Pay periods directly.")}</p>
+        </fieldset>
         <h3 className="mt-4 mb-2 text-sm font-medium">{t("Days until the card is due, by reason")}</h3>
         <div className="grid gap-2 sm:grid-cols-2">
           {reasons.map((r) => (

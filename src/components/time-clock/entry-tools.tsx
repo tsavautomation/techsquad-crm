@@ -22,10 +22,10 @@ export function EntryTools({ id, time, locked = false, admin = false, weekLocked
   const [reason, setReason] = useState("");
   const BTN = "inline-flex h-9 items-center gap-1 rounded-md border px-2 text-xs hover:bg-muted disabled:opacity-50";
 
-  // TC-h: the week is approved; nobody changes it until it is reopened on Timesheets.
+  // TS-c: the person's period is approved; nobody changes it until it is reopened on their timesheet.
   if (weekLocked)
     return (
-      <span className="inline-flex h-9 items-center gap-1 px-1 text-xs text-muted-foreground" title={t("Week approved: reopen it on Timesheets to change this entry")}>
+      <span className="inline-flex h-9 items-center gap-1 px-1 text-xs text-muted-foreground" title={t("Timesheet approved: reopen the period to change this entry")}>
         <Lock className="size-3.5" aria-hidden />
       </span>
     );
