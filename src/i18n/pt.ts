@@ -1741,6 +1741,7 @@ export const PT: Record<string, string> = {
   "Recent receipts": "Comprovantes recentes",
   "1 line": "1 linha",
   "{n} lines": "{n} linhas",
+  "{n} lines · to buy {b}": "{n} linhas · comprar {b}",
   "View / print": "Ver / imprimir",
   "Total units": "Total de itens",
   "Units by stage": "Itens por status",

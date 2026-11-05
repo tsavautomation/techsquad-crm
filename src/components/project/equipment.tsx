@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Boxes } from "lucide-react";
+import { CollapsedCard } from "@/components/ui/collapsed-card";
 import type { CurrentUser } from "@/lib/auth/session";
 import { formatDate } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
@@ -39,13 +40,16 @@ export async function ProjectEquipment({ projectId, user }: { projectId: number;
     { key: "Separated", title: tr("Staged at the warehouse for this job"), items: units.filter((u) => u.status === "Separated") },
   ].filter((g) => g.items.length);
   return (
-    <section className="order-2 mb-3.5 rounded-2xl border bg-card px-[18px] py-4 shadow-card xl:order-none">
-      <div className="mb-2 flex items-center justify-between gap-2">
+    <CollapsedCard
+      id="equipment"
+      className="order-2 mb-3.5 xl:order-none"
+      title={
         <h2 className="flex items-center gap-1.5 text-[15px] font-semibold tracking-tight">
           <Boxes className="size-4 text-primary" aria-hidden /> {tr("Equipment")}
         </h2>
-        <span className="text-xs text-muted-foreground">{tr("{n} units", { n: units.length })}</span>
-      </div>
+      }
+      meta={groups.map((g) => `${g.title} ${g.items.length}`).join(" · ")}
+    >
       {groups.map((g) => (
         <div key={g.key} className="mb-3 last:mb-0">
           <h3 className="mb-1 text-[13px] font-semibold text-text-2">
@@ -66,6 +70,6 @@ export async function ProjectEquipment({ projectId, user }: { projectId: number;
           </ul>
         </div>
       ))}
-    </section>
+    </CollapsedCard>
   );
 }
