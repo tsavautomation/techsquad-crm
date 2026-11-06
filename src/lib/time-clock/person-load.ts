@@ -2,6 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fromDateTimeLocalET, toDateTimeLocalET } from "@/lib/dates";
 import { loadAssignments, loadOverrides, loadSchedule } from "@/lib/payroll/load";
+import { limitAt, type DayLimit } from "@/lib/payroll/overtime";
+import { loadGroupHours, loadPersonHours, loadTrips, type TripRow } from "@/lib/payroll/overtime-load";
 import { nextPeriod, periodFor, previousPeriod, scheduleInForce, type Period, type Schedule } from "@/lib/payroll/periods";
 import { addDays } from "@/lib/schedule/dates";
 import { CLOCK_GROUPS, type EntryKind, type Place } from "./clock";
@@ -72,10 +74,14 @@ export type PanelData = {
   approval: ApprovalRowWithNames | null;
   /** Titles of the jobs set on the shifts. */
   projectTitles: Map<number, string>;
+  /** OT: the daily / weekly limit in force on a day (the person's own, else their group's). */
+  limitFor: (day: string) => DayLimit;
+  /** OT: the person's work trips touching the range. */
+  trips: TripRow[];
 };
 
-export async function loadPanel(db: SupabaseClient, employeeId: number, range: PanelRange, now: number, today: string): Promise<PanelData> {
-  const [{ data: ent }, { data: off }, approvals] = await Promise.all([
+export async function loadPanel(db: SupabaseClient, employeeId: number, range: PanelRange, now: number, today: string, clockGroup: string | null = null): Promise<PanelData> {
+  const [{ data: ent }, { data: off }, approvals, groupHours, ownHours, trips] = await Promise.all([
     db
       .from("time_entries")
       .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, auto_closed, needs_adjustment, project_id, manager_note, pay_period_id, corrected_at, original_at, visits:visit_id(projects(id, title))")
@@ -86,7 +92,11 @@ export async function loadPanel(db: SupabaseClient, employeeId: number, range: P
       .order("at"),
     db.from("time_off_entries").select("id, day, kind, paid, minutes, note").eq("employee_id", employeeId).gte("day", range.from).lte("day", range.to).is("deleted_at", null),
     range.period ? loadApprovalsAt(db, [employeeId], range.from) : Promise.resolve(new Map<number, ApprovalRowWithNames>()),
+    loadGroupHours(db),
+    loadPersonHours(db, [employeeId]),
+    loadTrips(db, [employeeId], range.from, range.to),
   ]);
+  const groupRows = groupHours.filter((g) => g.clock_group === (clockGroup ?? "Field"));
   const rows = (ent ?? []) as unknown as EntryRow[];
   const days = personDays(rows, range.from, range.to, (off ?? []) as DayOff[], now, today);
   const events = new Map<string, DayEvent[]>();
@@ -105,5 +115,7 @@ export async function loadPanel(db: SupabaseClient, employeeId: number, range: P
     events,
     approval: approvals.get(employeeId) ?? null,
     projectTitles: new Map(((projects ?? []) as { id: number; title: string | null }[]).map((p) => [p.id, projectLabel(p.title, p.id)])),
+    limitFor: (day) => limitAt(groupRows, ownHours, day),
+    trips,
   };
 }

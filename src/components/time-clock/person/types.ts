@@ -50,6 +50,10 @@ export type DayView = {
   events: EventView[];
   /** TS-c: the period is approved → read-only. */
   locked: boolean;
+  /** OT: minutes of the day past the limit in force. */
+  overtime: number;
+  /** OT: "+20%" when the day is inside a work trip. */
+  trip: string | null;
   isToday: boolean;
   isFuture: boolean;
 };

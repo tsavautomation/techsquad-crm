@@ -2,11 +2,9 @@
 // person's days over a period (their pay-schedule period, or the week), grouped in week blocks with a
 // subtotal, and the totals at the top (regular, overtime over 9 h/day, PTO, days worked).
 // Tests: tests/ts-person-sheet.test.ts.
+import { DEFAULT_DAILY_MIN, splitDays, type DayLimit } from "@/lib/payroll/overtime";
 import { addDays } from "@/lib/schedule/dates";
 import { mondayOf, shiftsOf, type SheetEntry, type Shift } from "./timesheet";
-
-/** Minutes of a day past which the rest is overtime (9 h; the Overtime spec makes it per group). */
-export const OVERTIME_DAY_MIN = 9 * 60;
 
 /** A day of time off (time_off_entries) as the panel shows it. */
 export type DayOff = { id: number; day: string; kind: string; paid: boolean; minutes: number; note: string | null };
@@ -16,9 +14,9 @@ export type PersonDay = { date: string; shifts: Shift[]; minutes: number; toRevi
 export type WeekBlock = { monday: string; days: PersonDay[]; minutes: number; ptoMinutes: number };
 export type PersonTotals = {
   minutes: number;
-  /** Up to 9 h per day. */
+  /** Up to the daily (and weekly) limit in force. */
   regular: number;
-  /** Over 9 h on a day (J-t's limit). */
+  /** OT: past the limit in force on each day (9 h when nothing is set). */
   overtime: number;
   /** Paid time off. */
   pto: number;
@@ -55,10 +53,12 @@ export function weekBlocks(days: PersonDay[]): WeekBlock[] {
   return out;
 }
 
-/** The figures at the top of the panel. Overtime is whatever a day has past 9 hours. */
-export function personTotals(days: PersonDay[]): PersonTotals {
+const NINE: DayLimit = { daily: DEFAULT_DAILY_MIN, weekly: null };
+
+/** The figures at the top of the panel. Overtime is whatever a day has past the limit in force (OT: per group / person). */
+export function personTotals(days: PersonDay[], limitFor: (day: string) => DayLimit = () => NINE): PersonTotals {
   const minutes = days.reduce((n, d) => n + d.minutes, 0);
-  const overtime = days.reduce((n, d) => n + Math.max(0, d.minutes - OVERTIME_DAY_MIN), 0);
+  const overtime = splitDays(days.map((d) => ({ day: d.date, minutes: d.minutes })), limitFor).reduce((n, d) => n + d.overtime, 0);
   return {
     minutes,
     regular: minutes - overtime,

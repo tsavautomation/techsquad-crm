@@ -45,6 +45,12 @@ export function DayRow({ employeeId, day, canFix, admin }: Props) {
           </span>
           <span className="text-[13px] font-semibold tabular-nums md:hidden">{day.minutes > 0 ? formatHours(day.minutes) : empty ? "" : "0:00"}</span>
           {day.locked && <Lock className="ml-1 inline size-3.5 text-ok-fg" aria-label={t("Period approved")} />}
+          {(day.trip || day.overtime > 0) && (
+            <span className="ml-1 inline-flex flex-wrap gap-1 align-middle md:ml-0 md:mt-0.5 md:flex">
+              {day.trip && <span className="rounded bg-info-bg px-1 text-[10px] font-medium text-info-fg">{t("Trip {pct}", { pct: day.trip })}</span>}
+              {day.overtime > 0 && <span className="rounded bg-warn-bg px-1 text-[10px] font-medium text-warn-fg">{t("OT {h}", { h: formatHours(day.overtime) })}</span>}
+            </span>
+          )}
         </div>
         <div className="min-w-0">
           {empty && !adding && <p className="text-[13px] text-muted-foreground">{day.isFuture ? "" : "–"}</p>}

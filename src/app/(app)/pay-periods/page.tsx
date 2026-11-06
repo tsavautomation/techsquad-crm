@@ -3,12 +3,14 @@ import { notFound } from "next/navigation";
 import { AlertTriangle, ChevronLeft, ChevronRight, Download, Lock } from "lucide-react";
 import { ApproveButton } from "@/components/payroll/approve-button";
 import { PayDayEditor } from "@/components/payroll/pay-day-editor";
+import { GroupHoursPanel } from "@/components/payroll/group-hours-panel";
 import { SchedulesPanel } from "@/components/payroll/schedules-panel";
 import { requireUser } from "@/lib/auth/session";
 import { canSeeCosting } from "@/lib/costing/load";
 import { formatDate, formatDateTime, nowMs, todayET } from "@/lib/dates";
 import { money } from "@/lib/payroll/engine";
 import { loadOverrides, loadPeriod, loadSchedules, type LineApproval } from "@/lib/payroll/load";
+import { loadGroupHours } from "@/lib/payroll/overtime-load";
 import { describeRule, nextPeriod, payDayOf, periodEnded, periodFor, previousPeriod, recentPeriods } from "@/lib/payroll/periods";
 import { recordsDb } from "@/lib/records/data";
 import { formatHours } from "@/lib/time-clock/timesheet";
@@ -25,6 +27,7 @@ export async function generateMetadata() {
 // Administrative › Payroll already holds the payment records): pick a pay schedule and a period, see each person's
 // hours, paid PTO, the rate(s) in force, adjustments and the total; approve & lock; export CSV / Excel.
 // PS-a (Fred 2026-11-04): periods come from pay schedules (groups with their own anchor), not from fixed frequencies.
+// OT (Fred 2026-11-05): each line splits Regular / Overtime by the limit in force, pays the overtime rate and the work-trip premium.
 // Only the Job costing permission (the rule that protects pay rates) may open it. Nothing here goes to OneDrive.
 
 export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
@@ -52,7 +55,7 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
 
   const overrides = await loadOverrides(db, schedule.id);
   const period = periodFor(schedule, pParam && /^\d{4}-\d{2}-\d{2}$/.test(pParam) ? pParam : today, overrides);
-  const data = await loadPeriod(db, period, nowMs());
+  const [data, groupHours] = await Promise.all([loadPeriod(db, period, nowMs()), loadGroupHours(db)]);
   const employeesT = getTable("employees");
   const href = (scheduleId: number, startsOn: string) => `/pay-periods?schedule=${scheduleId}&period=${startsOn}`;
   const label = `${formatDate(period.starts_on)} – ${formatDate(period.ends_on)}`;
@@ -67,7 +70,7 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[21px] font-semibold tracking-tight md:text-2xl">{tr("Pay periods")}</h1>
-          <p className="text-xs text-muted-foreground">{tr("Hours × the pay rate in force each day, per person and period. Only people with the Job costing permission see this; nothing here goes to OneDrive.")}</p>
+          <p className="text-xs text-muted-foreground">{tr("Regular hours × the pay rate and overtime × the overtime rate in force each day, plus the work-trip premium, per person and period. Only people with the Job costing permission see this; nothing here goes to OneDrive.")}</p>
         </div>
         <div className="flex flex-wrap rounded-[10px] border bg-muted p-0.5 text-[13px]" role="tablist" aria-label={tr("Pay schedule")}>
           {(active.includes(schedule) ? active : [schedule, ...active]).map((s) => (
@@ -119,6 +122,7 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
           Excel
         </a>
         <SchedulesPanel schedules={schedules} />
+        <GroupHoursPanel today={today} rows={groupHours.map((g) => ({ id: g.id, group: g.clock_group, daily: g.daily_minutes, weekly: g.weekly_minutes, from: g.effective_from, note: g.note }))} />
       </div>
       <p className="mb-4 text-xs text-text-2">{tr("{name}: {frequency}, paid {rule}.", { name: schedule.name, frequency: tr(schedule.frequency), rule: describeRule(schedule.pay_day_rule, tr) })}</p>
 
@@ -186,8 +190,11 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
                 </div>
                 <p className="mt-1 text-[13px] text-text-2">
                   {tr("{n} h", { n: formatHours(l.line.minutes) })}
+                  {l.line.overtimeMinutes > 0 && ` · ${tr("overtime {n} h", { n: formatHours(l.line.overtimeMinutes) })}`}
                   {l.line.ptoMinutes > 0 && ` · ${tr("PTO {n} h", { n: formatHours(l.line.ptoMinutes) })}`}
                   {l.line.rateText && ` · ${l.line.rateText}`}
+                  {l.line.overtimeRateText && ` · ${tr("OT {rate}", { rate: l.line.overtimeRateText })}`}
+                  {l.line.premiumAmount !== 0 && ` · ${tr("trip {amount}", { amount: money.format(l.line.premiumAmount) })}`}
                   {l.line.adjustments !== 0 && ` · ${tr("adjustments {amount}", { amount: money.format(l.line.adjustments) })}`}
                 </p>
                 <p className="mt-1">
@@ -206,8 +213,12 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
                   <th className="px-4 py-2.5 font-medium">{tr("Person")}</th>
                   <th className="px-3 py-2.5 font-medium">{tr("Timesheet")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{tr("Hours")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Regular")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Overtime")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{tr("PTO")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{tr("Rate")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("OT rate")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Trip")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{tr("Amount")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{tr("Adjustments")}</th>
                   <th className="px-4 py-2.5 text-right font-medium">{tr("Total")}</th>
@@ -226,8 +237,12 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
                       <TimesheetCell approval={l.approval} tr={tr} />
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{formatHours(l.line.minutes)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{formatHours(l.line.regularMinutes)}</td>
+                    <td className={cn("px-3 py-2 text-right tabular-nums", l.line.overtimeMinutes > 0 && "font-medium text-warn-fg")}>{l.line.overtimeMinutes ? formatHours(l.line.overtimeMinutes) : "–"}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{l.line.ptoMinutes ? formatHours(l.line.ptoMinutes) : "–"}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{l.line.rateText || <span className="text-warn-fg">{tr("no rate")}</span>}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{l.line.overtimeMinutes === 0 ? "–" : l.line.missingOvertimeRateDays.length ? <span className="text-warn-fg">{tr("No overtime rate")}</span> : l.line.overtimeRateText}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{l.line.premiumAmount ? money.format(l.line.premiumAmount) : "–"}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{amount(l.line.amount)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{l.line.adjustments ? money.format(l.line.adjustments) : "–"}</td>
                     <td className="px-4 py-2 text-right font-semibold tabular-nums">{amount(l.line.total)}</td>
@@ -239,8 +254,12 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
                   <td className="px-4 py-2">{tr("{n} people", { n: data.lines.length })}</td>
                   <td className="px-3 py-2">{data.totals.unapproved > 0 ? <span className="text-warn-fg">{tr("{n} not approved", { n: data.totals.unapproved })}</span> : null}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{formatHours(data.totals.minutes)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{formatHours(data.totals.regularMinutes)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{data.totals.overtimeMinutes ? formatHours(data.totals.overtimeMinutes) : "–"}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{data.totals.ptoMinutes ? formatHours(data.totals.ptoMinutes) : "–"}</td>
                   <td />
+                  <td className="px-3 py-2 text-right">{data.totals.missingOvertimeRate > 0 ? <span className="text-warn-fg">{tr("{n} without overtime rate", { n: data.totals.missingOvertimeRate })}</span> : null}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{data.totals.premiumAmount ? money.format(data.totals.premiumAmount) : "–"}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{amount(data.totals.amount)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{data.totals.adjustments ? money.format(data.totals.adjustments) : "–"}</td>
                   <td className="px-4 py-2 text-right font-semibold tabular-nums">{amount(data.totals.total)}</td>
@@ -273,6 +292,8 @@ function LineNotes({ line: l, tr }: { line: Awaited<ReturnType<typeof loadPeriod
   const notes: { tone: "warn" | "muted"; text: string }[] = [];
   if (l.line.missingRateDays.length) notes.push({ tone: "warn", text: tr("No pay rate on {dates}: amount incomplete", { dates: l.line.missingRateDays.map((d) => formatDate(d)).join(", ") }) });
   if (l.line.toReview) notes.push({ tone: "warn", text: tr("{n} shifts need a review", { n: l.line.toReview }) });
+  if (l.line.missingOvertimeRateDays.length) notes.push({ tone: "warn", text: tr("No overtime rate on {dates}: overtime paid at the pay rate", { dates: l.line.missingOvertimeRateDays.map((d) => formatDate(d)).join(", ") }) });
+  if (l.line.tripDays > 0) notes.push({ tone: "muted", text: tr("Work trip: {amount} premium on {n} days", { amount: money.format(l.line.premiumAmount), n: l.line.tripDays }) });
   for (const a of l.adjustments) notes.push({ tone: "muted", text: tr("Adjustment {amount} ({hours} h) from {period}: {reason}", { amount: a.delta_amount === null ? "—" : money.format(a.delta_amount), hours: formatHours(a.delta_minutes), period: a.period_label ?? `#${a.period_id}`, reason: a.reason }) });
   for (const a of l.later) notes.push({ tone: "muted", text: tr("Corrected after the lock: {amount} ({hours} h), {reason}; paid in the next period", { amount: a.delta_amount === null ? "—" : money.format(a.delta_amount), hours: formatHours(a.delta_minutes), reason: a.reason }) });
   if (!notes.length) return null;

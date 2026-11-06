@@ -674,6 +674,47 @@ export type Database = {
           },
         ]
       }
+      clock_group_hours: {
+        Row: {
+          clock_group: string
+          created_at: string
+          created_by: string | null
+          daily_minutes: number
+          effective_from: string
+          id: number
+          note: string | null
+          weekly_minutes: number | null
+        }
+        Insert: {
+          clock_group: string
+          created_at?: string
+          created_by?: string | null
+          daily_minutes: number
+          effective_from?: string
+          id?: number
+          note?: string | null
+          weekly_minutes?: number | null
+        }
+        Update: {
+          clock_group?: string
+          created_at?: string
+          created_by?: string | null
+          daily_minutes?: number
+          effective_from?: string
+          id?: number
+          note?: string | null
+          weekly_minutes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clock_group_hours_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_documents: {
         Row: {
           archived_at: string | null
@@ -1312,6 +1353,113 @@ export type Database = {
             columns: ["automation_id"]
             isOneToOne: false
             referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_daily_hours: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          daily_minutes: number
+          effective_from: string
+          employee_id: number
+          id: number
+          note: string | null
+          weekly_minutes: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          daily_minutes: number
+          effective_from?: string
+          employee_id: number
+          id?: number
+          note?: string | null
+          weekly_minutes?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          daily_minutes?: number
+          effective_from?: string
+          employee_id?: number
+          id?: number
+          note?: string | null
+          weekly_minutes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_daily_hours_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_daily_hours_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_daily_hours_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_overtime_rates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          employee_id: number
+          hourly_rate: number
+          id: number
+          note: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          employee_id: number
+          hourly_rate: number
+          id?: number
+          note?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          employee_id?: number
+          hourly_rate?: number
+          id?: number
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_overtime_rates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_overtime_rates_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_overtime_rates_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
         ]
@@ -2619,9 +2767,13 @@ export type Database = {
           flagged: number
           id: number
           minutes: number
+          overtime_minutes: number
+          overtime_rate_text: string | null
           period_id: number
+          premium_amount: number
           pto_minutes: number
           rate_text: string | null
+          regular_minutes: number
         }
         Insert: {
           adjustments?: number
@@ -2630,9 +2782,13 @@ export type Database = {
           flagged?: number
           id?: number
           minutes?: number
+          overtime_minutes?: number
+          overtime_rate_text?: string | null
           period_id: number
+          premium_amount?: number
           pto_minutes?: number
           rate_text?: string | null
+          regular_minutes?: number
         }
         Update: {
           adjustments?: number
@@ -2641,9 +2797,13 @@ export type Database = {
           flagged?: number
           id?: number
           minutes?: number
+          overtime_minutes?: number
+          overtime_rate_text?: string | null
           period_id?: number
+          premium_amount?: number
           pto_minutes?: number
           rate_text?: string | null
+          regular_minutes?: number
         }
         Relationships: [
           {
@@ -8223,6 +8383,94 @@ export type Database = {
           {
             foreignKeyName: "wa_muted_chats_muted_by_fkey"
             columns: ["muted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_trips: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          destination: string | null
+          employee_id: number
+          ends_on: string
+          id: number
+          note: string | null
+          premium_pct: number
+          project_id: number | null
+          starts_on: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          destination?: string | null
+          employee_id: number
+          ends_on: string
+          id?: number
+          note?: string | null
+          premium_pct: number
+          project_id?: number | null
+          starts_on: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          destination?: string | null
+          employee_id?: number
+          ends_on?: string
+          id?: number
+          note?: string | null
+          premium_pct?: number
+          project_id?: number | null
+          starts_on?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_trips_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_trips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_trips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_trips_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portal_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_trips_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_trips_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

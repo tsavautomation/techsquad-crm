@@ -2,7 +2,8 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CurrentUser } from "@/lib/auth/session";
-import { currentLine, lockedPeriodOf } from "./load";
+import { currentLine, lockedPeriodOf, lockedPeriodsTouching } from "./load";
+import type { Period } from "./periods";
 
 // TC-f: what a locked (approved) period means for a later correction of one of its clock entries.
 
@@ -21,6 +22,18 @@ export async function entryLocked(db: SupabaseClient, entryId: number): Promise<
 export async function recordLockedCorrection(db: SupabaseClient, me: CurrentUser, entryId: number, reason: string): Promise<void> {
   const locked = await lockedPeriodOf(db, entryId);
   if (!locked) return;
+  await recordLockedDelta(db, me, locked.period, locked.employeeId, entryId, reason);
+}
+
+/** OT: a work trip created, changed or removed over days of an approved period: the difference is paid in the next period. */
+export async function recordLockedTripChange(db: SupabaseClient, me: CurrentUser, employeeId: number, from: string, to: string, reason: string): Promise<number> {
+  const periods = await lockedPeriodsTouching(db, employeeId, from, to);
+  for (const p of periods) await recordLockedDelta(db, me, p, employeeId, null, reason);
+  return periods.length;
+}
+
+async function recordLockedDelta(db: SupabaseClient, me: CurrentUser, period: Period & { id: number }, employeeId: number, entryId: number | null, reason: string): Promise<void> {
+  const locked = { period, employeeId };
   const [{ data: line }, { data: earlier }, now] = await Promise.all([
     db.from("pay_period_lines").select("minutes, amount").eq("period_id", locked.period.id).eq("employee_id", locked.employeeId).maybeSingle(),
     db.from("pay_period_adjustments").select("delta_minutes, delta_amount").eq("period_id", locked.period.id).eq("employee_id", locked.employeeId),

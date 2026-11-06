@@ -39,7 +39,7 @@ export async function approvePeriodAction(scheduleId: number, startsOn: string, 
   if (error) return { ok: false, message: /row-level security/i.test(error.message) ? DENIED_MESSAGE : error.message };
   const periodId = (created as { id: number }).id;
   const { error: le } = await db.from("pay_period_lines").insert(
-    data.lines.map((l) => ({ period_id: periodId, employee_id: l.person.id, minutes: l.line.minutes, pto_minutes: l.line.ptoMinutes, rate_text: l.line.rateText || null, amount: l.line.amount, adjustments: l.line.adjustments, flagged: l.shifts.filter((s) => s.flags.length).length })),
+    data.lines.map((l) => ({ period_id: periodId, employee_id: l.person.id, minutes: l.line.minutes, pto_minutes: l.line.ptoMinutes, rate_text: l.line.rateText || null, amount: l.line.amount, adjustments: l.line.adjustments, flagged: l.shifts.filter((s) => s.flags.length).length, regular_minutes: l.line.regularMinutes, overtime_minutes: l.line.overtimeMinutes, overtime_rate_text: l.line.overtimeRateText || null, premium_amount: l.line.premiumAmount })),
   );
   if (le) return { ok: false, message: le.message };
   // Lock the clock entries whose shift falls in the period (both ends of each shift).
