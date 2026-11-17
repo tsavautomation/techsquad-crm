@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fromDateTimeLocalET, todayET } from "@/lib/dates";
 import { loadFieldDay } from "@/lib/field-day/return-card";
 import { excessOf, limitAt, type HoursRow, type OvertimeState } from "@/lib/payroll/overtime";
+import { scheduleInForce, type Assignment } from "@/lib/payroll/periods";
 import { loginsByEmployee } from "@/lib/push/reminders";
 import { notifyPush } from "@/lib/push/send";
 import { addDays } from "@/lib/schedule/dates";
@@ -94,7 +95,9 @@ export async function syncClockDays(employeeIds: number[], from: string, to: str
   }
 
   const start = from < settings.since ? settings.since : from;
-  const flow = people.filter((p) => p.must_clock_in && overtimeNeedsApproval(p.clock_group, settings));
+  // Only people paid through a pay schedule: someone on none (the owners) is out of the clock and of this flow.
+  const { data: links } = await db.from("employee_pay_schedules").select("employee_id, schedule_id, effective_from").in("employee_id", ids);
+  const flow = people.filter((p) => p.must_clock_in && overtimeNeedsApproval(p.clock_group, settings) && scheduleInForce((links ?? []) as Assignment[], p.id, to) !== null);
   if (!flow.length || start > to) return out;
   const flowIds = flow.map((p) => p.id);
   const [{ data: groupRows }, { data: ownRows }, existing] = await Promise.all([

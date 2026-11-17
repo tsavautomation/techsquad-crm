@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fromDateTimeLocalET, toDateTimeLocalET } from "@/lib/dates";
 import { loadFieldDay } from "@/lib/field-day/return-card";
 import { limitAt, type HoursRow } from "@/lib/payroll/overtime";
+import { scheduleInForce, type Assignment } from "@/lib/payroll/periods";
 import { addDays } from "@/lib/schedule/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { ABSENCE, bankBalance, isAbsence, requestDays, type BankRow, type OffRequest, type TakenRow } from "./time-off-rules";
@@ -94,7 +95,9 @@ export async function markAbsences(day: string): Promise<Record<string, unknown>
   if (day < settings.time_off.absences_since) return { skipped: "before the start date" };
   if (!isAbsence({ day, hasClockIn: false, hasTimeOff: false, holidays: settings.time_off.holidays })) return { skipped: "weekend or holiday" };
   const { data: emp } = await db.from("employees").select("id, clock_group").is("deleted_at", null).eq("must_clock_in", true).in("status", ["Active", "Reports"]);
-  const people = (emp ?? []) as { id: number; clock_group: string | null }[];
+  // Only people paid through a pay schedule that day: someone on none (the owners) is out of the clock.
+  const { data: links } = await db.from("employee_pay_schedules").select("employee_id, schedule_id, effective_from");
+  const people = ((emp ?? []) as { id: number; clock_group: string | null }[]).filter((p) => scheduleInForce((links ?? []) as Assignment[], p.id, day) !== null);
   if (!people.length) return { marked: 0 };
   const ids = people.map((p) => p.id);
   const [{ data: ins }, off, { data: groups }, { data: own }] = await Promise.all([
