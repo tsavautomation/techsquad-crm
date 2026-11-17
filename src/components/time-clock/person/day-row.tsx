@@ -8,7 +8,7 @@ import { acceptSuggestedEndAction, correctEntryAction, removeEntryAction, review
 import { addManualShiftAction } from "@/lib/time-clock/manual";
 import { reasonNeeded } from "@/lib/time-clock/person-sheet";
 import { removeTimeOffAction, setTimeOffAction } from "@/lib/time-clock/time-off";
-import { TIME_OFF_KINDS, type TimeOffKind } from "@/lib/time-clock/time-off-kinds";
+import { ABSENCE, TIME_OFF_KINDS, type TimeOffKind } from "@/lib/time-clock/time-off-kinds";
 import { FLAG_TEXT, formatHours } from "@/lib/time-clock/timesheet";
 import { clock } from "@/lib/schedule/dates";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,9 @@ const PLACE_TONE: Record<Loc["place"], string> = { Office: "text-info-fg", "On s
 const BOX = "h-11 min-w-0 rounded-[10px] border bg-background px-3 text-base";
 const BTN = "inline-flex h-9 items-center gap-1 rounded-md border px-2 text-xs hover:bg-muted disabled:opacity-50";
 const GRID = "md:grid md:grid-cols-[64px_minmax(0,1fr)_140px_140px_64px_auto] md:items-start md:gap-x-3";
+// OT-b: the day's overtime by what the pay does with it.
+const OT_TONE: Record<NonNullable<DayView["overtimeState"]>, string> = { paid: "bg-info-bg text-info-fg", approved: "bg-ok-bg text-ok-fg", refused: "bg-bad-bg text-bad-fg line-through", pending: "bg-warn-bg text-warn-fg", awaiting: "bg-warn-bg text-warn-fg" };
+const OT_TEXT: Record<NonNullable<DayView["overtimeState"]>, string> = { paid: "Overtime", approved: "Overtime approved", refused: "Overtime refused", pending: "Overtime pending", awaiting: "Overtime: waiting for the justification" };
 
 type Props = { employeeId: number; day: DayView; canFix: boolean; admin: boolean };
 
@@ -48,7 +51,11 @@ export function DayRow({ employeeId, day, canFix, admin }: Props) {
           {(day.trip || day.overtime > 0) && (
             <span className="ml-1 inline-flex flex-wrap gap-1 align-middle md:ml-0 md:mt-0.5 md:flex">
               {day.trip && <span className="rounded bg-info-bg px-1 text-[10px] font-medium text-info-fg">{t("Trip {pct}", { pct: day.trip })}</span>}
-              {day.overtime > 0 && <span className="rounded bg-warn-bg px-1 text-[10px] font-medium text-warn-fg">{t("OT {h}", { h: formatHours(day.overtime) })}</span>}
+              {day.overtime > 0 && (
+                <span className={cn("rounded px-1 text-[10px] font-medium", OT_TONE[day.overtimeState ?? "paid"])} title={t(OT_TEXT[day.overtimeState ?? "paid"])}>
+                  +{formatHours(day.overtime)} · {t(OT_TEXT[day.overtimeState ?? "paid"])}
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -341,9 +348,8 @@ function TimeOffRow({ employeeId, day, off, editable }: { employeeId: number; da
   const router = useRouter();
   const [pending, start] = useTransition();
   const [editing, setEditing] = useState(false);
-  const [kind, setKind] = useState<TimeOffKind>(off.kind as TimeOffKind);
+  const [kind, setKind] = useState<TimeOffKind>(off.paid ? "Paid absence" : "Unpaid absence");
   const [hours, setHours] = useState(String(off.minutes / 60));
-  const [paid, setPaid] = useState(off.paid);
   const [note, setNote] = useState(off.note ?? "");
 
   if (editing)
@@ -360,8 +366,6 @@ function TimeOffRow({ employeeId, day, off, editable }: { employeeId: number; da
           <label className="flex h-11 items-center gap-2 text-sm">
             <input type="number" inputMode="decimal" min={0} max={24} step="0.5" value={hours} onChange={(e) => setHours(e.target.value)} aria-label={t("Hours")} className={`${BOX} w-24`} />
             {t("hours")}
-            <input type="checkbox" checked={kind === "Unpaid" ? false : paid} disabled={kind === "Unpaid"} onChange={(e) => setPaid(e.target.checked)} className="ml-2 size-5" />
-            {t("Paid")}
           </label>
           <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("Note (optional)")} aria-label={t("Note (optional)")} className={`${BOX} lg:col-span-2`} maxLength={300} />
         </div>
@@ -372,7 +376,7 @@ function TimeOffRow({ employeeId, day, off, editable }: { employeeId: number; da
             className="inline-flex h-9 items-center gap-1 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50"
             onClick={() =>
               start(async () => {
-                const r = await setTimeOffAction({ employeeId, day, kind, paid, hours, note });
+                const r = await setTimeOffAction({ employeeId, day, kind, hours, note });
                 if (!r.ok) return void toast.error(t(r.message));
                 toast.success(t("Saved"));
                 setEditing(false);
@@ -408,13 +412,13 @@ function TimeOffRow({ employeeId, day, off, editable }: { employeeId: number; da
     <li className={cn("grid grid-cols-2 gap-x-3 gap-y-1 rounded-xl px-1 py-1", GRID)}>
       <span className="text-xs text-text-2 md:pt-0.5">{t("Time off")}</span>
       <span className="text-[13px]">
-        {t(off.kind)}
+        <span className={cn(off.kind === ABSENCE && "font-medium text-bad-fg")}>{t(off.kind)}</span>
         <span className="ml-1 rounded bg-muted px-1 text-[11px] text-muted-foreground">{off.paid ? t("Paid") : t("Unpaid")}</span>
         {off.note && <span className="ml-1 text-text-2">· {off.note}</span>}
       </span>
       <span className="hidden md:block" />
       <span className="hidden md:block" />
-      <span className="text-[13px] font-semibold tabular-nums md:text-right">{off.paid ? formatHours(off.minutes) : ""}</span>
+      <span className={cn("text-[13px] font-semibold tabular-nums md:text-right", !off.paid && "text-muted-foreground")}>{formatHours(off.minutes)}</span>
       <span className="flex justify-end md:justify-start">
         {editable && (
           <button type="button" className={BTN} onClick={() => setEditing(true)} aria-label={t("Edit this time off")}>

@@ -12,6 +12,14 @@ export const PUSH_EVENTS = [
   { kind: "whatsapp_silent", label: "WhatsApp PC stopped or silent" },
   // TC-h: Monday morning, to the approvers, while last week still has Open timesheets.
   { kind: "timesheets_to_approve", label: "Timesheets waiting for approval (Monday)" },
+  // OT-b: the overtime approval flow.
+  { kind: "overtime_justify", label: "My overtime needs a justification" },
+  { kind: "overtime_decided", label: "My overtime was approved or refused" },
+  { kind: "overtime_weekly", label: "Overtime of the week to decide (Thursday)" },
+  { kind: "overtime_backup", label: "Overtime still undecided after Thursday (backup approvers)" },
+  // TO-a: time-off requests.
+  { kind: "time_off_request", label: "A time-off request to decide" },
+  { kind: "time_off_decided", label: "My time-off request was answered" },
 ] as const;
 
 /** F27-b: the van has sat within this distance of the job for this long without a check-in. */

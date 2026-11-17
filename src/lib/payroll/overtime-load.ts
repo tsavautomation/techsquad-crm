@@ -1,6 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RateRow } from "@/lib/costing/engine";
+import { loadOvertimeDays, overtimeSettings, overtimeStateFor, type OvertimeSettings } from "@/lib/time-clock/overtime-flow";
+import type { OvertimeDay } from "@/lib/time-clock/overtime-rules";
 import type { PayOptions } from "./engine";
 import { limitAt, type HoursRow, type Trip } from "./overtime";
 
@@ -18,11 +20,14 @@ export type OvertimeData = {
   groupHours: Map<string, HoursRowWithId[]>;
   personHours: Map<number, HoursRowWithId[]>;
   trips: Map<number, TripRow[]>;
+  /** OT-b: the overtime days (justification, decision) and the flow's settings. */
+  days: Map<number, OvertimeDay[]>;
+  settings: OvertimeSettings;
 };
 
 /** Every group's regular-hours history, newest first. */
 export async function loadGroupHours(db: SupabaseClient): Promise<GroupHoursRow[]> {
-  const { data } = await db.from("clock_group_hours").select("id, clock_group, daily_minutes, weekly_minutes, effective_from, note").order("effective_from", { ascending: false });
+  const { data } = await db.from("clock_group_hours").select("id, clock_group, daily_minutes, tolerance_minutes, effective_from, note").order("effective_from", { ascending: false });
   return (data ?? []) as GroupHoursRow[];
 }
 
@@ -34,7 +39,7 @@ export async function loadOvertimeRates(db: SupabaseClient, employeeIds: number[
 
 export async function loadPersonHours(db: SupabaseClient, employeeIds: number[]): Promise<(HoursRowWithId & { employee_id: number })[]> {
   if (!employeeIds.length) return [];
-  const { data } = await db.from("employee_daily_hours").select("id, employee_id, daily_minutes, weekly_minutes, effective_from, note").in("employee_id", employeeIds).order("effective_from", { ascending: false });
+  const { data } = await db.from("employee_daily_hours").select("id, employee_id, daily_minutes, effective_from, note").in("employee_id", employeeIds).order("effective_from", { ascending: false });
   return (data ?? []) as (HoursRowWithId & { employee_id: number })[];
 }
 
@@ -49,12 +54,14 @@ export async function loadTrips(db: SupabaseClient, employeeIds: number[], from?
 }
 
 export async function loadOvertime(db: SupabaseClient, employeeIds: number[], from: string, to: string): Promise<OvertimeData> {
-  const [overtimeRates, groups, personRows, trips] = await Promise.all([loadOvertimeRates(db, employeeIds), loadGroupHours(db), loadPersonHours(db, employeeIds), loadTrips(db, employeeIds, from, to)]);
+  const [overtimeRates, groups, personRows, trips, days, settings] = await Promise.all([loadOvertimeRates(db, employeeIds), loadGroupHours(db), loadPersonHours(db, employeeIds), loadTrips(db, employeeIds, from, to), loadOvertimeDays(db, employeeIds, from, to), overtimeSettings(db)]);
   return {
     overtimeRates: Map.groupBy(overtimeRates, (r) => r.employee_id),
     groupHours: Map.groupBy(groups, (g) => g.clock_group),
     personHours: Map.groupBy(personRows, (r) => r.employee_id),
     trips: Map.groupBy(trips, (t) => t.employee_id),
+    days: Map.groupBy(days, (d) => d.employee_id),
+    settings,
   };
 }
 
@@ -62,5 +69,5 @@ export async function loadOvertime(db: SupabaseClient, employeeIds: number[], fr
 export function overtimeOptions(data: OvertimeData, employeeId: number, clockGroup: string | null | undefined): PayOptions {
   const group = data.groupHours.get(clockGroup ?? "Field") ?? [];
   const own = data.personHours.get(employeeId) ?? [];
-  return { overtimeRates: data.overtimeRates.get(employeeId) ?? [], limitFor: (day) => limitAt(group, own, day), trips: data.trips.get(employeeId) ?? [] };
+  return { overtimeRates: data.overtimeRates.get(employeeId) ?? [], limitFor: (day) => limitAt(group, own, day), stateFor: overtimeStateFor(data.days.get(employeeId) ?? [], clockGroup, data.settings), trips: data.trips.get(employeeId) ?? [] };
 }

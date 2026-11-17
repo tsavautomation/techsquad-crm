@@ -6,7 +6,9 @@ import { addDays } from "@/lib/schedule/dates";
 import { approvalGroups, loadApprovalsAt } from "@/lib/time-clock/approval-status";
 import { approvalStatusOf, needsApproval, type ApprovalStatus } from "@/lib/time-clock/period-approval";
 import { shiftsOf, type SheetEntry, type Shift } from "@/lib/time-clock/timesheet";
-import { payLine, type PayLine, type PtoDay } from "./engine";
+import { loadBanks, balanceOf, loadRequests } from "@/lib/time-clock/time-off-flow";
+import { offTotals } from "@/lib/time-clock/time-off-rules";
+import { payLine, type OffSummary, type PayLine, type PtoDay } from "./engine";
 import { loadOvertime, overtimeOptions } from "./overtime-load";
 import { isFrequency, parsePayDayRule, scheduleInForce, type Assignment, type Overrides, type Period, type Schedule } from "./periods";
 
@@ -15,18 +17,21 @@ import { isFrequency, parsePayDayRule, scheduleInForce, type Assignment, type Ov
 // PS-a: periods come from pay schedules (groups), and each person is on a schedule from a date on.
 // TS-c: a person of a group that needs the approval (the Field) enters the period only once their timesheet is approved.
 // OT: each line splits Regular / Overtime by the limit in force, pays the overtime rate and the work-trip premium (overtime.ts).
+// PC-a (Fred 2026-11-17): the closing summary: overtime approved / refused, time off paid / unpaid, absences without a
+// request, the bank at the period's end, trip days and premium; the period waits for overtime and time-off requests still open.
 
-type ScheduleRow = { id: number; name: string; frequency: string; anchor_on: string; pay_day_rule: unknown; active: boolean };
-const toSchedule = (r: ScheduleRow): Schedule => ({ id: r.id, name: r.name, frequency: isFrequency(r.frequency) ? r.frequency : "Biweekly", anchor_on: r.anchor_on, pay_day_rule: parsePayDayRule(r.pay_day_rule), active: r.active });
+type ScheduleRow = { id: number; name: string; frequency: string; anchor_on: string; pay_day_rule: unknown; active: boolean; reanchor_on: string | null };
+const SCHEDULE_COLS = "id, name, frequency, anchor_on, pay_day_rule, active, reanchor_on";
+const toSchedule = (r: ScheduleRow): Schedule => ({ id: r.id, name: r.name, frequency: isFrequency(r.frequency) ? r.frequency : "Biweekly", anchor_on: r.anchor_on, pay_day_rule: parsePayDayRule(r.pay_day_rule), active: r.active, reanchor_on: r.reanchor_on });
 
 /** Every schedule, active ones first, then by name. */
 export async function loadSchedules(db: SupabaseClient): Promise<Schedule[]> {
-  const { data } = await db.from("pay_schedules").select("id, name, frequency, anchor_on, pay_day_rule, active").order("active", { ascending: false }).order("name");
+  const { data } = await db.from("pay_schedules").select(SCHEDULE_COLS).order("active", { ascending: false }).order("name");
   return ((data ?? []) as ScheduleRow[]).map(toSchedule);
 }
 
 export async function loadSchedule(db: SupabaseClient, id: number): Promise<Schedule | null> {
-  const { data } = await db.from("pay_schedules").select("id, name, frequency, anchor_on, pay_day_rule, active").eq("id", id).maybeSingle();
+  const { data } = await db.from("pay_schedules").select(SCHEDULE_COLS).eq("id", id).maybeSingle();
   return data ? toSchedule(data as ScheduleRow) : null;
 }
 
@@ -64,11 +69,17 @@ export type PersonLine = {
   /** Corrections of earlier locked periods paid in this one (pending ones for an open period). */
   adjustments: Adjustment[];
   /** Locked snapshot, when the period is approved. */
-  snapshot?: { minutes: number; pto_minutes: number; rate_text: string | null; amount: number | null; adjustments: number; flagged: number; regular_minutes: number; overtime_minutes: number; overtime_rate_text: string | null; premium_amount: number };
+  snapshot?: Snapshot;
   /** Corrections made to this person's entries after the lock (paid in a later period). */
   later: Adjustment[];
   approval: LineApproval;
+  /** PC-a: time off unpaid, absences without a request and the bank at the period's last day. */
+  off: OffSummary;
+  /** PC-a: time-off requests of this person still pending inside the period. */
+  timeOffPending: number;
 };
+
+type Snapshot = { minutes: number; pto_minutes: number; rate_text: string | null; amount: number | null; adjustments: number; flagged: number; regular_minutes: number; overtime_minutes: number; overtime_rate_text: string | null; premium_amount: number; overtime_refused_minutes: number; unpaid_off_minutes: number; absence_count: number; absence_dates: string | null; bank_minutes: number | null; trip_days: number; premium_regular: number; premium_overtime: number };
 
 export type PeriodData = {
   period: Period;
@@ -76,7 +87,7 @@ export type PeriodData = {
   lines: PersonLine[];
   /** People who clocked hours in the period but are on no pay schedule on its first day. */
   unassigned: Person[];
-  totals: { minutes: number; regularMinutes: number; overtimeMinutes: number; premiumAmount: number; ptoMinutes: number; amount: number | null; adjustments: number; total: number | null; toReview: number; /** TS-c: lines that still wait for the timesheet approval. */ unapproved: number; /** OT: lines with overtime but no overtime rate. */ missingOvertimeRate: number };
+  totals: { minutes: number; regularMinutes: number; overtimeMinutes: number; refusedMinutes: number; /** PC-a: days of overtime not decided yet, and time-off requests pending: both block the approval. */ overtimePending: number; timeOffPending: number; unpaidOffMinutes: number; absences: number; tripDays: number; premiumRegular: number; premiumOvertime: number; premiumAmount: number; ptoMinutes: number; amount: number | null; adjustments: number; total: number | null; toReview: number; /** TS-c: lines that still wait for the timesheet approval. */ unapproved: number; /** OT: lines with overtime but no overtime rate. */ missingOvertimeRate: number };
 };
 
 type EntryRow = SheetEntry & { employee_id: number };
@@ -102,39 +113,46 @@ function periodShifts(entries: SheetEntry[], period: Pick<Period, "starts_on" | 
 export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.now()): Promise<PeriodData> {
   const today = todayET(new Date(now));
   const [{ data: emp }, byPerson, links, { data: lockedRow }] = await Promise.all([
-    db.from("employees").select("id, title, status, clock_group").is("deleted_at", null).order("title"),
+    db.from("employees").select("id, title, status, clock_group, must_clock_in").is("deleted_at", null).order("title"),
     periodEntries(db, period),
     loadAssignments(db),
     db.from("pay_periods").select("id, approved_by, approved_at, note").eq("schedule_id", period.schedule_id).eq("starts_on", period.starts_on).maybeSingle(),
   ]);
-  const people: Person[] = ((emp ?? []) as { id: number; title: string | null; status: string | null; clock_group: string | null }[]).map((p) => ({ ...p, title: p.title ?? `#${p.id}` }));
+  const everyone = (emp ?? []) as { id: number; title: string | null; status: string | null; clock_group: string | null; must_clock_in: boolean }[];
+  // People who do not clock in (must_clock_in off, e.g. the approver) are out of Pay periods altogether.
+  const people: Person[] = everyone.filter((p) => p.must_clock_in).map((p) => ({ id: p.id, title: p.title ?? `#${p.id}`, status: p.status, clock_group: p.clock_group }));
   const onSchedule = (p: Person) => scheduleInForce(links, p.id, period.starts_on);
   const inSchedule = people.filter((p) => onSchedule(p) === period.schedule_id && (byPerson.has(p.id) || p.status === "Active" || p.status === "Reports"));
   const unassigned = people.filter((p) => onSchedule(p) === null && byPerson.has(p.id) && periodShifts(byPerson.get(p.id)!, period, now, today).some((s) => s.minutes > 0));
   const locked = lockedRow ? ({ ...(lockedRow as Omit<LockedPeriod, "approver">), approver: null } as LockedPeriod) : null;
 
   const ids = inSchedule.map((p) => p.id);
-  const [rates, { data: adj }, { data: snap }, names, { data: off }, approvals, groups, overtime] = await Promise.all([
+  const [rates, { data: adj }, { data: snap }, names, { data: off }, approvals, groups, overtime, banks, requests] = await Promise.all([
     loadPayRates(db, ids),
     ids.length
       ? locked
         ? db.from("pay_period_adjustments").select("*").in("employee_id", ids).or(`applied_period_id.eq.${locked.id},period_id.eq.${locked.id}`).order("created_at")
         : db.from("pay_period_adjustments").select("*").in("employee_id", ids).is("applied_period_id", null).order("created_at")
       : Promise.resolve({ data: [] }),
-    locked ? db.from("pay_period_lines").select("employee_id, minutes, pto_minutes, rate_text, amount, adjustments, flagged, regular_minutes, overtime_minutes, overtime_rate_text, premium_amount").eq("period_id", locked.id) : Promise.resolve({ data: [] }),
+    locked ? db.from("pay_period_lines").select("employee_id, minutes, pto_minutes, rate_text, amount, adjustments, flagged, regular_minutes, overtime_minutes, overtime_rate_text, premium_amount, overtime_refused_minutes, unpaid_off_minutes, absence_count, absence_dates, bank_minutes, trip_days, premium_regular, premium_overtime").eq("period_id", locked.id) : Promise.resolve({ data: [] }),
     locked?.approved_by ? db.from("profiles").select("id, first_name, last_name").eq("id", locked.approved_by).maybeSingle() : Promise.resolve({ data: null }),
-    // TS-a: paid time off in the period, per person.
-    ids.length ? db.from("time_off_entries").select("employee_id, day, minutes").in("employee_id", ids).eq("paid", true).gte("day", period.starts_on).lte("day", period.ends_on).is("deleted_at", null) : Promise.resolve({ data: [] }),
+    // TS-a / TO-a: the time off in the period, per person (paid, unpaid and absences without a request).
+    ids.length ? db.from("time_off_entries").select("employee_id, day, kind, paid, minutes").in("employee_id", ids).gte("day", period.starts_on).lte("day", period.ends_on).is("deleted_at", null) : Promise.resolve({ data: [] }),
     // TS-c: the timesheet approvals of the period, per person.
     loadApprovalsAt(db, ids, period.starts_on),
     approvalGroups(db),
     // OT: overtime rates, regular hours (group / person) and work trips.
     loadOvertime(db, ids, period.starts_on, period.ends_on),
+    // TO-a: each person's bank (the balance at the period's last day) and the requests still pending in the period.
+    loadBanks(db, ids),
+    loadRequests(db, { employeeIds: ids, status: "pending", touching: { from: period.starts_on, to: period.ends_on } }),
   ]);
-  const ptoByPerson = Map.groupBy((off ?? []) as { employee_id: number; day: string; minutes: number }[], (r) => r.employee_id);
+  type OffRow = { employee_id: number; day: string; kind: string; paid: boolean; minutes: number };
+  const offByPerson = Map.groupBy((off ?? []) as OffRow[], (r) => r.employee_id);
+  const ptoByPerson = new Map([...offByPerson].map(([id, rows]) => [id, rows.filter((r) => r.paid)]));
   if (locked && names.data) locked.approver = [(names.data as { first_name: string | null }).first_name, (names.data as { last_name: string | null }).last_name].filter(Boolean).join(" ") || null;
   const adjustments = ((adj ?? []) as Adjustment[]).map((a) => ({ ...a, delta_amount: a.delta_amount === null ? null : Number(a.delta_amount) }));
-  const snapshots = new Map(((snap ?? []) as { employee_id: number; minutes: number; pto_minutes: number; rate_text: string | null; amount: number | string | null; adjustments: number | string; flagged: number; regular_minutes: number; overtime_minutes: number; overtime_rate_text: string | null; premium_amount: number | string }[]).map((s) => [s.employee_id, { ...s, amount: s.amount === null ? null : Number(s.amount), adjustments: Number(s.adjustments), premium_amount: Number(s.premium_amount) }]));
+  const snapshots = new Map(((snap ?? []) as (Omit<Snapshot, "amount" | "adjustments" | "premium_amount" | "premium_regular" | "premium_overtime"> & { employee_id: number; amount: number | string | null; adjustments: number | string; premium_amount: number | string; premium_regular: number | string; premium_overtime: number | string })[]).map((s) => [s.employee_id, { ...s, amount: s.amount === null ? null : Number(s.amount), adjustments: Number(s.adjustments), premium_amount: Number(s.premium_amount), premium_regular: Number(s.premium_regular), premium_overtime: Number(s.premium_overtime) } as Snapshot]));
   const periodLabels = await adjustmentPeriodLabels(db, adjustments);
 
   const lines: PersonLine[] = inSchedule.map((person) => {
@@ -146,16 +164,29 @@ export async function loadPeriod(db: SupabaseClient, period: Period, now = Date.
     const pending = paidHere.reduce((n, a) => n + (a.delta_amount ?? 0), 0);
     const snapshot = snapshots.get(person.id);
     const line = snapshot
-      ? ({ minutes: snapshot.minutes, regularMinutes: snapshot.regular_minutes, overtimeMinutes: snapshot.overtime_minutes, ptoMinutes: snapshot.pto_minutes, amount: snapshot.amount, rateText: snapshot.rate_text ?? "", overtimeRateText: snapshot.overtime_rate_text ?? "", missingOvertimeRateDays: [], premiumAmount: snapshot.premium_amount, tripDays: 0, missingRateDays: [], toReview: 0, adjustments: snapshot.adjustments, total: snapshot.amount === null ? null : Math.round((snapshot.amount + snapshot.adjustments) * 100) / 100 } satisfies PayLine)
+      ? ({ minutes: snapshot.minutes, regularMinutes: snapshot.regular_minutes, overtimeMinutes: snapshot.overtime_minutes, refusedMinutes: snapshot.overtime_refused_minutes, pendingMinutes: 0, pendingDays: [], droppedMinutes: Math.max(0, snapshot.minutes - snapshot.regular_minutes - snapshot.overtime_minutes - snapshot.overtime_refused_minutes), ptoMinutes: snapshot.pto_minutes, amount: snapshot.amount, rateText: snapshot.rate_text ?? "", overtimeRateText: snapshot.overtime_rate_text ?? "", missingOvertimeRateDays: [], premiumAmount: snapshot.premium_amount, premiumRegular: snapshot.premium_regular, premiumOvertime: snapshot.premium_overtime, tripDays: snapshot.trip_days, missingRateDays: [], toReview: 0, adjustments: snapshot.adjustments, total: snapshot.amount === null ? null : Math.round((snapshot.amount + snapshot.adjustments) * 100) / 100 } satisfies PayLine)
       : payLine(shifts, rates as PayRate[], (ptoByPerson.get(person.id) ?? []).map((r): PtoDay => ({ day: r.day, minutes: r.minutes })), pending, overtimeOptions(overtime, person.id, person.clock_group));
     const row = approvals.get(person.id);
     const approval: LineApproval = { required: needsApproval(person.clock_group, groups), status: approvalStatusOf(row), approver: row?.approver ?? null, approved_at: row?.approved_at ?? null };
-    return { person, line, shifts, review: shifts.filter((s) => s.needsReview), adjustments: paidHere, snapshot, later, approval };
+    const taken = offTotals(offByPerson.get(person.id) ?? [], period.starts_on, period.ends_on);
+    const offSummary: OffSummary = snapshot
+      ? { unpaidMinutes: snapshot.unpaid_off_minutes, absenceDates: snapshot.absence_dates ? snapshot.absence_dates.split(" ") : [], bankMinutes: snapshot.bank_minutes }
+      : { unpaidMinutes: taken.unpaidMinutes, absenceDates: taken.absenceDates, bankMinutes: balanceOf(banks.get(person.id), period.ends_on) };
+    const timeOffPending = locked ? 0 : requests.filter((r) => r.employee_id === person.id).length;
+    return { person, line, shifts, review: shifts.filter((s) => s.needsReview), adjustments: paidHere, snapshot, later, approval, off: offSummary, timeOffPending };
   });
   const totals = {
     minutes: lines.reduce((n, l) => n + l.line.minutes, 0),
     regularMinutes: lines.reduce((n, l) => n + l.line.regularMinutes, 0),
     overtimeMinutes: lines.reduce((n, l) => n + l.line.overtimeMinutes, 0),
+    refusedMinutes: lines.reduce((n, l) => n + l.line.refusedMinutes, 0),
+    overtimePending: lines.reduce((n, l) => n + l.line.pendingDays.length, 0),
+    timeOffPending: lines.reduce((n, l) => n + l.timeOffPending, 0),
+    unpaidOffMinutes: lines.reduce((n, l) => n + l.off.unpaidMinutes, 0),
+    absences: lines.reduce((n, l) => n + l.off.absenceDates.length, 0),
+    tripDays: lines.reduce((n, l) => n + l.line.tripDays, 0),
+    premiumRegular: Math.round(lines.reduce((n, l) => n + l.line.premiumRegular, 0) * 100) / 100,
+    premiumOvertime: Math.round(lines.reduce((n, l) => n + l.line.premiumOvertime, 0) * 100) / 100,
     premiumAmount: Math.round(lines.reduce((n, l) => n + l.line.premiumAmount, 0) * 100) / 100,
     missingOvertimeRate: lines.filter((l) => l.line.missingOvertimeRateDays.length > 0).length,
     ptoMinutes: lines.reduce((n, l) => n + l.line.ptoMinutes, 0),

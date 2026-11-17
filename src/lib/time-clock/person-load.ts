@@ -2,7 +2,10 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fromDateTimeLocalET, toDateTimeLocalET } from "@/lib/dates";
 import { loadAssignments, loadOverrides, loadSchedule } from "@/lib/payroll/load";
-import { limitAt, type DayLimit } from "@/lib/payroll/overtime";
+import { limitAt, type DayLimit, type OvertimeState } from "@/lib/payroll/overtime";
+import { loadOvertimeDays, overtimeSettings, overtimeStateFor } from "./overtime-flow";
+import type { OvertimeDay } from "./overtime-rules";
+import { balanceOf, loadBanks } from "./time-off-flow";
 import { loadGroupHours, loadPersonHours, loadTrips, type TripRow } from "@/lib/payroll/overtime-load";
 import { nextPeriod, periodFor, previousPeriod, scheduleInForce, type Period, type Schedule } from "@/lib/payroll/periods";
 import { addDays } from "@/lib/schedule/dates";
@@ -78,10 +81,15 @@ export type PanelData = {
   limitFor: (day: string) => DayLimit;
   /** OT: the person's work trips touching the range. */
   trips: TripRow[];
+  /** OT-b: the overtime days of the range and what the pay does with each day's overtime. */
+  overtimeDays: OvertimeDay[];
+  stateFor: (day: string) => OvertimeState | null;
+  /** TO-a: the bank today (null = no opening balance yet). */
+  bankMinutes: number | null;
 };
 
 export async function loadPanel(db: SupabaseClient, employeeId: number, range: PanelRange, now: number, today: string, clockGroup: string | null = null): Promise<PanelData> {
-  const [{ data: ent }, { data: off }, approvals, groupHours, ownHours, trips] = await Promise.all([
+  const [{ data: ent }, { data: off }, approvals, groupHours, ownHours, trips, overtimeDays, settings, banks] = await Promise.all([
     db
       .from("time_entries")
       .select("id, employee_id, kind, at, visit_id, place, distance_m, lat, lng, note, reviewed_at, auto_closed, needs_adjustment, project_id, manager_note, pay_period_id, corrected_at, original_at, visits:visit_id(projects(id, title))")
@@ -95,6 +103,9 @@ export async function loadPanel(db: SupabaseClient, employeeId: number, range: P
     loadGroupHours(db),
     loadPersonHours(db, [employeeId]),
     loadTrips(db, [employeeId], range.from, range.to),
+    loadOvertimeDays(db, [employeeId], range.from, range.to),
+    overtimeSettings(db),
+    loadBanks(db, [employeeId]),
   ]);
   const groupRows = groupHours.filter((g) => g.clock_group === (clockGroup ?? "Field"));
   const rows = (ent ?? []) as unknown as EntryRow[];
@@ -117,5 +128,8 @@ export async function loadPanel(db: SupabaseClient, employeeId: number, range: P
     projectTitles: new Map(((projects ?? []) as { id: number; title: string | null }[]).map((p) => [p.id, projectLabel(p.title, p.id)])),
     limitFor: (day) => limitAt(groupRows, ownHours, day),
     trips,
+    overtimeDays,
+    stateFor: overtimeStateFor(overtimeDays, clockGroup, settings),
+    bankMinutes: balanceOf(banks.get(employeeId), today),
   };
 }

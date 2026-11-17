@@ -683,7 +683,7 @@ export type Database = {
           effective_from: string
           id: number
           note: string | null
-          weekly_minutes: number | null
+          tolerance_minutes: number
         }
         Insert: {
           clock_group: string
@@ -693,7 +693,7 @@ export type Database = {
           effective_from?: string
           id?: number
           note?: string | null
-          weekly_minutes?: number | null
+          tolerance_minutes?: number
         }
         Update: {
           clock_group?: string
@@ -703,7 +703,7 @@ export type Database = {
           effective_from?: string
           id?: number
           note?: string | null
-          weekly_minutes?: number | null
+          tolerance_minutes?: number
         }
         Relationships: [
           {
@@ -1366,7 +1366,6 @@ export type Database = {
           employee_id: number
           id: number
           note: string | null
-          weekly_minutes: number | null
         }
         Insert: {
           created_at?: string
@@ -1376,7 +1375,6 @@ export type Database = {
           employee_id: number
           id?: number
           note?: string | null
-          weekly_minutes?: number | null
         }
         Update: {
           created_at?: string
@@ -1386,7 +1384,6 @@ export type Database = {
           employee_id?: number
           id?: number
           note?: string | null
-          weekly_minutes?: number | null
         }
         Relationships: [
           {
@@ -2677,6 +2674,144 @@ export type Database = {
           },
         ]
       }
+      overtime_day_events: {
+        Row: {
+          action: string
+          at: string
+          by_user: string | null
+          employee_id: number
+          id: number
+          minutes: number | null
+          note: string | null
+          overtime_day_id: number
+        }
+        Insert: {
+          action: string
+          at?: string
+          by_user?: string | null
+          employee_id: number
+          id?: number
+          minutes?: number | null
+          note?: string | null
+          overtime_day_id: number
+        }
+        Update: {
+          action?: string
+          at?: string
+          by_user?: string | null
+          employee_id?: number
+          id?: number
+          minutes?: number | null
+          note?: string | null
+          overtime_day_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overtime_day_events_by_user_fkey"
+            columns: ["by_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overtime_day_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overtime_day_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overtime_day_events_overtime_day_id_fkey"
+            columns: ["overtime_day_id"]
+            isOneToOne: false
+            referencedRelation: "overtime_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      overtime_days: {
+        Row: {
+          auto_refused: boolean
+          created_at: string
+          day: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_comment: string | null
+          employee_id: number
+          excess_minutes: number
+          id: number
+          justification: string | null
+          justified_at: string | null
+          justify_due_at: string | null
+          status: string
+          updated_at: string
+          worked_minutes: number
+        }
+        Insert: {
+          auto_refused?: boolean
+          created_at?: string
+          day: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_comment?: string | null
+          employee_id: number
+          excess_minutes: number
+          id?: number
+          justification?: string | null
+          justified_at?: string | null
+          justify_due_at?: string | null
+          status?: string
+          updated_at?: string
+          worked_minutes: number
+        }
+        Update: {
+          auto_refused?: boolean
+          created_at?: string
+          day?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_comment?: string | null
+          employee_id?: number
+          excess_minutes?: number
+          id?: number
+          justification?: string | null
+          justified_at?: string | null
+          justify_due_at?: string | null
+          status?: string
+          updated_at?: string
+          worked_minutes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overtime_days_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overtime_days_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overtime_days_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pay_period_adjustments: {
         Row: {
           applied_period_id: number | null
@@ -2761,49 +2896,73 @@ export type Database = {
       }
       pay_period_lines: {
         Row: {
+          absence_count: number
+          absence_dates: string | null
           adjustments: number
           amount: number | null
+          bank_minutes: number | null
           employee_id: number
           flagged: number
           id: number
           minutes: number
           overtime_minutes: number
           overtime_rate_text: string | null
+          overtime_refused_minutes: number
           period_id: number
           premium_amount: number
+          premium_overtime: number
+          premium_regular: number
           pto_minutes: number
           rate_text: string | null
           regular_minutes: number
+          trip_days: number
+          unpaid_off_minutes: number
         }
         Insert: {
+          absence_count?: number
+          absence_dates?: string | null
           adjustments?: number
           amount?: number | null
+          bank_minutes?: number | null
           employee_id: number
           flagged?: number
           id?: number
           minutes?: number
           overtime_minutes?: number
           overtime_rate_text?: string | null
+          overtime_refused_minutes?: number
           period_id: number
           premium_amount?: number
+          premium_overtime?: number
+          premium_regular?: number
           pto_minutes?: number
           rate_text?: string | null
           regular_minutes?: number
+          trip_days?: number
+          unpaid_off_minutes?: number
         }
         Update: {
+          absence_count?: number
+          absence_dates?: string | null
           adjustments?: number
           amount?: number | null
+          bank_minutes?: number | null
           employee_id?: number
           flagged?: number
           id?: number
           minutes?: number
           overtime_minutes?: number
           overtime_rate_text?: string | null
+          overtime_refused_minutes?: number
           period_id?: number
           premium_amount?: number
+          premium_overtime?: number
+          premium_regular?: number
           pto_minutes?: number
           rate_text?: string | null
           regular_minutes?: number
+          trip_days?: number
+          unpaid_off_minutes?: number
         }
         Relationships: [
           {
@@ -2938,6 +3097,7 @@ export type Database = {
           id: number
           name: string
           pay_day_rule: Json
+          reanchor_on: string | null
           updated_at: string
         }
         Insert: {
@@ -2949,6 +3109,7 @@ export type Database = {
           id?: number
           name: string
           pay_day_rule?: Json
+          reanchor_on?: string | null
           updated_at?: string
         }
         Update: {
@@ -2960,6 +3121,7 @@ export type Database = {
           id?: number
           name?: string
           pay_day_rule?: Json
+          reanchor_on?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -7112,8 +7274,64 @@ export type Database = {
           },
         ]
       }
+      time_off_bank_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          day: string
+          delta_minutes: number
+          employee_id: number
+          id: number
+          kind: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          day?: string
+          delta_minutes: number
+          employee_id: number
+          id?: number
+          kind?: string
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          day?: string
+          delta_minutes?: number
+          employee_id?: number
+          id?: number
+          kind?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_off_bank_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_off_bank_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_off_bank_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_off_entries: {
         Row: {
+          auto: boolean
           created_at: string
           created_by: string | null
           day: string
@@ -7124,9 +7342,11 @@ export type Database = {
           minutes: number
           note: string | null
           paid: boolean
+          request_id: number | null
           updated_at: string
         }
         Insert: {
+          auto?: boolean
           created_at?: string
           created_by?: string | null
           day: string
@@ -7137,9 +7357,11 @@ export type Database = {
           minutes?: number
           note?: string | null
           paid?: boolean
+          request_id?: number | null
           updated_at?: string
         }
         Update: {
+          auto?: boolean
           created_at?: string
           created_by?: string | null
           day?: string
@@ -7150,6 +7372,7 @@ export type Database = {
           minutes?: number
           note?: string | null
           paid?: boolean
+          request_id?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -7169,6 +7392,109 @@ export type Database = {
           },
           {
             foreignKeyName: "time_off_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_off_entries_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "time_off_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_off_requests: {
+        Row: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_comment: string | null
+          direct: boolean
+          employee_id: number
+          ends_on: string
+          id: number
+          minutes_per_day: number
+          policy: string
+          reason: string
+          starts_on: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_comment?: string | null
+          direct?: boolean
+          employee_id: number
+          ends_on: string
+          id?: number
+          minutes_per_day: number
+          policy: string
+          reason: string
+          starts_on: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_comment?: string | null
+          direct?: boolean
+          employee_id?: number
+          ends_on?: string
+          id?: number
+          minutes_per_day?: number
+          policy?: string
+          reason?: string
+          starts_on?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_off_requests_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_off_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_off_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_off_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employee_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_off_requests_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"

@@ -13,7 +13,7 @@ import { useT } from "@/i18n/client";
 // OT: the regular hours per day (and per week) of each time-clock group, with history, on the Pay periods page
 // (next to Pay schedules). Office 10 h and Field 9 h to start; a person may have their own value on their Employee page.
 
-export type GroupHoursView = { id: number; group: string; daily: number; weekly: number | null; from: string; note: string | null };
+export type GroupHoursView = { id: number; group: string; daily: number; tolerance: number; from: string; note: string | null };
 
 export function GroupHoursPanel({ rows, today }: { rows: GroupHoursView[]; today: string }) {
   const t = useT();
@@ -21,7 +21,7 @@ export function GroupHoursPanel({ rows, today }: { rows: GroupHoursView[]; today
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
   const [group, setGroup] = useState<string>(CLOCK_GROUPS[0]);
-  const [v, setV] = useState<HoursInput>({ daily: "", weekly: "", from: today, note: "" });
+  const [v, setV] = useState<HoursInput>({ daily: "", tolerance: "", from: today, note: "" });
 
   if (!open)
     return (
@@ -48,14 +48,14 @@ export function GroupHoursPanel({ rows, today }: { rows: GroupHoursView[]; today
           {t("Close")}
         </button>
       </div>
-      <p className="mb-3 text-xs text-text-2">{t("Hours of a day past the group's limit are overtime (several shifts of a day add up first). The value in force on the day worked counts; a person can have their own on the Employee page.")}</p>
+      <p className="mb-3 text-xs text-text-2">{t("Overtime is per day only. Past the group's limit, up to the tolerance the extra minutes are not paid and are not overtime; past the tolerance the whole excess is overtime (several shifts of a day add up first). The value in force on the day worked counts; a person can have their own hours on the Employee page.")}</p>
       <dl className="mb-3 grid grid-cols-2 gap-2">
         {CLOCK_GROUPS.map((g) => {
           const c = current(g);
           return (
             <div key={g} className="rounded-xl border px-3 py-2">
               <dt className="text-[11px] text-text-2">{t(g)}</dt>
-              <dd className="text-sm font-semibold tabular-nums">{c ? hoursText(c.daily, c.weekly, t) : t("not set (9 h/day)")}</dd>
+              <dd className="text-sm font-semibold tabular-nums">{c ? hoursText(c.daily, c.tolerance, t) : t("not set (9 h/day)")}</dd>
               {c && <dd className="text-xs text-text-2">{t("since {date}", { date: formatDate(c.from) })}</dd>}
             </div>
           );
@@ -67,7 +67,7 @@ export function GroupHoursPanel({ rows, today }: { rows: GroupHoursView[]; today
           e.preventDefault();
           run(
             () => setGroupHoursAction(group, v),
-            () => setV({ daily: "", weekly: "", from: today, note: "" }),
+            () => setV({ daily: "", tolerance: "", from: today, note: "" }),
           );
         }}
       >
@@ -81,7 +81,7 @@ export function GroupHoursPanel({ rows, today }: { rows: GroupHoursView[]; today
             ))}
           </select>
         </label>
-        <HoursFields v={v} set={setV} submitLabel={t("Set hours")} pending={pending} />
+        <HoursFields v={v} set={setV} submitLabel={t("Set hours")} pending={pending} withTolerance />
       </form>
       {rows.length > 0 && (
         <ul className="mt-3 divide-y rounded-xl border text-[13px]">
@@ -89,7 +89,7 @@ export function GroupHoursPanel({ rows, today }: { rows: GroupHoursView[]; today
             <li key={r.id} className="flex items-center justify-between gap-2 px-3 py-2">
               <span className="min-w-0">
                 <span className="mr-1 rounded bg-muted px-1.5 text-[11px]">{t(r.group)}</span>
-                <b className="tabular-nums">{hoursText(r.daily, r.weekly, t)}</b> <span className="text-text-2">{t("from {date}", { date: formatDate(r.from) })}</span>
+                <b className="tabular-nums">{hoursText(r.daily, r.tolerance, t)}</b> <span className="text-text-2">{t("from {date}", { date: formatDate(r.from) })}</span>
                 {r.note && <span className="block truncate text-xs text-muted-foreground">{r.note}</span>}
               </span>
               <button

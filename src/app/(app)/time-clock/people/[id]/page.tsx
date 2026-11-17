@@ -12,10 +12,11 @@ import { recordsDb } from "@/lib/records/data";
 import { limitHours, splitDays, tripAt } from "@/lib/payroll/overtime";
 import { addDays } from "@/lib/schedule/dates";
 import { formatDistance } from "@/lib/time-clock/clock";
-import { approvalGroups, canApproveTimesheets, loadPendingCorrections } from "@/lib/time-clock/approval-status";
+import { approvalGroups, canApproveTimesheets, holdsIn, loadHolds, loadPendingCorrections } from "@/lib/time-clock/approval-status";
 import { approvalBlockers, approvalStatusOf, needsApproval } from "@/lib/time-clock/period-approval";
 import { loadPanel, panelPeople, panelRange, type EntryRow } from "@/lib/time-clock/person-load";
 import { personTotals, weekBlocks } from "@/lib/time-clock/person-sheet";
+import { bankHours } from "@/lib/time-clock/time-off-rules";
 import { formatHours, mondayOf, type Shift } from "@/lib/time-clock/timesheet";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
@@ -54,17 +55,17 @@ export default async function PersonPanelPage(props: PageProps<"/time-clock/peop
   const now = nowMs();
   // TS-c: Previous / Next walk the person's own group (an approver walks the Field).
   const [range, people, groups] = await Promise.all([panelRange(db, employeeId, day), panelPeople(db, group || (person.clock_group ?? "Field")), approvalGroups(db)]);
-  const [data, corrections] = await Promise.all([loadPanel(db, employeeId, range, now, today, person.clock_group), loadPendingCorrections(db, [employeeId], range.from, range.to)]);
+  const [data, corrections, holds] = await Promise.all([loadPanel(db, employeeId, range, now, today, person.clock_group), loadPendingCorrections(db, [employeeId], range.from, range.to), loadHolds(db, [employeeId], range.from, range.to)]);
   const required = needsApproval(person.clock_group, groups);
   const status = approvalStatusOf(data.approval);
   const locked = status === "Approved";
   const canApprove = canApproveTimesheets(user);
-  const totals = personTotals(data.days, data.limitFor);
+  const totals = personTotals(data.days, data.limitFor, data.stateFor);
   const blocks = weekBlocks(data.days);
   // OT: the limit shown is the one in force on the period's last day (or today inside it); each day uses its own.
   const limitDay = today >= range.from && today <= range.to ? today : range.to;
   const limit = data.limitFor(limitDay);
-  const overtimeByDay = new Map(splitDays(data.days.map((d) => ({ day: d.date, minutes: d.minutes })), data.limitFor).map((d) => [d.day, d.overtime]));
+  const overtimeByDay = new Map(splitDays(data.days.map((d) => ({ day: d.date, minutes: d.minutes })), data.limitFor, data.stateFor).map((d) => [d.day, d]));
   const tripTag = (date: string) => {
     const trip = tripAt(data.trips, date);
     return trip ? `+${Number(trip.premium_pct)}%` : null;
@@ -108,10 +109,10 @@ export default async function PersonPanelPage(props: PageProps<"/time-clock/peop
   };
   const views: DayView[] = data.days.map((d) => {
     const events: EventView[] = (data.events.get(d.date) ?? []).map((e) => ({ id: e.id, kind: e.kind, time: hhmm(e.at), project: e.project, loc: { place: e.place, lat: e.lat, lng: e.lng, distance: e.place !== "Office" && e.place !== "On site" ? formatDistance(e.distance_m) : "" } }));
-    return { date: d.date, dow: dow(d.date), label: formatDate(d.date).replace(/\/\d{4}$/, ""), minutes: d.minutes, shifts: d.shifts.map(toView), timeOff: d.timeOff, events, locked, isToday: d.date === today, isFuture: d.date > today, overtime: overtimeByDay.get(d.date) ?? 0, trip: tripTag(d.date) };
+    return { date: d.date, dow: dow(d.date), label: formatDate(d.date).replace(/\/\d{4}$/, ""), minutes: d.minutes, shifts: d.shifts.map(toView), timeOff: d.timeOff, events, locked, isToday: d.date === today, isFuture: d.date > today, overtime: overtimeByDay.get(d.date)?.excess ?? 0, overtimeState: overtimeByDay.get(d.date)?.state ?? null, trip: tripTag(d.date) };
   });
-  const totalsAfter = personTotals(data.days, data.limitFor);
-  const blockers = !required || locked ? [] : approvalBlockers({ toReview: totalsAfter.toReview, pendingCorrections: corrections.get(employeeId) ?? 0, endsOn: range.period?.ends_on ?? null, today });
+  const totalsAfter = totals;
+  const blockers = !required || locked ? [] : approvalBlockers({ toReview: totalsAfter.toReview, pendingCorrections: corrections.get(employeeId) ?? 0, endsOn: range.period?.ends_on ?? null, today, ...holdsIn(holds, employeeId, range.from, range.to) });
   const addDay = today >= range.from && today <= range.to ? today : range.to < today ? range.to : range.from;
 
   return (
@@ -184,17 +185,21 @@ export default async function PersonPanelPage(props: PageProps<"/time-clock/peop
       </div>
 
       {/* Totals (brief item 6). */}
-      <dl className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+      <dl className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           { k: tr("Regular"), v: formatHours(totals.regular) },
-          { k: limit.weekly === null ? tr("Overtime (over {h} h/day)", { h: limitHours(limit.daily) }) : tr("Overtime (over {h} h/day, {w} h/week)", { h: limitHours(limit.daily), w: limitHours(limit.weekly) }), v: formatHours(totals.overtime), warn: totals.overtime > 0 },
-          { k: tr("PTO"), v: formatHours(totals.pto) },
+          { k: tr("Overtime (over {h} h/day)", { h: limitHours(limit.daily) }), v: formatHours(totals.overtime), warn: totals.pending > 0, sub: [totals.pending > 0 && tr("{h} pending", { h: formatHours(totals.pending) }), totals.refused > 0 && tr("{h} refused", { h: formatHours(totals.refused) })].filter(Boolean).join(" · ") },
+          { k: tr("Time off paid"), v: formatHours(totals.pto) },
+          { k: tr("Time off unpaid"), v: formatHours(totals.unpaidOff) },
+          { k: tr("Absences without a request"), v: String(totals.absences), bad: totals.absences > 0 },
+          { k: tr("Time-off bank"), v: data.bankMinutes === null ? "–" : `${bankHours(data.bankMinutes)} h`, bad: data.bankMinutes !== null && data.bankMinutes < 0, sub: data.bankMinutes === null ? tr("no opening balance yet") : "" },
           { k: tr("Days worked"), v: String(totals.daysWorked) },
           { k: tr("Needs a look"), v: String(totals.toReview), warn: totals.toReview > 0 },
-        ].map((x) => (
-          <div key={x.k} className={cn("rounded-2xl border bg-card px-3 py-2 shadow-card", x.warn && "border-warn-fg/30 bg-warn-bg")}>
+        ].map((x: { k: string; v: string; warn?: boolean; bad?: boolean; sub?: string }) => (
+          <div key={x.k} className={cn("rounded-2xl border bg-card px-3 py-2 shadow-card", x.warn && "border-warn-fg/30 bg-warn-bg", x.bad && "border-bad-fg/30 bg-bad-bg")}>
             <dt className="text-[11px] text-text-2">{x.k}</dt>
-            <dd className={cn("text-lg font-semibold tabular-nums", x.warn && "text-warn-fg")}>{x.v}</dd>
+            <dd className={cn("text-lg font-semibold tabular-nums", x.warn && "text-warn-fg", x.bad && "text-bad-fg")}>{x.v}</dd>
+            {x.sub ? <dd className="text-[11px] text-text-2">{x.sub}</dd> : null}
           </div>
         ))}
       </dl>
@@ -234,7 +239,7 @@ export default async function PersonPanelPage(props: PageProps<"/time-clock/peop
                 {tr("Week of {date}", { date: formatDate(b.monday) })}
               </span>
               <span className="tabular-nums text-text-2">
-                {b.ptoMinutes > 0 && `${tr("PTO")} ${formatHours(b.ptoMinutes)} · `}
+                {b.ptoMinutes > 0 && `${tr("Time off paid")} ${formatHours(b.ptoMinutes)} · `}
                 <span className="font-semibold text-foreground">{formatHours(b.minutes)}</span>
               </span>
             </header>

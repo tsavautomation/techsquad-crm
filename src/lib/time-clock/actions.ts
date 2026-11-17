@@ -8,11 +8,14 @@ import { entryLocked, recordLockedCorrection } from "@/lib/payroll/lock";
 import { recordsDb } from "@/lib/records/data";
 import type { Geo } from "./clock";
 import { periodApprovedFor } from "./approval-status";
+import { addDays } from "@/lib/schedule/dates";
+import { todayET } from "@/lib/dates";
+import { syncAroundEntry, syncClockDays } from "./overtime-flow";
 import { myClockToday, recordEntry } from "./record";
 
 // P2 Time clock actions. Everyone records their own entries; people who may edit Employees correct them.
 
-export type ClockResult = { ok: true; place: string } | { ok: false; message: string };
+export type ClockResult = { ok: true; place: string; /** OT-b: the day ran over: the app asks for the justification now. */ justify?: { id: number; day: string; excess: number } } | { ok: false; message: string };
 
 const cleanGeo = (g: Geo | null): Geo | null =>
   g && Number.isFinite(g.lat) && Number.isFinite(g.lng) && Math.abs(g.lat) <= 90 && Math.abs(g.lng) <= 180 ? { lat: g.lat, lng: g.lng, accuracy_m: g.accuracy_m != null && Number.isFinite(g.accuracy_m) ? Math.round(Math.min(99_999, Math.max(0, g.accuracy_m))) : null } : null;
@@ -30,9 +33,21 @@ export async function clockAction(kind: "clock_in" | "clock_out", geo: Geo | nul
   if (!r.ok) return r;
   // F20: the day is over, so no visit of mine stays "On site".
   if (kind === "clock_out") await db.rpc("close_my_open_visits", { p_except: null, p_reason: "clock_out" });
+  // OT-b: the day is closed: when it ran past the limit and the tolerance, the technician justifies it now.
+  let justify: { id: number; day: string; excess: number } | undefined;
+  if (kind === "clock_out") {
+    try {
+      const today = todayET();
+      const sync = await syncClockDays([mine.employeeId], addDays(today, -1), today);
+      const row = sync.awaiting.filter((a) => a.employee_id === mine.employeeId).sort((a, b) => (a.day < b.day ? 1 : -1))[0];
+      if (row) justify = { id: row.id, day: row.day, excess: row.excess_minutes };
+    } catch (e) {
+      console.error("overtime sync:", e);
+    }
+  }
   revalidatePath("/");
   revalidatePath("/time-clock");
-  return { ok: true, place: r.entry.place };
+  return { ok: true, place: r.entry.place, justify };
 }
 
 /**
@@ -77,6 +92,7 @@ export async function correctEntryAction(id: number, time: string, reason?: stri
     .eq("id", id);
   if (error) return { ok: false, message: error.message };
   if (lock.locked) await recordLockedCorrection(db, user, id, reason!.trim());
+  await syncAroundEntry(id);
   revalidatePath("/time-clock");
   revalidatePath("/");
   return { ok: true };
@@ -92,6 +108,7 @@ export async function removeEntryAction(id: number, reason?: string): Promise<{ 
   const { error } = await db.from("time_entries").update({ deleted_at: new Date().toISOString(), corrected_at: new Date().toISOString(), corrected_by: user.id, note: lock.locked ? `Removed after the pay period was approved: ${reason!.trim()}` : undefined }).eq("id", id);
   if (error) return { ok: false, message: error.message };
   if (lock.locked) await recordLockedCorrection(db, user, id, reason!.trim());
+  await syncAroundEntry(id);
   revalidatePath("/time-clock");
   revalidatePath("/");
   return { ok: true };
@@ -112,6 +129,7 @@ export async function acceptSuggestedEndAction(id: number): Promise<{ ok: true }
     .select("id");
   if (error) return { ok: false, message: error.message };
   if (!data?.length) return { ok: false, message: "Entry not found." };
+  await syncAroundEntry(id);
   revalidatePath("/time-clock");
   revalidatePath("/time-clock/timesheets");
   return { ok: true };

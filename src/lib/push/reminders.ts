@@ -23,7 +23,7 @@ import { notifyPush } from "./send";
 export type ReminderRun = { arrival: number; clockOut: number; reports: number; skipped?: string };
 
 /** Logins by employee id: the Employee record's email is the login (users:sync keeps them equal). */
-async function loginsByEmployee(db: SupabaseClient, employeeIds: number[]): Promise<Map<number, string>> {
+export async function loginsByEmployee(db: SupabaseClient, employeeIds: number[]): Promise<Map<number, string>> {
   const ids = [...new Set(employeeIds)];
   if (!ids.length) return new Map();
   const { data: emps } = await db.from("employees").select("id, email").in("id", ids).is("deleted_at", null);

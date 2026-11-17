@@ -17,6 +17,21 @@ export const FieldDaySchema = z.object({
   scheduler_employee_id_electrical: z.number().int().positive().nullable().default(null),
   /** TS-c: the time-clock groups whose timesheets need the approval before Pay periods take them (the Field). */
   approval_groups: z.array(z.enum(["Field", "Office"])).default(["Field"]),
+  /** OT-b: which groups' overtime needs the weekly approval (the Field), from which day, and the hours to justify it. */
+  overtime: z
+    .object({
+      approval_groups: z.array(z.enum(["Field", "Office"])).default(["Field"]),
+      since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-17"),
+      justify_hours: z.number().int().min(1).max(240).default(48),
+    })
+    .prefault({}),
+  /** TO-a: from which day a weekday with no clock-in is an absence without a request, and the company holidays (never an absence, never taken from the bank). */
+  time_off: z
+    .object({
+      absences_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2026-11-17"),
+      holidays: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).default([]),
+    })
+    .prefault({}),
   /** Days until a return card is due, by Job Report › Reason. */
   return_days: z.record(z.string(), z.number().int().min(0).max(90)).default({}),
   /** Per Visit › Service type: checklist added to the visit at check-in, and tools to bring. */

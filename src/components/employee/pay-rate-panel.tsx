@@ -58,10 +58,10 @@ export async function PayRatePanel({ employeeId, user }: { employeeId: number; u
 
       <h3 className="mt-5 text-[14px] font-semibold tracking-tight">{tr("Regular hours")}</h3>
       <p className="text-sm">
-        <b className="tabular-nums">{hoursText(limit.daily, limit.weekly, tr)}</b>{" "}
+        <b className="tabular-nums">{hoursText(limit.daily, limit.tolerance, tr)}</b>{" "}
         <span className="text-text-2">{ownNow ? tr("this person's own value, since {date}; hours past it are overtime", { date: formatDate(ownNow.effective_from) }) : tr("the {group} group's value; set one below only if this person differs", { group: tr(group) })}</span>
       </p>
-      <PersonHoursForm employeeId={employeeId} today={today} rows={own.map((r) => ({ id: r.id, daily: r.daily_minutes, weekly: r.weekly_minutes, from: r.effective_from, note: r.note }))} />
+      <PersonHoursForm employeeId={employeeId} today={today} rows={own.map((r) => ({ id: r.id, daily: r.daily_minutes, from: r.effective_from, note: r.note }))} />
     </section>
   );
 }

@@ -6,6 +6,7 @@ import { fromDateTimeLocalET } from "@/lib/dates";
 import { recordsDb } from "@/lib/records/data";
 import { addDays } from "@/lib/schedule/dates";
 import { periodApprovedFor } from "./approval-status";
+import { syncClockDays } from "./overtime-flow";
 import { shiftSequenceProblem } from "./period-approval";
 
 // J-s Manual clock entries (Jessica via Fred 2026-10-26, "when someone forgets to clock in or out"): the office
@@ -78,6 +79,8 @@ export async function addManualShiftAction(input: { employeeId: number; day: str
     rows.map((r) => ({ employee_id: employeeId, user_id: user.id, kind: r.kind, at: r.at, place: "Unknown", note: reason ? `Added by ${who}: ${reason}` : `Added by ${who}`, corrected_at: stamp, corrected_by: user.id })),
   );
   if (error) return { ok: false, message: error.message };
+  // OT-b / TO-a: a completed clock-out may raise the overtime request now; a clock-in takes back an automatic absence.
+  await syncClockDays([employeeId], addDays(day, -1), day).catch((e) => console.error("overtime sync:", e));
   revalidatePath("/time-clock");
   revalidatePath("/time-clock/timesheets");
   return { ok: true, added: rows.map((r) => r.kind) };

@@ -5,6 +5,8 @@ import { todayET } from "@/lib/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { suggestDoneTasks } from "@/lib/ai/task-done";
 import { remindOpenTimesheets } from "@/lib/time-clock/approval-reminder";
+import { overtimeHourly, weeklyOvertimeNotice } from "@/lib/time-clock/overtime-flow";
+import { markAbsences } from "@/lib/time-clock/time-off-flow";
 import { googleHourly } from "@/lib/google/sync";
 import { backfillRecordPdfs } from "@/lib/files/record-pdf";
 import { reviewQueuedReports } from "@/lib/ai/review";
@@ -402,6 +404,32 @@ export async function tick(now: Date = new Date()): Promise<Record<string, unkno
     await deliverQueuedSms(db);
   } catch (e) {
     out.reports = { error: e instanceof Error ? e.message : String(e) };
+  }
+  // OT-b / TO-a: the overtime days follow the clock entries (and unanswered ones are refused after 48 h) every hour;
+  // Thursday from 8 AM the approver gets the week's single notice, Friday from 8 AM the backups hear about what is
+  // still undecided; and yesterday's weekday absences without a request are written once.
+  try {
+    const slot = etSlot(now);
+    if (await claimRun(db, keys.hourly.replace("hourly:", "overtime:"))) {
+      out.overtime = await overtimeHourly(now.getTime());
+      await finishRun(db, keys.hourly.replace("hourly:", "overtime:"), out.overtime as Record<string, unknown>);
+    }
+    const weekday = new Date(`${slot.date}T12:00:00Z`).getUTCDay();
+    if (weekday === 4 && Number(slot.hour) >= 8 && (await claimRun(db, `overtime_weekly:${slot.date}`))) {
+      out.overtime_weekly = await weeklyOvertimeNotice(slot.date);
+      await finishRun(db, `overtime_weekly:${slot.date}`, out.overtime_weekly as Record<string, unknown>);
+    }
+    if (weekday === 5 && Number(slot.hour) >= 8 && (await claimRun(db, `overtime_backup:${slot.date}`))) {
+      out.overtime_backup = await weeklyOvertimeNotice(slot.date, true);
+      await finishRun(db, `overtime_backup:${slot.date}`, out.overtime_backup as Record<string, unknown>);
+    }
+    const dayBefore = addDays(slot.date, -1);
+    if (Number(slot.hour) >= 1 && (await claimRun(db, `absences:${dayBefore}`))) {
+      out.absences = await markAbsences(dayBefore);
+      await finishRun(db, `absences:${dayBefore}`, out.absences as Record<string, unknown>);
+    }
+  } catch (e) {
+    out.overtime = { error: e instanceof Error ? e.message : String(e) };
   }
   // BK-a: tonight's copy of every table to OneDrive (from the configured hour; continues next tick if cut short).
   try {

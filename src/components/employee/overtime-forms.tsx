@@ -117,10 +117,10 @@ export function OvertimeRateForm({ employeeId, today, rates }: { employeeId: num
   );
 }
 
-export type HoursRowView = { id: number; daily: number; weekly: number | null; from: string; note: string | null };
+export type HoursRowView = { id: number; daily: number; from: string; note: string | null };
 
 /** The hours fields shared by the person's override and the group panel. */
-export function HoursFields({ v, set, submitLabel, pending }: { v: HoursInput; set: (v: HoursInput) => void; submitLabel: string; pending: boolean }) {
+export function HoursFields({ v, set, submitLabel, pending, withTolerance }: { v: HoursInput; set: (v: HoursInput) => void; submitLabel: string; pending: boolean; withTolerance?: boolean }) {
   const t = useT();
   return (
     <>
@@ -128,10 +128,12 @@ export function HoursFields({ v, set, submitLabel, pending }: { v: HoursInput; s
         <span className="mb-1 block text-xs text-text-2">{t("Hours per day")}</span>
         <input className={INPUT} type="number" inputMode="decimal" step="0.25" min="1" max="24" required placeholder="9" value={String(v.daily ?? "")} onChange={(e) => set({ ...v, daily: e.target.value })} />
       </label>
-      <label className="block">
-        <span className="mb-1 block text-xs text-text-2">{t("Hours per week (optional)")}</span>
-        <input className={INPUT} type="number" inputMode="decimal" step="0.25" min="1" max="168" placeholder={t("none")} value={String(v.weekly ?? "")} onChange={(e) => set({ ...v, weekly: e.target.value })} />
-      </label>
+      {withTolerance && (
+        <label className="block">
+          <span className="mb-1 block text-xs text-text-2">{t("Tolerance (min)")}</span>
+          <input className={INPUT} type="number" inputMode="numeric" step="1" min="0" max="120" placeholder="0" value={String(v.tolerance ?? "")} onChange={(e) => set({ ...v, tolerance: e.target.value })} />
+        </label>
+      )}
       <label className="block">
         <span className="mb-1 block text-xs text-text-2">{t("From")}</span>
         <input className={INPUT} type="date" required value={v.from} onChange={(e) => set({ ...v, from: e.target.value })} />
@@ -147,21 +149,21 @@ export function HoursFields({ v, set, submitLabel, pending }: { v: HoursInput; s
   );
 }
 
-export const hoursText = (daily: number, weekly: number | null, t: (s: string, v?: Record<string, string | number>) => string) => (weekly === null ? t("{h} h/day", { h: daily / 60 }) : t("{h} h/day · {w} h/week", { h: daily / 60, w: weekly / 60 }));
+export const hoursText = (daily: number, tolerance: number | null, t: (s: string, v?: Record<string, string | number>) => string) => (tolerance ? t("{h} h/day · {m} min tolerance", { h: daily / 60, m: tolerance }) : t("{h} h/day", { h: daily / 60 }));
 
 export function PersonHoursForm({ employeeId, today, rows }: { employeeId: number; today: string; rows: HoursRowView[] }) {
   const t = useT();
   const { pending, run } = useRun();
-  const [v, setV] = useState<HoursInput>({ daily: "", weekly: "", from: today, note: "" });
+  const [v, setV] = useState<HoursInput>({ daily: "", from: today, note: "" });
   return (
     <div className="mt-3 flex flex-col gap-3">
       <form
-        className="grid grid-cols-2 gap-2 sm:grid-cols-[7rem_9rem_11rem_1fr_auto]"
+        className="grid grid-cols-2 gap-2 sm:grid-cols-[7rem_11rem_1fr_auto]"
         onSubmit={(e) => {
           e.preventDefault();
           run(
             () => setPersonHoursAction(employeeId, v),
-            () => setV({ daily: "", weekly: "", from: today, note: "" }),
+            () => setV({ daily: "", from: today, note: "" }),
           );
         }}
       >
@@ -174,7 +176,7 @@ export function PersonHoursForm({ employeeId, today, rows }: { employeeId: numbe
         onRemove={(r) => run(() => deletePersonHoursAction(employeeId, r.id))}
         render={(r) => (
           <>
-            <b className="tabular-nums">{hoursText(r.daily, r.weekly, t)}</b> <span className="text-text-2">{t("from {date}", { date: formatDate(r.from) })}</span>
+            <b className="tabular-nums">{hoursText(r.daily, null, t)}</b> <span className="text-text-2">{t("from {date}", { date: formatDate(r.from) })}</span>
             {r.note && <span className="block truncate text-xs text-muted-foreground">{r.note}</span>}
           </>
         )}

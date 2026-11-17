@@ -18,6 +18,8 @@ export async function MyClock({ user, now }: { user: CurrentUser; now: number })
   const db = await recordsDb();
   const [mine, settings, tr] = await Promise.all([myClockToday(db, user, now), loadFieldDay(db), getT()]);
   if (!mine) return null;
+  // OT-b: my overtime days still waiting for my justification (I read only my own rows).
+  const { count: toJustify } = await db.from("overtime_days").select("id", { count: "exact", head: true }).eq("employee_id", mine.employeeId).eq("status", "awaiting_justification");
   const { day } = mine;
   const localNow = toDateTimeLocalET(new Date(now).toISOString()).slice(11, 16);
   return (
@@ -31,6 +33,7 @@ export async function MyClock({ user, now }: { user: CurrentUser; now: number })
       reminderPassed={pastTime(localNow, settings.time_clock.reminder[mine.group])}
       cutoffText={pastTime(localNow, settings.time_clock.cutoff) ? clock(settings.time_clock.cutoff) : null}
       office={settings.time_clock.office_lat !== null && settings.time_clock.office_lng !== null ? { lat: settings.time_clock.office_lat, lng: settings.time_clock.office_lng } : null}
+      toJustify={toJustify ?? 0}
       entries={day.entries.map((e) => ({ id: e.id, kind: e.kind, time: time(e.at), label: tr(KIND_LABEL[e.kind]), place: e.place, distance_m: e.distance_m, hasGeo: e.lat !== null }))}
     />
   );

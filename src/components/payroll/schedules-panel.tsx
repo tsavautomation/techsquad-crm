@@ -7,6 +7,13 @@ import { toast } from "sonner";
 import { savePayScheduleAction, type ScheduleInput } from "@/lib/payroll/actions";
 import { CYCLE_DAYS, describeRule, FREQUENCIES, WEEKDAYS, weekdayOf, type Frequency, type PayDayRule, type Schedule } from "@/lib/payroll/periods";
 import { formatDate } from "@/lib/dates";
+
+/** PC-a: "from 11/19/2026 the periods start on a Thursday". */
+function CycleChange({ s }: { s: Schedule }) {
+  const t = useT();
+  if (!s.reanchor_on) return null;
+  return <span className="block text-xs text-info-fg">{t("From {date} the periods start on a {weekday}; the period before ends the day before.", { date: formatDate(s.reanchor_on), weekday: t(WEEKDAYS[weekdayOf(s.reanchor_on)]) })}</span>;
+}
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
 
@@ -74,6 +81,9 @@ export function SchedulesPanel({ schedules, open: openFirst = false }: { schedul
             <button type="button" aria-label={t("Edit {name}", { name: s.name })} onClick={() => setDraft(toDraft(s))} className="inline-flex size-9 items-center justify-center rounded-lg hover:bg-muted">
               <Pencil className="size-4" aria-hidden />
             </button>
+            <span className="basis-full empty:hidden">
+              <CycleChange s={s} />
+            </span>
           </li>
         ))}
       </ul>

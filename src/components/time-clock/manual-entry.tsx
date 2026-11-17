@@ -23,9 +23,8 @@ export function ManualEntry({ people, defaultDay }: { people: { id: number; name
   const [inTime, setIn] = useState("");
   const [outTime, setOut] = useState("");
   const [reason, setReason] = useState("");
-  const [kind, setKind] = useState<TimeOffKind>("Day off");
-  const [paid, setPaid] = useState(true);
-  const [hours, setHours] = useState("8");
+  const [kind, setKind] = useState<TimeOffKind>("Paid absence");
+  const [hours, setHours] = useState("9");
   const box = "h-11 min-w-0 rounded-[10px] border bg-background px-3 text-base";
 
   if (!open)
@@ -43,7 +42,7 @@ export function ManualEntry({ people, defaultDay }: { people: { id: number; name
         if (employeeId === "") return toast.error(t("Pick the person."));
         start(async () => {
           if (mode === "time_off") {
-            const r = await setTimeOffAction({ employeeId, day, kind, paid: kind === "Unpaid" ? false : paid, hours, note: reason });
+            const r = await setTimeOffAction({ employeeId, day, kind, hours, note: reason });
             if (!r.ok) return void toast.error(t(r.message));
             toast.success(t("Time off added."));
             setReason("");
@@ -72,7 +71,7 @@ export function ManualEntry({ people, defaultDay }: { people: { id: number; name
           ))}
         </div>
       </div>
-      <p className="mb-3 text-xs text-text-2">{mode === "shift" ? t("For a forgotten clock-in or clock-out. Leave one time blank to complete a half shift; the entry is marked with your name.") : t("One day of time off. Paid hours count as PTO on Pay periods; Unpaid is never paid.")}</p>
+      <p className="mb-3 text-xs text-text-2">{mode === "shift" ? t("For a forgotten clock-in or clock-out. Leave one time blank to complete a half shift; the entry is marked with your name.") : t("One day of time off, entered directly. Both policies take the hours from the person's bank; only the paid one is paid at the closing.")}</p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value ? Number(e.target.value) : "")} aria-label={t("Person")} className={box} required>
           <option value="">{t("Person")}</option>
@@ -101,8 +100,6 @@ export function ManualEntry({ people, defaultDay }: { people: { id: number; name
             <label className="flex h-11 items-center gap-2 text-sm">
               <input type="number" inputMode="decimal" min={0} max={24} step="0.5" value={hours} onChange={(e) => setHours(e.target.value)} aria-label={t("Hours")} className={`${box} w-24`} required />
               {t("hours")}
-              <input type="checkbox" checked={kind === "Unpaid" ? false : paid} disabled={kind === "Unpaid"} onChange={(e) => setPaid(e.target.checked)} className="ml-2 size-5" />
-              {t("Paid")}
             </label>
             <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("Note (optional)")} aria-label={t("Note (optional)")} className={box} maxLength={300} />
           </>

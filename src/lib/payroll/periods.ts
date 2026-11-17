@@ -23,7 +23,16 @@ export function parsePayDayRule(value: unknown): PayDayRule {
   return r.success ? r.data : DEFAULT_PAY_DAY_RULE;
 }
 
-export type Schedule = { id: number; name: string; frequency: Frequency; anchor_on: string; pay_day_rule: PayDayRule; active: boolean };
+export type Schedule = {
+  id: number;
+  name: string;
+  frequency: Frequency;
+  anchor_on: string;
+  pay_day_rule: PayDayRule;
+  active: boolean;
+  /** PC-a: from this date on the cycle is counted from it (e.g. a Thursday); the period before it ends the day before, cut short. */
+  reanchor_on?: string | null;
+};
 
 export type Period = {
   schedule_id: number;
@@ -62,9 +71,13 @@ export function periodFor(schedule: Schedule, date: string, overrides: Overrides
   let ends_on: string;
   const cycle = CYCLE_DAYS[schedule.frequency];
   if (cycle) {
-    const k = Math.floor((dayNumber(date) - dayNumber(schedule.anchor_on)) / cycle);
-    starts_on = addDays(schedule.anchor_on, k * cycle);
+    // PC-a: after a cycle change the periods run from the new anchor; the last one before it is cut the day before.
+    const changed = schedule.reanchor_on && date >= schedule.reanchor_on;
+    const anchor = changed ? schedule.reanchor_on! : schedule.anchor_on;
+    const k = Math.floor((dayNumber(date) - dayNumber(anchor)) / cycle);
+    starts_on = addDays(anchor, k * cycle);
     ends_on = addDays(starts_on, cycle - 1);
+    if (!changed && schedule.reanchor_on && ends_on >= schedule.reanchor_on) ends_on = addDays(schedule.reanchor_on, -1);
   } else {
     starts_on = `${date.slice(0, 7)}-01`;
     ends_on = monthEnd(date);

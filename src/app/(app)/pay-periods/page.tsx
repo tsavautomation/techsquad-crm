@@ -13,6 +13,7 @@ import { loadOverrides, loadPeriod, loadSchedules, type LineApproval } from "@/l
 import { loadGroupHours } from "@/lib/payroll/overtime-load";
 import { describeRule, nextPeriod, payDayOf, periodEnded, periodFor, previousPeriod, recentPeriods } from "@/lib/payroll/periods";
 import { recordsDb } from "@/lib/records/data";
+import { bankHours } from "@/lib/time-clock/time-off-rules";
 import { formatHours } from "@/lib/time-clock/timesheet";
 import { getTable } from "@/registry";
 import { recordHref } from "@/registry/routes";
@@ -28,6 +29,8 @@ export async function generateMetadata() {
 // hours, paid PTO, the rate(s) in force, adjustments and the total; approve & lock; export CSV / Excel.
 // PS-a (Fred 2026-11-04): periods come from pay schedules (groups with their own anchor), not from fixed frequencies.
 // OT (Fred 2026-11-05): each line splits Regular / Overtime by the limit in force, pays the overtime rate and the work-trip premium.
+// PC-a (Fred 2026-11-17): the closing summary per person (regular, overtime approved / refused, time off paid / unpaid,
+// absences without a request, the bank at the period's end, trip days and premium) and what still blocks the approval.
 // Only the Job costing permission (the rule that protects pay rates) may open it. Nothing here goes to OneDrive.
 
 export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
@@ -61,7 +64,7 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
   const label = `${formatDate(period.starts_on)} – ${formatDate(period.ends_on)}`;
   const current = periodFor(schedule, today, overrides);
   const ended = periodEnded(period, today);
-  const disabledReason = data.locked ? null : !ended ? tr("Ends {date}: approve it after that", { date: formatDate(period.ends_on) }) : data.totals.toReview > 0 ? tr("{n} shifts still need a review", { n: data.totals.toReview }) : data.totals.unapproved > 0 ? tr("{n} timesheets not approved yet", { n: data.totals.unapproved }) : data.lines.length === 0 ? tr("Nobody on this pay schedule") : null;
+  const disabledReason = data.locked ? null : !ended ? tr("Ends {date}: approve it after that", { date: formatDate(period.ends_on) }) : data.totals.toReview > 0 ? tr("{n} shifts still need a review", { n: data.totals.toReview }) : data.totals.unapproved > 0 ? tr("{n} timesheets not approved yet", { n: data.totals.unapproved }) : data.totals.overtimePending > 0 ? tr("{n} overtime days not decided yet", { n: data.totals.overtimePending }) : data.totals.timeOffPending > 0 ? tr("{n} time-off requests pending", { n: data.totals.timeOffPending }) : data.lines.length === 0 ? tr("Nobody on this pay schedule") : null;
   const amount = (v: number | null) => (v === null ? "—" : money.format(v));
   const exportHref = (format: "csv" | "xlsx") => `/api/pay-periods/export?schedule=${schedule.id}&period=${period.starts_on}&format=${format}`;
 
@@ -122,7 +125,7 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
           Excel
         </a>
         <SchedulesPanel schedules={schedules} />
-        <GroupHoursPanel today={today} rows={groupHours.map((g) => ({ id: g.id, group: g.clock_group, daily: g.daily_minutes, weekly: g.weekly_minutes, from: g.effective_from, note: g.note }))} />
+        <GroupHoursPanel today={today} rows={groupHours.map((g) => ({ id: g.id, group: g.clock_group, daily: g.daily_minutes, tolerance: g.tolerance_minutes ?? 0, from: g.effective_from, note: g.note }))} />
       </div>
       <p className="mb-4 text-xs text-text-2">{tr("{name}: {frequency}, paid {rule}.", { name: schedule.name, frequency: tr(schedule.frequency), rule: describeRule(schedule.pay_day_rule, tr) })}</p>
 
@@ -137,6 +140,35 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
           <ApproveButton scheduleId={schedule.id} startsOn={period.starts_on} disabledReason={disabledReason} />
         )}
       </div>
+
+      {!data.locked && (data.totals.overtimePending > 0 || data.totals.timeOffPending > 0) && (
+        <section className="mb-4 rounded-2xl border border-warn-fg/30 bg-warn-bg px-[18px] py-3 shadow-card">
+          <h2 className="mb-1 flex items-center gap-1.5 text-[15px] font-semibold tracking-tight text-warn-fg">
+            <AlertTriangle className="size-4" aria-hidden />
+            {tr("Waiting before this period can be approved")}
+          </h2>
+          <ul className="grid gap-1 text-[13px]">
+            {data.totals.overtimePending > 0 && (
+              <li>
+                {tr("{n} overtime days waiting for the justification or the decision:", { n: data.totals.overtimePending })}{" "}
+                {data.lines.filter((l) => l.line.pendingDays.length > 0).map((l) => `${l.person.title} (${l.line.pendingDays.map((d) => formatDate(d).replace(/\/\d{4}$/, "")).join(", ")})`).join(" · ")}{" "}
+                <Link href="/time-clock/overtime" className="font-medium text-primary hover:underline">
+                  {tr("Decide on Overtime")}
+                </Link>
+              </li>
+            )}
+            {data.totals.timeOffPending > 0 && (
+              <li>
+                {tr("{n} time-off requests pending in the period:", { n: data.totals.timeOffPending })}{" "}
+                {data.lines.filter((l) => l.timeOffPending > 0).map((l) => l.person.title).join(" · ")}{" "}
+                <Link href="/time-clock/time-off" className="font-medium text-primary hover:underline">
+                  {tr("Answer on Time off")}
+                </Link>
+              </li>
+            )}
+          </ul>
+        </section>
+      )}
 
       {data.totals.toReview > 0 && !data.locked && (
         <section className="mb-4 rounded-2xl border border-warn-fg/30 bg-warn-bg px-[18px] py-3 shadow-card">
@@ -188,15 +220,27 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
                   </Link>
                   <span className="font-semibold tabular-nums">{amount(l.line.total)}</span>
                 </div>
-                <p className="mt-1 text-[13px] text-text-2">
-                  {tr("{n} h", { n: formatHours(l.line.minutes) })}
-                  {l.line.overtimeMinutes > 0 && ` · ${tr("overtime {n} h", { n: formatHours(l.line.overtimeMinutes) })}`}
-                  {l.line.ptoMinutes > 0 && ` · ${tr("PTO {n} h", { n: formatHours(l.line.ptoMinutes) })}`}
-                  {l.line.rateText && ` · ${l.line.rateText}`}
-                  {l.line.overtimeRateText && ` · ${tr("OT {rate}", { rate: l.line.overtimeRateText })}`}
-                  {l.line.premiumAmount !== 0 && ` · ${tr("trip {amount}", { amount: money.format(l.line.premiumAmount) })}`}
-                  {l.line.adjustments !== 0 && ` · ${tr("adjustments {amount}", { amount: money.format(l.line.adjustments) })}`}
-                </p>
+                <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[13px]">
+                  {(
+                    [
+                      [tr("Regular"), formatHours(l.line.regularMinutes)],
+                      [tr("Overtime approved"), l.line.overtimeMinutes ? formatHours(l.line.overtimeMinutes) : "–"],
+                      [tr("Overtime refused"), l.line.refusedMinutes ? formatHours(l.line.refusedMinutes) : "–"],
+                      [tr("Time off paid"), l.line.ptoMinutes ? formatHours(l.line.ptoMinutes) : "–"],
+                      [tr("Time off unpaid"), l.off.unpaidMinutes ? formatHours(l.off.unpaidMinutes) : "–"],
+                      [tr("Absences"), l.off.absenceDates.length ? String(l.off.absenceDates.length) : "–"],
+                      [tr("Bank"), l.off.bankMinutes === null ? "–" : `${bankHours(l.off.bankMinutes)} h`],
+                      [tr("Trip days"), l.line.tripDays ? String(l.line.tripDays) : "–"],
+                      [tr("Trip premium"), l.line.premiumAmount ? money.format(l.line.premiumAmount) : "–"],
+                      [tr("Adjustments"), l.line.adjustments ? money.format(l.line.adjustments) : "–"],
+                    ] as [string, string][]
+                  ).map(([k, v]) => (
+                    <div key={k} className="flex justify-between gap-2">
+                      <dt className="text-text-2">{k}</dt>
+                      <dd className="tabular-nums">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
                 <p className="mt-1">
                   <TimesheetCell approval={l.approval} tr={tr} />
                 </p>
@@ -212,14 +256,15 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
                 <tr className="border-b text-left text-xs text-text-2">
                   <th className="px-4 py-2.5 font-medium">{tr("Person")}</th>
                   <th className="px-3 py-2.5 font-medium">{tr("Timesheet")}</th>
-                  <th className="px-3 py-2.5 text-right font-medium">{tr("Hours")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{tr("Regular")}</th>
-                  <th className="px-3 py-2.5 text-right font-medium">{tr("Overtime")}</th>
-                  <th className="px-3 py-2.5 text-right font-medium">{tr("PTO")}</th>
-                  <th className="px-3 py-2.5 text-right font-medium">{tr("Rate")}</th>
-                  <th className="px-3 py-2.5 text-right font-medium">{tr("OT rate")}</th>
-                  <th className="px-3 py-2.5 text-right font-medium">{tr("Trip")}</th>
-                  <th className="px-3 py-2.5 text-right font-medium">{tr("Amount")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Overtime approved")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Overtime refused")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Time off paid")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Time off unpaid")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Absences")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Bank")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Trip days")}</th>
+                  <th className="px-3 py-2.5 text-right font-medium">{tr("Trip premium")}</th>
                   <th className="px-3 py-2.5 text-right font-medium">{tr("Adjustments")}</th>
                   <th className="px-4 py-2.5 text-right font-medium">{tr("Total")}</th>
                 </tr>
@@ -236,14 +281,26 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
                     <td className="px-3 py-2">
                       <TimesheetCell approval={l.approval} tr={tr} />
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{formatHours(l.line.minutes)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{formatHours(l.line.regularMinutes)}</td>
-                    <td className={cn("px-3 py-2 text-right tabular-nums", l.line.overtimeMinutes > 0 && "font-medium text-warn-fg")}>{l.line.overtimeMinutes ? formatHours(l.line.overtimeMinutes) : "–"}</td>
+                    <td className={cn("px-3 py-2 text-right tabular-nums", l.line.overtimeMinutes > 0 && "font-medium text-ok-fg")}>{l.line.overtimeMinutes ? formatHours(l.line.overtimeMinutes) : "–"}</td>
+                    <td className={cn("px-3 py-2 text-right tabular-nums", l.line.refusedMinutes > 0 && "text-bad-fg line-through")}>{l.line.refusedMinutes ? formatHours(l.line.refusedMinutes) : "–"}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{l.line.ptoMinutes ? formatHours(l.line.ptoMinutes) : "–"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{l.line.rateText || <span className="text-warn-fg">{tr("no rate")}</span>}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{l.line.overtimeMinutes === 0 ? "–" : l.line.missingOvertimeRateDays.length ? <span className="text-warn-fg">{tr("No overtime rate")}</span> : l.line.overtimeRateText}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{l.line.premiumAmount ? money.format(l.line.premiumAmount) : "–"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{amount(l.line.amount)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{l.off.unpaidMinutes ? formatHours(l.off.unpaidMinutes) : "–"}</td>
+                    <td className={cn("px-3 py-2 text-right tabular-nums", l.off.absenceDates.length > 0 && "font-medium text-bad-fg")} title={l.off.absenceDates.map((d) => formatDate(d)).join(", ")}>
+                      {l.off.absenceDates.length || "–"}
+                    </td>
+                    <td className={cn("px-3 py-2 text-right tabular-nums", l.off.bankMinutes !== null && l.off.bankMinutes < 0 && "font-medium text-bad-fg")}>{l.off.bankMinutes === null ? "–" : bankHours(l.off.bankMinutes)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{l.line.tripDays || "–"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {l.line.premiumAmount ? (
+                        <>
+                          {money.format(l.line.premiumRegular)}
+                          <span className="block text-[11px] text-text-2">{tr("+ {amount} on overtime", { amount: money.format(l.line.premiumOvertime) })}</span>
+                        </>
+                      ) : (
+                        "–"
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums">{l.line.adjustments ? money.format(l.line.adjustments) : "–"}</td>
                     <td className="px-4 py-2 text-right font-semibold tabular-nums">{amount(l.line.total)}</td>
                   </tr>
@@ -253,14 +310,15 @@ export default async function PayPeriodsPage(props: PageProps<"/pay-periods">) {
                 <tr className="border-t text-xs text-text-2">
                   <td className="px-4 py-2">{tr("{n} people", { n: data.lines.length })}</td>
                   <td className="px-3 py-2">{data.totals.unapproved > 0 ? <span className="text-warn-fg">{tr("{n} not approved", { n: data.totals.unapproved })}</span> : null}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{formatHours(data.totals.minutes)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{formatHours(data.totals.regularMinutes)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{data.totals.overtimeMinutes ? formatHours(data.totals.overtimeMinutes) : "–"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{data.totals.refusedMinutes ? formatHours(data.totals.refusedMinutes) : "–"}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{data.totals.ptoMinutes ? formatHours(data.totals.ptoMinutes) : "–"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{data.totals.unpaidOffMinutes ? formatHours(data.totals.unpaidOffMinutes) : "–"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{data.totals.absences || "–"}</td>
                   <td />
-                  <td className="px-3 py-2 text-right">{data.totals.missingOvertimeRate > 0 ? <span className="text-warn-fg">{tr("{n} without overtime rate", { n: data.totals.missingOvertimeRate })}</span> : null}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{data.totals.tripDays || "–"}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{data.totals.premiumAmount ? money.format(data.totals.premiumAmount) : "–"}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{amount(data.totals.amount)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{data.totals.adjustments ? money.format(data.totals.adjustments) : "–"}</td>
                   <td className="px-4 py-2 text-right font-semibold tabular-nums">{amount(data.totals.total)}</td>
                 </tr>
@@ -290,6 +348,12 @@ function TimesheetCell({ approval: a, tr }: { approval: LineApproval; tr: (s: st
 /** Under a person: days without a rate, shifts to review, adjustments paid here, corrections made after the lock. */
 function LineNotes({ line: l, tr }: { line: Awaited<ReturnType<typeof loadPeriod>>["lines"][number]; tr: (s: string, v?: Record<string, string | number>) => string }) {
   const notes: { tone: "warn" | "muted"; text: string }[] = [];
+  if (l.line.rateText) notes.push({ tone: "muted", text: l.line.overtimeRateText ? tr("Rate {rate} · overtime {ot}", { rate: l.line.rateText, ot: l.line.overtimeRateText }) : tr("Rate {rate}", { rate: l.line.rateText }) });
+  else if (l.line.minutes > 0 || l.line.ptoMinutes > 0) notes.push({ tone: "warn", text: tr("no rate") });
+  if (l.line.pendingDays.length) notes.push({ tone: "warn", text: tr("Overtime not decided on {dates} ({h} h, not paid yet)", { dates: l.line.pendingDays.map((d) => formatDate(d).replace(/\/\d{4}$/, "")).join(", "), h: formatHours(l.line.pendingMinutes) }) });
+  if (l.timeOffPending) notes.push({ tone: "warn", text: tr("{n} time-off requests pending", { n: l.timeOffPending }) });
+  if (l.off.absenceDates.length) notes.push({ tone: "warn", text: tr("Absent without a request on {dates}", { dates: l.off.absenceDates.map((d) => formatDate(d).replace(/\/\d{4}$/, "")).join(", ") }) });
+  if (l.line.droppedMinutes > 0) notes.push({ tone: "muted", text: tr("{h} h inside the daily tolerance: not paid", { h: formatHours(l.line.droppedMinutes) }) });
   if (l.line.missingRateDays.length) notes.push({ tone: "warn", text: tr("No pay rate on {dates}: amount incomplete", { dates: l.line.missingRateDays.map((d) => formatDate(d)).join(", ") }) });
   if (l.line.toReview) notes.push({ tone: "warn", text: tr("{n} shifts need a review", { n: l.line.toReview }) });
   if (l.line.missingOvertimeRateDays.length) notes.push({ tone: "warn", text: tr("No overtime rate on {dates}: overtime paid at the pay rate", { dates: l.line.missingOvertimeRateDays.map((d) => formatDate(d)).join(", ") }) });

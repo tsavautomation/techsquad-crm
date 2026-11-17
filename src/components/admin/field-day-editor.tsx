@@ -73,6 +73,39 @@ export function FieldDayEditor({ initial, people, reasons, services }: { initial
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{t("The other groups go to Pay periods directly.")}</p>
         </fieldset>
+        {/* OT-b: whose overtime needs the weekly approval, from when, and the hours the technician has to justify it. */}
+        <fieldset className="mt-3">
+          <legend className="text-sm font-medium">{t("Overtime that needs the weekly approval")}</legend>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {(["Field", "Office"] as const).map((g) => (
+              <label key={g} className="inline-flex h-11 items-center gap-2 rounded-lg border px-3 text-sm">
+                <input type="checkbox" className="size-5" checked={s.overtime.approval_groups.includes(g)} onChange={(e) => setS({ ...s, overtime: { ...s.overtime, approval_groups: e.target.checked ? [...s.overtime.approval_groups, g] : s.overtime.approval_groups.filter((x) => x !== g) } })} />
+                {t(g)}
+              </label>
+            ))}
+            <label className="inline-flex items-center gap-2 text-sm">
+              {t("from")}
+              <input type="date" className={`${BOX} h-11 w-44`} value={s.overtime.since} onChange={(e) => setS({ ...s, overtime: { ...s.overtime, since: e.target.value || s.overtime.since } })} />
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm">
+              {t("hours to justify")}
+              <input type="number" min={1} max={240} className={`${BOX} h-11 w-24`} value={s.overtime.justify_hours} onChange={(e) => setS({ ...s, overtime: { ...s.overtime, justify_hours: Math.max(1, Math.min(240, Number(e.target.value) || 48)) } })} />
+            </label>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("The other groups' overtime is paid without approval. The daily limit and the tolerance of each group are on Pay periods › Regular hours.")}</p>
+        </fieldset>
+        {/* TO-a: from when a weekday with no clock-in is an absence, and the company holidays. */}
+        <fieldset className="mt-3">
+          <legend className="text-sm font-medium">{t("Absences without a request")}</legend>
+          <label className="mt-1 inline-flex items-center gap-2 text-sm">
+            {t("counted from")}
+            <input type="date" className={`${BOX} h-11 w-44`} value={s.time_off.absences_since} onChange={(e) => setS({ ...s, time_off: { ...s.time_off, absences_since: e.target.value || s.time_off.absences_since } })} />
+          </label>
+          <label className="mt-2 block text-sm font-medium">
+            {t("Company holidays (one date per line, YYYY-MM-DD): never an absence, never taken from the bank")}
+            <textarea className={`${BOX} mt-1 min-h-24 py-2`} value={s.time_off.holidays.join("\n")} onChange={(e) => setS({ ...s, time_off: { ...s.time_off, holidays: e.target.value.split(/\s+/).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)) } })} placeholder="2026-11-26" />
+          </label>
+        </fieldset>
         <h3 className="mt-4 mb-2 text-sm font-medium">{t("Days until the card is due, by reason")}</h3>
         <div className="grid gap-2 sm:grid-cols-2">
           {reasons.map((r) => (

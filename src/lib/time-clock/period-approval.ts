@@ -33,10 +33,12 @@ export const approvalLocked = (row: Pick<ApprovalRow, "status"> | null | undefin
 export const needsApproval = (group: string | null | undefined, approvalGroups: readonly string[]) => approvalGroups.includes(group ?? "Field");
 
 /** Why a period cannot be approved yet (translated on screen with t()). */
-export type Blocker = "review" | "corrections" | "not_ended" | "no_schedule";
+export type Blocker = "review" | "corrections" | "overtime" | "time_off" | "not_ended" | "no_schedule";
 export const BLOCKER_TEXT: Record<Blocker, string> = {
   review: "Shifts need a look",
   corrections: "Correction requests pending",
+  overtime: "Overtime not decided",
+  time_off: "Time-off request pending",
   not_ended: "The period has not ended",
   no_schedule: "No pay schedule",
 };
@@ -45,12 +47,14 @@ export const BLOCKER_TEXT: Record<Blocker, string> = {
  * What stands between a person's period and its approval, in the order the office should clear them.
  * `toReview` counts the shifts under Needs a look, a forgotten clock-out that still counts 0 (TS-a) among them.
  */
-export function approvalBlockers(p: { toReview: number; pendingCorrections: number; endsOn: string | null; today: string }): Blocker[] {
+export function approvalBlockers(p: { toReview: number; pendingCorrections: number; endsOn: string | null; today: string; /** OT-b / TO-a: overtime days not decided and time-off requests pending inside the period. */ overtimeOpen?: number; timeOffPending?: number }): Blocker[] {
   const out: Blocker[] = [];
   if (p.endsOn === null) return ["no_schedule"];
   if (p.endsOn >= p.today) out.push("not_ended");
   if (p.toReview > 0) out.push("review");
   if (p.pendingCorrections > 0) out.push("corrections");
+  if ((p.overtimeOpen ?? 0) > 0) out.push("overtime");
+  if ((p.timeOffPending ?? 0) > 0) out.push("time_off");
   return out;
 }
 

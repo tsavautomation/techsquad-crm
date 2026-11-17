@@ -2,7 +2,8 @@
 // person's days over a period (their pay-schedule period, or the week), grouped in week blocks with a
 // subtotal, and the totals at the top (regular, overtime over 9 h/day, PTO, days worked).
 // Tests: tests/ts-person-sheet.test.ts.
-import { DEFAULT_DAILY_MIN, splitDays, type DayLimit } from "@/lib/payroll/overtime";
+import { DEFAULT_DAILY_MIN, splitDays, type DayLimit, type OvertimeState } from "@/lib/payroll/overtime";
+import { ABSENCE } from "./time-off-rules";
 import { addDays } from "@/lib/schedule/dates";
 import { mondayOf, shiftsOf, type SheetEntry, type Shift } from "./timesheet";
 
@@ -16,10 +17,16 @@ export type PersonTotals = {
   minutes: number;
   /** Up to the daily (and weekly) limit in force. */
   regular: number;
-  /** OT: past the limit in force on each day (9 h when nothing is set). */
+  /** OT: the excess past the limit in force on each day, once it passes the tolerance (whatever its state). */
   overtime: number;
+  /** OT-b: of that, what was refused and what still waits. */
+  refused: number;
+  pending: number;
   /** Paid time off. */
   pto: number;
+  /** TO-a: unpaid time off (requested) and the absences without a request. */
+  unpaidOff: number;
+  absences: number;
   daysWorked: number;
   toReview: number;
 };
@@ -53,17 +60,21 @@ export function weekBlocks(days: PersonDay[]): WeekBlock[] {
   return out;
 }
 
-const NINE: DayLimit = { daily: DEFAULT_DAILY_MIN, weekly: null };
+const NINE: DayLimit = { daily: DEFAULT_DAILY_MIN, tolerance: 0 };
 
 /** The figures at the top of the panel. Overtime is whatever a day has past the limit in force (OT: per group / person). */
-export function personTotals(days: PersonDay[], limitFor: (day: string) => DayLimit = () => NINE): PersonTotals {
+export function personTotals(days: PersonDay[], limitFor: (day: string) => DayLimit = () => NINE, stateFor?: (day: string) => OvertimeState | null): PersonTotals {
   const minutes = days.reduce((n, d) => n + d.minutes, 0);
-  const overtime = splitDays(days.map((d) => ({ day: d.date, minutes: d.minutes })), limitFor).reduce((n, d) => n + d.overtime, 0);
+  const split = splitDays(days.map((d) => ({ day: d.date, minutes: d.minutes })), limitFor, stateFor);
   return {
     minutes,
-    regular: minutes - overtime,
-    overtime,
+    regular: split.reduce((n, d) => n + d.regular, 0),
+    overtime: split.reduce((n, d) => n + d.excess, 0),
+    refused: split.reduce((n, d) => n + d.refused, 0),
+    pending: split.reduce((n, d) => n + d.pending, 0),
     pto: days.reduce((n, d) => n + (d.timeOff?.paid ? d.timeOff.minutes : 0), 0),
+    unpaidOff: days.reduce((n, d) => n + (d.timeOff && !d.timeOff.paid && d.timeOff.kind !== ABSENCE ? d.timeOff.minutes : 0), 0),
+    absences: days.filter((d) => d.timeOff?.kind === ABSENCE).length,
     daysWorked: days.filter((d) => d.minutes > 0).length,
     toReview: days.reduce((n, d) => n + d.toReview, 0),
   };

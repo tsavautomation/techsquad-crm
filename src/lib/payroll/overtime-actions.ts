@@ -58,14 +58,15 @@ export async function deleteOvertimeRateAction(employeeId: number, rateId: numbe
 
 const HoursInput = z.object({
   daily: z.coerce.number().min(1, "Give the regular hours per day.").max(24, "A day has 24 hours."),
-  weekly: z.union([z.literal(""), z.coerce.number().min(1).max(168, "A week has 168 hours.")]).optional(),
+  /** Group only: minutes past the limit that are neither paid nor overtime. */
+  tolerance: z.union([z.literal(""), z.coerce.number().int().min(0).max(120, "The tolerance is at most 120 minutes.")]).optional(),
   from: z.string().regex(DATE, "Pick the date it starts."),
   note: z.string().trim().max(200).optional(),
 });
 export type HoursInput = z.input<typeof HoursInput>;
 
 function hoursRow(v: z.output<typeof HoursInput>) {
-  return { daily_minutes: Math.round(v.daily * 60), weekly_minutes: v.weekly === "" || v.weekly === undefined ? null : Math.round(v.weekly * 60), effective_from: v.from, note: v.note || null };
+  return { daily_minutes: Math.round(v.daily * 60), effective_from: v.from, note: v.note || null };
 }
 
 export async function setGroupHoursAction(group: string, input: HoursInput): Promise<Result> {
@@ -75,7 +76,7 @@ export async function setGroupHoursAction(group: string, input: HoursInput): Pro
   const parsed = HoursInput.safeParse(input);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
   const db = await recordsDb();
-  const { error } = await db.from("clock_group_hours").upsert({ clock_group: group, ...hoursRow(parsed.data), created_by: me.id }, { onConflict: "clock_group,effective_from" });
+  const { error } = await db.from("clock_group_hours").upsert({ clock_group: group, ...hoursRow(parsed.data), tolerance_minutes: parsed.data.tolerance === "" || parsed.data.tolerance === undefined ? 0 : parsed.data.tolerance, created_by: me.id }, { onConflict: "clock_group,effective_from" });
   if (error) return dbError(error.message);
   revalidatePath("/pay-periods");
   revalidatePath("/time-clock", "layout");

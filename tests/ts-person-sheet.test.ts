@@ -54,7 +54,7 @@ describe("the person's days", () => {
   });
 
   it("totals regular, overtime past 9 h a day, PTO and the days worked", () => {
-    expect(personTotals(days)).toEqual({ minutes: 1350, regular: 1290, overtime: 60, pto: 480, daysWorked: 3, toReview: 1 });
+    expect(personTotals(days)).toEqual({ minutes: 1350, regular: 1290, overtime: 60, refused: 0, pending: 0, pto: 480, unpaidOff: 480, absences: 0, daysWorked: 3, toReview: 1 });
   });
 });
 

@@ -61,7 +61,7 @@ describe("return cards", () => {
   });
 
   it("falls back to empty settings when the stored value is broken", () => {
-    expect(parseFieldDay({ scheduler_employee_id: "Jessica" })).toEqual({ scheduler_employee_id: null, scheduler_employee_id_electrical: null, approval_groups: ["Field"], return_days: {}, service_lists: {}, time_clock: expect.objectContaining({ radius_m: 150, start_time: "08:00" }), report_rule: { mode: "off", since: null, threshold_min: 30, grace_min: 15 } });
+    expect(parseFieldDay({ scheduler_employee_id: "Jessica" })).toEqual({ scheduler_employee_id: null, scheduler_employee_id_electrical: null, approval_groups: ["Field"], overtime: { approval_groups: ["Field"], since: "2026-11-17", justify_hours: 48 }, time_off: { absences_since: "2026-11-17", holidays: [] }, return_days: {}, service_lists: {}, time_clock: expect.objectContaining({ radius_m: 150, start_time: "08:00" }), report_rule: { mode: "off", since: null, threshold_min: 30, grace_min: 15 } });
   });
 
   it("writes the card's details, flagging a 2nd partial in a row", () => {

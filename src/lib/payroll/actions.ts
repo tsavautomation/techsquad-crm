@@ -33,13 +33,16 @@ export async function approvePeriodAction(scheduleId: number, startsOn: string, 
   if (data.totals.toReview > 0) return { ok: false, message: "Some shifts still need a review. Open each one from the list and correct it or mark it reviewed." };
   // TS-c: the Field enters the period only once each person's timesheet is approved.
   if (data.totals.unapproved > 0) return { ok: false, message: "Some timesheets are not approved yet. Approve them on Time clock › Timesheets first." };
+  // PC-a: overtime not decided yet and time-off requests still pending inside the period block it too.
+  if (data.totals.overtimePending > 0) return { ok: false, message: "Some overtime days are not decided yet. Decide them on Time clock › Overtime first." };
+  if (data.totals.timeOffPending > 0) return { ok: false, message: "Some time-off requests are still pending in this period. Answer them on Time clock › Time off first." };
   if (!data.lines.length) return { ok: false, message: "Nobody is on this pay schedule." };
 
   const { data: created, error } = await db.from("pay_periods").insert({ schedule_id: scheduleId, frequency: schedule.frequency, starts_on: period.starts_on, ends_on: period.ends_on, pay_day: period.pay_day, approved_by: me.id, note: note.trim() || null }).select("id").single();
   if (error) return { ok: false, message: /row-level security/i.test(error.message) ? DENIED_MESSAGE : error.message };
   const periodId = (created as { id: number }).id;
   const { error: le } = await db.from("pay_period_lines").insert(
-    data.lines.map((l) => ({ period_id: periodId, employee_id: l.person.id, minutes: l.line.minutes, pto_minutes: l.line.ptoMinutes, rate_text: l.line.rateText || null, amount: l.line.amount, adjustments: l.line.adjustments, flagged: l.shifts.filter((s) => s.flags.length).length, regular_minutes: l.line.regularMinutes, overtime_minutes: l.line.overtimeMinutes, overtime_rate_text: l.line.overtimeRateText || null, premium_amount: l.line.premiumAmount })),
+    data.lines.map((l) => ({ period_id: periodId, employee_id: l.person.id, minutes: l.line.minutes, pto_minutes: l.line.ptoMinutes, rate_text: l.line.rateText || null, amount: l.line.amount, adjustments: l.line.adjustments, flagged: l.shifts.filter((s) => s.flags.length).length, regular_minutes: l.line.regularMinutes, overtime_minutes: l.line.overtimeMinutes, overtime_rate_text: l.line.overtimeRateText || null, premium_amount: l.line.premiumAmount, overtime_refused_minutes: l.line.refusedMinutes, unpaid_off_minutes: l.off.unpaidMinutes, absence_count: l.off.absenceDates.length, absence_dates: l.off.absenceDates.join(" ") || null, bank_minutes: l.off.bankMinutes, trip_days: l.line.tripDays, premium_regular: l.line.premiumRegular, premium_overtime: l.line.premiumOvertime })),
   );
   if (le) return { ok: false, message: le.message };
   // Lock the clock entries whose shift falls in the period (both ends of each shift).

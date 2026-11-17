@@ -110,8 +110,8 @@ describe("the pay line", () => {
 
   it("writes an Excel-friendly CSV", () => {
     const csv = periodCsv([{ name: "Gurgel, Carlos", frequency: "Biweekly", period: "10/12/2026 – 10/25/2026", line: payLine([shift("2026-10-12", 525)], rates) }]);
-    expect(csv.startsWith("﻿Name,Pay schedule,Period,Hours,Regular hours,Overtime hours,PTO hours,Rate,Overtime rate,Trip premium,Amount,Adjustments,Total,Needs review,Timesheet,Approved by\r\n")).toBe(true);
-    expect(csv).toContain('"Gurgel, Carlos",Biweekly,10/12/2026 – 10/25/2026,8.75,8.75,0,0,$25.00,,0,218.75,0,218.75,0,,');
+    expect(csv.startsWith("\uFEFFName,Pay schedule,Period,Regular hours,Overtime approved,Overtime refused ($0),Time off paid (h),Time off unpaid (h),Absences without request,Absence dates,Bank balance (h),Trip days,Trip premium on regular,Trip premium on overtime,Rate,Overtime rate,Amount,Adjustments,Total,Needs review,Timesheet,Approved by\r\n")).toBe(true);
+    expect(csv).toContain('"Gurgel, Carlos",Biweekly,10/12/2026 – 10/25/2026,8.75,0,0,0,0,0,,,0,0,0,$25.00,,218.75,0,218.75,0,,');
     expect(hours(525)).toBe(8.75);
   });
 });

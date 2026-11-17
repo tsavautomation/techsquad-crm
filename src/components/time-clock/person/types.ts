@@ -1,4 +1,5 @@
 import type { EntryKind, Place } from "@/lib/time-clock/clock";
+import type { OvertimeState } from "@/lib/payroll/overtime";
 import type { DayOff } from "@/lib/time-clock/person-sheet";
 import type { ShiftFlag } from "@/lib/time-clock/timesheet";
 
@@ -50,8 +51,9 @@ export type DayView = {
   events: EventView[];
   /** TS-c: the period is approved → read-only. */
   locked: boolean;
-  /** OT: minutes of the day past the limit in force. */
+  /** OT: the day's overtime (the excess past the limit, once it passes the tolerance) and what the pay does with it. */
   overtime: number;
+  overtimeState: OvertimeState | null;
   /** OT: "+20%" when the day is inside a work trip. */
   trip: string | null;
   isToday: boolean;

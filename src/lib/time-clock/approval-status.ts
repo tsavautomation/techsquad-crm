@@ -7,6 +7,7 @@ import { loadAssignments, loadOverrides, loadSchedules } from "@/lib/payroll/loa
 import { periodFor, scheduleInForce, type Period, type Schedule } from "@/lib/payroll/periods";
 import { addDays } from "@/lib/schedule/dates";
 import { needsApproval, type ApprovalRow } from "./period-approval";
+import { OPEN_STATUSES } from "./overtime-rules";
 
 // TS-c: what the screens and the actions read about a person's period approval (the pure rules are in
 // period-approval.ts).
@@ -62,6 +63,21 @@ export async function loadPendingCorrections(db: SupabaseClient, employeeIds: nu
   for (const id of employeeIds) out.set(id, 0);
   for (const c of (data ?? []) as { employee_id: number }[]) out.set(c.employee_id, (out.get(c.employee_id) ?? 0) + 1);
   return out;
+}
+
+/** OT-b / TO-a: what else holds a period: overtime days still open and time-off requests pending, by person, in [from, to]. */
+export type Holds = { overtime: { employee_id: number; day: string }[]; timeOff: { employee_id: number; starts_on: string; ends_on: string }[] };
+export async function loadHolds(db: SupabaseClient, employeeIds: number[], from: string, to: string): Promise<Holds> {
+  if (!employeeIds.length) return { overtime: [], timeOff: [] };
+  const [{ data: ot }, { data: off }] = await Promise.all([
+    db.from("overtime_days").select("employee_id, day").in("employee_id", employeeIds).in("status", OPEN_STATUSES).gte("day", from).lte("day", to),
+    db.from("time_off_requests").select("employee_id, starts_on, ends_on").in("employee_id", employeeIds).eq("status", "pending").lte("starts_on", to).gte("ends_on", from),
+  ]);
+  return { overtime: (ot ?? []) as Holds["overtime"], timeOff: (off ?? []) as Holds["timeOff"] };
+}
+/** How many of each hold fall in one person's period. */
+export function holdsIn(h: Holds, employeeId: number, from: string, to: string): { overtimeOpen: number; timeOffPending: number } {
+  return { overtimeOpen: h.overtime.filter((o) => o.employee_id === employeeId && o.day >= from && o.day <= to).length, timeOffPending: h.timeOff.filter((r) => r.employee_id === employeeId && r.starts_on <= to && r.ends_on >= from).length };
 }
 
 /** True when this person's approved period contains `day`, so its entries are locked. */

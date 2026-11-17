@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Clock, Loader2, LogIn, LogOut, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { clockAction } from "@/lib/time-clock/actions";
 import { formatDistance, tooFar, type Geo, type Place, type TimeEntry } from "@/lib/time-clock/clock";
+import { formatHours } from "@/lib/time-clock/timesheet";
+import { JustifyForm } from "./justify-form";
 import { FarAwayDialog } from "@/components/field-day/far-away-dialog";
 import { currentPosition } from "@/lib/time-clock/geo-client";
 import { cn } from "@/lib/utils";
@@ -28,16 +31,20 @@ type Props = {
   cutoffText?: string | null;
   /** F29: the office position (Admin › Field day); a clock-in over 1000 ft from it first asks. */
   office?: Geo | null;
+  /** OT-b: overtime days of mine still waiting for my justification. */
+  toJustify?: number;
 };
 
 const PLACE_TONE: Record<Place, string> = { Office: "text-info-fg", "On site": "text-ok-fg", Elsewhere: "text-warn-fg", Unknown: "text-muted-foreground" };
 
-export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSiteText, reminderPassed, cutoffText, office = null }: Props) {
+export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSiteText, reminderPassed, cutoffText, office = null, toJustify = 0 }: Props) {
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [locating, setLocating] = useState(false);
   const [farAway, setFarAway] = useState<{ distanceM: number; geo: Geo | null } | null>(null);
+  // OT-b: the day ran past the limit: the justification is asked right at the clock-out.
+  const [justify, setJustify] = useState<{ id: number; day: string; excess: number } | null>(null);
 
   const press = (kind: "clock_in" | "clock_out", confirmed = false, known: Geo | null = null) =>
     start(async () => {
@@ -52,6 +59,7 @@ export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSi
       if (!r.ok) return void toast.error(t(r.message));
       const place = r.place as Place;
       toast.success(kind === "clock_in" ? t("Clocked in · {place}", { place: t(place === "Unknown" ? "no location" : place) }) : t("Clocked out · {place}", { place: t(place === "Unknown" ? "no location" : place) }));
+      if (r.justify) setJustify(r.justify);
       router.refresh();
     });
 
@@ -95,6 +103,26 @@ export function ClockCard({ openSince, entries, openSinceTime, clockedText, onSi
             </li>
           ))}
         </ol>
+      )}
+      {justify ? (
+        <div className="mt-3 rounded-xl border border-warn-fg/40 bg-warn-bg p-3">
+          <p className="mb-2 text-[13px] font-medium text-warn-fg">{t("Your day ran +{excess} over. Write why (required): the approver decides if these hours are paid.", { excess: formatHours(justify.excess) })}</p>
+          <JustifyForm id={justify.id} onDone={() => setJustify(null)} autoFocus />
+          <button type="button" onClick={() => setJustify(null)} className="mt-2 text-xs text-text-2 underline underline-offset-4">
+            {t("Later (it stays waiting for your justification)")}
+          </button>
+        </div>
+      ) : (
+        <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-2 text-[13px]">
+          <Link href="/my-time" className="font-medium text-primary hover:underline">
+            {t("My time: overtime, time off, bank")}
+          </Link>
+          {toJustify > 0 && (
+            <Link href="/my-time" className="rounded bg-warn-bg px-1.5 py-0.5 text-xs font-medium text-warn-fg hover:underline">
+              {t("{n} overtime days to justify", { n: toJustify })}
+            </Link>
+          )}
+        </p>
       )}
       {farAway && (
         <FarAwayDialog
