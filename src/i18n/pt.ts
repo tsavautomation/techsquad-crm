@@ -3057,4 +3057,13 @@ export const PT: Record<string, string> = {
   "Some overtime days are not decided yet. Decide them on Time clock › Overtime first.": "Alguns dias de hora extra ainda não foram decididos. Decida em Time clock › Overtime primeiro.",
   "Some time-off requests are still pending in this period. Answer them on Time clock › Time off first.": "Ainda há pedidos de folga pendentes neste período. Responda em Time clock › Time off primeiro.",
   "Your login isn't linked to an Employee record (same email). Ask the office to fix the employee's email.": "Seu login não está ligado a um registro de Employee (mesmo e-mail). Peça ao escritório para corrigir o e-mail do funcionário.",
+  // SS-a On site from the stays, system Left the job, Add missing entry (Fred 2026-11-18)
+  "Visit with no exit": "Visita sem saída",
+  "arrived {time}": "chegou {time}",
+  "The system writes Left the job at the clock-out or at the next job; add it by hand below if the time is known.": "O sistema grava a saída (Left the job) no clock-out ou na próxima obra; lance à mão abaixo se o horário for conhecido.",
+  "Add missing entry": "Lançar registro faltando",
+  "Pick the job.": "Escolha a obra.",
+  "Entry added.": "Registro lançado.",
+  "No visit on this day": "Nenhuma visita neste dia",
+  "Unknown step.": "Etapa desconhecida.",
 };

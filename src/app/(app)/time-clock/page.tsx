@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Lock, MapPin } from "lucide-react";
 import { AlertTriangle } from "lucide-react";
 import { ClockTabs } from "@/components/time-clock/clock-tabs";
 import { AcceptSuggested } from "@/components/time-clock/accept-suggested";
+import { AddMissingEntry } from "@/components/time-clock/add-missing-entry";
 import { EntryTools } from "@/components/time-clock/entry-tools";
 import { ReviewButton } from "@/components/time-clock/review-button";
 import { requireUser } from "@/lib/auth/session";
@@ -25,6 +26,9 @@ export async function generateMetadata() {
 }
 
 // P2: the office's view of the time clock, one day at a time, per person; corrections for employee editors.
+// SS-a (Fred 2026-11-18): "on site" follows the stays (a visit nobody closed ends at the next job, the clock-out or
+// the end of a past day, never at "now" for a past day, never more than the clocked time); a card whose visit has
+// no "Left the job" says so; "Add missing entry" adds the event the timeline lacks.
 
 const KIND_LABEL: Record<EntryKind, string> = { clock_in: "Clocked in", clock_out: "Clocked out", on_way: "On my way", visit_in: "Arrived at the job", visit_out: "Left the job" };
 const PLACE_TONE: Record<Place, string> = { Office: "text-info-fg", "On site": "text-ok-fg", Elsewhere: "text-warn-fg", Unknown: "text-muted-foreground" };
@@ -104,6 +108,10 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
             const sum = clockDay(entries, now);
             // TC-b: the shifts of this day that want a look (the flags live on the shift, the mark on its clock-in).
             const flagged = shiftsOf(entries, now, today).filter((s) => s.flags.length > 0);
+            // SS-a: the jobs of this person's day (for "Add missing entry") and the visits with no exit.
+            const visitLabel = new Map<number, string>();
+            for (const e of entries) if (e.visit_id) visitLabel.set(e.visit_id, e.visits?.projects ? projectLabel(e.visits.projects.title, e.visits.projects.id) : tr("Visit #{id}", { id: e.visit_id }));
+            const locked = approvedWeek.has(employeeId);
             return (
               <section key={employeeId} className="rounded-2xl border bg-card px-[18px] py-4 shadow-card">
                 <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
@@ -148,6 +156,14 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                     ))}
                   </ul>
                 )}
+                {sum.noExit.length > 0 && (
+                  <p className="mb-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-lg bg-warn-bg px-2.5 py-1.5 text-[13px] text-warn-fg">
+                    <AlertTriangle className="size-4 shrink-0" aria-hidden />
+                    <b>{tr("Visit with no exit")}</b>
+                    {sum.noExit.map((s) => `${visitLabel.get(s.visitId) ?? `#${s.visitId}`} (${tr("arrived {time}", { time: time(s.start) })})`).join(" · ")}
+                    <span className="basis-full text-xs">{tr("The system writes Left the job at the clock-out or at the next job; add it by hand below if the time is known.")}</span>
+                  </p>
+                )}
                 <ol className="divide-y text-[13px]">
                   {entries.map((e) => (
                     // Time | what happened (place under it) | tools. The place sits under the text so a long project
@@ -181,6 +197,7 @@ export default async function TimeClockPage(props: PageProps<"/time-clock">) {
                     </li>
                   ))}
                 </ol>
+                {canFix && !locked && <AddMissingEntry employeeId={employeeId} day={day} visits={[...visitLabel].map(([id, label]) => ({ id, label }))} />}
               </section>
             );
           })}

@@ -6,6 +6,7 @@ import { missingReportsFor } from "@/lib/reports/rule-run";
 import { addDays } from "@/lib/schedule/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import type { EntryKind } from "@/lib/time-clock/clock";
+import { closeOpenStaysSafely } from "@/lib/time-clock/site-stays";
 import { forgottenClockOutAt, openClockIns } from "@/lib/time-clock/timesheet";
 import { autoCloseAt } from "./day";
 import { projectLabel } from "@/lib/projects/label";
@@ -65,8 +66,8 @@ export async function closeForgottenDay(date: string): Promise<Record<string, un
   //    activity after it (job arrival, leaving a job, On my way), else at the cut-off. TS-a: that time is only a
   //    suggestion (needs_adjustment): the shift counts 0 until the office types the real time or accepts it.
   const from = fromDateTimeLocalET(`${date}T00:00`);
-  const { data: entries } = await db.from("time_entries").select("id, employee_id, user_id, kind, at").gte("at", from).lt("at", to).is("deleted_at", null).order("at");
-  const all = (entries ?? []) as { id: number; employee_id: number; user_id: string; kind: EntryKind; at: string }[];
+  const { data: entries } = await db.from("time_entries").select("id, employee_id, user_id, kind, at, auto_closed").gte("at", from).lt("at", to).is("deleted_at", null).order("at");
+  const all = ((entries ?? []) as { id: number; employee_id: number; user_id: string; kind: EntryKind; at: string; auto_closed: boolean }[]).filter((x) => !(x.kind === "visit_out" && x.auto_closed));
   let clockOuts = 0;
   for (const [employeeId, e] of openClockIns(all)) {
     const activity = all.filter((x) => x.employee_id === employeeId && x.kind !== "clock_in" && x.kind !== "clock_out").map((x) => x.at);
@@ -77,6 +78,9 @@ export async function closeForgottenDay(date: string): Promise<Record<string, un
     clockOuts++;
     warnings.push({ employee_id: employeeId, user_id: e.user_id, kind: "forgot_clock_out", day: date, visit_id: null, project: null, closed_at: closed.at });
   }
+
+  // SS-a: the visits of the day nobody closed get their "Left the job" (at the clock-out just written, or what ended them).
+  await closeOpenStaysSafely(null, date, date);
 
   // 3. Job Reports still missing for the day (the F18 rule decides who owed one; nothing when the rule is off).
   const missing = await missingReportsFor(date);

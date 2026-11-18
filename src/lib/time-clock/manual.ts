@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { fromDateTimeLocalET } from "@/lib/dates";
+import type { EntryKind } from "./clock";
 import { recordsDb } from "@/lib/records/data";
 import { addDays } from "@/lib/schedule/dates";
 import { periodApprovedFor } from "./approval-status";
@@ -84,4 +85,38 @@ export async function addManualShiftAction(input: { employeeId: number; day: str
   revalidatePath("/time-clock");
   revalidatePath("/time-clock/timesheets");
   return { ok: true, added: rows.map((r) => r.kind) };
+}
+
+/**
+ * SS-a (Fred 2026-11-18) "Add missing entry": the office adds an event the day's timeline is missing. A clock-in or
+ * clock-out goes through the manual shift rules above; a visit event (On my way, Arrived at the job, Left the job)
+ * is written for that visit at the time given. Signed with who added it, like the corrections.
+ */
+export async function addMissingEntryAction(input: { employeeId: number; day: string; kind: EntryKind; time: string; visitId: number | null; reason: string }): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireUser();
+  if (!user.permissions.has("administrative.employees.modify")) return { ok: false, message: "Only people who may edit Employees can add entries." };
+  const employeeId = Number(input.employeeId);
+  const time = input.time.trim();
+  const reason = input.reason.trim().slice(0, 300);
+  if (!Number.isInteger(employeeId) || !DAY.test(input.day)) return { ok: false, message: "Pick the person and the day." };
+  if (!TIME.test(time)) return { ok: false, message: "Times must be hh:mm." };
+  if (input.kind === "clock_in" || input.kind === "clock_out") {
+    const r = await addManualShiftAction({ employeeId, day: input.day, inTime: input.kind === "clock_in" ? time : "", outTime: input.kind === "clock_out" ? time : "", reason });
+    return r.ok ? { ok: true } : r;
+  }
+  if (input.kind !== "on_way" && input.kind !== "visit_in" && input.kind !== "visit_out") return { ok: false, message: "Unknown step." };
+  if (!Number.isInteger(input.visitId)) return { ok: false, message: "Pick the job." };
+  const db = await recordsDb();
+  const [{ data: person }, { data: visit }] = await Promise.all([db.from("employees").select("id").eq("id", employeeId).is("deleted_at", null).maybeSingle(), db.from("visits").select("id").eq("id", input.visitId!).is("deleted_at", null).maybeSingle()]);
+  if (!person) return { ok: false, message: "That employee was not found." };
+  if (!visit) return { ok: false, message: "That visit was not found." };
+  if (await periodApprovedFor(db, employeeId, input.day)) return { ok: false, message: "This timesheet is approved. Reopen the period first." };
+  const who = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
+  const { error } = await db.from("time_entries").insert({ employee_id: employeeId, user_id: user.id, kind: input.kind, at: fromDateTimeLocalET(`${input.day}T${time}`), visit_id: input.visitId, place: "Unknown", note: reason ? `Added by ${who}: ${reason}` : `Added by ${who}`, corrected_at: new Date().toISOString(), corrected_by: user.id });
+  if (error) return { ok: false, message: error.message };
+  await syncClockDays([employeeId], addDays(input.day, -1), input.day).catch((e) => console.error("overtime sync:", e));
+  revalidatePath("/time-clock");
+  revalidatePath("/time-clock/timesheets");
+  revalidatePath("/");
+  return { ok: true };
 }

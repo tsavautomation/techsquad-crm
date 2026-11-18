@@ -9429,6 +9429,20 @@ export type Database = {
         Args: { p_project_id?: number }
         Returns: number
       }
+      system_left_job_add: {
+        Args: {
+          p_at: string
+          p_employee: number
+          p_note: string
+          p_user: string
+          p_visit: number
+        }
+        Returns: number
+      }
+      system_left_job_move: {
+        Args: { p_at: string; p_id: number; p_note: string }
+        Returns: boolean
+      }
       timesheet_period_approved: {
         Args: { p_at: string; p_employee: number }
         Returns: boolean

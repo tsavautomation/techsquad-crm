@@ -10,6 +10,7 @@ import { tableHref } from "@/registry/routes";
 import type { EntryKind, Geo } from "@/lib/time-clock/clock";
 import { geocode } from "@/lib/time-clock/geocode";
 import { myClockToday, recordEntry } from "@/lib/time-clock/record";
+import { closeOpenStaysSafely } from "@/lib/time-clock/site-stays";
 import { fromDateTimeLocalET, todayET } from "@/lib/dates";
 import { addDays } from "@/lib/schedule/dates";
 import { myEmployeeIds } from "./load";
@@ -36,6 +37,11 @@ export async function visitStepAction(id: number, step: Step, geo: Geo | null = 
   // The time entry with the position; a missing Employee record just leaves the step without one.
   const here = geo && Number.isFinite(geo.lat) && Number.isFinite(geo.lng) ? { lat: geo.lat, lng: geo.lng, accuracy_m: geo.accuracy_m != null && Number.isFinite(geo.accuracy_m) ? Math.round(geo.accuracy_m) : null } : null;
   await recordEntry(db, user, ENTRY_KIND[step], here, id).catch(() => undefined);
+  // SS-a: on the way to, or arrived at, another job: the visit before it gets its "Left the job" at this moment (by the system).
+  if (step !== "check_out") {
+    const mine = await myEmployeeIds(db, user).catch(() => [] as number[]);
+    if (mine.length) await closeOpenStaysSafely(mine, todayET(), todayET());
+  }
   after(runAutomationsSafely);
   // F27: the office is told at once (push); the person pressing the button gets it too (Fred 2026-10-21, so a check-in can be tested from one login).
   if (step === "check_in" || step === "check_out") {

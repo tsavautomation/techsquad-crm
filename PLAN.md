@@ -94,6 +94,7 @@ Phase 2 will also need a Microsoft 365 / Entra app registration (OneDrive), a Go
 | **OT-b** | *(built 2026-11-17; SPEC §9.1 OT-b)* **Overtime daily only with a tolerance per group (Field 20 min); Field overtime needs the technician's justification (48 h) and the approver's decision in a weekly review (Thursday notice, Friday reminder to the backups); refused = not paid; grid highlights by status; Saulo out of the clock.** |
 | **TO-a** | *(built 2026-11-17; SPEC §9.1 TO-a)* **Time off: two policies (paid / unpaid) on one bank of hours per person (opening balance and adjustments by Jessica, computed balance), requests from the person's app decided by Saulo or Jessica, absences without a request written nightly, who-is-out list, My time page.** |
 | **PC-a** | *(built 2026-11-17; SPEC §9.1 PC-a; the calendar change waits for Fred's OK on the list)* **Pay periods Thursday → Wednesday (cycle change per schedule, dry-run list then --apply), approval blocked by open overtime / time off / missing clock-outs, closing summary columns on screen and in CSV / Excel.** |
+| **SS-a** | *(built 2026-11-18; SPEC §9.1 SS-a)* **Time clock "on site" from the stays (an open visit ends at the next job, the clock-out or the end of a past day; never "now" for a past day; never more than the clocked time); the system writes the missing "Left the job" (by the system, editable); "Visit with no exit" alert and "Add missing entry" on the Day view; history backfilled (109 entries).** |
 
 ---
 

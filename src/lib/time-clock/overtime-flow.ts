@@ -10,6 +10,7 @@ import { addDays } from "@/lib/schedule/dates";
 import { adminDb, hasAdminKey } from "@/lib/supabase/admin";
 import { AUTO_REFUSAL_COMMENT, decidedMessage, justifyDueAt, justifyMessage, OPEN_STATUSES, reconcile, reviewCutoff, stateOf, weeklyMessage, type OvertimeDay } from "./overtime-rules";
 import { personDays } from "./person-sheet";
+import { closeOpenStaysSafely } from "./site-stays";
 import { ABSENCE } from "./time-off-rules";
 import type { SheetEntry } from "./timesheet";
 
@@ -58,6 +59,8 @@ export type SyncResult = { created: number; updated: number; reopened: number; v
 export async function syncClockDays(employeeIds: number[], from: string, to: string, now: number = Date.now()): Promise<SyncResult> {
   const out: SyncResult = { created: 0, updated: 0, reopened: 0, voided: 0, absencesCleared: 0, awaiting: [] };
   if (!hasAdminKey() || !employeeIds.length || from > to) return out;
+  // SS-a: first, every visit of these days nobody closed gets its "Left the job" (at the clock-out, the next job, or the end of a past day).
+  await closeOpenStaysSafely(employeeIds, from, to);
   const db = adminDb();
   const settings = await overtimeSettings(db);
   const today = todayET(new Date(now));
