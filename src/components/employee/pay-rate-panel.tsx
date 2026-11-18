@@ -1,11 +1,11 @@
 import type { CurrentUser } from "@/lib/auth/session";
 import { canSeeCosting, loadPayRates } from "@/lib/costing/load";
 import { formatDate, todayET } from "@/lib/dates";
-import { hoursAt, limitAt } from "@/lib/payroll/overtime";
+import { hoursAt, hoursText, limitAt } from "@/lib/payroll/overtime";
 import { loadGroupHours, loadOvertimeRates, loadPersonHours } from "@/lib/payroll/overtime-load";
 import { recordsDb } from "@/lib/records/data";
 import { getT } from "@/i18n/server";
-import { hoursText, OvertimeRateForm, PersonHoursForm } from "./overtime-forms";
+import { OvertimeRateForm, PersonHoursForm } from "./overtime-forms";
 import { PayRateForm } from "./pay-rate-form";
 
 // F13-a: the Pay rate panel on an Employee page, for people with the job costing key. A new row each

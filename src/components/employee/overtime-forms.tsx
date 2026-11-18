@@ -6,6 +6,7 @@ import { ChevronDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteOvertimeRateAction, deletePersonHoursAction, setOvertimeRateAction, setPersonHoursAction, type HoursInput } from "@/lib/payroll/overtime-actions";
 import { formatDate } from "@/lib/dates";
+import { hoursText } from "@/lib/payroll/overtime";
 import { useT } from "@/i18n/client";
 
 // OT Overtime: on the Employee's Pay rate card, the overtime rate ($/h, from a date, history) and the person's own
@@ -149,7 +150,6 @@ export function HoursFields({ v, set, submitLabel, pending, withTolerance }: { v
   );
 }
 
-export const hoursText = (daily: number, tolerance: number | null, t: (s: string, v?: Record<string, string | number>) => string) => (tolerance ? t("{h} h/day · {m} min tolerance", { h: daily / 60, m: tolerance }) : t("{h} h/day", { h: daily / 60 }));
 
 export function PersonHoursForm({ employeeId, today, rows }: { employeeId: number; today: string; rows: HoursRowView[] }) {
   const t = useT();

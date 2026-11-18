@@ -137,3 +137,7 @@ export function limitHours(minutes: number): string {
   const h = Math.round((minutes / 60) * 100) / 100;
   return `${h}`;
 }
+
+/** "9 h/day · 20 min tolerance". Lives here (no "use client") because server panels call it too: a function exported
+ *  from a client file cannot be called while the server renders a page. */
+export const hoursText = (daily: number, tolerance: number | null, t: (s: string, v?: Record<string, string | number>) => string) => (tolerance ? t("{h} h/day · {m} min tolerance", { h: daily / 60, m: tolerance }) : t("{h} h/day", { h: daily / 60 }));
